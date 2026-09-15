@@ -16,6 +16,10 @@
 - Q: ¿País y Estado deben ser catálogo (dropdown) o texto libre? → A: Catálogo (Opción A) — lista predefinida de países y estados.
 - Q: ¿El banner freemium aparece al guardar o al intentar agregar el 2do hijo, y se pierden los datos ya escritos? → A: El banner aparece de inmediato al presionar "Agregar hijo" por segunda vez (no hasta guardar). Los datos ya capturados (tutor + todos los hijos, incluido el que excede el límite) NUNCA se pierden: si el usuario cierra el banner y continúa en freemium, los datos permanecen en el formulario; si contrata el plan de pago, el sistema retoma esos mismos datos ya listos para completar el alta del segundo hijo sin volver a escribirlos.
 
+### Sesión 2026-09-15 (revisión)
+
+- Q: Al presionar "Agregar hijo" por segunda vez sin plan de pago, ¿se revela el formulario del segundo hijo junto con el banner (decisión original arriba), o el banner aparece SIN revelar ese formulario, bloqueando la creación del segundo hijo hasta pagar? → A: Se bloquea — el banner aparece pero el formulario del segundo hijo NO se crea/revela en absoluto mientras la cuenta no tenga plan de pago. Esto **reemplaza** la decisión de la sesión anterior sobre este punto específico (los Escenarios de Aceptación 1, 2 y 4 de la Historia 3 quedan actualizados abajo). La garantía de "nunca perder datos ya capturados" se mantiene para el tutor y para el primer hijo (el único que sí se puede crear en plan gratuito) — simplemente ya no aplica a un segundo hijo porque su formulario nunca llega a existir sin plan de pago.
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 - Crear cuenta de padre/tutor (Prioridad: P1)
@@ -56,18 +60,18 @@ Mientras crea su cuenta, el padre/tutor agrega uno o más hijos usando el botón
 
 ### Historia de Usuario 3 - Aviso de límite freemium al agregar un segundo hijo (Prioridad: P3)
 
-Un padre/tutor con plan gratuito intenta agregar un segundo hijo y el sistema le informa de inmediato, mediante un banner, que debe contratar el plan completo para dar de alta más de uno, con acceso directo a la página de planes — sin perder en ningún momento los datos ya capturados.
+Un padre/tutor con plan gratuito intenta agregar un segundo hijo y el sistema le informa de inmediato, mediante un banner, que debe contratar el plan completo para dar de alta más de uno — sin crear el formulario de ese segundo hijo mientras no pague, y sin perder en ningún momento los datos del tutor ni del primer hijo ya capturados.
 
 **Por qué esta prioridad**: Es la regla de negocio de monetización (Principio IV de la constitución) — importante para el modelo de negocio, pero depende de que ya exista el flujo de agregar hijos (Historia 2), por eso es P3.
 
-**Prueba Independiente**: Se puede probar por completo llenando los datos de un primer hijo y luego presionando "Agregar hijo" una segunda vez, verificando que el banner aparece de inmediato (no hasta guardar) y que los datos ya escritos permanecen visibles pase lo que pase.
+**Prueba Independiente**: Se puede probar por completo llenando los datos de un primer hijo y luego presionando "Agregar hijo" una segunda vez, verificando que el banner aparece de inmediato, que NO aparece un segundo bloque de campos, y que los datos del tutor y del primer hijo permanecen intactos.
 
 **Escenarios de Aceptación**:
 
-1. **Dado** que ya llené los datos de un hijo, **Cuando** presiono "Agregar hijo" por segunda vez, **Entonces** el sistema muestra de inmediato un banner indicando que el plan gratuito incluye solo un hijo y que debe contratar el plan completo para dar de alta más, con un botón hacia la página de planes — y los campos del segundo hijo quedan visibles y editables (no se bloquea la escritura).
-2. **Dado** que veo el banner y decido cerrarlo para continuar con el plan gratuito, **Cuando** lo cierro, **Entonces** los datos del tutor y de ambos hijos (incluido el que excede el límite) permanecen en el formulario sin perderse; si intento guardar en ese estado, el sistema no persiste la cuenta con más de un hijo (ver FR-007).
+1. **Dado** que ya llené los datos de un hijo, **Cuando** presiono "Agregar hijo" por segunda vez, **Entonces** el sistema muestra de inmediato un banner indicando que el plan gratuito incluye solo un hijo y que debe contratar el plan completo para dar de alta más, con un botón hacia la página de planes — y NO se crea ni se revela un segundo bloque de campos de hijo.
+2. **Dado** que veo el banner, **Cuando** lo cierro o simplemente sigo en la página, **Entonces** los datos del tutor y del primer hijo permanecen en el formulario sin perderse, y sigo teniendo únicamente un bloque de hijo (el segundo nunca se creó).
 3. **Dado** que veo el banner y presiono el botón "Ver planes", **Entonces** soy redirigido a una ruta/página de planes (no implementada aún — puede ser un placeholder o ruta pendiente en esta fase).
-4. **Dado** que contraté el plan de pago desde el banner y regreso al formulario, **Cuando** completo el proceso, **Entonces** el sistema retoma los datos del segundo hijo ya capturados (sin pedir que se vuelvan a escribir) y permite guardar la cuenta con ambos hijos.
+4. **Dado** que presiono "Agregar hijo" repetidamente estando en plan gratuito con ya un hijo agregado, **Cuando** cada intento ocurre, **Entonces** el sistema vuelve a mostrar el mismo banner y sigue sin crear bloques adicionales — el límite de campos de hijo visibles en plan gratuito es siempre 1.
 
 ---
 
@@ -79,8 +83,9 @@ Un padre/tutor con plan gratuito intenta agregar un segundo hijo y el sistema le
 - ¿Qué pasa si la fecha de nacimiento de un hijo es una fecha futura? Debe rechazarse como inválida (ver Historia 2, escenario 4).
 - ¿Qué pasa si el usuario intenta guardar con cero hijos? Debe permitirse — la cuenta se crea sin hijos; se podrán agregar después en una tarea futura de edición/listado.
 - ¿Qué pasa si talla o peso se llenan con valores no numéricos o negativos? El sistema debe rechazarlos como inválidos si se proporcionan, aunque el campo en sí sea opcional.
-- ¿Qué pasa si el usuario llena datos de 3 o más hijos de una sola vez sin plan de pago? El mismo aviso de la Historia 3 aplica — el sistema no distingue "2" de "3 o más", el límite gratuito siempre es 1; el banner ya se mostró desde que se intentó agregar el segundo.
-- ¿Se pierden los datos capturados si el usuario cierra el banner freemium sin contratar un plan? No — los datos del tutor y de todos los hijos permanecen en el formulario; el usuario simplemente no podrá guardar mientras haya más de un hijo sin plan de pago activo.
+- ¿Qué pasa si el usuario presiona "Agregar hijo" varias veces sin plan de pago? El mismo banner de la Historia 3 se muestra cada vez; el sistema nunca crea un segundo bloque de campos de hijo en plan gratuito, sin importar cuántas veces se presione el botón.
+- ¿Se pierden los datos capturados si el usuario ve el banner freemium sin contratar un plan? No — los datos del tutor y del primer hijo permanecen en el formulario; simplemente no se crea un segundo bloque de hijo mientras no haya plan de pago activo.
+- (Defensa en profundidad) ¿Qué pasa si, por algún medio distinto al formulario (p. ej. llamar la API directamente), llegan 2 o más hijos en la solicitud de una cuenta sin plan de pago? El servidor DEBE rechazar la solicitud igualmente (ver FR-007) — la validación del límite no depende únicamente de que el frontend nunca envíe más de un hijo.
 
 ## Requisitos *(obligatorio)*
 
@@ -88,12 +93,12 @@ Un padre/tutor con plan gratuito intenta agregar un segundo hijo y el sistema le
 
 - **FR-001**: El sistema DEBE permitir crear una cuenta de padre/tutor con nombre, apellido y correo electrónico como campos obligatorios, y país y estado como campos opcionales, seleccionables desde un catálogo predefinido (no texto libre).
 - **FR-002**: El sistema DEBE validar que el correo electrónico tenga un formato válido y sea único entre las cuentas existentes.
-- **FR-003**: El sistema DEBE permitir agregar cero o más hijos dentro del mismo formulario de creación de cuenta, mediante un botón "Agregar hijo" que revela dinámicamente los campos de un nuevo hijo cada vez que se presiona.
+- **FR-003**: El sistema DEBE permitir agregar hijos dentro del mismo formulario de creación de cuenta, mediante un botón "Agregar hijo" que revela dinámicamente los campos de un nuevo hijo — hasta el límite que permita el plan de la cuenta (1 hijo en el plan gratuito, ver FR-007). Al alcanzar el límite, el botón NO DEBE revelar un bloque adicional; en su lugar aplica FR-007.
 - **FR-004**: Por cada hijo agregado, el sistema DEBE requerir nombre, apellido y fecha de nacimiento (como campos separados, igual que en la Cuenta), y DEBE permitir talla y peso como campos opcionales.
 - **FR-005**: El sistema DEBE validar que la fecha de nacimiento de un hijo no sea una fecha futura.
 - **FR-006**: El sistema DEBE permitir remover un bloque de hijo ya agregado **antes** de guardar la cuenta (mientras el formulario no se ha persistido).
 - **FR-006a**: Una vez que un hijo queda persistido (la cuenta fue guardada exitosamente), el sistema NO DEBE permitir eliminarlo bajo ninguna circunstancia en esta fase, y NO DEBE permitir editar su nombre, apellido ni fecha de nacimiento (una futura tarea de edición solo permitirá modificar talla y peso). Razón: evitar que una cuenta con plan gratuito "rote" hijos (elimina uno, agrega otro) para dar de alta más niños de los que su plan permite.
-- **FR-007**: El sistema DEBE aplicar la regla de negocio freemium: al presionar "Agregar hijo" por segunda vez (sin plan de pago activo), el sistema DEBE mostrar de inmediato un banner de aviso (plan gratuito incluye solo un hijo) con un botón que redirige a la página de planes. El banner NO DEBE bloquear ni eliminar los campos ya visibles ni los datos ya escritos (tutor y todos los hijos). Si el usuario intenta guardar la cuenta con más de un hijo sin plan de pago activo, el sistema NO DEBE persistirla. Si el usuario contrata el plan de pago, el sistema DEBE retomar los datos ya capturados del segundo hijo (y siguientes) sin requerir que se vuelvan a ingresar.
+- **FR-007**: El sistema DEBE aplicar la regla de negocio freemium: al presionar "Agregar hijo" cuando la cuenta (sin plan de pago activo) ya tiene 1 hijo en el formulario, el sistema DEBE mostrar de inmediato un banner de aviso (plan gratuito incluye solo un hijo) con un botón que redirige a la página de planes, y NO DEBE crear ni revelar un bloque de campos para ese hijo adicional. El banner NO DEBE eliminar ni alterar los datos ya escritos del tutor ni del primer hijo. Como defensa adicional del lado del servidor (ver research.md), si de cualquier forma llega una solicitud con más de un hijo para una cuenta sin plan de pago, el sistema NO DEBE persistirla.
 - **FR-008**: El sistema NO DEBE calcular, mostrar ni inferir ninguna interpretación médica (p. ej. percentiles de crecimiento OMS) a partir de los datos de fecha de nacimiento, talla o peso capturados en este flujo — solo se almacenan como datos para uso en funcionalidades futuras (Principio I de la constitución del proyecto).
 - **FR-009**: El sistema NO DEBE solicitar contraseña ni implementar inicio de sesión/autenticación en este alcance — el correo electrónico se captura únicamente como dato de la cuenta.
 - **FR-010**: El sistema DEBE persistir la cuenta junto con sus hijos asociados (si los hay y respetan el límite del plan) una vez que la validación sea exitosa.

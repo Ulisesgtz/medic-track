@@ -30,9 +30,14 @@
 
 1. Repetir pasos 1-2 del Escenario 2.
 2. Presionar "Agregar hijo" por segunda vez.
-3. **Resultado esperado inmediato**: aparece el banner freemium; los campos del segundo hijo son visibles y editables; ningún dato ya escrito se pierde.
-4. Llenar los datos del segundo hijo e intentar guardar la cuenta.
-5. **Resultado esperado**: el backend responde `422 freemium_child_limit_exceeded`; el frontend conserva todos los datos en el formulario (tutor + ambos hijos) y sigue mostrando el banner.
+3. **Resultado esperado inmediato**: aparece el banner freemium; NO se crea un segundo bloque de campos de hijo; los datos del tutor y del primer hijo permanecen intactos.
+4. Guardar la cuenta con solo el primer hijo.
+5. **Resultado esperado**: `201 Created` — la cuenta se guarda normalmente con 1 hijo; el banner ya no tiene efecto sobre el guardado porque el formulario nunca permitió capturar un segundo hijo.
+
+### Defensa en profundidad (llamada directa a la API, fuera de la UI)
+
+6. Llamar `POST /accounts` directamente con 2 hijos en el body, sin plan de pago.
+7. **Resultado esperado**: el backend responde `422 freemium_child_limit_exceeded` — el servidor rechaza el exceso incluso si no llegó a través del formulario.
 
 ## Escenario 5 — Correo duplicado
 

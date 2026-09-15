@@ -34,7 +34,7 @@ test.describe('Registro de cuenta de usuario', () => {
     await expect(page.getByText('Cuenta creada exitosamente.')).toBeVisible()
   })
 
-  test('Escenario 4 — banner freemium al agregar un segundo hijo, sin perder datos', async ({
+  test('Escenario 4 — banner freemium al intentar un segundo hijo, sin crear su formulario', async ({
     page,
   }) => {
     await page.goto('/signup')
@@ -49,21 +49,18 @@ test.describe('Registro de cuenta de usuario', () => {
     await page.locator('#children\\.0\\.lastName').fill('Ruiz')
     await page.locator('#children\\.0\\.birthDate').fill('2018-01-01')
 
-    // Adding the 2nd child must show the banner immediately, before saving.
+    // Adding a 2nd child must show the banner immediately, and must NOT
+    // create a second child fieldset (FR-007, revised behavior).
     await page.getByRole('button', { name: 'Agregar hijo' }).click()
     await expect(page.getByText(/plan gratuito incluye solo un hijo/i)).toBeVisible()
+    await expect(page.locator('#children\\.1\\.firstName')).toHaveCount(0)
 
-    await page.locator('#children\\.1\\.firstName').fill('Hijo2')
-    await page.locator('#children\\.1\\.lastName').fill('Ruiz')
-    await page.locator('#children\\.1\\.birthDate').fill('2021-01-01')
-
-    await page.getByRole('button', { name: 'Guardar' }).click()
-
-    // The server rejects the save (422), and the banner stays visible while
-    // no data is lost from the form (FR-007).
-    await expect(page.getByText(/plan gratuito incluye solo un hijo/i)).toBeVisible()
+    // The tutor and first-child data already entered must not be lost.
     await expect(page.locator('#firstName')).toHaveValue('Carla')
     await expect(page.locator('#children\\.0\\.firstName')).toHaveValue('Hijo1')
-    await expect(page.locator('#children\\.1\\.firstName')).toHaveValue('Hijo2')
+
+    // Saving with just the one allowed child still works normally.
+    await page.getByRole('button', { name: 'Guardar' }).click()
+    await expect(page.getByText('Cuenta creada exitosamente.')).toBeVisible()
   })
 })

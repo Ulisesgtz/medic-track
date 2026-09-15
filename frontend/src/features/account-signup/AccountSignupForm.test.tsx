@@ -58,35 +58,39 @@ describe('AccountSignupForm', () => {
     expect(screen.getByLabelText('Apellido')).toHaveValue('Gómez')
   })
 
-  it('reveals a new child fieldset each time "Agregar hijo" is pressed', async () => {
+  it('reveals exactly one child fieldset when "Agregar hijo" is pressed the first time', async () => {
     const user = userEvent.setup()
     renderForm()
 
     expect(screen.queryByTestId('child-fieldset-0')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Agregar hijo' }))
-    expect(screen.getByTestId('child-fieldset-0')).toBeInTheDocument()
 
-    await user.click(screen.getByRole('button', { name: 'Agregar hijo' }))
-    expect(screen.getByTestId('child-fieldset-1')).toBeInTheDocument()
+    expect(screen.getByTestId('child-fieldset-0')).toBeInTheDocument()
+    expect(screen.queryByTestId('child-fieldset-1')).not.toBeInTheDocument()
   })
 
-  it('shows the freemium banner immediately when a second child is added, without disabling inputs', async () => {
+  it('shows the freemium banner and does NOT reveal a second child fieldset (FR-007)', async () => {
     const user = userEvent.setup()
     renderForm()
 
     await user.click(screen.getByRole('button', { name: 'Agregar hijo' }))
-    expect(screen.queryByRole('alert', { name: /plan gratuito/i })).not.toBeInTheDocument()
+    await user.type(document.getElementById('children.0.firstName')!, 'Luis')
+    expect(screen.queryByText(/plan gratuito incluye solo un hijo/i)).not.toBeInTheDocument()
 
+    // Second press: banner appears, but no second fieldset is created.
     await user.click(screen.getByRole('button', { name: 'Agregar hijo' }))
 
     await waitFor(() => {
       expect(screen.getByText(/plan gratuito incluye solo un hijo/i)).toBeInTheDocument()
     })
-    // Fields must remain editable (FR-007) — not disabled.
-    const secondChildFirstName = document.getElementById('children.1.firstName')
-    expect(secondChildFirstName).not.toBeNull()
-    expect(secondChildFirstName).not.toBeDisabled()
+    expect(screen.queryByTestId('child-fieldset-1')).not.toBeInTheDocument()
+    // The first child's already-typed data must not be lost.
+    expect(document.getElementById('children.0.firstName')).toHaveValue('Luis')
+
+    // Pressing it again keeps the same state (idempotent block).
+    await user.click(screen.getByRole('button', { name: 'Agregar hijo' }))
+    expect(screen.queryByTestId('child-fieldset-1')).not.toBeInTheDocument()
   })
 
   it('shows the state selector once a country with states is chosen', async () => {

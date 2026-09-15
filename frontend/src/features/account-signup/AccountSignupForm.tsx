@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { useCountries, useStates } from '../../shared/catalog/useCatalog'
 import { useAccountSignup } from './useAccountSignup'
@@ -11,6 +12,11 @@ const inputClass =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30'
 const labelClass = 'mb-1 block text-sm font-medium text-slate-700'
 const errorClass = 'mt-1 text-sm text-red-600'
+
+// FR-007: the free plan allows at most this many children. There is no paid
+// plan implemented yet (see Supuestos in spec.md), so this is a hardcoded
+// constant for now rather than something read from account state.
+const FREE_PLAN_CHILD_LIMIT = 1
 
 function toPayload(values: AccountSignupFormValues): CreateAccountPayload {
   return {
@@ -54,13 +60,23 @@ export function AccountSignupForm() {
 
   const signup = useAccountSignup()
 
-  // FR-007: the banner appears as soon as a second child block exists on the
-  // client, not only when the server rejects the save.
+  // FR-007: attempting to add a child beyond the free-plan limit shows the
+  // banner immediately, but does NOT create/reveal that child's fieldset.
+  const [freemiumBlocked, setFreemiumBlocked] = useState(false)
+
   const showFreemiumBanner =
-    fields.length > 1 ||
+    freemiumBlocked ||
     (signup.isError &&
       signup.error instanceof CreateAccountError &&
       signup.error.kind === 'freemium_child_limit_exceeded')
+
+  function handleAddChild() {
+    if (fields.length >= FREE_PLAN_CHILD_LIMIT) {
+      setFreemiumBlocked(true)
+      return
+    }
+    append(emptyChild)
+  }
 
   const onSubmit = handleSubmit((values) => {
     signup.mutate(toPayload(values))
@@ -170,7 +186,7 @@ export function AccountSignupForm() {
 
         <button
           type="button"
-          onClick={() => append(emptyChild)}
+          onClick={handleAddChild}
           className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-cyan-600 px-4 py-2 text-sm font-medium text-cyan-700 transition-colors duration-200 hover:bg-cyan-50 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2"
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
