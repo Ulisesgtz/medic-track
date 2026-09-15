@@ -104,9 +104,9 @@ describe('AccountSignupForm', () => {
     renderForm()
 
     await screen.findByRole('option', { name: 'México' })
-    await user.selectOptions(screen.getByLabelText('País'), 'MX')
+    await user.selectOptions(screen.getByLabelText(/País/), 'MX')
 
-    expect(await screen.findByLabelText('Estado')).toBeInTheDocument()
+    expect(await screen.findByLabelText(/Estado/)).toBeInTheDocument()
     expect(await screen.findByRole('option', { name: 'Jalisco' })).toBeInTheDocument()
   })
 
@@ -123,8 +123,7 @@ describe('AccountSignupForm', () => {
 
   it('shows a success message after a successful save', async () => {
     const user = userEvent.setup()
-    vi.mocked(fetch).mockImplementation(async (input, init) => {
-      const url = String(input)
+    vi.mocked(fetch).mockImplementation(async (_input, init) => {
       if (init?.method === 'POST') {
         return {
           ok: true,
