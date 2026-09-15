@@ -1,0 +1,23 @@
+# Go
+/bin/
+/dist/
+*.exe
+*.test
+*.out
+vendor/
+
+# Node / React
+node_modules/
+/build/
+/coverage/
+.env
+.env.local
+.env.*.local
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+
+# Claude Code local settings
+.claude/settings.local.json
