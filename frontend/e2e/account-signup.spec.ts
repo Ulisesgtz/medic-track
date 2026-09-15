@@ -64,3 +64,84 @@ test.describe('Registro de cuenta de usuario', () => {
     await expect(page.getByText('Cuenta creada exitosamente.')).toBeVisible()
   })
 })
+
+test.describe('Validaciones del formulario (navegador real)', () => {
+  test('campos obligatorios del tutor: muestra error y no envía la solicitud (FR-001)', async ({
+    page,
+  }) => {
+    let postCalled = false
+    await page.route('**/accounts', async (route) => {
+      postCalled = true
+      await route.continue()
+    })
+
+    await page.goto('/signup')
+    await page.getByRole('button', { name: 'Guardar' }).click()
+
+    await expect(page.getByText('El nombre es obligatorio')).toBeVisible()
+    await expect(page.getByText('El apellido es obligatorio')).toBeVisible()
+    await expect(page.getByText('El correo es obligatorio')).toBeVisible()
+    expect(postCalled).toBe(false)
+  })
+
+  test('campos obligatorios de un hijo: nombre/apellido/fecha de nacimiento (FR-004)', async ({
+    page,
+  }) => {
+    await page.goto('/signup')
+
+    await page.getByLabel('Nombre').fill('Ana')
+    await page.getByLabel('Apellido').fill('Gómez')
+    await page.getByLabel('Correo electrónico').fill(`ana.e2e.${Date.now()}@example.com`)
+    await page.getByRole('button', { name: 'Agregar hijo' }).click()
+
+    await page.getByRole('button', { name: 'Guardar' }).click()
+
+    await expect(page.getByText('El nombre del hijo es obligatorio')).toBeVisible()
+    await expect(page.getByText('El apellido del hijo es obligatorio')).toBeVisible()
+    await expect(page.getByText('La fecha de nacimiento es obligatoria')).toBeVisible()
+  })
+
+  test('fecha de nacimiento futura es rechazada por el servidor (FR-005)', async ({ page }) => {
+    await page.goto('/signup')
+
+    await page.getByLabel('Nombre').fill('Ana')
+    await page.getByLabel('Apellido').fill('Gómez')
+    await page.getByLabel('Correo electrónico').fill(`ana.e2e.${Date.now()}@example.com`)
+
+    await page.getByRole('button', { name: 'Agregar hijo' }).click()
+    await page.locator('#children\\.0\\.firstName').fill('Luis')
+    await page.locator('#children\\.0\\.lastName').fill('Gómez')
+
+    const futureDate = new Date()
+    futureDate.setFullYear(futureDate.getFullYear() + 1)
+    await page.locator('#children\\.0\\.birthDate').fill(futureDate.toISOString().slice(0, 10))
+
+    await page.getByRole('button', { name: 'Guardar' }).click()
+
+    // The browser's native <input type="date"> min/max isn't set, so this
+    // reaches the server, which must reject it (no success message shown).
+    await expect(page.getByText('Cuenta creada exitosamente.')).not.toBeVisible()
+  })
+
+  test('correo duplicado: el servidor responde 409 y el mensaje se muestra (FR-002)', async ({
+    page,
+  }) => {
+    const email = `ana.dup.e2e.${Date.now()}@example.com`
+
+    await page.goto('/signup')
+    await page.getByLabel('Nombre').fill('Ana')
+    await page.getByLabel('Apellido').fill('Gómez')
+    await page.getByLabel('Correo electrónico').fill(email)
+    await page.getByRole('button', { name: 'Guardar' }).click()
+    await expect(page.getByText('Cuenta creada exitosamente.')).toBeVisible()
+
+    // Try to create a second account with the exact same email.
+    await page.goto('/signup')
+    await page.getByLabel('Nombre').fill('Otra')
+    await page.getByLabel('Apellido').fill('Persona')
+    await page.getByLabel('Correo electrónico').fill(email)
+    await page.getByRole('button', { name: 'Guardar' }).click()
+
+    await expect(page.getByText('Este correo ya está en uso.')).toBeVisible()
+  })
+})
