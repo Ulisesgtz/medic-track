@@ -70,7 +70,7 @@ describe('AccountSignupForm', () => {
     expect(screen.queryByTestId('child-fieldset-1')).not.toBeInTheDocument()
   })
 
-  it('shows the freemium banner and does NOT reveal a second child fieldset (FR-007)', async () => {
+  it('shows the freemium pop-up and does NOT reveal a second child fieldset (FR-007)', async () => {
     const user = userEvent.setup()
     renderForm()
 
@@ -78,18 +78,35 @@ describe('AccountSignupForm', () => {
     await user.type(document.getElementById('children.0.firstName')!, 'Luis')
     expect(screen.queryByText(/plan gratuito incluye solo un hijo/i)).not.toBeInTheDocument()
 
-    // Second press: banner appears, but no second fieldset is created.
+    // Second press: pop-up appears, but no second fieldset is created.
     await user.click(screen.getByRole('button', { name: 'Agregar hijo' }))
 
     await waitFor(() => {
-      expect(screen.getByText(/plan gratuito incluye solo un hijo/i)).toBeInTheDocument()
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
     })
+    expect(screen.getByText(/plan gratuito incluye solo un hijo/i)).toBeInTheDocument()
     expect(screen.queryByTestId('child-fieldset-1')).not.toBeInTheDocument()
     // The first child's already-typed data must not be lost.
     expect(document.getElementById('children.0.firstName')).toHaveValue('Luis')
 
     // Pressing it again keeps the same state (idempotent block).
     await user.click(screen.getByRole('button', { name: 'Agregar hijo' }))
+    expect(screen.queryByTestId('child-fieldset-1')).not.toBeInTheDocument()
+  })
+
+  it('closes the freemium pop-up and keeps data when "Quedarme con el plan gratuito" is pressed', async () => {
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.click(screen.getByRole('button', { name: 'Agregar hijo' }))
+    await user.type(document.getElementById('children.0.firstName')!, 'Luis')
+    await user.click(screen.getByRole('button', { name: 'Agregar hijo' }))
+    await screen.findByRole('dialog')
+
+    await user.click(screen.getByRole('button', { name: 'Quedarme con el plan gratuito' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(document.getElementById('children.0.firstName')).toHaveValue('Luis')
     expect(screen.queryByTestId('child-fieldset-1')).not.toBeInTheDocument()
   })
 
@@ -204,7 +221,7 @@ describe('AccountSignupForm', () => {
     expect(sentBody).toMatchObject({ children: [{ height: 95.5, weight: 14.2 }] })
   })
 
-  it('shows the freemium banner when the server rejects the save with 422, even if the client only sent one child', async () => {
+  it('shows the freemium pop-up when the server rejects the save with 422, even if the client only sent one child', async () => {
     const user = userEvent.setup()
     vi.mocked(fetch).mockImplementation(async (input, init) => {
       if (init?.method === 'POST') {

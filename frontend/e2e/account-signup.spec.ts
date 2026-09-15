@@ -34,7 +34,7 @@ test.describe('Registro de cuenta de usuario', () => {
     await expect(page.getByText('Cuenta creada exitosamente.')).toBeVisible()
   })
 
-  test('Escenario 4 — banner freemium al intentar un segundo hijo, sin crear su formulario', async ({
+  test('Escenario 4 — pop-up freemium al intentar un segundo hijo, sin crear su formulario', async ({
     page,
   }) => {
     await page.goto('/signup')
@@ -49,9 +49,10 @@ test.describe('Registro de cuenta de usuario', () => {
     await page.locator('#children\\.0\\.lastName').fill('Ruiz')
     await page.locator('#children\\.0\\.birthDate').fill('2018-01-01')
 
-    // Adding a 2nd child must show the banner immediately, and must NOT
-    // create a second child fieldset (FR-007, revised behavior).
+    // Adding a 2nd child must show the pop-up modal immediately, and must
+    // NOT create a second child fieldset (FR-007, revised behavior).
     await page.getByRole('button', { name: 'Agregar hijo' }).click()
+    await expect(page.getByRole('dialog')).toBeVisible()
     await expect(page.getByText(/plan gratuito incluye solo un hijo/i)).toBeVisible()
     await expect(page.locator('#children\\.1\\.firstName')).toHaveCount(0)
 
@@ -59,9 +60,31 @@ test.describe('Registro de cuenta de usuario', () => {
     await expect(page.locator('#firstName')).toHaveValue('Carla')
     await expect(page.locator('#children\\.0\\.firstName')).toHaveValue('Hijo1')
 
+    // Closing via "Quedarme con el plan gratuito" dismisses the modal.
+    await page.getByRole('button', { name: 'Quedarme con el plan gratuito' }).click()
+    await expect(page.getByRole('dialog')).not.toBeVisible()
+
     // Saving with just the one allowed child still works normally.
     await page.getByRole('button', { name: 'Guardar' }).click()
     await expect(page.getByText('Cuenta creada exitosamente.')).toBeVisible()
+  })
+
+  test('Escenario 4b — el botón "Ver planes" del pop-up freemium redirige', async ({ page }) => {
+    await page.goto('/signup')
+
+    await page.getByLabel('Nombre').fill('Diego')
+    await page.getByLabel('Apellido').fill('Torres')
+    await page.getByLabel('Correo electrónico').fill(`diego.e2e.${Date.now()}@example.com`)
+
+    await page.getByRole('button', { name: 'Agregar hijo' }).click()
+    await page.locator('#children\\.0\\.firstName').fill('Hijo1')
+    await page.locator('#children\\.0\\.lastName').fill('Torres')
+    await page.locator('#children\\.0\\.birthDate').fill('2019-01-01')
+    await page.getByRole('button', { name: 'Agregar hijo' }).click()
+
+    await page.getByRole('button', { name: 'Ver planes' }).click()
+
+    await expect(page).toHaveURL(/\/planes/)
   })
 })
 

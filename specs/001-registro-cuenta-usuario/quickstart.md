@@ -30,9 +30,11 @@
 
 1. Repetir pasos 1-2 del Escenario 2.
 2. Presionar "Agregar hijo" por segunda vez.
-3. **Resultado esperado inmediato**: aparece el banner freemium; NO se crea un segundo bloque de campos de hijo; los datos del tutor y del primer hijo permanecen intactos.
-4. Guardar la cuenta con solo el primer hijo.
-5. **Resultado esperado**: `201 Created` — la cuenta se guarda normalmente con 1 hijo; el banner ya no tiene efecto sobre el guardado porque el formulario nunca permitió capturar un segundo hijo.
+3. **Resultado esperado inmediato**: aparece un pop-up modal con dos botones ("Ver planes" y "Quedarme con el plan gratuito"); NO se crea un segundo bloque de campos de hijo; los datos del tutor y del primer hijo permanecen intactos.
+4. Presionar "Quedarme con el plan gratuito".
+5. **Resultado esperado**: el pop-up se cierra; los datos siguen intactos.
+6. Guardar la cuenta con solo el primer hijo.
+7. **Resultado esperado**: `201 Created` — la cuenta se guarda normalmente con 1 hijo.
 
 ### Defensa en profundidad (llamada directa a la API, fuera de la UI)
 

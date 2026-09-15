@@ -3,7 +3,7 @@ import { useForm, useFieldArray, useWatch } from 'react-hook-form'
 import { useCountries, useStates } from '../../shared/catalog/useCatalog'
 import { useAccountSignup } from './useAccountSignup'
 import { ChildFieldset } from './ChildFieldset'
-import { FreemiumBanner } from './FreemiumBanner'
+import { FreemiumLimitModal } from './FreemiumLimitModal'
 import { CreateAccountError, type CreateAccountPayload } from './api'
 import type { AccountSignupFormValues } from './types'
 import { emptyChild } from './types'
@@ -61,10 +61,10 @@ export function AccountSignupForm() {
   const signup = useAccountSignup()
 
   // FR-007: attempting to add a child beyond the free-plan limit shows the
-  // banner immediately, but does NOT create/reveal that child's fieldset.
+  // pop-up modal immediately, but does NOT create/reveal that child's fieldset.
   const [freemiumBlocked, setFreemiumBlocked] = useState(false)
 
-  const showFreemiumBanner =
+  const showFreemiumModal =
     freemiumBlocked ||
     (signup.isError &&
       signup.error instanceof CreateAccountError &&
@@ -76,6 +76,13 @@ export function AccountSignupForm() {
       return
     }
     append(emptyChild)
+  }
+
+  function handleStayFree() {
+    setFreemiumBlocked(false)
+    if (signup.isError) {
+      signup.reset()
+    }
   }
 
   const onSubmit = handleSubmit((values) => {
@@ -196,8 +203,11 @@ export function AccountSignupForm() {
         </button>
       </section>
 
-      {showFreemiumBanner && (
-        <FreemiumBanner onViewPlans={() => window.location.assign('/planes')} />
+      {showFreemiumModal && (
+        <FreemiumLimitModal
+          onViewPlans={() => window.location.assign('/planes')}
+          onStayFree={handleStayFree}
+        />
       )}
 
       {signup.isError &&
