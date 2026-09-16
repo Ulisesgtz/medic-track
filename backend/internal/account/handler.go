@@ -135,10 +135,15 @@ func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 		if c.BirthDate != "" {
 			parsed, err := time.Parse("2006-01-02", c.BirthDate)
 			if err != nil {
-				h.writeValidationError(r.Context(), w, []ValidationError{{
+				// Called directly (not via a shared helper) so
+				// Responder.record's runtime.Caller attributes this entry to
+				// this exact line, distinct from the other validation-error
+				// call sites below — see backend/CLAUDE.md's warning about
+				// indirection between a handler and Responder.
+				h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody([]ValidationError{{
 					Field:   fieldIndex("children", i, "birthDate"),
 					Message: "birth date must be an ISO-8601 date (YYYY-MM-DD)",
-				}}, "One or more fields are invalid")
+				}}, "One or more fields are invalid"), nil)
 				return
 			}
 			birthDate = parsed
@@ -161,11 +166,17 @@ func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 	h.responder.WriteJSON(r.Context(), w, http.StatusCreated, toAccountResponse(acc), &acc.ID)
 }
 
+// writeCreateAccountError dispatches on the error kind and, for each kind,
+// calls h.responder directly from its own case branch (never through a
+// shared sub-helper) so Responder.record's runtime.Caller attributes every
+// error to the distinct line that actually decided it, not to one shared
+// call site — see backend/CLAUDE.md's warning about indirection between a
+// handler and Responder.
 func (h *Handler) writeCreateAccountError(ctx context.Context, w http.ResponseWriter, err error, receivedChildren int) {
 	var validationErrs ValidationErrors
 	switch {
 	case errors.As(err, &validationErrs):
-		h.writeValidationError(ctx, w, validationErrs, "One or more fields are invalid")
+		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationErrorBody(validationErrs, "One or more fields are invalid"), nil)
 	case errors.Is(err, ErrEmailAlreadyExists):
 		// The conflicting account already exists, but its ID isn't looked up
 		// by this flow (EmailExists only returns a bool) — logged without an
@@ -186,24 +197,28 @@ func (h *Handler) writeCreateAccountError(ctx context.Context, w http.ResponseWr
 		// rejected the row even though the service-layer check passed (e.g. a
 		// bug or drift between the two). Surface it as a validation error
 		// rather than an opaque 500, since it's really an input problem.
-		h.writeValidationError(ctx, w, []ValidationError{
+		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationErrorBody([]ValidationError{
 			{Field: "firstName", Message: "must contain only letters, spaces, hyphens or apostrophes, and be at most 100 characters"},
-		}, "One or more fields are invalid")
+		}, "One or more fields are invalid"), nil)
 	default:
 		h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", "Could not create account", nil)
 	}
 }
 
-func (h *Handler) writeValidationError(ctx context.Context, w http.ResponseWriter, errs []ValidationError, message string) {
+// validationErrorBody builds the 400 response body shape. Pure data
+// shaping only — deliberately does NOT call the responder itself, so every
+// call site above invokes h.responder.WriteJSON directly and gets its own
+// distinct, correctly-attributed error_logs entry (see writeCreateAccountError).
+func validationErrorBody(errs []ValidationError, message string) map[string]any {
 	details := make([]map[string]string, 0, len(errs))
 	for _, e := range errs {
 		details = append(details, map[string]string{"field": e.Field, "message": e.Message})
 	}
-	h.responder.WriteJSON(ctx, w, http.StatusBadRequest, map[string]any{
+	return map[string]any{
 		"error":   "validation_error",
 		"message": message,
 		"details": details,
-	}, nil)
+	}
 }
 
 func toAccountResponse(acc *Account) accountResponse {

@@ -125,6 +125,27 @@ func TestResponder_WriteJSON_SuccessDoesNotRecord(t *testing.T) {
 	}
 }
 
+// TestResponder_WriteJSONError_SuccessStatusDoesNotRecord is a regression
+// test for a code review finding: WriteJSONError used to call record()
+// unconditionally, unlike WriteJSON's status>=400 guard — a misuse (calling
+// WriteJSONError with a 2xx/3xx status) would have silently logged a bogus
+// "error" entry. The guard now lives once inside record() itself, shared by
+// both methods.
+func TestResponder_WriteJSONError_SuccessStatusDoesNotRecord(t *testing.T) {
+	recorder := newFakeRecorder()
+	responder := httpx.NewResponder(recorder)
+	rec := httptest.NewRecorder()
+
+	responder.WriteJSONError(context.Background(), rec, 200, "ok", "not actually an error", nil)
+
+	select {
+	case <-recorder.done:
+		t.Fatal("WriteJSONError with a non-error status must never be recorded")
+	case <-time.After(100 * time.Millisecond):
+		// expected: nothing recorded
+	}
+}
+
 func TestResponder_WriteJSON_ErrorStatusRecordsEntry(t *testing.T) {
 	// Several error responses in the app carry custom bodies beyond the
 	// simple {error, message} shape (e.g. the freemium-limit 422 with

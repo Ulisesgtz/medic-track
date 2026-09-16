@@ -51,9 +51,7 @@ func (r *Responder) WriteJSON(ctx context.Context, w http.ResponseWriter, status
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(body)
 
-	if status >= 400 {
-		r.record(ctx, status, extractMessage(body, status), accountID)
-	}
+	r.record(ctx, status, extractMessage(body, status), accountID)
 }
 
 // WriteJSONError writes a {"error": code, "message": message} JSON body and
@@ -70,8 +68,15 @@ func (r *Responder) WriteJSONError(ctx context.Context, w http.ResponseWriter, s
 // (skip=2: 0=record's own frame, 1=WriteJSON/WriteJSONError's frame,
 // 2=their caller) and persists the entry in a detached background
 // goroutine, so a failing or slow database NEVER delays or breaks the HTTP
-// response that has already been written (FR-005, SC-004).
+// response that has already been written (FR-005, SC-004). This is also the
+// single place that decides whether a response counts as "loggable"
+// (status >= 400) — WriteJSON and WriteJSONError both delegate here instead
+// of each carrying their own copy of that check, so they can never disagree.
 func (r *Responder) record(ctx context.Context, status int, message string, accountID *uuid.UUID) {
+	if status < 400 {
+		return
+	}
+
 	_, file, line, ok := runtime.Caller(2)
 	if !ok {
 		file, line = "unknown", 0
