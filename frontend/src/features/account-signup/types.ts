@@ -1,3 +1,9 @@
+// Letters (incl. accented characters and ñ), spaces, hyphens and
+// apostrophes only — mirrors backend/internal/account/service.go's
+// validateNameFormat, kept as the single source of truth for the rule.
+export const NAME_PATTERN = /^[\p{L} '-]+$/u
+export const NAME_MAX_LENGTH = 100
+
 export interface ChildFormValues {
   firstName: string
   lastName: string

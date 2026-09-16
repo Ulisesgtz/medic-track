@@ -6,7 +6,7 @@ import { ChildFieldset } from './ChildFieldset'
 import { FreemiumLimitModal } from './FreemiumLimitModal'
 import { CreateAccountError, type CreateAccountPayload } from './api'
 import type { AccountSignupFormValues } from './types'
-import { emptyChild } from './types'
+import { emptyChild, NAME_MAX_LENGTH, NAME_PATTERN } from './types'
 
 const inputClass =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30'
@@ -17,6 +17,11 @@ const errorClass = 'mt-1 text-sm text-red-600'
 // plan implemented yet (see Supuestos in spec.md), so this is a hardcoded
 // constant for now rather than something read from account state.
 const FREE_PLAN_CHILD_LIMIT = 1
+
+// Letters (incl. accented characters and ñ), spaces, hyphens and
+// apostrophes only — mirrors backend/internal/account/service.go's
+// validateNameFormat, kept as the single source of truth for the rule.
+const nameValidation = { required: true, maxLength: NAME_MAX_LENGTH, pattern: NAME_PATTERN }
 
 function toPayload(values: AccountSignupFormValues): CreateAccountPayload {
   return {
@@ -112,16 +117,32 @@ export function AccountSignupForm() {
             <label className={labelClass} htmlFor="firstName">
               Nombre
             </label>
-            <input id="firstName" className={inputClass} {...register('firstName', { required: true })} />
-            {errors.firstName && <span role="alert" className={errorClass}>El nombre es obligatorio</span>}
+            <input id="firstName" className={inputClass} {...register('firstName', nameValidation)} />
+            {errors.firstName?.type === 'required' && (
+              <span role="alert" className={errorClass}>El nombre es obligatorio</span>
+            )}
+            {errors.firstName?.type === 'maxLength' && (
+              <span role="alert" className={errorClass}>El nombre debe tener máximo 100 caracteres</span>
+            )}
+            {errors.firstName?.type === 'pattern' && (
+              <span role="alert" className={errorClass}>El nombre solo puede contener letras, espacios, guiones y apóstrofes</span>
+            )}
           </div>
 
           <div>
             <label className={labelClass} htmlFor="lastName">
               Apellido
             </label>
-            <input id="lastName" className={inputClass} {...register('lastName', { required: true })} />
-            {errors.lastName && <span role="alert" className={errorClass}>El apellido es obligatorio</span>}
+            <input id="lastName" className={inputClass} {...register('lastName', nameValidation)} />
+            {errors.lastName?.type === 'required' && (
+              <span role="alert" className={errorClass}>El apellido es obligatorio</span>
+            )}
+            {errors.lastName?.type === 'maxLength' && (
+              <span role="alert" className={errorClass}>El apellido debe tener máximo 100 caracteres</span>
+            )}
+            {errors.lastName?.type === 'pattern' && (
+              <span role="alert" className={errorClass}>El apellido solo puede contener letras, espacios, guiones y apóstrofes</span>
+            )}
           </div>
         </div>
 

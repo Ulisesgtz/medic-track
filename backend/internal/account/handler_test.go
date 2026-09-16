@@ -116,6 +116,25 @@ func TestHandler_CreateAccount_MissingRequiredFields(t *testing.T) {
 	require.Equal(t, "validation_error", resp["error"])
 }
 
+// TestHandler_CreateAccount_InvalidNameFormat covers the server-side
+// character-set/length rule enforced independently of whatever the client
+// already validated (defense in depth, mirroring the freemium check).
+func TestHandler_CreateAccount_InvalidNameFormat(t *testing.T) {
+	router := newTestRouter(t)
+
+	rec := doPost(t, router, map[string]any{
+		"firstName": "Ana123",
+		"lastName":  "Gómez",
+		"email":     uniqueEmail("handler.invalid-name"),
+	})
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	require.Equal(t, "validation_error", resp["error"])
+}
+
 func TestHandler_CreateAccount_DuplicateEmail(t *testing.T) {
 	router := newTestRouter(t)
 	body := map[string]any{
@@ -146,8 +165,8 @@ func TestHandler_CreateAccount_FreemiumLimit(t *testing.T) {
 		"lastName":  "Ruiz",
 		"email":     uniqueEmail("handler.freemium"),
 		"children": []map[string]any{
-			{"firstName": "Hijo1", "lastName": "Ruiz", "birthDate": "2018-01-01"},
-			{"firstName": "Hijo2", "lastName": "Ruiz", "birthDate": "2021-01-01"},
+			{"firstName": "Hijo Uno", "lastName": "Ruiz", "birthDate": "2018-01-01"},
+			{"firstName": "Hijo Dos", "lastName": "Ruiz", "birthDate": "2021-01-01"},
 		},
 	})
 

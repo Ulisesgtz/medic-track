@@ -1,5 +1,8 @@
 import type { UseFormRegister, FieldErrors } from 'react-hook-form'
 import type { AccountSignupFormValues } from './types'
+import { NAME_MAX_LENGTH, NAME_PATTERN } from './types'
+
+const nameValidation = { required: true, maxLength: NAME_MAX_LENGTH, pattern: NAME_PATTERN }
 
 interface ChildFieldsetProps {
   index: number
@@ -51,11 +54,21 @@ export function ChildFieldset({ index, register, errors, onRemove }: ChildFields
           <input
             id={`children.${index}.firstName`}
             className={inputClass}
-            {...register(`children.${index}.firstName`, { required: true })}
+            {...register(`children.${index}.firstName`, nameValidation)}
           />
-          {childErrors?.firstName && (
+          {childErrors?.firstName?.type === 'required' && (
             <span role="alert" className={errorClass}>
               El nombre del hijo es obligatorio
+            </span>
+          )}
+          {childErrors?.firstName?.type === 'maxLength' && (
+            <span role="alert" className={errorClass}>
+              El nombre del hijo debe tener máximo 100 caracteres
+            </span>
+          )}
+          {childErrors?.firstName?.type === 'pattern' && (
+            <span role="alert" className={errorClass}>
+              El nombre del hijo solo puede contener letras, espacios, guiones y apóstrofes
             </span>
           )}
         </div>
@@ -67,11 +80,21 @@ export function ChildFieldset({ index, register, errors, onRemove }: ChildFields
           <input
             id={`children.${index}.lastName`}
             className={inputClass}
-            {...register(`children.${index}.lastName`, { required: true })}
+            {...register(`children.${index}.lastName`, nameValidation)}
           />
-          {childErrors?.lastName && (
+          {childErrors?.lastName?.type === 'required' && (
             <span role="alert" className={errorClass}>
               El apellido del hijo es obligatorio
+            </span>
+          )}
+          {childErrors?.lastName?.type === 'maxLength' && (
+            <span role="alert" className={errorClass}>
+              El apellido del hijo debe tener máximo 100 caracteres
+            </span>
+          )}
+          {childErrors?.lastName?.type === 'pattern' && (
+            <span role="alert" className={errorClass}>
+              El apellido del hijo solo puede contener letras, espacios, guiones y apóstrofes
             </span>
           )}
         </div>

@@ -24,6 +24,11 @@
 
 - Q: ¿El aviso de límite freemium debe seguir siendo un banner inline en la página, o debe convertirse en una ventana emergente (pop-up modal) con dos botones explícitos ("Ver planes" y "Quedarme con el plan gratuito")? → A: Ventana emergente (pop-up modal), con ambos botones. Esto **reemplaza** las menciones a "banner" de las sesiones anteriores en la Historia 3, FR-007 y los Casos Límite — el comportamiento de fondo (no crear el segundo bloque de hijo, no perder datos del tutor/primer hijo) no cambia, solo la presentación visual y la adición del botón explícito para quedarse en el plan gratuito (antes solo existía "cerrar" implícito).
 
+### Sesión 2026-09-15 (revisión 3)
+
+- Q: ¿Qué caracteres deben permitirse en los campos de nombre y apellido (tutor e hijo)? → A: Solo letras (incluyendo acentuadas y ñ), espacios, guiones y apóstrofes, para permitir nombres compuestos y apellidos como "O'Higgins" o "Núñez-Gómez". Se rechazan dígitos y símbolos (p. ej. `<`, `@`, `#`).
+- Q: ¿Cuál es la longitud máxima para nombre y apellido? → A: 100 caracteres.
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 - Crear cuenta de padre/tutor (Prioridad: P1)
@@ -96,9 +101,10 @@ Un padre/tutor con plan gratuito intenta agregar un segundo hijo y el sistema le
 ### Requisitos Funcionales
 
 - **FR-001**: El sistema DEBE permitir crear una cuenta de padre/tutor con nombre, apellido y correo electrónico como campos obligatorios, y país y estado como campos opcionales, seleccionables desde un catálogo predefinido (no texto libre).
+- **FR-001a**: Los campos de nombre y apellido (del tutor y de cada hijo, ver FR-004) DEBEN aceptar únicamente letras (incluyendo acentuadas y ñ), espacios, guiones y apóstrofes, con una longitud máxima de 100 caracteres. El sistema DEBE rechazar valores con dígitos u otros símbolos, o que excedan ese máximo, tanto en el cliente como en el servidor (defensa en profundidad, igual que FR-007).
 - **FR-002**: El sistema DEBE validar que el correo electrónico tenga un formato válido y sea único entre las cuentas existentes.
 - **FR-003**: El sistema DEBE permitir agregar hijos dentro del mismo formulario de creación de cuenta, mediante un botón "Agregar hijo" que revela dinámicamente los campos de un nuevo hijo — hasta el límite que permita el plan de la cuenta (1 hijo en el plan gratuito, ver FR-007). Al alcanzar el límite, el botón NO DEBE revelar un bloque adicional; en su lugar aplica FR-007.
-- **FR-004**: Por cada hijo agregado, el sistema DEBE requerir nombre, apellido y fecha de nacimiento (como campos separados, igual que en la Cuenta), y DEBE permitir talla y peso como campos opcionales.
+- **FR-004**: Por cada hijo agregado, el sistema DEBE requerir nombre, apellido y fecha de nacimiento (como campos separados, igual que en la Cuenta), y DEBE permitir talla y peso como campos opcionales. El nombre y apellido del hijo están sujetos a la misma regla de formato y longitud que FR-001a.
 - **FR-005**: El sistema DEBE validar que la fecha de nacimiento de un hijo no sea una fecha futura.
 - **FR-006**: El sistema DEBE permitir remover un bloque de hijo ya agregado **antes** de guardar la cuenta (mientras el formulario no se ha persistido).
 - **FR-006a**: Una vez que un hijo queda persistido (la cuenta fue guardada exitosamente), el sistema NO DEBE permitir eliminarlo bajo ninguna circunstancia en esta fase, y NO DEBE permitir editar su nombre, apellido ni fecha de nacimiento (una futura tarea de edición solo permitirá modificar talla y peso). Razón: evitar que una cuenta con plan gratuito "rote" hijos (elimina uno, agrega otro) para dar de alta más niños de los que su plan permite.

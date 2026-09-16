@@ -45,7 +45,7 @@ test.describe('Registro de cuenta de usuario', () => {
     await page.getByLabel('Correo electrónico').fill(email)
 
     await page.getByRole('button', { name: 'Agregar hijo' }).click()
-    await page.locator('#children\\.0\\.firstName').fill('Hijo1')
+    await page.locator('#children\\.0\\.firstName').fill('Hijo Uno')
     await page.locator('#children\\.0\\.lastName').fill('Ruiz')
     await page.locator('#children\\.0\\.birthDate').fill('2018-01-01')
 
@@ -58,7 +58,7 @@ test.describe('Registro de cuenta de usuario', () => {
 
     // The tutor and first-child data already entered must not be lost.
     await expect(page.locator('#firstName')).toHaveValue('Carla')
-    await expect(page.locator('#children\\.0\\.firstName')).toHaveValue('Hijo1')
+    await expect(page.locator('#children\\.0\\.firstName')).toHaveValue('Hijo Uno')
 
     // Closing via "Quedarme con el plan gratuito" dismisses the modal.
     await page.getByRole('button', { name: 'Quedarme con el plan gratuito' }).click()
@@ -77,7 +77,7 @@ test.describe('Registro de cuenta de usuario', () => {
     await page.getByLabel('Correo electrónico').fill(`diego.e2e.${Date.now()}@example.com`)
 
     await page.getByRole('button', { name: 'Agregar hijo' }).click()
-    await page.locator('#children\\.0\\.firstName').fill('Hijo1')
+    await page.locator('#children\\.0\\.firstName').fill('Hijo Uno')
     await page.locator('#children\\.0\\.lastName').fill('Torres')
     await page.locator('#children\\.0\\.birthDate').fill('2019-01-01')
     await page.getByRole('button', { name: 'Agregar hijo' }).click()
@@ -144,6 +144,46 @@ test.describe('Validaciones del formulario (navegador real)', () => {
     // The browser's native <input type="date"> min/max isn't set, so this
     // reaches the server, which must reject it (no success message shown).
     await expect(page.getByText('Cuenta creada exitosamente.')).not.toBeVisible()
+  })
+
+  test('nombre con caracteres no alfanuméricos: muestra error y no envía la solicitud', async ({
+    page,
+  }) => {
+    let postCalled = false
+    await page.route('**/accounts', async (route) => {
+      postCalled = true
+      await route.continue()
+    })
+
+    await page.goto('/signup')
+    await page.getByLabel('Nombre').fill('Ana123')
+    await page.getByLabel('Apellido').fill('Gómez')
+    await page.getByLabel('Correo electrónico').fill(`ana.e2e.${Date.now()}@example.com`)
+    await page.getByRole('button', { name: 'Guardar' }).click()
+
+    await expect(
+      page.getByText('El nombre solo puede contener letras, espacios, guiones y apóstrofes'),
+    ).toBeVisible()
+    expect(postCalled).toBe(false)
+  })
+
+  test('nombre que excede el máximo de 100 caracteres: muestra error y no envía la solicitud', async ({
+    page,
+  }) => {
+    let postCalled = false
+    await page.route('**/accounts', async (route) => {
+      postCalled = true
+      await route.continue()
+    })
+
+    await page.goto('/signup')
+    await page.getByLabel('Nombre').fill('a'.repeat(101))
+    await page.getByLabel('Apellido').fill('Gómez')
+    await page.getByLabel('Correo electrónico').fill(`ana.e2e.${Date.now()}@example.com`)
+    await page.getByRole('button', { name: 'Guardar' }).click()
+
+    await expect(page.getByText('El nombre debe tener máximo 100 caracteres')).toBeVisible()
+    expect(postCalled).toBe(false)
   })
 
   test('correo duplicado: el servidor responde 409 y el mensaje se muestra (FR-002)', async ({

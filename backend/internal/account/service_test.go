@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -66,6 +67,21 @@ func TestService_CreateAccount_Validation(t *testing.T) {
 			input:         account.CreateAccountInput{FirstName: "Ana", LastName: "Gómez", Email: "not-an-email"},
 			wantFieldErrs: []string{"email"},
 		},
+		{
+			name:          "first name contains digits",
+			input:         account.CreateAccountInput{FirstName: "Ana123", LastName: "Gómez", Email: "valid@example.com"},
+			wantFieldErrs: []string{"firstName"},
+		},
+		{
+			name:          "first name contains symbols",
+			input:         account.CreateAccountInput{FirstName: "<Ana>", LastName: "Gómez", Email: "valid@example.com"},
+			wantFieldErrs: []string{"firstName"},
+		},
+		{
+			name:          "last name exceeds max length",
+			input:         account.CreateAccountInput{FirstName: "Ana", LastName: strings.Repeat("a", 101), Email: "valid@example.com"},
+			wantFieldErrs: []string{"lastName"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -83,6 +99,35 @@ func TestService_CreateAccount_Validation(t *testing.T) {
 			for _, want := range tt.wantFieldErrs {
 				require.True(t, gotFields[want], "expected a validation error on field %q, got %+v", want, validationErrs)
 			}
+		})
+	}
+}
+
+// TestService_CreateAccount_NameFormatAccepted covers names that must pass
+// the character-set/length rule (letters incl. accents/ñ, spaces, hyphens,
+// apostrophes, max 100 chars) rather than be rejected by it.
+func TestService_CreateAccount_NameFormatAccepted(t *testing.T) {
+	pool := testPool(t)
+	svc := account.NewService(account.NewRepository(pool))
+
+	tests := []struct {
+		name      string
+		firstName string
+		lastName  string
+	}{
+		{name: "accents, ñ, hyphen and apostrophe", firstName: "María José", lastName: "Núñez-O'Higgins"},
+		{name: "first name at exactly 100 characters", firstName: strings.Repeat("a", 100), lastName: "Gómez"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := svc.CreateAccount(context.Background(), account.CreateAccountInput{
+				FirstName: tt.firstName,
+				LastName:  tt.lastName,
+				Email:     uniqueEmail("name-format-ok"),
+			})
+
+			require.NoError(t, err)
 		})
 	}
 }
@@ -131,6 +176,16 @@ func TestService_CreateAccount_ChildValidation(t *testing.T) {
 			},
 			wantFieldErrs: []string{"children[0].weight"},
 		},
+		{
+			name:          "child first name contains digits",
+			child:         account.CreateChildInput{FirstName: "Luis3", LastName: "Gómez", BirthDate: time.Now().AddDate(-2, 0, 0)},
+			wantFieldErrs: []string{"children[0].firstName"},
+		},
+		{
+			name:          "child last name exceeds max length",
+			child:         account.CreateChildInput{FirstName: "Luis", LastName: strings.Repeat("a", 101), BirthDate: time.Now().AddDate(-2, 0, 0)},
+			wantFieldErrs: []string{"children[0].lastName"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -170,8 +225,8 @@ func TestService_CreateAccount_FreemiumLimit(t *testing.T) {
 		LastName:  "Ruiz",
 		Email:     uniqueEmail("carla.freemium.test"),
 		Children: []account.CreateChildInput{
-			{FirstName: "Hijo1", LastName: "Ruiz", BirthDate: time.Now().AddDate(-3, 0, 0)},
-			{FirstName: "Hijo2", LastName: "Ruiz", BirthDate: time.Now().AddDate(-1, 0, 0)},
+			{FirstName: "Hijo Uno", LastName: "Ruiz", BirthDate: time.Now().AddDate(-3, 0, 0)},
+			{FirstName: "Hijo Dos", LastName: "Ruiz", BirthDate: time.Now().AddDate(-1, 0, 0)},
 		},
 	}
 

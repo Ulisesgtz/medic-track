@@ -5,9 +5,19 @@ import (
 	"regexp"
 	"strconv"
 	"time"
+	"unicode/utf8"
 )
 
 var emailPattern = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
+
+// namePattern allows letters (including accented characters and ñ), spaces,
+// hyphens and apostrophes, for compound and hyphenated names. Digits and
+// symbols such as < or @ are rejected.
+var namePattern = regexp.MustCompile(`^[\p{L} '-]+$`)
+
+// nameMaxLength is the maximum length for first/last name fields, for both
+// the tutor and each child.
+const nameMaxLength = 100
 
 // CreateAccountInput is the input to Service.CreateAccount, mirroring the
 // POST /accounts request body (contracts/post-accounts.md).
@@ -91,9 +101,13 @@ func validateCreateAccountInput(input CreateAccountInput) ValidationErrors {
 
 	if input.FirstName == "" {
 		errs = append(errs, ValidationError{Field: "firstName", Message: "first name is required"})
+	} else if err := validateNameFormat(input.FirstName); err != "" {
+		errs = append(errs, ValidationError{Field: "firstName", Message: err})
 	}
 	if input.LastName == "" {
 		errs = append(errs, ValidationError{Field: "lastName", Message: "last name is required"})
+	} else if err := validateNameFormat(input.LastName); err != "" {
+		errs = append(errs, ValidationError{Field: "lastName", Message: err})
 	}
 	if input.Email == "" {
 		errs = append(errs, ValidationError{Field: "email", Message: "email is required"})
@@ -106,9 +120,13 @@ func validateCreateAccountInput(input CreateAccountInput) ValidationErrors {
 		prefix := "children"
 		if c.FirstName == "" {
 			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "firstName"), Message: "first name is required"})
+		} else if err := validateNameFormat(c.FirstName); err != "" {
+			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "firstName"), Message: err})
 		}
 		if c.LastName == "" {
 			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "lastName"), Message: "last name is required"})
+		} else if err := validateNameFormat(c.LastName); err != "" {
+			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "lastName"), Message: err})
 		}
 		if c.BirthDate.IsZero() {
 			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "birthDate"), Message: "birth date is required"})
@@ -129,4 +147,16 @@ func validateCreateAccountInput(input CreateAccountInput) ValidationErrors {
 
 func fieldIndex(prefix string, i int, field string) string {
 	return prefix + "[" + strconv.Itoa(i) + "]." + field
+}
+
+// validateNameFormat checks length and character-set rules shared by every
+// first/last name field. Returns an empty string when the value is valid.
+func validateNameFormat(name string) string {
+	if utf8.RuneCountInString(name) > nameMaxLength {
+		return "must be at most 100 characters"
+	}
+	if !namePattern.MatchString(name) {
+		return "must contain only letters, spaces, hyphens or apostrophes"
+	}
+	return ""
 }

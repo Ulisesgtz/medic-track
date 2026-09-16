@@ -58,6 +58,75 @@ describe('AccountSignupForm', () => {
     expect(screen.getByLabelText('Apellido')).toHaveValue('Gómez')
   })
 
+  it('shows a format error when the tutor first/last name contains non-letter characters', async () => {
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.type(screen.getByLabelText('Nombre'), 'Ana123')
+    await user.type(screen.getByLabelText('Apellido'), '<Gómez>')
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect(
+      await screen.findByText('El nombre solo puede contener letras, espacios, guiones y apóstrofes'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('El apellido solo puede contener letras, espacios, guiones y apóstrofes'),
+    ).toBeInTheDocument()
+  })
+
+  it('shows a max-length error when the tutor first name exceeds 100 characters', async () => {
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.type(screen.getByLabelText('Nombre'), 'a'.repeat(101))
+    await user.type(screen.getByLabelText('Apellido'), 'Gómez')
+    await user.type(screen.getByLabelText('Correo electrónico'), 'ana@example.com')
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect(await screen.findByText('El nombre debe tener máximo 100 caracteres')).toBeInTheDocument()
+  })
+
+  it('accepts names with accents, ñ, hyphens and apostrophes for the tutor', async () => {
+    const user = userEvent.setup()
+    vi.mocked(fetch).mockImplementation(async (_input, init) => {
+      if (init?.method === 'POST') {
+        return {
+          ok: true,
+          json: async () => ({
+            id: '1', firstName: 'María José', lastName: "Núñez-O'Higgins", email: 'maria@example.com',
+            countryCode: null, stateCode: null, plan: 'free', children: [],
+          }),
+        } as Response
+      }
+      return { ok: true, json: async () => [] } as Response
+    })
+    renderForm()
+
+    await user.type(screen.getByLabelText('Nombre'), 'María José')
+    await user.type(screen.getByLabelText('Apellido'), "Núñez-O'Higgins")
+    await user.type(screen.getByLabelText('Correo electrónico'), 'maria@example.com')
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect(await screen.findByText('Cuenta creada exitosamente.')).toBeInTheDocument()
+  })
+
+  it('shows format and max-length errors for a child\'s first/last name', async () => {
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.click(screen.getByRole('button', { name: 'Agregar hijo' }))
+    await user.type(document.getElementById('children.0.firstName')!, 'Luis3')
+    await user.type(document.getElementById('children.0.lastName')!, 'a'.repeat(101))
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect(
+      await screen.findByText('El nombre del hijo solo puede contener letras, espacios, guiones y apóstrofes'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('El apellido del hijo debe tener máximo 100 caracteres'),
+    ).toBeInTheDocument()
+  })
+
   it('reveals exactly one child fieldset when "Agregar hijo" is pressed the first time', async () => {
     const user = userEvent.setup()
     renderForm()

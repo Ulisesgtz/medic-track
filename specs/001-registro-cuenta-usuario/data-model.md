@@ -8,8 +8,8 @@
 | Campo | Tipo | Obligatorio | Notas |
 |---|---|---|---|
 | `id` | UUID | Sí (generado) | Identificador primario |
-| `first_name` | string | Sí | |
-| `last_name` | string | Sí | |
+| `first_name` | string | Sí | Máx. 100 caracteres; solo letras (incl. acentos/ñ), espacios, guiones y apóstrofes (FR-001a) |
+| `last_name` | string | Sí | Máx. 100 caracteres; solo letras (incl. acentos/ñ), espacios, guiones y apóstrofes (FR-001a) |
 | `email` | string | Sí | Único entre cuentas (FR-002); formato validado |
 | `country_code` | string (FK → `countries.code`) | No | Selección de catálogo, no texto libre |
 | `state_code` | string (FK → `states.code`) | No | Selección de catálogo, dependiente del país elegido |
@@ -19,6 +19,7 @@
 **Reglas de validación**:
 - `email` único en toda la tabla (constraint UNIQUE + validación de formato antes de persistir).
 - `country_code`/`state_code`, si se proporcionan, deben existir en el catálogo (FK).
+- `first_name`/`last_name`: formato y longitud validados en servicio (`validateNameFormat`) y con CHECK constraint en base de datos (defensa en profundidad, FR-001a).
 
 ## Entidad: Child (Hijo)
 
@@ -26,8 +27,8 @@
 |---|---|---|---|
 | `id` | UUID | Sí (generado) | Identificador primario |
 | `account_id` | UUID (FK → `accounts.id`) | Sí | Relación con la Cuenta dueña |
-| `first_name` | string | Sí | |
-| `last_name` | string | Sí | |
+| `first_name` | string | Sí | Máx. 100 caracteres; solo letras (incl. acentos/ñ), espacios, guiones y apóstrofes (FR-001a) |
+| `last_name` | string | Sí | Máx. 100 caracteres; solo letras (incl. acentos/ñ), espacios, guiones y apóstrofes (FR-001a) |
 | `birth_date` | date | Sí | No puede ser fecha futura (FR-005) |
 | `height` | numeric | No | Unidad: cm (ver research.md — detalle de implementación) |
 | `weight` | numeric | No | Unidad: kg |
@@ -36,6 +37,7 @@
 **Reglas de validación**:
 - `birth_date <= fecha actual`.
 - `height`, `weight`: si se proporcionan, deben ser numéricos positivos (Caso Límite del spec).
+- `first_name`/`last_name`: formato y longitud validados en servicio y con CHECK constraint en base de datos, igual que en Account (FR-001a).
 - **Inmutabilidad tras persistir** (FR-006a): una vez que la Cuenta se guarda exitosamente, ningún registro de Child es editable en `first_name`, `last_name` ni `birth_date`, y no existe operación de eliminación en esta fase — esto se aplica a nivel de servicio/API (no se exponen endpoints PATCH/DELETE para Child en este alcance), no como restricción de base de datos.
 
 ## Relación
