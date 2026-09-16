@@ -1,0 +1,277 @@
+basePath: /
+definitions:
+  EmailConflictResponse:
+    properties:
+      error:
+        example: email_already_exists
+        type: string
+      message:
+        example: Email is already in use
+        type: string
+    type: object
+  ErrorResponse:
+    properties:
+      error:
+        example: internal_error
+        type: string
+      message:
+        example: Could not create account
+        type: string
+    type: object
+  FieldError:
+    properties:
+      field:
+        example: email
+        type: string
+      message:
+        example: invalid email format
+        type: string
+    type: object
+  FreemiumLimitResponse:
+    properties:
+      error:
+        example: freemium_child_limit_exceeded
+        type: string
+      limit:
+        example: 1
+        type: integer
+      message:
+        example: The free plan includes only one child per account
+        type: string
+      received:
+        example: 2
+        type: integer
+    type: object
+  NotFoundResponse:
+    properties:
+      error:
+        example: country_not_found
+        type: string
+      message:
+        example: Country not found in catalog
+        type: string
+    type: object
+  ValidationErrorResponse:
+    properties:
+      details:
+        items:
+          $ref: '#/definitions/FieldError'
+        type: array
+      error:
+        example: validation_error
+        type: string
+      message:
+        example: One or more fields are invalid
+        type: string
+    type: object
+  internal_account.accountResponse:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/internal_account.childResponse'
+        type: array
+      countryCode:
+        example: MX
+        type: string
+      email:
+        example: ana@example.com
+        type: string
+      firstName:
+        example: Ana
+        type: string
+      id:
+        example: e5f6a7b8-0000-0000-0000-000000000000
+        type: string
+      lastName:
+        example: Gómez
+        type: string
+      plan:
+        example: free
+        type: string
+      stateCode:
+        example: MX-JAL
+        type: string
+    type: object
+  internal_account.childResponse:
+    properties:
+      birthDate:
+        example: "2020-01-15"
+        type: string
+      firstName:
+        example: Luis
+        type: string
+      height:
+        example: 95.5
+        type: number
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      lastName:
+        example: Gómez
+        type: string
+      weight:
+        example: 14.2
+        type: number
+    type: object
+  internal_account.createAccountRequest:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/internal_account.createChildRequest'
+        type: array
+      countryCode:
+        example: MX
+        type: string
+      email:
+        example: ana@example.com
+        type: string
+      firstName:
+        example: Ana
+        type: string
+      lastName:
+        example: Gómez
+        type: string
+      stateCode:
+        example: MX-JAL
+        type: string
+    type: object
+  internal_account.createChildRequest:
+    properties:
+      birthDate:
+        example: "2020-01-15"
+        type: string
+      firstName:
+        example: Luis
+        type: string
+      height:
+        example: 95.5
+        type: number
+      lastName:
+        example: Gómez
+        type: string
+      weight:
+        example: 14.2
+        type: number
+    type: object
+  internal_catalog.countryResponse:
+    properties:
+      code:
+        example: MX
+        type: string
+      name:
+        example: México
+        type: string
+    type: object
+  internal_catalog.stateResponse:
+    properties:
+      code:
+        example: MX-JAL
+        type: string
+      name:
+        example: Jalisco
+        type: string
+    type: object
+info:
+  contact: {}
+  description: |-
+    Backend API for account/children signup and the país/estado catalog.
+    See contracts/post-accounts.md and contracts/get-catalog.md under
+    specs/001-registro-cuenta-usuario/ for the source-of-truth prose contracts.
+  title: PediTrack API
+  version: "1.0"
+paths:
+  /accounts:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Creates a padre/tutor account, optionally with one or more children in the
+        same request. A brand-new account always starts on the free plan, which
+        allows at most 1 child (FR-007) — enforced server-side regardless of what
+        the client already validated. No login/password is accepted here (FR-009).
+      parameters:
+      - description: Account (and optional children) to create
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_account.createAccountRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_account.accountResponse'
+        "400":
+          description: Missing/invalid field, e.g. a malformed email or future birth
+            date
+          schema:
+            $ref: '#/definitions/ValidationErrorResponse'
+        "409":
+          description: Email already in use
+          schema:
+            $ref: '#/definitions/EmailConflictResponse'
+        "422":
+          description: Free plan already has 1 child; upgrade required
+          schema:
+            $ref: '#/definitions/FreemiumLimitResponse'
+        "500":
+          description: Unexpected server error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      summary: Create an account (tutor + optional children)
+      tags:
+      - accounts
+  /catalog/countries:
+    get:
+      description: Read-only catalog used to populate the país selector (contracts/get-catalog.md).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_catalog.countryResponse'
+            type: array
+        "500":
+          description: Unexpected server error
+          schema:
+            $ref: '#/definitions/NotFoundResponse'
+      summary: List countries
+      tags:
+      - catalog
+  /catalog/countries/{countryCode}/states:
+    get:
+      description: |-
+        Used to populate the estado selector. Returns an empty array if the country
+        has no subdivisions in the catalog (contracts/get-catalog.md).
+      parameters:
+      - description: ISO country code
+        example: MX
+        in: path
+        name: countryCode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_catalog.stateResponse'
+            type: array
+        "404":
+          description: countryCode not found in catalog
+          schema:
+            $ref: '#/definitions/NotFoundResponse'
+        "500":
+          description: Unexpected server error
+          schema:
+            $ref: '#/definitions/NotFoundResponse'
+      summary: List states/provinces for a country
+      tags:
+      - catalog
+swagger: "2.0"

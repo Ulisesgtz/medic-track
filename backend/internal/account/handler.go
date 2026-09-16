@@ -20,47 +20,97 @@ func NewHandler(service *Service) *Handler {
 }
 
 type createChildRequest struct {
-	FirstName string   `json:"firstName"`
-	LastName  string   `json:"lastName"`
-	BirthDate string   `json:"birthDate"`
-	Height    *float64 `json:"height"`
-	Weight    *float64 `json:"weight"`
+	FirstName string   `json:"firstName" example:"Luis"`
+	LastName  string   `json:"lastName" example:"Gómez"`
+	BirthDate string   `json:"birthDate" example:"2020-01-15"`
+	Height    *float64 `json:"height" example:"95.5"`
+	Weight    *float64 `json:"weight" example:"14.2"`
 }
 
 type createAccountRequest struct {
-	FirstName   string               `json:"firstName"`
-	LastName    string               `json:"lastName"`
-	Email       string               `json:"email"`
-	CountryCode *string              `json:"countryCode"`
-	StateCode   *string              `json:"stateCode"`
+	FirstName   string               `json:"firstName" example:"Ana"`
+	LastName    string               `json:"lastName" example:"Gómez"`
+	Email       string               `json:"email" example:"ana@example.com"`
+	CountryCode *string              `json:"countryCode" example:"MX"`
+	StateCode   *string              `json:"stateCode" example:"MX-JAL"`
 	Children    []createChildRequest `json:"children"`
 }
 
 type childResponse struct {
-	ID        string   `json:"id"`
-	FirstName string   `json:"firstName"`
-	LastName  string   `json:"lastName"`
-	BirthDate string   `json:"birthDate"`
-	Height    *float64 `json:"height"`
-	Weight    *float64 `json:"weight"`
+	ID        string   `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	FirstName string   `json:"firstName" example:"Luis"`
+	LastName  string   `json:"lastName" example:"Gómez"`
+	BirthDate string   `json:"birthDate" example:"2020-01-15"`
+	Height    *float64 `json:"height" example:"95.5"`
+	Weight    *float64 `json:"weight" example:"14.2"`
 }
 
 type accountResponse struct {
-	ID          string          `json:"id"`
-	FirstName   string          `json:"firstName"`
-	LastName    string          `json:"lastName"`
-	Email       string          `json:"email"`
-	CountryCode *string         `json:"countryCode"`
-	StateCode   *string         `json:"stateCode"`
-	Plan        string          `json:"plan"`
+	ID          string          `json:"id" example:"e5f6a7b8-0000-0000-0000-000000000000"`
+	FirstName   string          `json:"firstName" example:"Ana"`
+	LastName    string          `json:"lastName" example:"Gómez"`
+	Email       string          `json:"email" example:"ana@example.com"`
+	CountryCode *string         `json:"countryCode" example:"MX"`
+	StateCode   *string         `json:"stateCode" example:"MX-JAL"`
+	Plan        string          `json:"plan" example:"free"`
 	Children    []childResponse `json:"children"`
 }
+
+// fieldErrorDoc documents one entry of validationErrorResponse.Details.
+type fieldErrorDoc struct {
+	Field   string `json:"field" example:"email"`
+	Message string `json:"message" example:"invalid email format"`
+} // @name FieldError
+
+// validationErrorResponseDoc documents the 400 body shape (contracts/post-accounts.md).
+type validationErrorResponseDoc struct {
+	Error   string          `json:"error" example:"validation_error"`
+	Message string          `json:"message" example:"One or more fields are invalid"`
+	Details []fieldErrorDoc `json:"details"`
+} // @name ValidationErrorResponse
+
+// emailConflictResponseDoc documents the 409 body shape.
+type emailConflictResponseDoc struct {
+	Error   string `json:"error" example:"email_already_exists"`
+	Message string `json:"message" example:"Email is already in use"`
+} // @name EmailConflictResponse
+
+// errorResponseDoc documents the generic {error, message} shape used by
+// internal/httpx.WriteJSONError (e.g. the 500 internal_error case).
+type errorResponseDoc struct {
+	Error   string `json:"error" example:"internal_error"`
+	Message string `json:"message" example:"Could not create account"`
+} // @name ErrorResponse
+
+// freemiumLimitResponseDoc documents the 422 body shape (FR-007).
+type freemiumLimitResponseDoc struct {
+	Error    string `json:"error" example:"freemium_child_limit_exceeded"`
+	Message  string `json:"message" example:"The free plan includes only one child per account"`
+	Limit    int    `json:"limit" example:"1"`
+	Received int    `json:"received" example:"2"`
+} // @name FreemiumLimitResponse
 
 // maxRequestBodyBytes caps the POST /accounts body to guard against
 // oversized-payload abuse (backend-security-coder: payload size limits).
 const maxRequestBodyBytes = 1 << 20 // 1 MiB
 
 // CreateAccount handles POST /accounts (contracts/post-accounts.md).
+//
+//	@Summary		Create an account (tutor + optional children)
+//	@Description	Creates a padre/tutor account, optionally with one or more children in the
+//	@Description	same request. A brand-new account always starts on the free plan, which
+//	@Description	allows at most 1 child (FR-007) — enforced server-side regardless of what
+//	@Description	the client already validated. No login/password is accepted here (FR-009).
+//	@Tags			accounts
+//	@Accept			json
+//	@Produce		json
+//	@Param			payload	body		createAccountRequest	true	"Account (and optional children) to create"
+//	@Success		201		{object}	accountResponse
+//	@Failure		400		{object}	validationErrorResponseDoc	"Missing/invalid field, e.g. a malformed email or future birth date"
+//	@Failure		409		{object}	emailConflictResponseDoc	"Email already in use"
+//	@Failure		422		{object}	freemiumLimitResponseDoc	"Free plan already has 1 child; upgrade required"
+//	@Failure		500		{object}	errorResponseDoc	"Unexpected server error"
+//	@Router			/accounts [post]
 func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 

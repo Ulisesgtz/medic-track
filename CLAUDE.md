@@ -12,6 +12,7 @@ Pediatric health-record app for parents in Mexico. Built with Spec-Kit (Spec-Dri
 | Frontend PWA | `frontend/` — see `frontend/CLAUDE.md` |
 | Dev server launch config (used by the Browser preview tool) | `.claude/launch.json` |
 | CI (coverage + E2E gates) | `.github/workflows/ci.yml` |
+| API docs (Swagger UI, generated from Go doc comments) | `http://localhost:8080/swagger/index.html` when the backend is running — see `backend/CLAUDE.md` |
 
 ## Current features
 

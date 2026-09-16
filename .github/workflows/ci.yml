@@ -49,6 +49,15 @@ jobs:
         working-directory: backend
         run: go vet ./...
 
+      - name: Verify Swagger docs are up to date
+        working-directory: backend
+        run: |
+          go run github.com/swaggo/swag/cmd/swag init -g cmd/api/main.go -o internal/docs --pd
+          git diff --exit-code -- internal/docs || {
+            echo "::error::internal/docs is out of date — run 'swag init -g cmd/api/main.go -o internal/docs --pd' from backend/ and commit the result.";
+            exit 1;
+          }
+
       - name: Test with coverage
         working-directory: backend
         run: |
