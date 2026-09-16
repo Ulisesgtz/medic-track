@@ -36,11 +36,7 @@ func (r *Repository) Create(ctx context.Context, acc *Account) error {
 	`, acc.FirstName, acc.LastName, acc.Email, acc.CountryCode, acc.StateCode, acc.Plan,
 	).Scan(&acc.ID, &acc.CreatedAt)
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return ErrEmailAlreadyExists
-		}
-		return fmt.Errorf("inserting account: %w", err)
+		return mapInsertError(err, "inserting account")
 	}
 
 	for i := range acc.Children {
@@ -53,7 +49,7 @@ func (r *Repository) Create(ctx context.Context, acc *Account) error {
 		`, child.AccountID, child.FirstName, child.LastName, child.BirthDate, child.Height, child.Weight,
 		).Scan(&child.ID, &child.CreatedAt)
 		if err != nil {
-			return fmt.Errorf("inserting child: %w", err)
+			return mapInsertError(err, "inserting child")
 		}
 	}
 
@@ -61,6 +57,23 @@ func (r *Repository) Create(ctx context.Context, acc *Account) error {
 		return fmt.Errorf("committing transaction: %w", err)
 	}
 	return nil
+}
+
+// mapInsertError translates Postgres constraint-violation error codes into
+// domain errors the handler knows how to turn into a proper 4xx response,
+// instead of letting them fall through to a generic wrapped error (which the
+// handler maps to an opaque 500).
+func mapInsertError(err error, context string) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		switch pgErr.Code {
+		case "23505": // unique_violation
+			return ErrEmailAlreadyExists
+		case "23514": // check_violation — e.g. the name-format/length CHECK constraints
+			return ErrInvalidNameFormat
+		}
+	}
+	return fmt.Errorf("%s: %w", context, err)
 }
 
 // EmailExists reports whether an account with the given email already exists.

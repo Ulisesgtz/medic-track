@@ -101,4 +101,102 @@ describe('ChildFieldset', () => {
     expect(await screen.findByText('El apellido del hijo es obligatorio')).toBeInTheDocument()
     expect(await screen.findByText('La fecha de nacimiento es obligatoria')).toBeInTheDocument()
   })
+
+  it('rejects a negative height/weight but allows leaving them blank', async () => {
+    const user = userEvent.setup()
+
+    function TestHostWithSubmit() {
+      const {
+        register,
+        control,
+        handleSubmit,
+        formState: { errors },
+      } = useForm<AccountSignupFormValues>({
+        defaultValues: { firstName: '', lastName: '', email: '', countryCode: '', stateCode: '', children: [] },
+      })
+      const { fields, append, remove } = useFieldArray({ control, name: 'children' })
+      const submitted = { current: false }
+
+      return (
+        <form
+          onSubmit={handleSubmit(() => {
+            submitted.current = true
+          })}
+        >
+          <button type="button" onClick={() => append(emptyChild)}>
+            Agregar hijo
+          </button>
+          {fields.map((field, index) => (
+            <ChildFieldset
+              key={field.id}
+              index={index}
+              register={register}
+              errors={errors}
+              onRemove={() => remove(index)}
+            />
+          ))}
+          <button type="submit">Guardar</button>
+        </form>
+      )
+    }
+
+    render(<TestHostWithSubmit />)
+    await user.click(screen.getByRole('button', { name: 'Agregar hijo' }))
+    await user.type(document.getElementById('children.0.firstName')!, 'Luis')
+    await user.type(document.getElementById('children.0.lastName')!, 'Gómez')
+    await user.type(document.getElementById('children.0.birthDate')!, '2020-01-15')
+    await user.type(document.getElementById('children.0.height')!, '-5')
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect(await screen.findByText('La talla debe ser un número positivo')).toBeInTheDocument()
+    expect(screen.queryByText('El peso debe ser un número positivo')).not.toBeInTheDocument()
+  })
+
+  it('rejects a negative weight and an over-length/invalid-character name', async () => {
+    const user = userEvent.setup()
+
+    function TestHostWithSubmit() {
+      const {
+        register,
+        control,
+        handleSubmit,
+        formState: { errors },
+      } = useForm<AccountSignupFormValues>({
+        defaultValues: { firstName: '', lastName: '', email: '', countryCode: '', stateCode: '', children: [] },
+      })
+      const { fields, append, remove } = useFieldArray({ control, name: 'children' })
+
+      return (
+        <form onSubmit={handleSubmit(() => {})}>
+          <button type="button" onClick={() => append(emptyChild)}>
+            Agregar hijo
+          </button>
+          {fields.map((field, index) => (
+            <ChildFieldset
+              key={field.id}
+              index={index}
+              register={register}
+              errors={errors}
+              onRemove={() => remove(index)}
+            />
+          ))}
+          <button type="submit">Guardar</button>
+        </form>
+      )
+    }
+
+    render(<TestHostWithSubmit />)
+    await user.click(screen.getByRole('button', { name: 'Agregar hijo' }))
+    await user.type(document.getElementById('children.0.firstName')!, 'a'.repeat(101))
+    await user.type(document.getElementById('children.0.lastName')!, 'Gómez3')
+    await user.type(document.getElementById('children.0.birthDate')!, '2020-01-15')
+    await user.type(document.getElementById('children.0.weight')!, '-2')
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect(await screen.findByText('El nombre del hijo debe tener máximo 100 caracteres')).toBeInTheDocument()
+    expect(
+      screen.getByText('El apellido del hijo solo puede contener letras, espacios, guiones y apóstrofes'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('El peso debe ser un número positivo')).toBeInTheDocument()
+  })
 })

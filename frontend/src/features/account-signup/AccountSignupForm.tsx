@@ -45,6 +45,7 @@ export function AccountSignupForm() {
     register,
     control,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<AccountSignupFormValues>({
     defaultValues: {
@@ -164,7 +165,18 @@ export function AccountSignupForm() {
             <label className={labelClass} htmlFor="countryCode">
               País <span className="font-normal text-slate-400">(opcional)</span>
             </label>
-            <select id="countryCode" className={inputClass} {...register('countryCode')}>
+            <select
+              id="countryCode"
+              className={inputClass}
+              {...register('countryCode', {
+                // A previously-selected estado belongs to the previous país
+                // and must not be silently carried over/submitted (a stale
+                // country/state pair would otherwise be persisted as-is,
+                // since the backend only checks each code exists, not that
+                // they match each other).
+                onChange: () => setValue('stateCode', ''),
+              })}
+            >
               <option value="">Selecciona un país</option>
               {countries?.map((c) => (
                 <option key={c.code} value={c.code}>
@@ -236,6 +248,20 @@ export function AccountSignupForm() {
         signup.error.kind === 'email_already_exists' && (
           <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
             Este correo ya está en uso.
+          </p>
+        )}
+
+      {/* Fallback for any other server rejection (e.g. a field the client
+          didn't validate, like a negative height/weight, or an unexpected
+          network/response error) — without this, those errors previously
+          failed silently with the Guardar button just stopping. */}
+      {signup.isError &&
+        !showFreemiumModal &&
+        !(signup.error instanceof CreateAccountError && signup.error.kind === 'email_already_exists') && (
+          <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {signup.error instanceof CreateAccountError
+              ? (signup.error.message ?? 'Ocurrió un error al guardar la cuenta. Intenta de nuevo.')
+              : 'Ocurrió un error al guardar la cuenta. Intenta de nuevo.'}
           </p>
         )}
 

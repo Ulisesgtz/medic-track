@@ -14,13 +14,30 @@ interface FreemiumLimitModalProps {
  */
 export function FreemiumLimitModal({ onViewPlans, onStayFree }: FreemiumLimitModalProps) {
   const stayButtonRef = useRef<HTMLButtonElement>(null)
+  const viewPlansButtonRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     stayButtonRef.current?.focus()
 
+    // Minimal focus trap: with only two focusable elements in the dialog,
+    // Tab/Shift+Tab just needs to cycle between them instead of letting
+    // focus escape to the page behind the (still-visible) overlay.
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         onStayFree()
+        return
+      }
+      if (event.key !== 'Tab') return
+
+      const active = document.activeElement
+      if (event.shiftKey) {
+        if (active === stayButtonRef.current) {
+          event.preventDefault()
+          viewPlansButtonRef.current?.focus()
+        }
+      } else if (active === viewPlansButtonRef.current) {
+        event.preventDefault()
+        stayButtonRef.current?.focus()
       }
     }
     document.addEventListener('keydown', handleKeyDown)
@@ -75,6 +92,7 @@ export function FreemiumLimitModal({ onViewPlans, onStayFree }: FreemiumLimitMod
             Quedarme con el plan gratuito
           </button>
           <button
+            ref={viewPlansButtonRef}
             type="button"
             onClick={onViewPlans}
             className="cursor-pointer rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition-colors duration-200 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"

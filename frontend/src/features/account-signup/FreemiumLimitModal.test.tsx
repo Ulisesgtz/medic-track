@@ -61,4 +61,27 @@ describe('FreemiumLimitModal', () => {
 
     expect(onStayFree).toHaveBeenCalledOnce()
   })
+
+  it('traps Tab focus between the two buttons instead of letting it escape the dialog', async () => {
+    const user = userEvent.setup()
+    render(<FreemiumLimitModal onViewPlans={() => {}} onStayFree={() => {}} />)
+
+    const stayButton = screen.getByRole('button', { name: 'Quedarme con el plan gratuito' })
+    const viewPlansButton = screen.getByRole('button', { name: 'Ver planes' })
+    expect(stayButton).toHaveFocus()
+
+    await user.tab()
+    expect(viewPlansButton).toHaveFocus()
+
+    await user.tab()
+    expect(stayButton).toHaveFocus()
+
+    await user.tab({ shift: true })
+    expect(viewPlansButton).toHaveFocus()
+
+    // Shift+Tab from viewPlansButton (not the trap's wrap-point) falls
+    // through to the browser's normal backward-tab behavior.
+    await user.tab({ shift: true })
+    expect(stayButton).toHaveFocus()
+  })
 })

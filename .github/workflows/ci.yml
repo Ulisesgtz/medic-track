@@ -1,0 +1,175 @@
+name: CI
+
+# Enforces constitution Principio VI: >90% unit test coverage (Go + React)
+# as a merge-blocking gate, plus a separate Playwright E2E gate.
+
+on:
+  pull_request:
+    branches: [develop, master]
+  push:
+    branches: [develop, master]
+
+env:
+  DATABASE_URL: postgres://postgres:postgres@localhost:5432/peditrack_test?sslmode=disable
+
+jobs:
+  backend-coverage:
+    name: Backend — tests + >90% coverage gate
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: peditrack_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+
+      - name: Apply migrations
+        run: |
+          for f in backend/migrations/*.sql; do
+            echo "Applying $f"
+            psql "$DATABASE_URL" -f "$f"
+          done
+        env:
+          PGPASSWORD: postgres
+
+      - name: go vet
+        working-directory: backend
+        run: go vet ./...
+
+      - name: Test with coverage
+        working-directory: backend
+        run: |
+          go test ./internal/... -coverprofile=coverage.out
+          go tool cover -func=coverage.out | tee coverage.txt
+
+      - name: Enforce >90% coverage on internal packages
+        working-directory: backend
+        run: |
+          total=$(grep '^total:' coverage.txt | awk '{print $3}' | tr -d '%')
+          echo "Total coverage (internal/...): ${total}%"
+          awk -v t="$total" 'BEGIN { exit (t+0 < 90) }'
+        # Note: cmd/api (wiring-only entry point) is intentionally excluded
+        # from this gate — see backend/CLAUDE.md for the open question on
+        # whether/how to test it.
+
+  frontend-coverage:
+    name: Frontend — unit tests + >90% coverage gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Type-check
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Lint
+        working-directory: frontend
+        run: npx eslint .
+
+      - name: Unit tests with coverage
+        working-directory: frontend
+        # vitest.config.ts already sets thresholds: 90% lines/functions/branches/statements
+        # and fails the run (non-zero exit) if any metric is below that.
+        run: npx vitest run --coverage
+
+  frontend-e2e:
+    name: Frontend — Playwright E2E gate
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: peditrack_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Apply migrations
+        run: |
+          for f in backend/migrations/*.sql; do
+            psql "$DATABASE_URL" -f "$f"
+          done
+        env:
+          PGPASSWORD: postgres
+
+      - name: Start backend API
+        working-directory: backend
+        run: nohup go run ./cmd/api > /tmp/backend.log 2>&1 &
+        env:
+          FRONTEND_ORIGIN: http://localhost:5173
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: npx playwright install --with-deps
+
+      - name: Start frontend dev server
+        working-directory: frontend
+        run: nohup npm run dev > /tmp/frontend.log 2>&1 &
+
+      - name: Wait for servers
+        run: |
+          npx wait-on http://localhost:8080/catalog/countries http://localhost:5173 --timeout 60000
+
+      - name: Run Playwright E2E suite
+        working-directory: frontend
+        run: npx playwright test
+
+      - name: Upload backend/frontend logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-logs
+          path: |
+            /tmp/backend.log
+            /tmp/frontend.log
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/

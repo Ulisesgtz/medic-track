@@ -11,6 +11,11 @@ var (
 	// ErrFreemiumChildLimitExceeded is returned when a free-plan account
 	// attempts to persist more than one child (FR-007).
 	ErrFreemiumChildLimitExceeded = errors.New("the free plan includes only one child per account")
+
+	// ErrInvalidNameFormat is returned when the database's name format/length
+	// CHECK constraint rejects a row that passed service-layer validation —
+	// defense in depth against drift between the two (FR-001a).
+	ErrInvalidNameFormat = errors.New("name contains invalid characters or exceeds the maximum length")
 )
 
 // ValidationError describes a single field-level validation failure.

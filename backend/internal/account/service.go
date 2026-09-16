@@ -53,15 +53,18 @@ func NewService(repo *Repository) *Service {
 // CreateAccount validates input and persists a new Account (with its
 // Children, if any and if allowed by the plan).
 func (s *Service) CreateAccount(ctx context.Context, input CreateAccountInput) (*Account, error) {
-	if errs := validateCreateAccountInput(input); errs.HasErrors() {
-		return nil, errs
-	}
-
 	// FR-007: a brand-new account is always on the free plan, which allows
 	// at most one child. This check runs server-side regardless of what the
-	// client already validated (defense in depth, per research.md).
+	// client already validated (defense in depth, per research.md), and
+	// BEFORE field-level validation so a caller bypassing the client's own
+	// 1-child cap always gets the freemium-limit response rather than a
+	// generic validation error about some unrelated field on the extra child.
 	if len(input.Children) > 1 {
 		return nil, ErrFreemiumChildLimitExceeded
+	}
+
+	if errs := validateCreateAccountInput(input); errs.HasErrors() {
+		return nil, errs
 	}
 
 	exists, err := s.repo.EmailExists(ctx, input.Email)

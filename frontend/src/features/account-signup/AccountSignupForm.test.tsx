@@ -200,6 +200,46 @@ describe('AccountSignupForm', () => {
     expect(await screen.findByRole('option', { name: 'Jalisco' })).toBeInTheDocument()
   })
 
+  it('clears the selected estado when the país changes', async () => {
+    const user = userEvent.setup()
+    vi.mocked(fetch).mockImplementation(async (input) => {
+      const url = String(input)
+      if (url.includes('/catalog/countries/MX/states')) {
+        return { ok: true, json: async () => [{ code: 'MX-JAL', name: 'Jalisco' }] } as Response
+      }
+      if (url.includes('/states')) {
+        return { ok: true, json: async () => [] } as Response
+      }
+      if (url.includes('/catalog/countries')) {
+        return {
+          ok: true,
+          json: async () => [
+            { code: 'MX', name: 'México' },
+            { code: 'US', name: 'Estados Unidos' },
+          ],
+        } as Response
+      }
+      return { ok: true, json: async () => [] } as Response
+    })
+    renderForm()
+
+    await screen.findByRole('option', { name: 'México' })
+    await user.selectOptions(screen.getByLabelText(/País/), 'MX')
+    await user.selectOptions(await screen.findByLabelText(/Estado/), 'MX-JAL')
+    expect(screen.getByLabelText(/Estado/)).toHaveValue('MX-JAL')
+
+    // US has no states in this mock, so the estado select unmounts — the
+    // stale "MX-JAL" value must not linger in the form state.
+    await user.selectOptions(screen.getByLabelText(/País/), 'US')
+    expect(screen.queryByLabelText(/Estado/)).not.toBeInTheDocument()
+
+    // Switching back to MX must show the placeholder, not the previously
+    // selected "Jalisco" — proving the underlying form value was cleared,
+    // not just the <select> unmounted while keeping its old value.
+    await user.selectOptions(screen.getByLabelText(/País/), 'MX')
+    expect(await screen.findByLabelText(/Estado/)).toHaveValue('')
+  })
+
   it('removes a child fieldset when "Quitar hijo" is pressed', async () => {
     const user = userEvent.setup()
     renderForm()
@@ -255,6 +295,76 @@ describe('AccountSignupForm', () => {
     await user.click(screen.getByRole('button', { name: 'Guardar' }))
 
     expect(await screen.findByText('Este correo ya está en uso.')).toBeInTheDocument()
+  })
+
+  it('shows the server message for a generic validation error the client did not catch', async () => {
+    const user = userEvent.setup()
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      if (init?.method === 'POST') {
+        return {
+          ok: false,
+          status: 400,
+          json: async () => ({
+            error: 'validation_error',
+            message: 'One or more fields are invalid',
+            details: [{ field: 'children[0].height', message: 'height must be a positive number' }],
+          }),
+        } as Response
+      }
+      return { ok: true, json: async () => [] } as Response
+    })
+    renderForm()
+
+    await user.type(screen.getByLabelText('Nombre'), 'Ana')
+    await user.type(screen.getByLabelText('Apellido'), 'Gómez')
+    await user.type(screen.getByLabelText('Correo electrónico'), 'ana@example.com')
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect(await screen.findByText('One or more fields are invalid')).toBeInTheDocument()
+  })
+
+  it('navigates to /planes when "Ver planes" is pressed in the freemium pop-up', async () => {
+    const user = userEvent.setup()
+    const assignSpy = vi.fn()
+    vi.stubGlobal('location', { ...window.location, assign: assignSpy })
+    renderForm()
+
+    await user.click(screen.getByRole('button', { name: 'Agregar hijo' }))
+    await user.click(screen.getByRole('button', { name: 'Agregar hijo' }))
+    await screen.findByRole('dialog')
+
+    await user.click(screen.getByRole('button', { name: 'Ver planes' }))
+
+    expect(assignSpy).toHaveBeenCalledWith('/planes')
+  })
+
+  it('resets a server-driven freemium error when "Quedarme con el plan gratuito" is pressed', async () => {
+    const user = userEvent.setup()
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      if (init?.method === 'POST') {
+        return {
+          ok: false,
+          status: 422,
+          json: async () => ({
+            error: 'freemium_child_limit_exceeded',
+            message: 'The free plan includes only one child per account',
+          }),
+        } as Response
+      }
+      return { ok: true, json: async () => [] } as Response
+    })
+    renderForm()
+
+    await user.type(screen.getByLabelText('Nombre'), 'Ana')
+    await user.type(screen.getByLabelText('Apellido'), 'Gómez')
+    await user.type(screen.getByLabelText('Correo electrónico'), 'ana@example.com')
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+    await screen.findByRole('dialog')
+
+    await user.click(screen.getByRole('button', { name: 'Quedarme con el plan gratuito' }))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(screen.queryByText('The free plan includes only one child per account')).not.toBeInTheDocument()
   })
 
   it('sends numeric height/weight when provided for a child', async () => {

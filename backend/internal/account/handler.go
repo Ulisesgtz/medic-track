@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 	"time"
+
+	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 )
 
 // Handler exposes the account HTTP endpoints.
@@ -64,7 +66,7 @@ func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 
 	var req createAccountRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "validation_error", "Malformed JSON body")
+		httpx.WriteJSONError(w, http.StatusBadRequest, "validation_error", "Malformed JSON body")
 		return
 	}
 
@@ -84,7 +86,7 @@ func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 				writeValidationError(w, []ValidationError{{
 					Field:   fieldIndex("children", i, "birthDate"),
 					Message: "birth date must be an ISO-8601 date (YYYY-MM-DD)",
-				}})
+				}}, "One or more fields are invalid")
 				return
 			}
 			birthDate = parsed
@@ -104,38 +106,47 @@ func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, toAccountResponse(acc))
+	httpx.WriteJSON(w, http.StatusCreated, toAccountResponse(acc))
 }
 
 func (h *Handler) writeCreateAccountError(w http.ResponseWriter, err error, receivedChildren int) {
 	var validationErrs ValidationErrors
 	switch {
 	case errors.As(err, &validationErrs):
-		writeValidationError(w, validationErrs)
+		writeValidationError(w, validationErrs, "One or more fields are invalid")
 	case errors.Is(err, ErrEmailAlreadyExists):
-		writeJSON(w, http.StatusConflict, map[string]string{
+		httpx.WriteJSON(w, http.StatusConflict, map[string]string{
 			"error":   "email_already_exists",
 			"message": "Email is already in use",
 		})
 	case errors.Is(err, ErrFreemiumChildLimitExceeded):
-		writeJSON(w, http.StatusUnprocessableEntity, map[string]any{
+		httpx.WriteJSON(w, http.StatusUnprocessableEntity, map[string]any{
 			"error":    "freemium_child_limit_exceeded",
 			"message":  "The free plan includes only one child per account",
 			"limit":    1,
 			"received": receivedChildren,
 		})
+	case errors.Is(err, ErrInvalidNameFormat):
+		// Defense-in-depth: the DB CHECK constraint on name format/length
+		// rejected the row even though the service-layer check passed (e.g. a
+		// bug or drift between the two). Surface it as a validation error
+		// rather than an opaque 500, since it's really an input problem.
+		writeValidationError(w, []ValidationError{
+			{Field: "firstName", Message: "must contain only letters, spaces, hyphens or apostrophes, and be at most 100 characters"},
+		}, "One or more fields are invalid")
 	default:
-		writeJSONError(w, http.StatusInternalServerError, "internal_error", "Could not create account")
+		httpx.WriteJSONError(w, http.StatusInternalServerError, "internal_error", "Could not create account")
 	}
 }
 
-func writeValidationError(w http.ResponseWriter, errs []ValidationError) {
+func writeValidationError(w http.ResponseWriter, errs []ValidationError, message string) {
 	details := make([]map[string]string, 0, len(errs))
 	for _, e := range errs {
 		details = append(details, map[string]string{"field": e.Field, "message": e.Message})
 	}
-	writeJSON(w, http.StatusBadRequest, map[string]any{
+	httpx.WriteJSON(w, http.StatusBadRequest, map[string]any{
 		"error":   "validation_error",
+		"message": message,
 		"details": details,
 	})
 }
@@ -162,14 +173,4 @@ func toAccountResponse(acc *Account) accountResponse {
 		Plan:        string(acc.Plan),
 		Children:    children,
 	}
-}
-
-func writeJSON(w http.ResponseWriter, status int, body any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(body)
-}
-
-func writeJSONError(w http.ResponseWriter, status int, code, message string) {
-	writeJSON(w, status, map[string]string{"error": code, "message": message})
 }

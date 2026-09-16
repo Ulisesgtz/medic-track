@@ -3,6 +3,7 @@ package account_test
 import (
 	"context"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -69,6 +70,24 @@ func TestRepository_EmailExists_ConnectionError(t *testing.T) {
 	_, err := repo.EmailExists(context.Background(), "irrelevant@example.com")
 
 	require.Error(t, err)
+}
+
+// TestRepository_Create_NameLengthCheckConstraint covers the defense-in-depth
+// DB CHECK constraint (migration 0004): a name exceeding 100 characters that
+// somehow bypasses service-layer validation must map to ErrInvalidNameFormat,
+// not a raw wrapped error the handler would turn into a 500.
+func TestRepository_Create_NameLengthCheckConstraint(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+
+	err := repo.Create(context.Background(), &account.Account{
+		FirstName: strings.Repeat("a", 101),
+		LastName:  "Gómez",
+		Email:     uniqueEmail("check-constraint.repo.test"),
+		Plan:      account.PlanFree,
+	})
+
+	require.ErrorIs(t, err, account.ErrInvalidNameFormat)
 }
 
 func TestRepository_Create_ConnectionError(t *testing.T) {

@@ -4,6 +4,12 @@ import { NAME_MAX_LENGTH, NAME_PATTERN } from './types'
 
 const nameValidation = { required: true, maxLength: NAME_MAX_LENGTH, pattern: NAME_PATTERN }
 
+// Height/weight are optional, but if provided must be positive — mirrors
+// backend/internal/account/service.go's `c.Height <= 0`/`c.Weight <= 0`
+// checks, catching the invalid case client-side instead of only server-side
+// (where a rejection previously showed no error message at all).
+const positiveNumberValidation = { min: { value: 0.01, message: 'must be positive' } }
+
 interface ChildFieldsetProps {
   index: number
   register: UseFormRegister<AccountSignupFormValues>
@@ -127,8 +133,13 @@ export function ChildFieldset({ index, register, errors, onRemove }: ChildFields
               step="0.1"
               placeholder="Opcional"
               className={inputClass}
-              {...register(`children.${index}.height`)}
+              {...register(`children.${index}.height`, positiveNumberValidation)}
             />
+            {childErrors?.height?.type === 'min' && (
+              <span role="alert" className={errorClass}>
+                La talla debe ser un número positivo
+              </span>
+            )}
           </div>
           <div>
             <label className={labelClass} htmlFor={`children.${index}.weight`}>
@@ -140,8 +151,13 @@ export function ChildFieldset({ index, register, errors, onRemove }: ChildFields
               step="0.1"
               placeholder="Opcional"
               className={inputClass}
-              {...register(`children.${index}.weight`)}
+              {...register(`children.${index}.weight`, positiveNumberValidation)}
             />
+            {childErrors?.weight?.type === 'min' && (
+              <span role="alert" className={errorClass}>
+                El peso debe ser un número positivo
+              </span>
+            )}
           </div>
         </div>
       </div>
