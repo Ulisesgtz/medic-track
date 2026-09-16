@@ -160,8 +160,12 @@ jobs:
         run: nohup npm run dev > /tmp/frontend.log 2>&1 &
 
       - name: Wait for servers
+        # wait-on's http:// scheme probes with HEAD by default, and chi
+        # (the backend's router) doesn't auto-map HEAD to GET handlers, so a
+        # plain http:// URL gets a 405 forever even once the server is up.
+        # http-get:// forces a GET probe instead.
         run: |
-          npx wait-on http://localhost:8080/catalog/countries http://localhost:5173 --timeout 60000
+          npx wait-on http-get://localhost:8080/catalog/countries http-get://localhost:5173 --timeout 60000
 
       - name: Run Playwright E2E suite
         working-directory: frontend
