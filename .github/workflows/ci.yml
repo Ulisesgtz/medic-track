@@ -155,30 +155,28 @@ jobs:
         working-directory: frontend
         run: npx playwright install --with-deps
 
-      - name: Start frontend dev server
-        working-directory: frontend
-        run: nohup npm run dev > /tmp/frontend.log 2>&1 &
-
-      - name: Wait for servers
+      - name: Wait for backend
         # wait-on's http:// scheme probes with HEAD by default, and chi
         # (the backend's router) doesn't auto-map HEAD to GET handlers, so a
         # plain http:// URL gets a 405 forever even once the server is up.
         # http-get:// forces a GET probe instead.
         run: |
-          npx wait-on http-get://localhost:8080/catalog/countries http-get://localhost:5173 --timeout 60000
+          npx wait-on http-get://localhost:8080/catalog/countries --timeout 60000
 
       - name: Run Playwright E2E suite
         working-directory: frontend
+        # playwright.config.ts's webServer starts the frontend dev server
+        # itself and waits for it — don't also start one here, or Playwright
+        # refuses to bind :5173 ("already used") since reuseExistingServer
+        # is false in CI (process.env.CI is set).
         run: npx playwright test
 
-      - name: Upload backend/frontend logs on failure
+      - name: Upload backend log on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: server-logs
-          path: |
-            /tmp/backend.log
-            /tmp/frontend.log
+          path: /tmp/backend.log
 
       - name: Upload Playwright report on failure
         if: failure()
