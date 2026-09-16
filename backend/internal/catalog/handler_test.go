@@ -10,12 +10,15 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
+	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
+	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 )
 
 func newTestRouter(t *testing.T) http.Handler {
 	pool := testPool(t)
 	repo := catalog.NewRepository(pool)
-	h := catalog.NewHandler(repo)
+	responder := httpx.NewResponder(errorlog.NewRepository(pool))
+	h := catalog.NewHandler(repo, responder)
 
 	r := chi.NewRouter()
 	r.Get("/catalog/countries", h.ListCountries)
@@ -40,7 +43,8 @@ func TestHandler_ListCountries(t *testing.T) {
 func TestHandler_InternalErrors(t *testing.T) {
 	dsn := testDSN(t)
 	repo := catalog.NewRepository(closedPool(t, dsn))
-	h := catalog.NewHandler(repo)
+	responder := httpx.NewResponder(errorlog.NewRepository(closedPool(t, dsn)))
+	h := catalog.NewHandler(repo, responder)
 
 	r := chi.NewRouter()
 	r.Get("/catalog/countries", h.ListCountries)

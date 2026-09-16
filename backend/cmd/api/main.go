@@ -22,6 +22,8 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	_ "github.com/Ulisesgtz/medic-track/backend/internal/docs"
+	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
+	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/platform"
 )
 
@@ -34,12 +36,15 @@ func main() {
 	}
 	defer pool.Close()
 
+	errorLogRepo := errorlog.NewRepository(pool)
+	responder := httpx.NewResponder(errorLogRepo)
+
 	catalogRepo := catalog.NewRepository(pool)
-	catalogHandler := catalog.NewHandler(catalogRepo)
+	catalogHandler := catalog.NewHandler(catalogRepo, responder)
 
 	accountRepo := account.NewRepository(pool)
 	accountService := account.NewService(accountRepo)
-	accountHandler := account.NewHandler(accountService)
+	accountHandler := account.NewHandler(accountService, responder)
 
 	frontendOrigin := os.Getenv("FRONTEND_ORIGIN")
 	if frontendOrigin == "" {

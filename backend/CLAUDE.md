@@ -15,9 +15,10 @@ Module: `github.com/Ulisesgtz/medic-track/backend`. Router: `chi`. DB: PostgreSQ
 | `internal/account/handler.go` | `POST /accounts` — request/response shapes, maps domain errors → HTTP status |
 | `internal/catalog/` | Read-only country/state catalog (`GET /catalog/countries`, `GET /catalog/countries/{code}/states`) |
 | `internal/platform/db.go` | `NewPostgresPool` — reads `DATABASE_URL` |
-| `internal/httpx/` | Shared `WriteJSON`/`WriteJSONError` response helpers — used by both `account` and `catalog` handlers, don't reintroduce per-package copies |
+| `internal/httpx/` | `Responder` (constructed via `NewResponder(recorder)`) — `WriteJSON`/`WriteJSONError` methods used by both `account` and `catalog` handlers; every 4xx/5xx response it writes is automatically logged to `error_logs` in a background goroutine, see "Automatic error logging" below |
+| `internal/errorlog/` | `Entry` model + `Repository.Create` — persists rows in `error_logs` (specs/002-registro-log-errores); no read/query in this scope on purpose |
 | `internal/docs/` | **Generated** OpenAPI/Swagger docs (`docs.go`, `swagger.json`, `swagger.yaml`) — do not hand-edit, see "API docs (Swagger)" below |
-| `migrations/*.sql` | Schema, applied manually (no migration tool wired in yet) — `0001` catalog tables + México seed, `0002` accounts, `0003` children, `0004` name length CHECK constraints |
+| `migrations/*.sql` | Schema, applied manually (no migration tool wired in yet) — `0001` catalog tables + México seed, `0002` accounts, `0003` children, `0004` name length CHECK constraints, `0005` `error_logs` table |
 | `.github/workflows/ci.yml` | CI: backend coverage gate (incl. verifying Swagger docs are up to date), frontend coverage gate, Playwright E2E gate — all merge-blocking per constitution Principio VI |
 
 ## Known cross-cutting rules to keep in sync when touching name/account fields
@@ -25,6 +26,16 @@ Module: `github.com/Ulisesgtz/medic-track/backend`. Router: `chi`. DB: PostgreSQ
 - Name format rule (letters incl. accents/ñ, spaces, hyphens, apostrophes, max 100 chars) is owned by the **application layer only** — `internal/account/service.go`'s `namePattern` (Go `\p{L}`) and `frontend/src/features/account-signup/types.ts`'s `NAME_PATTERN` (JS `\p{L}`), which agree since both use the full Unicode "letter" category. The DB CHECK constraint (`migrations/0004_add_name_constraints.sql`) deliberately enforces **length only** — an earlier version also checked character set with an explicit Latin-1 range, which silently diverged from `\p{L}` and rejected valid non-Latin names as an opaque 500; don't reintroduce a character-class regex there.
 - Freemium child limit (`1`) is a bare literal in `service.go`'s `CreateAccount` and a separate constant in `frontend/.../AccountSignupForm.tsx` (`FREE_PLAN_CHILD_LIMIT`) — update both if the limit or plan model changes.
 - `CreateAccount` checks the freemium limit **before** field-level validation, so a request with 2+ children always gets `422 freemium_child_limit_exceeded` rather than a `400` about some unrelated field on the extra child.
+
+## Automatic error logging (specs/002-registro-log-errores)
+
+Every handler constructor now takes a `*httpx.Responder` (built once in `cmd/api/main.go` via `httpx.NewResponder(errorlog.NewRepository(pool))`) instead of calling package-level `httpx` functions. Any response written through `Responder.WriteJSON`/`WriteJSONError` with a 4xx/5xx status is automatically logged to `error_logs` — no handler code has to opt in per call site. Key points if you touch this:
+
+- **Never call the old `httpx.WriteJSON`/`httpx.WriteJSONError` package functions** — they don't exist anymore; use `h.responder.WriteJSON(ctx, w, status, body, accountID)` (pass `accountID` as `nil` when no account is known yet, e.g. before signup succeeds).
+- File/line are captured automatically via `runtime.Caller` inside `Responder.record` — don't add a `file`/`line` parameter to handler call sites, and don't add another layer of indirection between a handler and `Responder` without checking the `skip` offset in `internal/httpx/json.go` still resolves correctly.
+- The actual DB write happens in a detached background goroutine with its own timeout — a slow/down `error_logs` insert must never delay or break the HTTP response already sent (verified by `TestResponder_WriteJSONError_RecorderFailureDoesNotAffectResponse` and the latency test in `internal/httpx/json_test.go`).
+- The log NEVER stores the user's email — only `account_id` (nullable UUID). Don't add an email field to `errorlog.Entry`.
+- No read/query endpoint, and no retention/purge policy exist for `error_logs` on purpose — see `BACKLOG.md`.
 
 ## API docs (Swagger)
 
