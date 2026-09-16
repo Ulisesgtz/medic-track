@@ -10,12 +10,13 @@ import (
 
 // Handler exposes the read-only catalog HTTP endpoints.
 type Handler struct {
-	repo *Repository
+	repo      *Repository
+	responder *httpx.Responder
 }
 
 // NewHandler creates a catalog Handler backed by the given repository.
-func NewHandler(repo *Repository) *Handler {
-	return &Handler{repo: repo}
+func NewHandler(repo *Repository, responder *httpx.Responder) *Handler {
+	return &Handler{repo: repo, responder: responder}
 }
 
 type countryResponse struct {
@@ -47,7 +48,7 @@ type notFoundResponseDoc struct {
 func (h *Handler) ListCountries(w http.ResponseWriter, r *http.Request) {
 	countries, err := h.repo.ListCountries(r.Context())
 	if err != nil {
-		httpx.WriteJSONError(w, http.StatusInternalServerError, "internal_error", "Could not load countries")
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not load countries", nil)
 		return
 	}
 
@@ -55,7 +56,7 @@ func (h *Handler) ListCountries(w http.ResponseWriter, r *http.Request) {
 	for _, c := range countries {
 		resp = append(resp, countryResponse{Code: c.Code, Name: c.Name})
 	}
-	httpx.WriteJSON(w, http.StatusOK, resp)
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, resp, nil)
 }
 
 // ListStates handles GET /catalog/countries/{countryCode}/states.
@@ -75,17 +76,17 @@ func (h *Handler) ListStates(w http.ResponseWriter, r *http.Request) {
 
 	exists, err := h.repo.CountryExists(r.Context(), countryCode)
 	if err != nil {
-		httpx.WriteJSONError(w, http.StatusInternalServerError, "internal_error", "Could not verify country")
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not verify country", nil)
 		return
 	}
 	if !exists {
-		httpx.WriteJSONError(w, http.StatusNotFound, "country_not_found", "Country not found in catalog")
+		h.responder.WriteJSONError(r.Context(), w, http.StatusNotFound, "country_not_found", "Country not found in catalog", nil)
 		return
 	}
 
 	states, err := h.repo.ListStatesByCountry(r.Context(), countryCode)
 	if err != nil {
-		httpx.WriteJSONError(w, http.StatusInternalServerError, "internal_error", "Could not load states")
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not load states", nil)
 		return
 	}
 
@@ -93,5 +94,5 @@ func (h *Handler) ListStates(w http.ResponseWriter, r *http.Request) {
 	for _, s := range states {
 		resp = append(resp, stateResponse{Code: s.Code, Name: s.Name})
 	}
-	httpx.WriteJSON(w, http.StatusOK, resp)
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, resp, nil)
 }

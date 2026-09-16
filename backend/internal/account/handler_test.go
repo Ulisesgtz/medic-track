@@ -11,13 +11,16 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
+	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
+	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 )
 
 func newTestRouter(t *testing.T) http.Handler {
 	pool := testPool(t)
 	repo := account.NewRepository(pool)
 	svc := account.NewService(repo)
-	h := account.NewHandler(svc)
+	responder := httpx.NewResponder(errorlog.NewRepository(pool))
+	h := account.NewHandler(svc, responder)
 
 	r := chi.NewRouter()
 	r.Post("/accounts", h.CreateAccount)
