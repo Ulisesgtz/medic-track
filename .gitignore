@@ -1,6 +1,5 @@
 # Go
-/bin/
-/dist/
+bin/
 *.exe
 *.test
 *.out
@@ -8,8 +7,11 @@ vendor/
 
 # Node / React
 node_modules/
-/build/
-/coverage/
+dist/
+build/
+coverage/
+playwright-report/
+test-results/
 .env
 .env.local
 .env.*.local
