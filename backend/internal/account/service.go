@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 	"unicode/utf8"
+
+	"github.com/google/uuid"
 )
 
 var emailPattern = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
@@ -18,6 +20,13 @@ var namePattern = regexp.MustCompile(`^[\p{L} '-]+$`)
 // nameMaxLength is the maximum length for first/last name fields, for both
 // the tutor and each child.
 const nameMaxLength = 100
+
+// freePlanChildLimit is the single source of truth for "how many children a
+// free-plan account may have" — both CreateAccount and AddChild check
+// against this constant instead of separately-worded literals (see
+// backend/CLAUDE.md's note on the freemium limit being a manual-sync risk;
+// this at least collapses the two backend copies into one).
+const freePlanChildLimit = 1
 
 // CreateAccountInput is the input to Service.CreateAccount, mirroring the
 // POST /accounts request body (contracts/post-accounts.md).
@@ -59,7 +68,7 @@ func (s *Service) CreateAccount(ctx context.Context, input CreateAccountInput) (
 	// BEFORE field-level validation so a caller bypassing the client's own
 	// 1-child cap always gets the freemium-limit response rather than a
 	// generic validation error about some unrelated field on the extra child.
-	if len(input.Children) > 1 {
+	if len(input.Children) > freePlanChildLimit {
 		return nil, ErrFreemiumChildLimitExceeded
 	}
 
@@ -99,6 +108,61 @@ func (s *Service) CreateAccount(ctx context.Context, input CreateAccountInput) (
 	return acc, nil
 }
 
+// GetAccount retrieves an account and its children by id, for the home page
+// listing (specs/003-home-listado-hijos FR-001).
+func (s *Service) GetAccount(ctx context.Context, id uuid.UUID) (*Account, error) {
+	return s.repo.GetByID(ctx, id)
+}
+
+// AddChild adds a single child to an already-existing account, reusing the
+// same field validation (validateChildFields) as CreateAccount
+// (specs/003-home-listado-hijos FR-004). The freemium 1-child limit check
+// and the insert happen atomically in the repository (AddChildIfUnderLimit,
+// under a row lock) — unlike CreateAccount, where the limit check race-frees
+// itself by running before the account even exists, AddChild's account
+// already exists and could otherwise race with a second concurrent request.
+func (s *Service) AddChild(ctx context.Context, accountID uuid.UUID, input CreateChildInput) (*Account, error) {
+	if errs := validateChildFields(input); len(errs) > 0 {
+		return nil, ValidationErrors(errs)
+	}
+
+	return s.repo.AddChildIfUnderLimit(ctx, accountID, input, freePlanChildLimit)
+}
+
+// validateChildFields validates a single child's fields (name format/length,
+// birth date, height/weight), with field names unprefixed (e.g. "firstName",
+// not "children[0].firstName"). validateCreateAccountInput wraps these with
+// an index prefix for its multi-child case; AddChild uses them as-is since it
+// only ever validates one child at a time.
+func validateChildFields(c CreateChildInput) []ValidationError {
+	var errs []ValidationError
+
+	if c.FirstName == "" {
+		errs = append(errs, ValidationError{Field: "firstName", Message: "first name is required"})
+	} else if err := validateNameFormat(c.FirstName); err != "" {
+		errs = append(errs, ValidationError{Field: "firstName", Message: err})
+	}
+	if c.LastName == "" {
+		errs = append(errs, ValidationError{Field: "lastName", Message: "last name is required"})
+	} else if err := validateNameFormat(c.LastName); err != "" {
+		errs = append(errs, ValidationError{Field: "lastName", Message: err})
+	}
+	if c.BirthDate.IsZero() {
+		errs = append(errs, ValidationError{Field: "birthDate", Message: "birth date is required"})
+	} else if c.BirthDate.After(time.Now()) {
+		// FR-005: birth date must not be in the future.
+		errs = append(errs, ValidationError{Field: "birthDate", Message: "birth date cannot be in the future"})
+	}
+	if c.Height != nil && *c.Height <= 0 {
+		errs = append(errs, ValidationError{Field: "height", Message: "height must be a positive number"})
+	}
+	if c.Weight != nil && *c.Weight <= 0 {
+		errs = append(errs, ValidationError{Field: "weight", Message: "weight must be a positive number"})
+	}
+
+	return errs
+}
+
 func validateCreateAccountInput(input CreateAccountInput) ValidationErrors {
 	var errs ValidationErrors
 
@@ -118,30 +182,9 @@ func validateCreateAccountInput(input CreateAccountInput) ValidationErrors {
 		errs = append(errs, ValidationError{Field: "email", Message: "invalid email format"})
 	}
 
-	now := time.Now()
 	for i, c := range input.Children {
-		prefix := "children"
-		if c.FirstName == "" {
-			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "firstName"), Message: "first name is required"})
-		} else if err := validateNameFormat(c.FirstName); err != "" {
-			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "firstName"), Message: err})
-		}
-		if c.LastName == "" {
-			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "lastName"), Message: "last name is required"})
-		} else if err := validateNameFormat(c.LastName); err != "" {
-			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "lastName"), Message: err})
-		}
-		if c.BirthDate.IsZero() {
-			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "birthDate"), Message: "birth date is required"})
-		} else if c.BirthDate.After(now) {
-			// FR-005: birth date must not be in the future.
-			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "birthDate"), Message: "birth date cannot be in the future"})
-		}
-		if c.Height != nil && *c.Height <= 0 {
-			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "height"), Message: "height must be a positive number"})
-		}
-		if c.Weight != nil && *c.Weight <= 0 {
-			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "weight"), Message: "weight must be a positive number"})
+		for _, e := range validateChildFields(c) {
+			errs = append(errs, ValidationError{Field: fieldIndex("children", i, e.Field), Message: e.Message})
 		}
 	}
 

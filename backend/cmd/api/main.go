@@ -66,6 +66,8 @@ func main() {
 	r.Get("/catalog/countries/{countryCode}/states", catalogHandler.ListStates)
 
 	r.Post("/accounts", accountHandler.CreateAccount)
+	r.Get("/accounts/{accountId}", accountHandler.GetAccount)
+	r.Post("/accounts/{accountId}/children", accountHandler.AddChild)
 
 	// Swagger UI, generated from the @swag annotations on the handlers below
 	// (run `swag init` from backend/ after changing any of them — see

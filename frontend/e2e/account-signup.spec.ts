@@ -14,7 +14,9 @@ test.describe('Registro de cuenta de usuario', () => {
 
     await page.getByRole('button', { name: 'Guardar' }).click()
 
-    await expect(page.getByText('Cuenta creada exitosamente.')).toBeVisible()
+    // FR-003: a successful signup navigates straight to the home page.
+    await expect(page).toHaveURL(/\/home/)
+    await expect(page.getByRole('heading', { name: 'Mis hijos' })).toBeVisible()
   })
 
   test('Escenario 2 — crear cuenta con un hijo', async ({ page }) => {
@@ -31,7 +33,8 @@ test.describe('Registro de cuenta de usuario', () => {
 
     await page.getByRole('button', { name: 'Guardar' }).click()
 
-    await expect(page.getByText('Cuenta creada exitosamente.')).toBeVisible()
+    await expect(page).toHaveURL(/\/home/)
+    await expect(page.getByText('Luis Gómez')).toBeVisible()
   })
 
   test('Escenario 4 — pop-up freemium al intentar un segundo hijo, sin crear su formulario', async ({
@@ -66,7 +69,7 @@ test.describe('Registro de cuenta de usuario', () => {
 
     // Saving with just the one allowed child still works normally.
     await page.getByRole('button', { name: 'Guardar' }).click()
-    await expect(page.getByText('Cuenta creada exitosamente.')).toBeVisible()
+    await expect(page).toHaveURL(/\/home/)
   })
 
   test('Escenario 4b — el botón "Ver planes" del pop-up freemium redirige', async ({ page }) => {
@@ -142,8 +145,8 @@ test.describe('Validaciones del formulario (navegador real)', () => {
     await page.getByRole('button', { name: 'Guardar' }).click()
 
     // The browser's native <input type="date"> min/max isn't set, so this
-    // reaches the server, which must reject it (no success message shown).
-    await expect(page.getByText('Cuenta creada exitosamente.')).not.toBeVisible()
+    // reaches the server, which must reject it — no navigation to /home.
+    await expect(page).toHaveURL(/\/signup/)
   })
 
   test('nombre con caracteres no alfanuméricos: muestra error y no envía la solicitud', async ({
@@ -196,7 +199,7 @@ test.describe('Validaciones del formulario (navegador real)', () => {
     await page.getByLabel('Apellido').fill('Gómez')
     await page.getByLabel('Correo electrónico').fill(email)
     await page.getByRole('button', { name: 'Guardar' }).click()
-    await expect(page.getByText('Cuenta creada exitosamente.')).toBeVisible()
+    await expect(page).toHaveURL(/\/home/)
 
     // Try to create a second account with the exact same email.
     await page.goto('/signup')

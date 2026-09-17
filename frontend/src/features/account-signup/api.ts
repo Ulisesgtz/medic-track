@@ -1,3 +1,5 @@
+import { ApiError, type ValidationErrorDetail } from '../../shared/apiError'
+
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 
 export interface CreateChildPayload {
@@ -28,26 +30,12 @@ export interface CreateAccountResponse {
   children: Array<CreateChildPayload & { id: string }>
 }
 
-export interface ValidationErrorDetail {
-  field: string
-  message: string
-}
+export type { ValidationErrorDetail }
 
 /** Discriminated error thrown by createAccount so callers can branch on `kind`. */
-export class CreateAccountError extends Error {
-  kind: 'validation_error' | 'email_already_exists' | 'freemium_child_limit_exceeded' | 'unknown'
-  details?: ValidationErrorDetail[]
-
-  constructor(
-    kind: CreateAccountError['kind'],
-    message: string,
-    details?: ValidationErrorDetail[],
-  ) {
-    super(message)
-    this.kind = kind
-    this.details = details
-  }
-}
+export class CreateAccountError extends ApiError<
+  'validation_error' | 'email_already_exists' | 'freemium_child_limit_exceeded' | 'unknown'
+> {}
 
 export async function createAccount(
   payload: CreateAccountPayload,

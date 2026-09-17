@@ -16,7 +16,25 @@ var (
 	// CHECK constraint rejects a row that passed service-layer validation —
 	// defense in depth against drift between the two (FR-001a).
 	ErrInvalidNameFormat = errors.New("name contains invalid characters or exceeds the maximum length")
+
+	// ErrAccountNotFound is returned when no account exists for a given id —
+	// e.g. an accountId saved in the browser that no longer corresponds to
+	// any account server-side (specs/003-home-listado-hijos FR-002).
+	ErrAccountNotFound = errors.New("account not found")
 )
+
+// FreemiumLimitError wraps ErrFreemiumChildLimitExceeded with the actual
+// limit/received counts, so a caller that needs those numbers (e.g.
+// handler.go's 422 response body) doesn't have to hardcode or re-derive
+// them. errors.Is(err, ErrFreemiumChildLimitExceeded) still matches via
+// Unwrap.
+type FreemiumLimitError struct {
+	Limit    int
+	Received int
+}
+
+func (e *FreemiumLimitError) Error() string { return ErrFreemiumChildLimitExceeded.Error() }
+func (e *FreemiumLimitError) Unwrap() error { return ErrFreemiumChildLimitExceeded }
 
 // ValidationError describes a single field-level validation failure.
 type ValidationError struct {

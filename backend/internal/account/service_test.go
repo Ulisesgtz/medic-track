@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 
@@ -233,4 +234,93 @@ func TestService_CreateAccount_FreemiumLimit(t *testing.T) {
 	_, err := svc.CreateAccount(context.Background(), input)
 
 	require.ErrorIs(t, err, account.ErrFreemiumChildLimitExceeded)
+}
+
+// TestService_GetAccount_NotFound covers specs/003-home-listado-hijos FR-002.
+func TestService_GetAccount_NotFound(t *testing.T) {
+	pool := testPool(t)
+	svc := account.NewService(account.NewRepository(pool))
+
+	_, err := svc.GetAccount(context.Background(), uuid.New())
+
+	require.ErrorIs(t, err, account.ErrAccountNotFound)
+}
+
+// TestService_AddChild_Success covers adding a child under the freemium
+// limit to an account that starts with none.
+func TestService_AddChild_Success(t *testing.T) {
+	pool := testPool(t)
+	svc := account.NewService(account.NewRepository(pool))
+
+	acc, err := svc.CreateAccount(context.Background(), account.CreateAccountInput{
+		FirstName: "Ana", LastName: "Gómez", Email: uniqueEmail("addchild.success"),
+	})
+	require.NoError(t, err)
+
+	updated, err := svc.AddChild(context.Background(), acc.ID, account.CreateChildInput{
+		FirstName: "Luis", LastName: "Gómez", BirthDate: time.Now().AddDate(-2, 0, 0),
+	})
+	require.NoError(t, err)
+	require.Len(t, updated.Children, 1)
+	require.Equal(t, "Luis", updated.Children[0].FirstName)
+}
+
+// TestService_AddChild_FreemiumLimit covers FR-004's acceptance scenario 2:
+// a free-plan account that already has 1 child gets the freemium error when
+// trying to add a second, and no child is created.
+func TestService_AddChild_FreemiumLimit(t *testing.T) {
+	pool := testPool(t)
+	svc := account.NewService(account.NewRepository(pool))
+
+	acc, err := svc.CreateAccount(context.Background(), account.CreateAccountInput{
+		FirstName: "Carla", LastName: "Ruiz", Email: uniqueEmail("addchild.freemium"),
+		Children: []account.CreateChildInput{
+			{FirstName: "Hijo Uno", LastName: "Ruiz", BirthDate: time.Now().AddDate(-3, 0, 0)},
+		},
+	})
+	require.NoError(t, err)
+
+	_, err = svc.AddChild(context.Background(), acc.ID, account.CreateChildInput{
+		FirstName: "Hijo Dos", LastName: "Ruiz", BirthDate: time.Now().AddDate(-1, 0, 0),
+	})
+
+	require.ErrorIs(t, err, account.ErrFreemiumChildLimitExceeded)
+
+	got, err := svc.GetAccount(context.Background(), acc.ID)
+	require.NoError(t, err)
+	require.Len(t, got.Children, 1)
+}
+
+// TestService_AddChild_AccountNotFound covers the 404 case in
+// contracts/post-account-children.md.
+func TestService_AddChild_AccountNotFound(t *testing.T) {
+	pool := testPool(t)
+	svc := account.NewService(account.NewRepository(pool))
+
+	_, err := svc.AddChild(context.Background(), uuid.New(), account.CreateChildInput{
+		FirstName: "Luis", LastName: "Gómez", BirthDate: time.Now().AddDate(-2, 0, 0),
+	})
+
+	require.ErrorIs(t, err, account.ErrAccountNotFound)
+}
+
+// TestService_AddChild_FieldValidation covers the 400 case: invalid child
+// fields on an account that has room for another child.
+func TestService_AddChild_FieldValidation(t *testing.T) {
+	pool := testPool(t)
+	svc := account.NewService(account.NewRepository(pool))
+
+	acc, err := svc.CreateAccount(context.Background(), account.CreateAccountInput{
+		FirstName: "Ana", LastName: "Gómez", Email: uniqueEmail("addchild.validation"),
+	})
+	require.NoError(t, err)
+
+	_, err = svc.AddChild(context.Background(), acc.ID, account.CreateChildInput{
+		LastName: "Gómez", BirthDate: time.Now().AddDate(-2, 0, 0),
+	})
+
+	require.Error(t, err)
+	var validationErrs account.ValidationErrors
+	require.ErrorAs(t, err, &validationErrs)
+	require.Equal(t, "firstName", validationErrs[0].Field)
 }

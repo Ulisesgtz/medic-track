@@ -73,6 +73,100 @@ const docTemplate = `{
                 }
             }
         },
+        "/accounts/{accountId}": {
+            "get": {
+                "description": "Retrieves an account (tutor + children) by id, to populate the home page's\nchildren listing (FR-001). No authentication — the account id acts as a\nde facto access token, a deliberate continuation of the posture already\naccepted in specs/001/002 (see plan.md's privacy note).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Get an account and its children",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.accountResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AccountNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}/children": {
+            "post": {
+                "description": "Adds a single child to an account already created, from the home page's\n\"Agregar hijo\" modal (FR-004). Applies the same field validation and\nfreemium 1-child limit as POST /accounts.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Add a child to an existing account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Child to add",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.createChildRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.accountResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing/invalid field",
+                        "schema": {
+                            "$ref": "#/definitions/ValidationErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AccountNotFoundResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Free plan already has 1 child; upgrade required",
+                        "schema": {
+                            "$ref": "#/definitions/FreemiumLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/catalog/countries": {
             "get": {
                 "description": "Read-only catalog used to populate the país selector (contracts/get-catalog.md).",
@@ -149,6 +243,19 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "AccountNotFoundResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "account_not_found"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Account not found"
+                }
+            }
+        },
         "EmailConflictResponse": {
             "type": "object",
             "properties": {

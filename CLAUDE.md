@@ -18,7 +18,8 @@ Pediatric health-record app for parents in Mexico. Built with Spec-Kit (Spec-Dri
 ## Current features
 
 - `specs/001-registro-cuenta-usuario/` — account signup (tutor + children), freemium 1-child limit, name format/length validation. Implemented on branch `feature/001-registro-cuenta-usuario`, PR: https://github.com/Ulisesgtz/medic-track/pull/1 (base `develop`), merged to `develop`.
-- `specs/002-registro-log-errores/` — automatic error logging hook: every 4xx/5xx response gets logged to `error_logs` (message, HTTP status, endpoint, file/line, optional account_id — never email) via `internal/httpx`'s `Responder`, without any handler opting in per call site. Implemented on branch `feature/002-registro-log-errores`, not yet merged. No read/query endpoint and no retention policy by design — see `BACKLOG.md`.
+- `specs/002-registro-log-errores/` — automatic error logging hook: every 4xx/5xx response gets logged to `error_logs` (message, HTTP status, endpoint, file/line, optional account_id — never email) via `internal/httpx`'s `Responder`, without any handler opting in per call site. Implemented on branch `feature/002-registro-log-errores`, merged to `develop`.
+- `specs/003-home-listado-hijos/` — home page: lists the tutor's children (name + age), "Agregar hijo" modal reusing feature 001's form/freemium limit, and the no-auth `account_id`-in-`localStorage` "session" used to return to the home without a real login. Adds `GET /accounts/{accountId}` and `POST /accounts/{accountId}/children` to `internal/account`. Implemented on branch `feature/003-home-listado-hijos`, not yet merged.
 
 ## Conventions (full detail in the constitution)
 
@@ -30,4 +31,5 @@ Pediatric health-record app for parents in Mexico. Built with Spec-Kit (Spec-Dri
   - Frontend E2E: `cd frontend && npx playwright test` (needs backend + frontend dev servers running)
 - **CI**: `.github/workflows/ci.yml` runs the backend coverage gate, frontend coverage gate, and Playwright E2E gate on every PR/push to `develop`/`master`. `cmd/api` (Go entrypoint wiring) is excluded from the backend coverage gate — standing open question, not yet resolved with the user.
 - **When you add a new module/feature**: update this file and the relevant `backend/CLAUDE.md`/`frontend/CLAUDE.md` map — they don't update themselves.
+- **Every new backend endpoint MUST write its responses through `*httpx.Responder`** (see backend/CLAUDE.md's "Automatic error logging") so it's automatically captured in `error_logs` — not optional, and there's no other supported way to write a JSON response in this backend.
 - **When a conversation decides something is future work** (explicitly deferred, not building it now): add it to `BACKLOG.md` instead of only noting it in a spec's Supuestos or in memory — specs get buried once done, and memory isn't visible in the repo to anyone else.

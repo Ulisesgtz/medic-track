@@ -7,12 +7,12 @@ Module: `github.com/Ulisesgtz/medic-track/backend`. Router: `chi`. DB: PostgreSQ
 | Path | What's there |
 |---|---|
 | `cmd/api/main.go` | Entry point: wires DB pool, repos/services/handlers, chi router, CORS, routes |
-| `internal/account/` | Account + Child domain: signup, freemium limit, name validation |
+| `internal/account/` | Account + Child domain: signup, freemium limit, name validation, reading an account and adding a child to an existing one (specs/003-home-listado-hijos) |
 | `internal/account/model.go` | `Account`, `Child` structs |
-| `internal/account/errors.go` | Domain errors (`ErrEmailAlreadyExists`, `ErrFreemiumChildLimitExceeded`, `ErrInvalidNameFormat`), `ValidationErrors` |
-| `internal/account/service.go` | `CreateAccount` — freemium 1-child limit check (runs first), then field validation (required fields, email format, name format/length via `validateNameFormat`, birth date, height/weight) |
-| `internal/account/repository.go` | SQL: inserts Account + Children in one transaction; `mapInsertError` maps pg 23505→`ErrEmailAlreadyExists`, pg 23514 (CHECK violation)→`ErrInvalidNameFormat` |
-| `internal/account/handler.go` | `POST /accounts` — request/response shapes, maps domain errors → HTTP status |
+| `internal/account/errors.go` | Domain errors (`ErrEmailAlreadyExists`, `ErrFreemiumChildLimitExceeded`, `ErrInvalidNameFormat`, `ErrAccountNotFound`), `ValidationErrors`, `FreemiumLimitError` (wraps `ErrFreemiumChildLimitExceeded` with the actual `Limit`/`Received` counts via `Unwrap`) |
+| `internal/account/service.go` | `CreateAccount` — freemium limit check against the shared `freePlanChildLimit` constant (runs first), then field validation (required fields, email format, name format/length via `validateNameFormat`, birth date, height/weight). `validateChildFields` factors out the single-child validation rules (unprefixed field names) that both `validateCreateAccountInput` and `AddChild` build on. `GetAccount` backs the home page's `GET` endpoint. `AddChild` validates fields, then delegates the freemium-limit check + insert to `repo.AddChildIfUnderLimit` as one atomic operation (see repository.go) — it does NOT check-then-insert itself, to avoid a TOCTOU race. |
+| `internal/account/repository.go` | SQL: inserts Account + Children in one transaction; `mapInsertError` maps pg 23505→`ErrEmailAlreadyExists`, pg 23514 (CHECK violation)→`ErrInvalidNameFormat`. `GetByID` (→`ErrAccountNotFound` if missing) backs `GetAccount`. `AddChildIfUnderLimit` backs `AddChild`: locks the account row (`FOR UPDATE`), counts children, and inserts — all in one transaction, so two concurrent "add a child" requests for the same account can't both pass the limit check (see `TestRepository_AddChildIfUnderLimit_LimitExceeded`). |
+| `internal/account/handler.go` | `POST /accounts`, `GET /accounts/{accountId}`, `POST /accounts/{accountId}/children` — request/response shapes, maps domain errors → HTTP status. An `accountId` that isn't a well-formed UUID is treated as 404, same as a genuinely missing account. |
 | `internal/catalog/` | Read-only country/state catalog (`GET /catalog/countries`, `GET /catalog/countries/{code}/states`) |
 | `internal/platform/db.go` | `NewPostgresPool` — reads `DATABASE_URL` |
 | `internal/httpx/` | `Responder` (constructed via `NewResponder(recorder)`) — `WriteJSON`/`WriteJSONError` methods used by both `account` and `catalog` handlers; every 4xx/5xx response it writes is automatically logged to `error_logs` in a background goroutine, see "Automatic error logging" below |
@@ -24,10 +24,12 @@ Module: `github.com/Ulisesgtz/medic-track/backend`. Router: `chi`. DB: PostgreSQ
 ## Known cross-cutting rules to keep in sync when touching name/account fields
 
 - Name format rule (letters incl. accents/ñ, spaces, hyphens, apostrophes, max 100 chars) is owned by the **application layer only** — `internal/account/service.go`'s `namePattern` (Go `\p{L}`) and `frontend/src/features/account-signup/types.ts`'s `NAME_PATTERN` (JS `\p{L}`), which agree since both use the full Unicode "letter" category. The DB CHECK constraint (`migrations/0004_add_name_constraints.sql`) deliberately enforces **length only** — an earlier version also checked character set with an explicit Latin-1 range, which silently diverged from `\p{L}` and rejected valid non-Latin names as an opaque 500; don't reintroduce a character-class regex there.
-- Freemium child limit (`1`) is a bare literal in `service.go`'s `CreateAccount` and a separate constant in `frontend/.../AccountSignupForm.tsx` (`FREE_PLAN_CHILD_LIMIT`) — update both if the limit or plan model changes.
+- Freemium child limit (`1`) is `service.go`'s `freePlanChildLimit` constant on the backend (used by both `CreateAccount` and `AddChild`) and a separate constant in `frontend/.../AccountSignupForm.tsx` (`FREE_PLAN_CHILD_LIMIT`) — update both if the limit or plan model changes.
 - `CreateAccount` checks the freemium limit **before** field-level validation, so a request with 2+ children always gets `422 freemium_child_limit_exceeded` rather than a `400` about some unrelated field on the extra child.
 
 ## Automatic error logging (specs/002-registro-log-errores)
+
+**Every new handler package (any new feature/endpoint) MUST take a `*httpx.Responder` in its constructor and write ALL its JSON responses through it** — same pattern as `account.NewHandler`/`catalog.NewHandler`. This is not optional or feature-specific: it's how every backend response in this codebase gets written, and it's what makes error logging automatic for free. There is no other supported way to write a JSON response here (the old package-level `httpx.WriteJSON`/`WriteJSONError` functions were deleted specifically so this can't be bypassed).
 
 Every handler constructor now takes a `*httpx.Responder` (built once in `cmd/api/main.go` via `httpx.NewResponder(errorlog.NewRepository(pool))`) instead of calling package-level `httpx` functions. Any response written through `Responder.WriteJSON`/`WriteJSONError` with a 4xx/5xx status is automatically logged to `error_logs` — no handler code has to opt in per call site. Key points if you touch this:
 

@@ -2,10 +2,13 @@ package account_test
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 
@@ -88,6 +91,131 @@ func TestRepository_Create_NameLengthCheckConstraint(t *testing.T) {
 	})
 
 	require.ErrorIs(t, err, account.ErrInvalidNameFormat)
+}
+
+// TestRepository_GetByID_NotFound covers specs/003-home-listado-hijos FR-002:
+// an id with no matching account must map to ErrAccountNotFound, not an
+// opaque wrapped error.
+func TestRepository_GetByID_NotFound(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+
+	_, err := repo.GetByID(context.Background(), uuid.New())
+
+	require.ErrorIs(t, err, account.ErrAccountNotFound)
+}
+
+// TestRepository_GetByID_WithChildren covers the happy path: an account with
+// children returns them ordered oldest-first (spec.md's "mismo orden en que
+// fueron dados de alta").
+func TestRepository_GetByID_WithChildren(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+
+	acc := &account.Account{
+		FirstName: "Ana", LastName: "Gómez", Email: uniqueEmail("getbyid.repo.test"), Plan: account.PlanFree,
+		Children: []account.Child{
+			{FirstName: "Primero", LastName: "Gómez", BirthDate: mustParseDate(t, "2018-01-01")},
+		},
+	}
+	require.NoError(t, repo.Create(context.Background(), acc))
+
+	got, err := repo.GetByID(context.Background(), acc.ID)
+	require.NoError(t, err)
+	require.Equal(t, acc.Email, got.Email)
+	require.Len(t, got.Children, 1)
+	require.Equal(t, "Primero", got.Children[0].FirstName)
+}
+
+func TestRepository_GetByID_ConnectionError(t *testing.T) {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Skip("DATABASE_URL not set; skipping test that requires a live database")
+	}
+	repo := account.NewRepository(closedPool(t, dsn))
+
+	_, err := repo.GetByID(context.Background(), uuid.New())
+
+	require.Error(t, err)
+	require.False(t, errors.Is(err, account.ErrAccountNotFound))
+}
+
+// TestRepository_AddChildIfUnderLimit covers adding a child to an
+// already-existing account (specs/003-home-listado-hijos, "Agregar hijo"
+// from the home page).
+func TestRepository_AddChildIfUnderLimit(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+
+	acc := &account.Account{FirstName: "Ana", LastName: "Gómez", Email: uniqueEmail("addchildlimit.repo.test"), Plan: account.PlanFree}
+	require.NoError(t, repo.Create(context.Background(), acc))
+
+	got, err := repo.AddChildIfUnderLimit(context.Background(), acc.ID, account.CreateChildInput{
+		FirstName: "Luis", LastName: "Gómez", BirthDate: mustParseDate(t, "2020-01-15"),
+	}, 1)
+	require.NoError(t, err)
+	require.Len(t, got.Children, 1)
+	require.NotEqual(t, uuid.Nil, got.Children[0].ID)
+}
+
+// TestRepository_AddChildIfUnderLimit_LimitExceeded covers the atomic
+// check-then-insert rejecting a second child once the account is already at
+// the given limit, returning the actual counts via *FreemiumLimitError.
+func TestRepository_AddChildIfUnderLimit_LimitExceeded(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+
+	acc := &account.Account{
+		FirstName: "Carla", LastName: "Ruiz", Email: uniqueEmail("addchildlimit.exceeded.repo.test"), Plan: account.PlanFree,
+		Children: []account.Child{{FirstName: "Hijo Uno", LastName: "Ruiz", BirthDate: mustParseDate(t, "2018-01-01")}},
+	}
+	require.NoError(t, repo.Create(context.Background(), acc))
+
+	_, err := repo.AddChildIfUnderLimit(context.Background(), acc.ID, account.CreateChildInput{
+		FirstName: "Hijo Dos", LastName: "Ruiz", BirthDate: mustParseDate(t, "2021-01-01"),
+	}, 1)
+
+	require.ErrorIs(t, err, account.ErrFreemiumChildLimitExceeded)
+	var limitErr *account.FreemiumLimitError
+	require.ErrorAs(t, err, &limitErr)
+	require.Equal(t, 1, limitErr.Limit)
+	require.Equal(t, 2, limitErr.Received)
+
+	got, err := repo.GetByID(context.Background(), acc.ID)
+	require.NoError(t, err)
+	require.Len(t, got.Children, 1, "no second child must have been inserted")
+}
+
+func TestRepository_AddChildIfUnderLimit_AccountNotFound(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+
+	_, err := repo.AddChildIfUnderLimit(context.Background(), uuid.New(), account.CreateChildInput{
+		FirstName: "Luis", LastName: "Gómez", BirthDate: mustParseDate(t, "2020-01-15"),
+	}, 1)
+
+	require.ErrorIs(t, err, account.ErrAccountNotFound)
+}
+
+func TestRepository_AddChildIfUnderLimit_ConnectionError(t *testing.T) {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Skip("DATABASE_URL not set; skipping test that requires a live database")
+	}
+	repo := account.NewRepository(closedPool(t, dsn))
+
+	_, err := repo.AddChildIfUnderLimit(context.Background(), uuid.New(), account.CreateChildInput{
+		FirstName: "Luis", LastName: "Gómez", BirthDate: mustParseDate(t, "2020-01-15"),
+	}, 1)
+
+	require.Error(t, err)
+}
+
+func mustParseDate(t *testing.T, s string) time.Time {
+	t.Helper()
+	d, err := time.Parse("2006-01-02", s)
+	require.NoError(t, err)
+	return d
 }
 
 func TestRepository_Create_ConnectionError(t *testing.T) {
