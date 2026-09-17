@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { useMutation } from '@tanstack/react-query'
 import { MedicationFieldset } from './MedicationFieldset'
@@ -31,14 +31,42 @@ const inputClass =
 const labelClass = 'mb-1 block text-sm font-medium text-slate-700'
 const errorClass = 'mt-1 text-sm text-red-600'
 
+interface PrescriptionHints {
+  doctorName?: string
+  consultDate?: string
+  medicationName?: string
+  frequencyHours?: string
+  durationDays?: string
+}
+
 /**
- * Extracts a plausible "treatment duration in days" from OCR-extracted free
- * text, as a best-effort autofill suggestion (FR-006) — never authoritative,
- * always left as an editable placeholder the parent must confirm.
+ * Best-effort field guesses from OCR-extracted free text (FR-006) — never
+ * authoritative. Every hint only ever fills a field the parent left empty,
+ * and stays fully editable/overwritable before Guardar (Principio I).
  */
-function extractDurationDaysHint(ocrText: string): string | undefined {
-  const match = ocrText.match(/(\d{1,3})\s*(?:d[ií]as?|days?)/i)
-  return match ? match[1] : undefined
+function extractPrescriptionHints(ocrText: string): PrescriptionHints {
+  const doctorMatch = ocrText.match(
+    /dra?\.?[ \t]+([A-Za-zÁÉÍÓÚÑáéíóúñ.]+(?:[ \t]+[A-Za-zÁÉÍÓÚÑáéíóúñ.]+){1,3})/i,
+  )
+  const dateMatch = ocrText.match(/(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/)
+  const medicationMatch = ocrText.match(/([A-Za-zÁÉÍÓÚÑáéíóúñ]{4,})\s*\d{2,4}\s*mg/i)
+  const frequencyMatch = ocrText.match(/cada\s*(\d{1,2})\s*(?:hrs?\.?|horas?)/i)
+  const durationMatch = ocrText.match(/(\d{1,3})\s*(?:d[ií]as?|days?)/i)
+
+  let consultDate: string | undefined
+  if (dateMatch) {
+    const [, day, month, yearRaw] = dateMatch
+    const year = yearRaw.length === 2 ? `20${yearRaw}` : yearRaw
+    consultDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`
+  }
+
+  return {
+    doctorName: doctorMatch ? doctorMatch[1].trim() : undefined,
+    consultDate,
+    medicationName: medicationMatch ? medicationMatch[1] : undefined,
+    frequencyHours: frequencyMatch ? frequencyMatch[1] : undefined,
+    durationDays: durationMatch ? durationMatch[1] : undefined,
+  }
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -63,11 +91,14 @@ interface ConsultationFormProps {
 export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationFormProps) {
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const { suggestion, isRunning, runOcr } = useOcrSuggestion()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const {
     register,
     control,
     handleSubmit,
+    setValue,
+    getValues,
     formState: { errors },
   } = useForm<ConsultationFormValues>({
     defaultValues: {
@@ -110,7 +141,25 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
     }
   }
 
-  const durationHint = suggestion ? extractDurationDaysHint(suggestion) : undefined
+  useEffect(() => {
+    if (!suggestion) return
+    const hints = extractPrescriptionHints(suggestion)
+    if (hints.doctorName && !getValues('doctorName')) {
+      setValue('doctorName', hints.doctorName)
+    }
+    if (hints.consultDate && !getValues('consultDate')) {
+      setValue('consultDate', hints.consultDate)
+    }
+    if (hints.medicationName && !getValues('medications.0.name')) {
+      setValue('medications.0.name', hints.medicationName)
+    }
+    if (hints.frequencyHours && !getValues('medications.0.frequencyHours')) {
+      setValue('medications.0.frequencyHours', hints.frequencyHours)
+    }
+    if (hints.durationDays && !getValues('medications.0.durationDays')) {
+      setValue('medications.0.durationDays', hints.durationDays)
+    }
+  }, [suggestion, getValues, setValue])
 
   const onSubmit = handleSubmit((values) => {
     mutation.mutate(values)
@@ -145,12 +194,23 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
         </label>
         <input
           id="photo"
+          ref={fileInputRef}
           type="file"
           accept="image/*"
           capture="environment"
-          className={inputClass}
+          className="sr-only"
           onChange={handlePhotoChange}
         />
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="cursor-pointer rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors duration-200 hover:bg-slate-50"
+          >
+            Seleccionar archivo
+          </button>
+          {photoFile && <span className="truncate text-sm text-slate-600">{photoFile.name}</span>}
+        </div>
         {isRunning && <p className="mt-1 text-sm text-slate-500">Analizando la foto…</p>}
         {mutation.isError &&
           mutation.error instanceof ConsultationApiError &&
@@ -168,7 +228,6 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
               register={register}
               errors={errors}
               onRemove={() => remove(index)}
-              durationPlaceholder={index === 0 ? durationHint : undefined}
             />
           ))}
         </div>

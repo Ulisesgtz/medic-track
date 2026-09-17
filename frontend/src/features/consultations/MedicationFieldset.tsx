@@ -6,7 +6,6 @@ interface MedicationFieldsetProps {
   register: UseFormRegister<ConsultationFormValues>
   errors: FieldErrors<ConsultationFormValues>
   onRemove: () => void
-  durationPlaceholder?: string
 }
 
 const inputClass =
@@ -30,7 +29,6 @@ export function MedicationFieldset({
   register,
   errors,
   onRemove,
-  durationPlaceholder,
 }: MedicationFieldsetProps) {
   const medErrors = errors.medications?.[index]
 
@@ -85,7 +83,6 @@ export function MedicationFieldset({
           <input
             id={`medications.${index}.durationDays`}
             type="number"
-            placeholder={durationPlaceholder}
             className={inputClass}
             {...register(`medications.${index}.durationDays`, positiveIntegerValidation)}
           />

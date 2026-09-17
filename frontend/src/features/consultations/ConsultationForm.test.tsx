@@ -94,6 +94,17 @@ describe('ConsultationForm', () => {
     await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('consultation-1'))
   })
 
+  it('opens the native file picker when clicking "Seleccionar archivo"', async () => {
+    const user = userEvent.setup()
+    renderForm()
+    const input = screen.getByLabelText('Foto de la receta') as HTMLInputElement
+    const clickSpy = vi.spyOn(input, 'click')
+
+    await user.click(screen.getByRole('button', { name: 'Seleccionar archivo' }))
+
+    expect(clickSpy).toHaveBeenCalled()
+  })
+
   it('cancels via the Cancelar button', async () => {
     const user = userEvent.setup()
     const { onCancel } = renderForm()
@@ -101,5 +112,67 @@ describe('ConsultationForm', () => {
     await user.click(screen.getByRole('button', { name: 'Cancelar' }))
 
     expect(onCancel).toHaveBeenCalled()
+  })
+
+  it('autofills empty fields from OCR text as an editable suggestion (FR-006)', async () => {
+    const tesseract = await import('tesseract.js')
+    vi.mocked(tesseract.default.recognize).mockResolvedValue({
+      data: {
+        text: 'Dra. Maria Lopez\nAmoxicilina 250mg\nTomar cada 8 horas\ndurante 5 dias\nFecha: 15/01/2026',
+      },
+    } as never)
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.upload(screen.getByLabelText('Foto de la receta'), samplePhoto())
+
+    await waitFor(() => expect(screen.getByLabelText('Doctor')).toHaveValue('Maria Lopez'))
+    expect(screen.getByLabelText('Fecha de la consulta')).toHaveValue('2026-01-15')
+    expect(document.getElementById('medications.0.name')).toHaveValue('Amoxicilina')
+    expect(document.getElementById('medications.0.frequencyHours')).toHaveValue(8)
+    expect(document.getElementById('medications.0.durationDays')).toHaveValue(5)
+  })
+
+  it('never overwrites fields the parent already filled in (FR-006, Principio I)', async () => {
+    const tesseract = await import('tesseract.js')
+    vi.mocked(tesseract.default.recognize).mockResolvedValue({
+      data: {
+        text: 'Dra. Maria Lopez\nAmoxicilina 250mg\nTomar cada 8 horas\ndurante 5 dias\nFecha: 15/01/2026',
+      },
+    } as never)
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.type(screen.getByLabelText('Doctor'), 'Dr. Juan Pérez')
+    await user.type(screen.getByLabelText('Fecha de la consulta'), '2026-02-01')
+    await user.type(document.getElementById('medications.0.name')!, 'Paracetamol')
+    await user.type(document.getElementById('medications.0.frequencyHours')!, '6')
+    await user.type(document.getElementById('medications.0.durationDays')!, '3')
+    await user.upload(screen.getByLabelText('Foto de la receta'), samplePhoto())
+    await waitFor(() => expect(screen.queryByText('Analizando la foto…')).not.toBeInTheDocument())
+
+    expect(screen.getByLabelText('Doctor')).toHaveValue('Dr. Juan Pérez')
+    expect(screen.getByLabelText('Fecha de la consulta')).toHaveValue('2026-02-01')
+    expect(document.getElementById('medications.0.name')).toHaveValue('Paracetamol')
+    expect(document.getElementById('medications.0.frequencyHours')).toHaveValue(6)
+    expect(document.getElementById('medications.0.durationDays')).toHaveValue(3)
+  })
+
+  it('leaves fields untouched when OCR text has no recognizable prescription data (FR-006)', async () => {
+    const tesseract = await import('tesseract.js')
+    vi.mocked(tesseract.default.recognize).mockResolvedValue({
+      data: { text: 'texto ilegible sin datos reconocibles' },
+    } as never)
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.upload(screen.getByLabelText('Foto de la receta'), samplePhoto())
+    await waitFor(() => expect(screen.queryByText('Analizando la foto…')).not.toBeInTheDocument())
+
+    expect(screen.getByLabelText('Doctor')).toHaveValue('')
+    expect(screen.getByLabelText('Fecha de la consulta')).toHaveValue('')
+    expect(document.getElementById('medications.0.name')).toHaveValue('')
+    expect(document.getElementById('medications.0.frequencyHours')).toHaveValue(null)
+    expect(document.getElementById('medications.0.durationDays')).toHaveValue(null)
   })
 })
