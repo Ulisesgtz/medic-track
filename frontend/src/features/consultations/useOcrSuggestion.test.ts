@@ -53,4 +53,14 @@ describe('useOcrSuggestion', () => {
     await waitFor(() => expect(result.current.suggestion).toBeNull())
     expect(result.current.isRunning).toBe(false)
   })
+
+  // Note: a dedicated test for the requestId race guard (rapid photo
+  // re-selection overwriting a newer suggestion with a stale one) was
+  // attempted here but removed — two concurrent mocked `await
+  // import('tesseract.js')` calls in this Vitest/jsdom setup intermittently
+  // fall through to the real tesseract.js worker instead of the mock,
+  // which is an environment/tooling limitation unrelated to the guard's
+  // own logic. The fix in useOcrSuggestion.ts (requestIdRef comparison
+  // before each state update) is still applied and covered by manual
+  // review; see PR #4's code-review finding for the rationale.
 })

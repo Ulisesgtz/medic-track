@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchConsultations, ConsultationApiError } from './api'
 import { ConsultationCard } from './ConsultationCard'
@@ -39,6 +39,12 @@ export function ChildDetailPage() {
           <p className="text-sm text-slate-500">
             {notFound ? 'No se encontró este hijo.' : 'Ocurrió un error al cargar sus consultas.'}
           </p>
+          <Link
+            to="/home"
+            className="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-cyan-600 px-4 py-2 text-sm font-medium text-cyan-700 transition-colors duration-200 hover:bg-cyan-50"
+          >
+            Volver a mi home
+          </Link>
         </div>
       </main>
     )
@@ -49,6 +55,10 @@ export function ChildDetailPage() {
   return (
     <main className="min-h-screen bg-cyan-50 px-4 py-8 md:py-12">
       <div className="mx-auto max-w-2xl space-y-6">
+        <Link to="/home" className="text-sm text-cyan-700 hover:underline">
+          ← Volver a mi home
+        </Link>
+
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold text-slate-900">Consultas médicas</h1>
           <button

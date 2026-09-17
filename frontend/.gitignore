@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# tesseract.js downloads its OCR language model to the cwd at runtime
+# (specs/004-detalle-consulta-hijo) — not a source artifact
+*.traineddata
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

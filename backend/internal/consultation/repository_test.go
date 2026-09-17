@@ -179,7 +179,7 @@ func TestRepository_UpdateDoseStatus(t *testing.T) {
 	require.NoError(t, repo.Create(context.Background(), childID, created))
 	doseID := created.Medications[0].Doses[0].ID
 
-	updated, err := repo.UpdateDoseStatus(context.Background(), doseID, true)
+	updated, err := repo.UpdateDoseStatus(context.Background(), created.ID, doseID, true)
 
 	require.NoError(t, err)
 	require.True(t, updated.Taken)
@@ -189,9 +189,35 @@ func TestRepository_UpdateDoseStatus_NotFound(t *testing.T) {
 	pool := testPool(t)
 	repo := consultation.NewRepository(pool)
 
-	_, err := repo.UpdateDoseStatus(context.Background(), uuid.New(), true)
+	_, err := repo.UpdateDoseStatus(context.Background(), uuid.New(), uuid.New(), true)
 
 	require.ErrorIs(t, err, consultation.ErrDoseNotFound)
+}
+
+// TestRepository_UpdateDoseStatus_WrongConsultation covers the analyze
+// finding that a dose must be scoped to its own consultation: a real dose
+// updated via a different consultation's id must 404, not silently succeed.
+func TestRepository_UpdateDoseStatus_WrongConsultation(t *testing.T) {
+	pool := testPool(t)
+	repo := consultation.NewRepository(pool)
+	childID := createTestChild(t, pool)
+
+	created := &consultation.Consultation{
+		DoctorName: "Dra. López", ConsultDate: time.Now(), Photo: samplePhoto(),
+		Medications: []consultation.Medication{
+			{Name: "Amoxicilina", FrequencyHours: 24, DurationDays: 1, StartTime: strPtr("08:00")},
+		},
+	}
+	require.NoError(t, repo.Create(context.Background(), childID, created))
+	doseID := created.Medications[0].Doses[0].ID
+
+	_, err := repo.UpdateDoseStatus(context.Background(), uuid.New(), doseID, true)
+
+	require.ErrorIs(t, err, consultation.ErrDoseNotFound)
+
+	got, err := repo.GetByID(context.Background(), created.ID)
+	require.NoError(t, err)
+	require.False(t, got.Medications[0].Doses[0].Taken, "the dose must not have been updated via the wrong consultation")
 }
 
 func TestRepository_GetByChild_ConnectionError(t *testing.T) {
@@ -240,7 +266,7 @@ func TestRepository_UpdateDoseStatus_ConnectionError(t *testing.T) {
 	}
 	repo := consultation.NewRepository(closedPool(t, dsn))
 
-	_, err := repo.UpdateDoseStatus(context.Background(), uuid.New(), true)
+	_, err := repo.UpdateDoseStatus(context.Background(), uuid.New(), uuid.New(), true)
 
 	require.Error(t, err)
 }

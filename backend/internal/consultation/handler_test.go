@@ -247,6 +247,31 @@ func TestHandler_UpdateDose_NotFound(t *testing.T) {
 	}
 }
 
+// TestHandler_UpdateDose_WrongConsultation covers the analyze finding: a
+// real dose addressed through a mismatched consultationId in the URL must
+// 404, not silently update someone else's dose.
+func TestHandler_UpdateDose_WrongConsultation(t *testing.T) {
+	pool := testPool(t)
+	childID := createTestChild(t, pool)
+	router, _ := routerWithPool(t)
+
+	created := doPostPath(t, router, "/children/"+childID.String()+"/consultations", map[string]any{
+		"doctorName":  "Dra. López",
+		"consultDate": "2026-01-15",
+		"photoBase64": base64.StdEncoding.EncodeToString([]byte("x")),
+		"medications": []map[string]any{validMedicationPayload()},
+	})
+	var createdResp map[string]any
+	require.NoError(t, json.Unmarshal(created.Body.Bytes(), &createdResp))
+	meds := createdResp["medications"].([]any)
+	doses := meds[0].(map[string]any)["doses"].([]any)
+	doseID := doses[0].(map[string]any)["id"].(string)
+
+	rec := doPatchPath(t, router, "/consultations/11111111-1111-1111-1111-111111111111/doses/"+doseID, map[string]any{"taken": true})
+
+	require.Equal(t, http.StatusNotFound, rec.Code)
+}
+
 // TestRouter_ConsultationsAreImmutable covers FR-014/SC-003 (analyze
 // finding A2): once created, a consultation must never be editable or
 // deletable — the router must not expose PUT/PATCH/DELETE for it, mirroring

@@ -146,8 +146,13 @@ func generateDoseSchedule(consultDate time.Time, med *Medication) []time.Time {
 	if med.StartTime == nil {
 		return nil
 	}
-	startHour, startMinute := 0, 0
-	fmt.Sscanf(*med.StartTime, "%d:%d", &startHour, &startMinute)
+	var startHour, startMinute int
+	if n, err := fmt.Sscanf(*med.StartTime, "%d:%d", &startHour, &startMinute); n != 2 || err != nil {
+		// Malformed StartTime shouldn't reach here — service.go validates the
+		// HH:MM format before Create is ever called — but if it somehow does,
+		// generate no doses rather than silently defaulting to midnight.
+		return nil
+	}
 
 	start := time.Date(
 		consultDate.Year(), consultDate.Month(), consultDate.Day(),
@@ -230,14 +235,19 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Consultation, 
 }
 
 // UpdateDoseStatus sets a dose's taken status, with no validation of
-// scheduled_at or treatment status (FR-016). Returns ErrDoseNotFound if no
-// dose exists for id.
-func (r *Repository) UpdateDoseStatus(ctx context.Context, id uuid.UUID, taken bool) (*Dose, error) {
+// scheduled_at or treatment status (FR-016). The update is scoped to
+// consultationID via medications' consultation_id, so a doseID that exists
+// but belongs to a different consultation is correctly treated as not found
+// — matching ErrDoseNotFound's own contract. Returns ErrDoseNotFound if no
+// matching dose exists.
+func (r *Repository) UpdateDoseStatus(ctx context.Context, consultationID, id uuid.UUID, taken bool) (*Dose, error) {
 	dose := &Dose{ID: id, Taken: taken}
 	err := r.pool.QueryRow(ctx, `
-		UPDATE doses SET taken = $1 WHERE id = $2
+		UPDATE doses SET taken = $1
+		WHERE id = $2
+		  AND medication_id IN (SELECT id FROM medications WHERE consultation_id = $3)
 		RETURNING medication_id, scheduled_at, created_at
-	`, taken, id).Scan(&dose.MedicationID, &dose.ScheduledAt, &dose.CreatedAt)
+	`, taken, id, consultationID).Scan(&dose.MedicationID, &dose.ScheduledAt, &dose.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrDoseNotFound

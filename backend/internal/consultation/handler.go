@@ -295,6 +295,14 @@ type updateDoseRequest struct {
 //	@Failure		404				{object}	doseNotFoundResponseDoc	"No dose exists for this id"
 //	@Router			/consultations/{consultationId}/doses/{doseId} [patch]
 func (h *Handler) UpdateDose(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+
+	consultationID, err := uuid.Parse(chi.URLParam(r, "consultationId"))
+	if err != nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, doseNotFoundBody(), nil)
+		return
+	}
+
 	doseID, err := uuid.Parse(chi.URLParam(r, "doseId"))
 	if err != nil {
 		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, doseNotFoundBody(), nil)
@@ -307,7 +315,10 @@ func (h *Handler) UpdateDose(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dose, err := h.service.MarkDose(r.Context(), doseID, req.Taken)
+	// Scoping the update to consultationID (not just doseID) is what makes
+	// a dose from a different consultation correctly 404 instead of
+	// silently succeeding — see repository.go's UpdateDoseStatus.
+	dose, err := h.service.MarkDose(r.Context(), consultationID, doseID, req.Taken)
 	if err != nil {
 		if errors.Is(err, ErrDoseNotFound) {
 			h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, doseNotFoundBody(), nil)

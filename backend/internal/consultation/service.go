@@ -2,11 +2,15 @@ package consultation
 
 import (
 	"context"
+	"regexp"
 	"strconv"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+// startTimeFormat matches a 24-hour "HH:MM" string (e.g. "08:00", "23:59").
+var startTimeFormat = regexp.MustCompile(`^([01][0-9]|2[0-3]):[0-5][0-9]$`)
 
 // maxPhotoBytes caps the decoded prescription photo size (research.md).
 const maxPhotoBytes = 8 * 1024 * 1024 // 8 MiB
@@ -81,9 +85,11 @@ func (s *Service) GetConsultation(ctx context.Context, id uuid.UUID) (*Consultat
 }
 
 // MarkDose sets a dose's taken status, with no restriction based on its
-// scheduled date or the treatment's duration (FR-011, FR-016).
-func (s *Service) MarkDose(ctx context.Context, doseID uuid.UUID, taken bool) (*Dose, error) {
-	return s.repo.UpdateDoseStatus(ctx, doseID, taken)
+// scheduled date or the treatment's duration (FR-011, FR-016). The update
+// is scoped to consultationID — a doseID that exists but belongs to a
+// different consultation is treated as not found (ErrDoseNotFound).
+func (s *Service) MarkDose(ctx context.Context, consultationID, doseID uuid.UUID, taken bool) (*Dose, error) {
+	return s.repo.UpdateDoseStatus(ctx, consultationID, doseID, taken)
 }
 
 func validateCreateConsultationInput(input CreateConsultationInput) ValidationErrors {
@@ -117,6 +123,9 @@ func validateCreateConsultationInput(input CreateConsultationInput) ValidationEr
 		}
 		if m.DurationDays <= 0 {
 			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "durationDays"), Message: "must be a positive integer"})
+		}
+		if m.StartTime != nil && !startTimeFormat.MatchString(*m.StartTime) {
+			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "startTime"), Message: "must be a 24-hour HH:MM time"})
 		}
 	}
 

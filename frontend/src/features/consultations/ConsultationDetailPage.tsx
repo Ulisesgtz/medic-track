@@ -2,6 +2,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { fetchConsultationDetail, ConsultationApiError } from './api'
 import { DoseCheckbox } from './DoseCheckbox'
+import { sniffImageMimeType } from './imageMime'
 
 /** Detail of a single consultation: photo, doctor, date, medications with
  * their markable doses (if any), and symptoms (FR-013). */
@@ -51,7 +52,7 @@ export function ConsultationDetailPage() {
           <p className="mt-1 text-sm text-slate-500">{consultation.consultDate}</p>
 
           <img
-            src={`data:image/jpeg;base64,${consultation.photoBase64}`}
+            src={`data:${sniffImageMimeType(consultation.photoBase64)};base64,${consultation.photoBase64}`}
             alt="Foto de la receta médica"
             className="mt-4 max-h-96 w-full rounded-lg object-contain"
           />

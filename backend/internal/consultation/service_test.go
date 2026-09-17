@@ -84,6 +84,14 @@ func TestService_CreateConsultation_Validation(t *testing.T) {
 			},
 			wantFieldErrs: []string{"medications[0].durationDays"},
 		},
+		{
+			name: "malformed start time",
+			input: consultation.CreateConsultationInput{
+				DoctorName: "Dra. López", ConsultDate: time.Now(), Photo: samplePhoto(),
+				Medications: []consultation.CreateMedicationInput{{Name: "X", FrequencyHours: 8, DurationDays: 1, StartTime: strPtr("25:99")}},
+			},
+			wantFieldErrs: []string{"medications[0].startTime"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -171,7 +179,7 @@ func TestService_MarkDose(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	dose, err := svc.MarkDose(context.Background(), c.Medications[0].Doses[0].ID, true)
+	dose, err := svc.MarkDose(context.Background(), c.ID, c.Medications[0].Doses[0].ID, true)
 
 	require.NoError(t, err)
 	require.True(t, dose.Taken)
@@ -181,7 +189,7 @@ func TestService_MarkDose_NotFound(t *testing.T) {
 	pool := testPool(t)
 	svc := consultation.NewService(consultation.NewRepository(pool))
 
-	_, err := svc.MarkDose(context.Background(), uuid.New(), true)
+	_, err := svc.MarkDose(context.Background(), uuid.New(), uuid.New(), true)
 
 	require.ErrorIs(t, err, consultation.ErrDoseNotFound)
 }
