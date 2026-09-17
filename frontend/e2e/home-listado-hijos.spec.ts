@@ -52,7 +52,7 @@ test('sin cuenta guardada muestra la invitación a crear cuenta (FR-002)', async
   await expect(page).toHaveURL(/\/signup/)
 })
 
-test('click en el nombre de un hijo navega a la ruta placeholder (FR-005)', async ({ page }) => {
+test('click en el nombre de un hijo navega a su pantalla de detalle (FR-005)', async ({ page }) => {
   await page.goto('/signup')
 
   await page.getByLabel('Nombre').fill('Carla')
@@ -69,5 +69,7 @@ test('click en el nombre de un hijo navega a la ruta placeholder (FR-005)', asyn
   await page.getByText('Mateo Ruiz').click()
 
   await expect(page).toHaveURL(/\/children\//)
-  await expect(page.getByText('Próximamente')).toBeVisible()
+  // specs/004-detalle-consulta-hijo replaced the placeholder with the real
+  // consultations listing for that child.
+  await expect(page.getByRole('heading', { name: 'Consultas médicas' })).toBeVisible()
 })
