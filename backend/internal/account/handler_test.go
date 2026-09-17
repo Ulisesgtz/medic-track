@@ -408,6 +408,64 @@ func TestHandler_AddChild_InvalidFields(t *testing.T) {
 	require.Equal(t, "validation_error", resp["error"])
 }
 
+// TestHandler_AddChild_MalformedAccountId covers the same "not even a valid
+// UUID" edge case as TestHandler_GetAccount_NotFound, for the path param
+// shared by AddChild.
+func TestHandler_AddChild_MalformedAccountId(t *testing.T) {
+	router := newTestRouter(t)
+
+	rec := doPostPath(t, router, "/accounts/not-a-uuid/children", map[string]any{
+		"firstName": "Luis", "lastName": "Gómez", "birthDate": "2020-01-15",
+	})
+
+	require.Equal(t, http.StatusNotFound, rec.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	require.Equal(t, "account_not_found", resp["error"])
+}
+
+// TestHandler_AddChild_MalformedJSON covers AddChild's own malformed-body
+// branch, mirroring TestHandler_CreateAccount_MalformedJSON.
+func TestHandler_AddChild_MalformedJSON(t *testing.T) {
+	router := newTestRouter(t)
+
+	created := doPost(t, router, map[string]any{
+		"firstName": "Ana", "lastName": "Gómez", "email": uniqueEmail("handler.addchild.malformedjson"),
+	})
+	var createdResp map[string]any
+	require.NoError(t, json.Unmarshal(created.Body.Bytes(), &createdResp))
+	id := createdResp["id"].(string)
+
+	req := httptest.NewRequest(http.MethodPost, "/accounts/"+id+"/children", bytes.NewReader([]byte("{not-json")))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+// TestHandler_AddChild_InvalidBirthDateFormat covers AddChild's own
+// birth-date-parse branch, mirroring TestHandler_CreateAccount_InvalidBirthDateFormat.
+func TestHandler_AddChild_InvalidBirthDateFormat(t *testing.T) {
+	router := newTestRouter(t)
+
+	created := doPost(t, router, map[string]any{
+		"firstName": "Ana", "lastName": "Gómez", "email": uniqueEmail("handler.addchild.invalidbirthdate"),
+	})
+	var createdResp map[string]any
+	require.NoError(t, json.Unmarshal(created.Body.Bytes(), &createdResp))
+	id := createdResp["id"].(string)
+
+	rec := doPostPath(t, router, "/accounts/"+id+"/children", map[string]any{
+		"firstName": "Luis", "lastName": "Gómez", "birthDate": "15-01-2020",
+	})
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	require.Equal(t, "validation_error", resp["error"])
+}
+
 // TestRouter_NoChildMutationRoutes covers FR-006a: once persisted, a Child
 // can never be edited or deleted in this scope, so the router must not
 // expose PATCH/DELETE for it. This asserts the router returns 404/405

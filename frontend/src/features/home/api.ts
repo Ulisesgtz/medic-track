@@ -1,27 +1,14 @@
+import { ApiError, type ValidationErrorDetail } from '../../shared/apiError'
 import type { Account } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 
-export interface ValidationErrorDetail {
-  field: string
-  message: string
-}
+export type { ValidationErrorDetail }
 
 /** Discriminated error thrown by fetchAccount/addChild so callers can branch on `kind`. */
-export class AccountApiError extends Error {
-  kind: 'not_found' | 'validation_error' | 'freemium_child_limit_exceeded' | 'unknown'
-  details?: ValidationErrorDetail[]
-
-  constructor(
-    kind: AccountApiError['kind'],
-    message: string,
-    details?: ValidationErrorDetail[],
-  ) {
-    super(message)
-    this.kind = kind
-    this.details = details
-  }
-}
+export class AccountApiError extends ApiError<
+  'not_found' | 'validation_error' | 'freemium_child_limit_exceeded' | 'unknown'
+> {}
 
 // contracts/get-account.md
 export async function fetchAccount(accountId: string): Promise<Account> {

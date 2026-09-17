@@ -1,6 +1,7 @@
 package account_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -18,4 +19,15 @@ func TestValidationErrors_Error(t *testing.T) {
 func TestValidationErrors_HasErrors(t *testing.T) {
 	require.False(t, account.ValidationErrors{}.HasErrors())
 	require.True(t, account.ValidationErrors{{Field: "x", Message: "y"}}.HasErrors())
+}
+
+// TestFreemiumLimitError_MatchesSentinel covers that *FreemiumLimitError
+// still satisfies errors.Is(err, ErrFreemiumChildLimitExceeded) via Unwrap,
+// and carries the same message as the sentinel it wraps.
+func TestFreemiumLimitError_MatchesSentinel(t *testing.T) {
+	err := &account.FreemiumLimitError{Limit: 1, Received: 2}
+
+	require.ErrorIs(t, err, account.ErrFreemiumChildLimitExceeded)
+	require.Equal(t, account.ErrFreemiumChildLimitExceeded.Error(), err.Error())
+	require.Equal(t, account.ErrFreemiumChildLimitExceeded, errors.Unwrap(err))
 }

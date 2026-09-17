@@ -196,12 +196,7 @@ func (h *Handler) writeCreateAccountError(ctx context.Context, w http.ResponseWr
 			"message": "Email is already in use",
 		}, nil)
 	case errors.Is(err, ErrFreemiumChildLimitExceeded):
-		h.responder.WriteJSON(ctx, w, http.StatusUnprocessableEntity, map[string]any{
-			"error":    "freemium_child_limit_exceeded",
-			"message":  "The free plan includes only one child per account",
-			"limit":    1,
-			"received": receivedChildren,
-		}, nil)
+		h.responder.WriteJSON(ctx, w, http.StatusUnprocessableEntity, freemiumLimitBody(freePlanChildLimit, receivedChildren), nil)
 	case errors.Is(err, ErrInvalidNameFormat):
 		// Defense-in-depth: the DB CHECK constraint on name format/length
 		// rejected the row even though the service-layer check passed (e.g. a
@@ -318,18 +313,17 @@ func (h *Handler) AddChild(w http.ResponseWriter, r *http.Request) {
 // attribution per backend/CLAUDE.md.
 func (h *Handler) writeAddChildError(ctx context.Context, w http.ResponseWriter, err error, accountID uuid.UUID) {
 	var validationErrs ValidationErrors
+	var limitErr *FreemiumLimitError
 	switch {
 	case errors.As(err, &validationErrs):
 		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationErrorBody(validationErrs, "One or more fields are invalid"), &accountID)
 	case errors.Is(err, ErrAccountNotFound):
 		h.responder.WriteJSON(ctx, w, http.StatusNotFound, accountNotFoundBody(), nil)
-	case errors.Is(err, ErrFreemiumChildLimitExceeded):
-		h.responder.WriteJSON(ctx, w, http.StatusUnprocessableEntity, map[string]any{
-			"error":    "freemium_child_limit_exceeded",
-			"message":  "The free plan includes only one child per account",
-			"limit":    1,
-			"received": 2,
-		}, &accountID)
+	case errors.As(err, &limitErr):
+		// Limit/Received come from the repository's actual row count at the
+		// time of the atomic check (AddChildIfUnderLimit), not a hardcoded
+		// guess — stays correct even if the freemium limit ever changes.
+		h.responder.WriteJSON(ctx, w, http.StatusUnprocessableEntity, freemiumLimitBody(limitErr.Limit, limitErr.Received), &accountID)
 	case errors.Is(err, ErrInvalidNameFormat):
 		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationErrorBody([]ValidationError{
 			{Field: "firstName", Message: "must contain only letters, spaces, hyphens or apostrophes, and be at most 100 characters"},
@@ -341,6 +335,19 @@ func (h *Handler) writeAddChildError(ctx context.Context, w http.ResponseWriter,
 
 func accountNotFoundBody() map[string]string {
 	return map[string]string{"error": "account_not_found", "message": "Account not found"}
+}
+
+// freemiumLimitBody builds the 422 response body shape (FR-007). Pure data
+// shaping only, same rationale as validationErrorBody — shared by both
+// writeCreateAccountError and writeAddChildError so the two 422 bodies can't
+// drift from each other.
+func freemiumLimitBody(limit, received int) map[string]any {
+	return map[string]any{
+		"error":    "freemium_child_limit_exceeded",
+		"message":  "The free plan includes only one child per account",
+		"limit":    limit,
+		"received": received,
+	}
 }
 
 // validationErrorBody builds the 400 response body shape. Pure data

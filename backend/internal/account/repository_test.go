@@ -140,36 +140,73 @@ func TestRepository_GetByID_ConnectionError(t *testing.T) {
 	require.False(t, errors.Is(err, account.ErrAccountNotFound))
 }
 
-// TestRepository_CreateChild covers adding a child to an already-existing
-// account (specs/003-home-listado-hijos, "Agregar hijo" from the home page).
-func TestRepository_CreateChild(t *testing.T) {
+// TestRepository_AddChildIfUnderLimit covers adding a child to an
+// already-existing account (specs/003-home-listado-hijos, "Agregar hijo"
+// from the home page).
+func TestRepository_AddChildIfUnderLimit(t *testing.T) {
 	pool := testPool(t)
 	repo := account.NewRepository(pool)
 
-	acc := &account.Account{FirstName: "Ana", LastName: "Gómez", Email: uniqueEmail("createchild.repo.test"), Plan: account.PlanFree}
+	acc := &account.Account{FirstName: "Ana", LastName: "Gómez", Email: uniqueEmail("addchildlimit.repo.test"), Plan: account.PlanFree}
 	require.NoError(t, repo.Create(context.Background(), acc))
 
-	child, err := repo.CreateChild(context.Background(), acc.ID, account.CreateChildInput{
+	got, err := repo.AddChildIfUnderLimit(context.Background(), acc.ID, account.CreateChildInput{
 		FirstName: "Luis", LastName: "Gómez", BirthDate: mustParseDate(t, "2020-01-15"),
-	})
+	}, 1)
 	require.NoError(t, err)
-	require.NotEqual(t, uuid.Nil, child.ID)
+	require.Len(t, got.Children, 1)
+	require.NotEqual(t, uuid.Nil, got.Children[0].ID)
+}
+
+// TestRepository_AddChildIfUnderLimit_LimitExceeded covers the atomic
+// check-then-insert rejecting a second child once the account is already at
+// the given limit, returning the actual counts via *FreemiumLimitError.
+func TestRepository_AddChildIfUnderLimit_LimitExceeded(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+
+	acc := &account.Account{
+		FirstName: "Carla", LastName: "Ruiz", Email: uniqueEmail("addchildlimit.exceeded.repo.test"), Plan: account.PlanFree,
+		Children: []account.Child{{FirstName: "Hijo Uno", LastName: "Ruiz", BirthDate: mustParseDate(t, "2018-01-01")}},
+	}
+	require.NoError(t, repo.Create(context.Background(), acc))
+
+	_, err := repo.AddChildIfUnderLimit(context.Background(), acc.ID, account.CreateChildInput{
+		FirstName: "Hijo Dos", LastName: "Ruiz", BirthDate: mustParseDate(t, "2021-01-01"),
+	}, 1)
+
+	require.ErrorIs(t, err, account.ErrFreemiumChildLimitExceeded)
+	var limitErr *account.FreemiumLimitError
+	require.ErrorAs(t, err, &limitErr)
+	require.Equal(t, 1, limitErr.Limit)
+	require.Equal(t, 2, limitErr.Received)
 
 	got, err := repo.GetByID(context.Background(), acc.ID)
 	require.NoError(t, err)
-	require.Len(t, got.Children, 1)
+	require.Len(t, got.Children, 1, "no second child must have been inserted")
 }
 
-func TestRepository_CreateChild_ConnectionError(t *testing.T) {
+func TestRepository_AddChildIfUnderLimit_AccountNotFound(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+
+	_, err := repo.AddChildIfUnderLimit(context.Background(), uuid.New(), account.CreateChildInput{
+		FirstName: "Luis", LastName: "Gómez", BirthDate: mustParseDate(t, "2020-01-15"),
+	}, 1)
+
+	require.ErrorIs(t, err, account.ErrAccountNotFound)
+}
+
+func TestRepository_AddChildIfUnderLimit_ConnectionError(t *testing.T) {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
 		t.Skip("DATABASE_URL not set; skipping test that requires a live database")
 	}
 	repo := account.NewRepository(closedPool(t, dsn))
 
-	_, err := repo.CreateChild(context.Background(), uuid.New(), account.CreateChildInput{
+	_, err := repo.AddChildIfUnderLimit(context.Background(), uuid.New(), account.CreateChildInput{
 		FirstName: "Luis", LastName: "Gómez", BirthDate: mustParseDate(t, "2020-01-15"),
-	})
+	}, 1)
 
 	require.Error(t, err)
 }

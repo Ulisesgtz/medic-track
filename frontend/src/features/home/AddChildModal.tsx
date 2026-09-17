@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ChildFieldset } from '../account-signup/ChildFieldset'
@@ -17,7 +17,6 @@ interface AddChildModalProps {
  * same validation behavior, no duplication (research.md).
  */
 export function AddChildModal({ accountId, onClose }: AddChildModalProps) {
-  const dialogRef = useRef<HTMLDivElement>(null)
   const queryClient = useQueryClient()
 
   const {
@@ -86,7 +85,6 @@ export function AddChildModal({ accountId, onClose }: AddChildModalProps) {
       onClick={onClose}
     >
       <div
-        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-child-title"
@@ -98,6 +96,11 @@ export function AddChildModal({ accountId, onClose }: AddChildModalProps) {
         </h2>
 
         <form onSubmit={onSubmit} noValidate className="mt-4 space-y-4">
+          {/* "Quitar hijo" (from the reused ChildFieldset) discards this
+              still-unsaved entry and closes the modal — valid only while
+              filling the form, since a child can never be removed once
+              persisted (FR-006a). It's the modal's only dismiss control;
+              there's no separate "Cancelar" duplicating the same action. */}
           {fields.map((field, index) => (
             <ChildFieldset
               key={field.id}
@@ -118,13 +121,6 @@ export function AddChildModal({ accountId, onClose }: AddChildModalProps) {
             )}
 
           <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="cursor-pointer rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors duration-200 hover:bg-slate-50"
-            >
-              Cancelar
-            </button>
             <button
               type="submit"
               disabled={mutation.isPending}

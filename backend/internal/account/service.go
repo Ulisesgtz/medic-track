@@ -21,6 +21,13 @@ var namePattern = regexp.MustCompile(`^[\p{L} '-]+$`)
 // the tutor and each child.
 const nameMaxLength = 100
 
+// freePlanChildLimit is the single source of truth for "how many children a
+// free-plan account may have" — both CreateAccount and AddChild check
+// against this constant instead of separately-worded literals (see
+// backend/CLAUDE.md's note on the freemium limit being a manual-sync risk;
+// this at least collapses the two backend copies into one).
+const freePlanChildLimit = 1
+
 // CreateAccountInput is the input to Service.CreateAccount, mirroring the
 // POST /accounts request body (contracts/post-accounts.md).
 type CreateAccountInput struct {
@@ -61,7 +68,7 @@ func (s *Service) CreateAccount(ctx context.Context, input CreateAccountInput) (
 	// BEFORE field-level validation so a caller bypassing the client's own
 	// 1-child cap always gets the freemium-limit response rather than a
 	// generic validation error about some unrelated field on the extra child.
-	if len(input.Children) > 1 {
+	if len(input.Children) > freePlanChildLimit {
 		return nil, ErrFreemiumChildLimitExceeded
 	}
 
@@ -108,31 +115,18 @@ func (s *Service) GetAccount(ctx context.Context, id uuid.UUID) (*Account, error
 }
 
 // AddChild adds a single child to an already-existing account, reusing the
-// same field validation (validateChildFields) and freemium 1-child limit as
-// CreateAccount (specs/003-home-listado-hijos FR-004).
+// same field validation (validateChildFields) as CreateAccount
+// (specs/003-home-listado-hijos FR-004). The freemium 1-child limit check
+// and the insert happen atomically in the repository (AddChildIfUnderLimit,
+// under a row lock) — unlike CreateAccount, where the limit check race-frees
+// itself by running before the account even exists, AddChild's account
+// already exists and could otherwise race with a second concurrent request.
 func (s *Service) AddChild(ctx context.Context, accountID uuid.UUID, input CreateChildInput) (*Account, error) {
-	acc, err := s.repo.GetByID(ctx, accountID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Same precedence as CreateAccount's freemium check: run before
-	// field-level validation, so exceeding the limit always produces the
-	// freemium response rather than an unrelated validation error.
-	if len(acc.Children) >= 1 {
-		return nil, ErrFreemiumChildLimitExceeded
-	}
-
 	if errs := validateChildFields(input); len(errs) > 0 {
 		return nil, ValidationErrors(errs)
 	}
 
-	child, err := s.repo.CreateChild(ctx, accountID, input)
-	if err != nil {
-		return nil, err
-	}
-	acc.Children = append(acc.Children, *child)
-	return acc, nil
+	return s.repo.AddChildIfUnderLimit(ctx, accountID, input, freePlanChildLimit)
 }
 
 // validateChildFields validates a single child's fields (name format/length,

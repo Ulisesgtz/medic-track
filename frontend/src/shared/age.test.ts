@@ -1,7 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { computeAge } from './age'
 
-const NOW = new Date('2026-09-16T12:00:00Z')
+// Built from local components (no 'Z'/UTC parsing) so the test is
+// deterministic regardless of the machine's timezone — computeAge itself
+// reads `now` via local accessors (see age.ts).
+const NOW = new Date(2026, 8, 16, 12)
 
 describe('computeAge', () => {
   it('returns 0 meses for a newborn', () => {

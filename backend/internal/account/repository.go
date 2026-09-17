@@ -118,11 +118,60 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Account, error
 	return acc, nil
 }
 
-// CreateChild inserts a single child for an already-existing account
-// (specs/003-home-listado-hijos, "Agregar hijo" from the home page), reusing
-// the same insert/error-mapping as Create's per-child loop.
-func (r *Repository) CreateChild(ctx context.Context, accountID uuid.UUID, input CreateChildInput) (*Child, error) {
-	child := &Child{
+// AddChildIfUnderLimit atomically checks the account's current child count
+// against limit and inserts input as a new child only if it's still under
+// that limit — all inside one transaction that locks the account row with
+// `FOR UPDATE`, so two concurrent calls for the same account can't both read
+// "under the limit" and both insert (the TOCTOU race a separate
+// count-then-insert would have). Returns ErrAccountNotFound if the account
+// doesn't exist, or a *FreemiumLimitError if the account is already at
+// limit.
+func (r *Repository) AddChildIfUnderLimit(ctx context.Context, accountID uuid.UUID, input CreateChildInput, limit int) (*Account, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck // rollback is a no-op after a successful commit
+
+	acc := &Account{ID: accountID}
+	err = tx.QueryRow(ctx, `
+		SELECT first_name, last_name, email, country_code, state_code, plan, created_at
+		FROM accounts WHERE id = $1
+		FOR UPDATE
+	`, accountID).Scan(&acc.FirstName, &acc.LastName, &acc.Email, &acc.CountryCode, &acc.StateCode, &acc.Plan, &acc.CreatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrAccountNotFound
+		}
+		return nil, fmt.Errorf("querying account: %w", err)
+	}
+
+	rows, err := tx.Query(ctx, `
+		SELECT id, first_name, last_name, birth_date, height, weight, created_at
+		FROM children WHERE account_id = $1 ORDER BY created_at ASC
+	`, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("querying children: %w", err)
+	}
+	for rows.Next() {
+		child := Child{AccountID: accountID}
+		if err := rows.Scan(&child.ID, &child.FirstName, &child.LastName, &child.BirthDate, &child.Height, &child.Weight, &child.CreatedAt); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("scanning child: %w", err)
+		}
+		acc.Children = append(acc.Children, child)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return nil, fmt.Errorf("iterating children: %w", err)
+	}
+	rows.Close()
+
+	if len(acc.Children) >= limit {
+		return nil, &FreemiumLimitError{Limit: limit, Received: len(acc.Children) + 1}
+	}
+
+	child := Child{
 		AccountID: accountID,
 		FirstName: input.FirstName,
 		LastName:  input.LastName,
@@ -130,7 +179,7 @@ func (r *Repository) CreateChild(ctx context.Context, accountID uuid.UUID, input
 		Height:    input.Height,
 		Weight:    input.Weight,
 	}
-	err := r.pool.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		INSERT INTO children (account_id, first_name, last_name, birth_date, height, weight)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, created_at
@@ -139,7 +188,12 @@ func (r *Repository) CreateChild(ctx context.Context, accountID uuid.UUID, input
 	if err != nil {
 		return nil, mapInsertError(err, "inserting child")
 	}
-	return child, nil
+	acc.Children = append(acc.Children, child)
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("committing transaction: %w", err)
+	}
+	return acc, nil
 }
 
 // EmailExists reports whether an account with the given email already exists.

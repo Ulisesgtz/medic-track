@@ -24,6 +24,20 @@ y se elimina (o se marca) aquí.
 - **Excepción de `cmd/api` en el gate de cobertura de CI** — actualmente `cmd/api` (wiring de Go) no
   cuenta para el >90% exigido por el Principio VI. Pregunta abierta sin resolver con el usuario: si
   se acepta la excepción permanentemente o se agrega alguna prueba de wiring.
+- **Autenticación real (login/contraseña)** — `specs/003-home-listado-hijos/` introduce un
+  `account_id` guardado en `localStorage` como "sesión" de facto, sin ningún mecanismo real de
+  login, explícitamente aceptado como solución interina (ver plan.md, nota de Privacidad del
+  Principio II). Cuando se diseñe la autenticación real, revisar `GET /accounts/{accountId}` y
+  `POST /accounts/{accountId}/children` (hoy sin autenticación) y `useAccountSession` en el
+  frontend.
+
+## Producto / Feature futura
+
+- **Pantalla de detalle de hijo (consultas/recetas médicas)** — `specs/003-home-listado-hijos/`
+  agrega una ruta placeholder (`/children/:childId`, `ChildDetailPlaceholder.tsx`) sin contenido
+  real; el reporte de consultas, recetas, medicamentos, horarios de toma y síntomas es una
+  funcionalidad futura separada, ya descrita en conversación con el usuario pero sin su propia
+  `specs/NNN-.../spec.md` todavía.
 
 ## Producto / Legal
 

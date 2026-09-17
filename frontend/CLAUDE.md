@@ -11,6 +11,7 @@ Vite + React 18 + TypeScript. Forms: React Hook Form. Server state: TanStack Que
 | `src/features/home/` | The home page feature: children listing, "Agregar hijo" modal, the `account_id`-in-`localStorage` session (see below) |
 | `src/shared/catalog/` | Country/state catalog fetch hooks (`useCountries`, `useStates`) shared across features |
 | `src/shared/age.ts` | `computeAge(birthDate)` — pure function, months under 2 years old, whole years after |
+| `src/shared/apiError.ts` | `ApiError<Kind>` base class (`kind`, `message`, optional `details`) — each feature's `api.ts` defines its own subclass (`CreateAccountError`, `AccountApiError`) with just the `Kind` union it needs, instead of duplicating the constructor |
 | `e2e/account-signup.spec.ts` | Playwright E2E specs for signup — requires backend running locally |
 | `e2e/home-listado-hijos.spec.ts` | Playwright E2E specs for the home page flow (specs/003-home-listado-hijos) |
 | `vite.config.ts` | Includes the Tailwind v4 Vite plugin — don't remove it, the whole UI silently loses styling if it's dropped |
@@ -24,7 +25,7 @@ Vite + React 18 + TypeScript. Forms: React Hook Form. Server state: TanStack Que
 | `ChildFieldset.tsx` | One repeatable child block: name/apellido/fecha nacimiento (required) + talla/peso (optional) |
 | `FreemiumLimitModal.tsx` | Pop-up shown when trying to add a 2nd child on the free plan — "Ver planes" / "Quedarme con el plan gratuito" |
 | `types.ts` | Form value types + `NAME_PATTERN`/`NAME_MAX_LENGTH` (mirrors backend's `validateNameFormat` — see backend/CLAUDE.md for the sync caveat) |
-| `api.ts` | `createAccount()`, `CreateAccountError` (discriminated by `.kind`: `validation_error` | `email_already_exists` | `freemium_child_limit_exceeded` | `unknown`) |
+| `api.ts` | `createAccount()`, `CreateAccountError extends ApiError<...>` (discriminated by `.kind`: `validation_error` | `email_already_exists` | `freemium_child_limit_exceeded` | `unknown`) |
 | `useAccountSignup.ts` | `useMutation` wrapper around `createAccount` |
 
 ## Notable behaviors when touching this feature
@@ -43,9 +44,9 @@ Vite + React 18 + TypeScript. Forms: React Hook Form. Server state: TanStack Que
 | `HomePage.tsx` | 3 states: no account saved / cuenta sin hijos / listado; clears the saved `account_id` and falls back to the "no account" state on a 404 from `fetchAccount` |
 | `ChildCard.tsx` | Name + `computeAge`; links to the (placeholder) child detail route |
 | `ChildDetailPlaceholder.tsx` | Minimal stub rendered at `/children/:childId` — the real consultas/recetas screen is a separate future feature (FR-005/FR-007) |
-| `AddChildModal.tsx` | Modal for "Agregar hijo"; reuses `ChildFieldset` and `FreemiumLimitModal` from `features/account-signup/` as-is, no duplication |
+| `AddChildModal.tsx` | Modal for "Agregar hijo"; reuses `ChildFieldset` and `FreemiumLimitModal` from `features/account-signup/` as-is, no duplication. `ChildFieldset`'s "Quitar hijo" button is the modal's only dismiss control (wired to `onClose`) — valid only while the child is still unsaved, since it can never be removed once persisted (FR-006a); there's no separate "Cancelar" button duplicating the same action |
 | `useAccountSession.ts` | `getAccountId`/`setAccountId`/`clearAccountId` over `localStorage`, each wrapped in `try/catch` — the only "session" this app has (no real login yet) |
-| `api.ts` | `fetchAccount()`, `addChild()`, `AccountApiError` (discriminated by `.kind`: `not_found` | `validation_error` | `freemium_child_limit_exceeded` | `unknown`) |
+| `api.ts` | `fetchAccount()`, `addChild()`, `AccountApiError extends ApiError<...>` (discriminated by `.kind`: `not_found` | `validation_error` | `freemium_child_limit_exceeded` | `unknown`) |
 | `types.ts` | `Account`/`Child` shapes matching `GET /accounts/{accountId}`'s response |
 
 Because `AddChildModal.tsx` reuses `ChildFieldset` cross-feature, both `useAccountSession` and `AddChildModal` are imported from `features/home/` inside `features/account-signup/AccountSignupForm.tsx` too — a deliberate cross-feature import rather than moving shared pieces into `shared/` prematurely (see specs/003-home-listado-hijos/research.md).

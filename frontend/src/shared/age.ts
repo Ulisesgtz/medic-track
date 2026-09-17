@@ -9,15 +9,20 @@ export interface Age {
  * meaningless "0 años" case for babies).
  */
 export function computeAge(birthDate: string, now: Date = new Date()): Age {
-  // birthDate is a plain YYYY-MM-DD string (no time-of-day), which Date
-  // parses as UTC midnight — read every field via the UTC accessors so a
-  // negative-offset local timezone doesn't roll it back a calendar day.
-  const birth = new Date(birthDate)
+  // birthDate is a plain YYYY-MM-DD string with no timezone of its own —
+  // read its calendar fields directly from the string instead of going
+  // through `Date` (which would parse it as UTC midnight). `now` is a real
+  // wall-clock instant, so it must be read with the LOCAL accessors to match
+  // what the user actually sees as "today" — mixing UTC-for-birth with
+  // local-for-now (or vice versa) shifts the age by up to a day for anyone
+  // outside UTC, which is every user of this app (Mexico, UTC-6/UTC-5).
+  const [birthYear, birthMonth, birthDay] = birthDate.split('-').map(Number)
+  const nowYear = now.getFullYear()
+  const nowMonth = now.getMonth() + 1
+  const nowDay = now.getDate()
 
-  let months =
-    (now.getUTCFullYear() - birth.getUTCFullYear()) * 12 +
-    (now.getUTCMonth() - birth.getUTCMonth())
-  if (now.getUTCDate() < birth.getUTCDate()) {
+  let months = (nowYear - birthYear) * 12 + (nowMonth - birthMonth)
+  if (nowDay < birthDay) {
     months -= 1
   }
   if (months < 0) {
@@ -28,10 +33,9 @@ export function computeAge(birthDate: string, now: Date = new Date()): Age {
     return { value: months, unit: 'meses' }
   }
 
-  let years = now.getUTCFullYear() - birth.getUTCFullYear()
+  let years = nowYear - birthYear
   const hasHadBirthdayThisYear =
-    now.getUTCMonth() > birth.getUTCMonth() ||
-    (now.getUTCMonth() === birth.getUTCMonth() && now.getUTCDate() >= birth.getUTCDate())
+    nowMonth > birthMonth || (nowMonth === birthMonth && nowDay >= birthDay)
   if (!hasHadBirthdayThisYear) {
     years -= 1
   }

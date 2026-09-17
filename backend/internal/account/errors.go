@@ -23,6 +23,19 @@ var (
 	ErrAccountNotFound = errors.New("account not found")
 )
 
+// FreemiumLimitError wraps ErrFreemiumChildLimitExceeded with the actual
+// limit/received counts, so a caller that needs those numbers (e.g.
+// handler.go's 422 response body) doesn't have to hardcode or re-derive
+// them. errors.Is(err, ErrFreemiumChildLimitExceeded) still matches via
+// Unwrap.
+type FreemiumLimitError struct {
+	Limit    int
+	Received int
+}
+
+func (e *FreemiumLimitError) Error() string { return ErrFreemiumChildLimitExceeded.Error() }
+func (e *FreemiumLimitError) Unwrap() error { return ErrFreemiumChildLimitExceeded }
+
 // ValidationError describes a single field-level validation failure.
 type ValidationError struct {
 	Field   string
