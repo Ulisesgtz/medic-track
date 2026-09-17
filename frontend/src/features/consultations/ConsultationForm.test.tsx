@@ -175,4 +175,78 @@ describe('ConsultationForm', () => {
     expect(document.getElementById('medications.0.frequencyHours')).toHaveValue(null)
     expect(document.getElementById('medications.0.durationDays')).toHaveValue(null)
   })
+
+  it('adds a fieldset per medication for a numbered prescription list (FR-006)', async () => {
+    const tesseract = await import('tesseract.js')
+    vi.mocked(tesseract.default.recognize).mockResolvedValue({
+      data: {
+        text:
+          'Dr. Erick Rojas\nColoproctología\nReceta Médica\nFecha: 04-02-2025\n' +
+          'Médicamentos:\n' +
+          '1. PARACETAMOL500 MG (TYLENOL)\nTomar 2 tableta cada 6-8 horas por 7 días.\n' +
+          '2. TRAMADOL /KETOROLACO 25/10 MG (SINERGIX)\nTomar 1 tableta cada 6-8 horas por 7 días.\n' +
+          '3. DEXKETOPROFENO25MG (STADIUM)\nTomar 1 tableta cada 12 horas por 7 días.\n',
+      },
+    } as never)
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.upload(screen.getByLabelText('Foto de la receta'), samplePhoto())
+
+    // Wait on the last medication's own value rather than the progress
+    // indicator disappearing — under parallel test-worker load the real
+    // setTimeout stagger can lag behind a fixed-timeout proxy check.
+    await waitFor(
+      () => expect(document.getElementById('medications.2.name')).toHaveValue('DEXKETOPROFENO'),
+      { timeout: 5000 },
+    )
+    expect(screen.queryByText(/Agregando medicamentos de la receta/)).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Doctor')).toHaveValue('Erick Rojas')
+    expect(screen.getByLabelText('Fecha de la consulta')).toHaveValue('2025-02-04')
+    expect(document.getElementById('medications.0.name')).toHaveValue('PARACETAMOL')
+    expect(document.getElementById('medications.0.frequencyHours')).toHaveValue(6)
+    expect(document.getElementById('medications.0.durationDays')).toHaveValue(7)
+    expect(document.getElementById('medications.1.name')).toHaveValue('TRAMADOL /KETOROLACO')
+    expect(document.getElementById('medications.1.frequencyHours')).toHaveValue(6)
+    expect(document.getElementById('medications.2.frequencyHours')).toHaveValue(12)
+  })
+
+  it('shows visible progress while adding medications from a numbered list (FR-006)', async () => {
+    const tesseract = await import('tesseract.js')
+    vi.mocked(tesseract.default.recognize).mockResolvedValue({
+      data: {
+        text:
+          '1. PARACETAMOL 500MG\nTomar cada 8 horas por 7 días.\n' +
+          '2. IBUPROFENO 400MG\nTomar cada 12 horas por 5 días.\n',
+      },
+    } as never)
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.upload(screen.getByLabelText('Foto de la receta'), samplePhoto())
+
+    await waitFor(() => expect(screen.getByText('Agregando medicamentos de la receta… 1 de 2')).toBeInTheDocument())
+    await waitFor(() => expect(document.getElementById('medications.1.name')).toHaveValue('IBUPROFENO'), {
+      timeout: 5000,
+    })
+    expect(screen.queryByText(/Agregando medicamentos de la receta/)).not.toBeInTheDocument()
+  })
+
+  it('collapses a medication fieldset to a one-line summary and back (scannability)', async () => {
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.type(document.getElementById('medications.0.name')!, 'Amoxicilina')
+    await user.type(document.getElementById('medications.0.frequencyHours')!, '8')
+    await user.type(document.getElementById('medications.0.durationDays')!, '5')
+
+    await user.click(screen.getByRole('button', { name: /Medicamento 1/ }))
+
+    expect(screen.getByText('Amoxicilina — cada 8h — 5 días')).toBeInTheDocument()
+    expect(document.getElementById('medications.0.name')!.closest('.grid')).toHaveClass('hidden')
+
+    await user.click(screen.getByRole('button', { name: /Medicamento 1/ }))
+
+    expect(document.getElementById('medications.0.name')!.closest('.grid')).not.toHaveClass('hidden')
+  })
 })

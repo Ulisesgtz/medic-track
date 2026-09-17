@@ -34,24 +34,24 @@ const errorClass = 'mt-1 text-sm text-red-600'
 interface PrescriptionHints {
   doctorName?: string
   consultDate?: string
-  medicationName?: string
+}
+
+interface MedicationHint {
+  name?: string
   frequencyHours?: string
   durationDays?: string
 }
 
 /**
- * Best-effort field guesses from OCR-extracted free text (FR-006) — never
- * authoritative. Every hint only ever fills a field the parent left empty,
- * and stays fully editable/overwritable before Guardar (Principio I).
+ * Best-effort doctor/date guesses from OCR-extracted free text (FR-006) —
+ * never authoritative. Every hint only ever fills a field the parent left
+ * empty, and stays fully editable/overwritable before Guardar (Principio I).
  */
 function extractPrescriptionHints(ocrText: string): PrescriptionHints {
   const doctorMatch = ocrText.match(
     /dra?\.?[ \t]+([A-Za-zÁÉÍÓÚÑáéíóúñ.]+(?:[ \t]+[A-Za-zÁÉÍÓÚÑáéíóúñ.]+){1,3})/i,
   )
   const dateMatch = ocrText.match(/(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/)
-  const medicationMatch = ocrText.match(/([A-Za-zÁÉÍÓÚÑáéíóúñ]{4,})\s*\d{2,4}\s*mg/i)
-  const frequencyMatch = ocrText.match(/cada\s*(\d{1,2})\s*(?:hrs?\.?|horas?)/i)
-  const durationMatch = ocrText.match(/(\d{1,3})\s*(?:d[ií]as?|days?)/i)
 
   let consultDate: string | undefined
   if (dateMatch) {
@@ -63,10 +63,50 @@ function extractPrescriptionHints(ocrText: string): PrescriptionHints {
   return {
     doctorName: doctorMatch ? doctorMatch[1].trim() : undefined,
     consultDate,
-    medicationName: medicationMatch ? medicationMatch[1] : undefined,
+  }
+}
+
+function frequencyAndDurationHints(block: string): Pick<MedicationHint, 'frequencyHours' | 'durationDays'> {
+  const frequencyMatch = block.match(/cada\s*(\d{1,2})(?:\s*[-–]\s*\d{1,2})?\s*(?:hrs?\.?|horas?)/i)
+  const durationMatch = block.match(/(?:por|durante)\s*(\d{1,3})\s*d[ií]as?/i)
+  return {
     frequencyHours: frequencyMatch ? frequencyMatch[1] : undefined,
     durationDays: durationMatch ? durationMatch[1] : undefined,
   }
+}
+
+/** One medication per numbered line ("1. AMOXICILINA 500MG ... cada 8 horas por 7 días"). */
+function extractNumberedMedications(ocrText: string): MedicationHint[] {
+  const blocks = ocrText.split(/(?=^\d{1,2}\.\s)/m).filter((block) => /^\d{1,2}\.\s/.test(block))
+  const meds: MedicationHint[] = []
+  for (const block of blocks) {
+    const nameMatch = block.match(/^\d{1,2}\.\s*([A-Za-zÁÉÍÓÚÑáéíóúñ/ ]+?)(?=\d)/)
+    if (!nameMatch) continue
+    meds.push({
+      name: nameMatch[1].replace(/\s+/g, ' ').trim(),
+      ...frequencyAndDurationHints(block),
+    })
+  }
+  return meds
+}
+
+/** Fallback for a single, unlisted medication ("Amoxicilina 250mg ... cada 8 horas ... 5 dias"). */
+function extractSingleMedication(ocrText: string): MedicationHint | undefined {
+  const nameMatch = ocrText.match(/([A-Za-zÁÉÍÓÚÑáéíóúñ]{4,})\s*\d{2,4}\s*mg/i)
+  if (!nameMatch) return undefined
+  return { name: nameMatch[1], ...frequencyAndDurationHints(ocrText) }
+}
+
+/**
+ * Best-effort medication guesses from OCR-extracted free text (FR-006) —
+ * never authoritative. Prescriptions with a numbered medication list yield
+ * one entry per line; otherwise falls back to a single best-guess entry.
+ */
+function extractMedications(ocrText: string): MedicationHint[] {
+  const numbered = extractNumberedMedications(ocrText)
+  if (numbered.length > 0) return numbered
+  const single = extractSingleMedication(ocrText)
+  return single ? [single] : []
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -88,10 +128,13 @@ interface ConsultationFormProps {
 }
 
 /** Form to register a new medical consultation (FR-003, FR-004). */
+const MEDICATION_STAGGER_MS = 180
+
 export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationFormProps) {
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const { suggestion, isRunning, runOcr } = useOcrSuggestion()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [ocrProgress, setOcrProgress] = useState<{ current: number; total: number } | null>(null)
 
   const {
     register,
@@ -143,23 +186,52 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
 
   useEffect(() => {
     if (!suggestion) return
-    const hints = extractPrescriptionHints(suggestion)
-    if (hints.doctorName && !getValues('doctorName')) {
-      setValue('doctorName', hints.doctorName)
+    let cancelled = false
+
+    async function applyHints() {
+      const hints = extractPrescriptionHints(suggestion as string)
+      if (hints.doctorName && !getValues('doctorName')) {
+        setValue('doctorName', hints.doctorName)
+      }
+      if (hints.consultDate && !getValues('consultDate')) {
+        setValue('consultDate', hints.consultDate)
+      }
+
+      const meds = extractMedications(suggestion as string)
+      if (meds.length === 0) return
+      const existingCount = getValues('medications').length
+      setOcrProgress({ current: 0, total: meds.length })
+
+      for (let index = 0; index < meds.length; index++) {
+        if (cancelled) return
+        // Adds each medication with a short pause so a long prescription
+        // reveals itself progressively instead of dumping every fieldset
+        // at once (UI/UX guidance: visible incremental progress).
+        if (index >= existingCount) {
+          append(emptyMedication)
+          await new Promise((resolve) => setTimeout(resolve, MEDICATION_STAGGER_MS))
+          if (cancelled) return
+        }
+        const med = meds[index]
+        if (med.name && !getValues(`medications.${index}.name`)) {
+          setValue(`medications.${index}.name`, med.name)
+        }
+        if (med.frequencyHours && !getValues(`medications.${index}.frequencyHours`)) {
+          setValue(`medications.${index}.frequencyHours`, med.frequencyHours)
+        }
+        if (med.durationDays && !getValues(`medications.${index}.durationDays`)) {
+          setValue(`medications.${index}.durationDays`, med.durationDays)
+        }
+        setOcrProgress({ current: index + 1, total: meds.length })
+      }
+      if (!cancelled) setOcrProgress(null)
     }
-    if (hints.consultDate && !getValues('consultDate')) {
-      setValue('consultDate', hints.consultDate)
+
+    applyHints()
+    return () => {
+      cancelled = true
     }
-    if (hints.medicationName && !getValues('medications.0.name')) {
-      setValue('medications.0.name', hints.medicationName)
-    }
-    if (hints.frequencyHours && !getValues('medications.0.frequencyHours')) {
-      setValue('medications.0.frequencyHours', hints.frequencyHours)
-    }
-    if (hints.durationDays && !getValues('medications.0.durationDays')) {
-      setValue('medications.0.durationDays', hints.durationDays)
-    }
-  }, [suggestion, getValues, setValue])
+  }, [suggestion, getValues, setValue, append])
 
   const onSubmit = handleSubmit((values) => {
     mutation.mutate(values)
@@ -198,7 +270,7 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
           type="file"
           accept="image/*"
           capture="environment"
-          className="sr-only"
+          className="hidden"
           onChange={handlePhotoChange}
         />
         <div className="flex items-center gap-3">
@@ -211,7 +283,16 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
           </button>
           {photoFile && <span className="truncate text-sm text-slate-600">{photoFile.name}</span>}
         </div>
-        {isRunning && <p className="mt-1 text-sm text-slate-500">Analizando la foto…</p>}
+        {isRunning && (
+          <p className="mt-1 text-sm text-slate-500" aria-live="polite">
+            Analizando la foto…
+          </p>
+        )}
+        {ocrProgress && (
+          <p className="mt-1 text-sm text-cyan-700" aria-live="polite">
+            Agregando medicamentos de la receta… {ocrProgress.current} de {ocrProgress.total}
+          </p>
+        )}
         {mutation.isError &&
           mutation.error instanceof ConsultationApiError &&
           mutation.error.kind === 'validation_error' &&
@@ -227,6 +308,7 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
               index={index}
               register={register}
               errors={errors}
+              control={control}
               onRemove={() => remove(index)}
             />
           ))}
