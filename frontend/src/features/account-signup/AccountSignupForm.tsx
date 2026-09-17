@@ -1,7 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm, useFieldArray, useWatch } from 'react-hook-form'
+import { useNavigate } from 'react-router-dom'
 import { useCountries, useStates } from '../../shared/catalog/useCatalog'
 import { useAccountSignup } from './useAccountSignup'
+import { useAccountSession } from '../home/useAccountSession'
 import { ChildFieldset } from './ChildFieldset'
 import { FreemiumLimitModal } from './FreemiumLimitModal'
 import { CreateAccountError, type CreateAccountPayload } from './api'
@@ -65,6 +67,18 @@ export function AccountSignupForm() {
   const { data: states } = useStates(countryCode || undefined)
 
   const signup = useAccountSignup()
+  const navigate = useNavigate()
+  const { setAccountId } = useAccountSession()
+
+  // FR-003: on a successful signup, save the new account id (the only
+  // "session" this app has, see specs/003-home-listado-hijos) and navigate
+  // straight to the home page, with no extra step from the user.
+  useEffect(() => {
+    if (signup.isSuccess) {
+      setAccountId(signup.data.id)
+      navigate('/home')
+    }
+  }, [signup.isSuccess, signup.data, setAccountId, navigate])
 
   // FR-007: attempting to add a child beyond the free-plan limit shows the
   // pop-up modal immediately, but does NOT create/reveal that child's fieldset.
@@ -264,12 +278,6 @@ export function AccountSignupForm() {
               : 'Ocurrió un error al guardar la cuenta. Intenta de nuevo.'}
           </p>
         )}
-
-      {signup.isSuccess && (
-        <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800">
-          Cuenta creada exitosamente.
-        </p>
-      )}
 
       <button
         type="submit"

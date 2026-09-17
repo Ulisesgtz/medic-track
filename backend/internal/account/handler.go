@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 )
 
@@ -91,6 +94,13 @@ type freemiumLimitResponseDoc struct {
 	Limit    int    `json:"limit" example:"1"`
 	Received int    `json:"received" example:"2"`
 } // @name FreemiumLimitResponse
+
+// accountNotFoundResponseDoc documents the 404 body shape
+// (specs/003-home-listado-hijos/contracts/get-account.md).
+type accountNotFoundResponseDoc struct {
+	Error   string `json:"error" example:"account_not_found"`
+	Message string `json:"message" example:"Account not found"`
+} // @name AccountNotFoundResponse
 
 // maxRequestBodyBytes caps the POST /accounts body to guard against
 // oversized-payload abuse (backend-security-coder: payload size limits).
@@ -203,6 +213,134 @@ func (h *Handler) writeCreateAccountError(ctx context.Context, w http.ResponseWr
 	default:
 		h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", "Could not create account", nil)
 	}
+}
+
+// GetAccount handles GET /accounts/{accountId}
+// (specs/003-home-listado-hijos/contracts/get-account.md).
+//
+//	@Summary		Get an account and its children
+//	@Description	Retrieves an account (tutor + children) by id, to populate the home page's
+//	@Description	children listing (FR-001). No authentication — the account id acts as a
+//	@Description	de facto access token, a deliberate continuation of the posture already
+//	@Description	accepted in specs/001/002 (see plan.md's privacy note).
+//	@Tags			accounts
+//	@Produce		json
+//	@Param			accountId	path		string	true	"Account UUID"
+//	@Success		200			{object}	accountResponse
+//	@Failure		404			{object}	accountNotFoundResponseDoc	"No account exists for this id"
+//	@Router			/accounts/{accountId} [get]
+func (h *Handler) GetAccount(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "accountId"))
+	if err != nil {
+		// An id that isn't even a well-formed UUID is treated the same as
+		// "no account" (FR-002's edge case: a stale/corrupt saved id).
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, accountNotFoundBody(), nil)
+		return
+	}
+
+	acc, err := h.service.GetAccount(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrAccountNotFound) {
+			h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, accountNotFoundBody(), nil)
+			return
+		}
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not fetch account", nil)
+		return
+	}
+
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, toAccountResponse(acc), &acc.ID)
+}
+
+// AddChild handles POST /accounts/{accountId}/children
+// (specs/003-home-listado-hijos/contracts/post-account-children.md).
+//
+//	@Summary		Add a child to an existing account
+//	@Description	Adds a single child to an account already created, from the home page's
+//	@Description	"Agregar hijo" modal (FR-004). Applies the same field validation and
+//	@Description	freemium 1-child limit as POST /accounts.
+//	@Tags			accounts
+//	@Accept			json
+//	@Produce		json
+//	@Param			accountId	path		string				true	"Account UUID"
+//	@Param			payload		body		createChildRequest	true	"Child to add"
+//	@Success		201			{object}	accountResponse
+//	@Failure		400			{object}	validationErrorResponseDoc	"Missing/invalid field"
+//	@Failure		404			{object}	accountNotFoundResponseDoc	"No account exists for this id"
+//	@Failure		422			{object}	freemiumLimitResponseDoc	"Free plan already has 1 child; upgrade required"
+//	@Router			/accounts/{accountId}/children [post]
+func (h *Handler) AddChild(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+
+	id, err := uuid.Parse(chi.URLParam(r, "accountId"))
+	if err != nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, accountNotFoundBody(), nil)
+		return
+	}
+
+	var req createChildRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusBadRequest, "validation_error", "Malformed JSON body", &id)
+		return
+	}
+
+	var birthDate time.Time
+	if req.BirthDate != "" {
+		parsed, err := time.Parse("2006-01-02", req.BirthDate)
+		if err != nil {
+			h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody([]ValidationError{{
+				Field:   "birthDate",
+				Message: "birth date must be an ISO-8601 date (YYYY-MM-DD)",
+			}}, "One or more fields are invalid"), &id)
+			return
+		}
+		birthDate = parsed
+	}
+
+	input := CreateChildInput{
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		BirthDate: birthDate,
+		Height:    req.Height,
+		Weight:    req.Weight,
+	}
+
+	acc, err := h.service.AddChild(r.Context(), id, input)
+	if err != nil {
+		h.writeAddChildError(r.Context(), w, err, id)
+		return
+	}
+
+	h.responder.WriteJSON(r.Context(), w, http.StatusCreated, toAccountResponse(acc), &acc.ID)
+}
+
+// writeAddChildError mirrors writeCreateAccountError's pattern of calling
+// h.responder directly from each case branch, for distinct error_logs
+// attribution per backend/CLAUDE.md.
+func (h *Handler) writeAddChildError(ctx context.Context, w http.ResponseWriter, err error, accountID uuid.UUID) {
+	var validationErrs ValidationErrors
+	switch {
+	case errors.As(err, &validationErrs):
+		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationErrorBody(validationErrs, "One or more fields are invalid"), &accountID)
+	case errors.Is(err, ErrAccountNotFound):
+		h.responder.WriteJSON(ctx, w, http.StatusNotFound, accountNotFoundBody(), nil)
+	case errors.Is(err, ErrFreemiumChildLimitExceeded):
+		h.responder.WriteJSON(ctx, w, http.StatusUnprocessableEntity, map[string]any{
+			"error":    "freemium_child_limit_exceeded",
+			"message":  "The free plan includes only one child per account",
+			"limit":    1,
+			"received": 2,
+		}, &accountID)
+	case errors.Is(err, ErrInvalidNameFormat):
+		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationErrorBody([]ValidationError{
+			{Field: "firstName", Message: "must contain only letters, spaces, hyphens or apostrophes, and be at most 100 characters"},
+		}, "One or more fields are invalid"), &accountID)
+	default:
+		h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", "Could not add child", &accountID)
+	}
+}
+
+func accountNotFoundBody() map[string]string {
+	return map[string]string{"error": "account_not_found", "message": "Account not found"}
 }
 
 // validationErrorBody builds the 400 response body shape. Pure data

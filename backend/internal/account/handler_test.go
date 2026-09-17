@@ -32,6 +32,8 @@ func newTestRouterWithPool(t *testing.T) (http.Handler, *pgxpool.Pool) {
 
 	r := chi.NewRouter()
 	r.Post("/accounts", h.CreateAccount)
+	r.Get("/accounts/{accountId}", h.GetAccount)
+	r.Post("/accounts/{accountId}/children", h.AddChild)
 	return r, pool
 }
 
@@ -248,6 +250,162 @@ func TestHandler_CreateAccount_ErrorLogAttributesDistinctCallSites(t *testing.T)
 
 	require.NotEqual(t, birthDateLine, missingFieldLine,
 		"two different validation-error kinds must attribute to two different source lines")
+}
+
+func doGet(t *testing.T, router http.Handler, path string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, path, nil)
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	return rec
+}
+
+func doPostPath(t *testing.T, router http.Handler, path string, body map[string]any) *httptest.ResponseRecorder {
+	t.Helper()
+	b, err := json.Marshal(body)
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodPost, path, bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	return rec
+}
+
+// TestHandler_GetAccount_Success covers contracts/get-account.md's 200 case:
+// same body shape as POST /accounts' 201.
+func TestHandler_GetAccount_Success(t *testing.T) {
+	router := newTestRouter(t)
+
+	created := doPost(t, router, map[string]any{
+		"firstName": "Ana",
+		"lastName":  "Gómez",
+		"email":     uniqueEmail("handler.getaccount.success"),
+		"children": []map[string]any{
+			{"firstName": "Luis", "lastName": "Gómez", "birthDate": "2020-01-15"},
+		},
+	})
+	require.Equal(t, http.StatusCreated, created.Code)
+	var createdResp map[string]any
+	require.NoError(t, json.Unmarshal(created.Body.Bytes(), &createdResp))
+	id := createdResp["id"].(string)
+
+	rec := doGet(t, router, "/accounts/"+id)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	require.Equal(t, id, resp["id"])
+	children, ok := resp["children"].([]any)
+	require.True(t, ok)
+	require.Len(t, children, 1)
+}
+
+// TestHandler_GetAccount_NotFound covers the 404 case: a well-formed but
+// non-existent UUID, and a malformed id (both treated as "no account").
+func TestHandler_GetAccount_NotFound(t *testing.T) {
+	router := newTestRouter(t)
+
+	for _, id := range []string{"11111111-1111-1111-1111-111111111111", "not-a-uuid"} {
+		t.Run(id, func(t *testing.T) {
+			rec := doGet(t, router, "/accounts/"+id)
+
+			require.Equal(t, http.StatusNotFound, rec.Code)
+			var resp map[string]any
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+			require.Equal(t, "account_not_found", resp["error"])
+		})
+	}
+}
+
+// TestHandler_AddChild_Success covers contracts/post-account-children.md's
+// 201 case: the returned account includes the newly added child.
+func TestHandler_AddChild_Success(t *testing.T) {
+	router := newTestRouter(t)
+
+	created := doPost(t, router, map[string]any{
+		"firstName": "Ana",
+		"lastName":  "Gómez",
+		"email":     uniqueEmail("handler.addchild.success"),
+	})
+	var createdResp map[string]any
+	require.NoError(t, json.Unmarshal(created.Body.Bytes(), &createdResp))
+	id := createdResp["id"].(string)
+
+	rec := doPostPath(t, router, "/accounts/"+id+"/children", map[string]any{
+		"firstName": "Luis", "lastName": "Gómez", "birthDate": "2020-01-15",
+	})
+
+	require.Equal(t, http.StatusCreated, rec.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	children, ok := resp["children"].([]any)
+	require.True(t, ok)
+	require.Len(t, children, 1)
+}
+
+// TestHandler_AddChild_FreemiumLimit covers the 422 case: a free-plan
+// account that already has 1 child.
+func TestHandler_AddChild_FreemiumLimit(t *testing.T) {
+	router := newTestRouter(t)
+
+	created := doPost(t, router, map[string]any{
+		"firstName": "Carla",
+		"lastName":  "Ruiz",
+		"email":     uniqueEmail("handler.addchild.freemium"),
+		"children": []map[string]any{
+			{"firstName": "Hijo Uno", "lastName": "Ruiz", "birthDate": "2018-01-01"},
+		},
+	})
+	var createdResp map[string]any
+	require.NoError(t, json.Unmarshal(created.Body.Bytes(), &createdResp))
+	id := createdResp["id"].(string)
+
+	rec := doPostPath(t, router, "/accounts/"+id+"/children", map[string]any{
+		"firstName": "Hijo Dos", "lastName": "Ruiz", "birthDate": "2021-01-01",
+	})
+
+	require.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	require.Equal(t, "freemium_child_limit_exceeded", resp["error"])
+}
+
+// TestHandler_AddChild_AccountNotFound covers the 404 case.
+func TestHandler_AddChild_AccountNotFound(t *testing.T) {
+	router := newTestRouter(t)
+
+	rec := doPostPath(t, router, "/accounts/11111111-1111-1111-1111-111111111111/children", map[string]any{
+		"firstName": "Luis", "lastName": "Gómez", "birthDate": "2020-01-15",
+	})
+
+	require.Equal(t, http.StatusNotFound, rec.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	require.Equal(t, "account_not_found", resp["error"])
+}
+
+// TestHandler_AddChild_InvalidFields covers the 400 case.
+func TestHandler_AddChild_InvalidFields(t *testing.T) {
+	router := newTestRouter(t)
+
+	created := doPost(t, router, map[string]any{
+		"firstName": "Ana",
+		"lastName":  "Gómez",
+		"email":     uniqueEmail("handler.addchild.invalid"),
+	})
+	var createdResp map[string]any
+	require.NoError(t, json.Unmarshal(created.Body.Bytes(), &createdResp))
+	id := createdResp["id"].(string)
+
+	rec := doPostPath(t, router, "/accounts/"+id+"/children", map[string]any{
+		"lastName": "Gómez", "birthDate": "2020-01-15",
+	})
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	require.Equal(t, "validation_error", resp["error"])
 }
 
 // TestRouter_NoChildMutationRoutes covers FR-006a: once persisted, a Child

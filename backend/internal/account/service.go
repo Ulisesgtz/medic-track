@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 	"unicode/utf8"
+
+	"github.com/google/uuid"
 )
 
 var emailPattern = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
@@ -99,6 +101,74 @@ func (s *Service) CreateAccount(ctx context.Context, input CreateAccountInput) (
 	return acc, nil
 }
 
+// GetAccount retrieves an account and its children by id, for the home page
+// listing (specs/003-home-listado-hijos FR-001).
+func (s *Service) GetAccount(ctx context.Context, id uuid.UUID) (*Account, error) {
+	return s.repo.GetByID(ctx, id)
+}
+
+// AddChild adds a single child to an already-existing account, reusing the
+// same field validation (validateChildFields) and freemium 1-child limit as
+// CreateAccount (specs/003-home-listado-hijos FR-004).
+func (s *Service) AddChild(ctx context.Context, accountID uuid.UUID, input CreateChildInput) (*Account, error) {
+	acc, err := s.repo.GetByID(ctx, accountID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Same precedence as CreateAccount's freemium check: run before
+	// field-level validation, so exceeding the limit always produces the
+	// freemium response rather than an unrelated validation error.
+	if len(acc.Children) >= 1 {
+		return nil, ErrFreemiumChildLimitExceeded
+	}
+
+	if errs := validateChildFields(input); len(errs) > 0 {
+		return nil, ValidationErrors(errs)
+	}
+
+	child, err := s.repo.CreateChild(ctx, accountID, input)
+	if err != nil {
+		return nil, err
+	}
+	acc.Children = append(acc.Children, *child)
+	return acc, nil
+}
+
+// validateChildFields validates a single child's fields (name format/length,
+// birth date, height/weight), with field names unprefixed (e.g. "firstName",
+// not "children[0].firstName"). validateCreateAccountInput wraps these with
+// an index prefix for its multi-child case; AddChild uses them as-is since it
+// only ever validates one child at a time.
+func validateChildFields(c CreateChildInput) []ValidationError {
+	var errs []ValidationError
+
+	if c.FirstName == "" {
+		errs = append(errs, ValidationError{Field: "firstName", Message: "first name is required"})
+	} else if err := validateNameFormat(c.FirstName); err != "" {
+		errs = append(errs, ValidationError{Field: "firstName", Message: err})
+	}
+	if c.LastName == "" {
+		errs = append(errs, ValidationError{Field: "lastName", Message: "last name is required"})
+	} else if err := validateNameFormat(c.LastName); err != "" {
+		errs = append(errs, ValidationError{Field: "lastName", Message: err})
+	}
+	if c.BirthDate.IsZero() {
+		errs = append(errs, ValidationError{Field: "birthDate", Message: "birth date is required"})
+	} else if c.BirthDate.After(time.Now()) {
+		// FR-005: birth date must not be in the future.
+		errs = append(errs, ValidationError{Field: "birthDate", Message: "birth date cannot be in the future"})
+	}
+	if c.Height != nil && *c.Height <= 0 {
+		errs = append(errs, ValidationError{Field: "height", Message: "height must be a positive number"})
+	}
+	if c.Weight != nil && *c.Weight <= 0 {
+		errs = append(errs, ValidationError{Field: "weight", Message: "weight must be a positive number"})
+	}
+
+	return errs
+}
+
 func validateCreateAccountInput(input CreateAccountInput) ValidationErrors {
 	var errs ValidationErrors
 
@@ -118,30 +188,9 @@ func validateCreateAccountInput(input CreateAccountInput) ValidationErrors {
 		errs = append(errs, ValidationError{Field: "email", Message: "invalid email format"})
 	}
 
-	now := time.Now()
 	for i, c := range input.Children {
-		prefix := "children"
-		if c.FirstName == "" {
-			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "firstName"), Message: "first name is required"})
-		} else if err := validateNameFormat(c.FirstName); err != "" {
-			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "firstName"), Message: err})
-		}
-		if c.LastName == "" {
-			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "lastName"), Message: "last name is required"})
-		} else if err := validateNameFormat(c.LastName); err != "" {
-			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "lastName"), Message: err})
-		}
-		if c.BirthDate.IsZero() {
-			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "birthDate"), Message: "birth date is required"})
-		} else if c.BirthDate.After(now) {
-			// FR-005: birth date must not be in the future.
-			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "birthDate"), Message: "birth date cannot be in the future"})
-		}
-		if c.Height != nil && *c.Height <= 0 {
-			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "height"), Message: "height must be a positive number"})
-		}
-		if c.Weight != nil && *c.Weight <= 0 {
-			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "weight"), Message: "weight must be a positive number"})
+		for _, e := range validateChildFields(c) {
+			errs = append(errs, ValidationError{Field: fieldIndex("children", i, e.Field), Message: e.Message})
 		}
 	}
 

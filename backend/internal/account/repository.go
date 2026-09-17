@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -74,6 +76,70 @@ func mapInsertError(err error, context string) error {
 		}
 	}
 	return fmt.Errorf("%s: %w", context, err)
+}
+
+// GetByID retrieves an account and its children (ordered by creation, oldest
+// first — spec.md's "mismo orden en que fueron dados de alta") by id. It
+// returns ErrAccountNotFound if no account exists for that id
+// (specs/003-home-listado-hijos FR-002).
+func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Account, error) {
+	acc := &Account{ID: id}
+	err := r.pool.QueryRow(ctx, `
+		SELECT first_name, last_name, email, country_code, state_code, plan, created_at
+		FROM accounts WHERE id = $1
+	`, id).Scan(&acc.FirstName, &acc.LastName, &acc.Email, &acc.CountryCode, &acc.StateCode, &acc.Plan, &acc.CreatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrAccountNotFound
+		}
+		return nil, fmt.Errorf("querying account: %w", err)
+	}
+
+	rows, err := r.pool.Query(ctx, `
+		SELECT id, first_name, last_name, birth_date, height, weight, created_at
+		FROM children WHERE account_id = $1 ORDER BY created_at ASC
+	`, id)
+	if err != nil {
+		return nil, fmt.Errorf("querying children: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		child := Child{AccountID: id}
+		if err := rows.Scan(&child.ID, &child.FirstName, &child.LastName, &child.BirthDate, &child.Height, &child.Weight, &child.CreatedAt); err != nil {
+			return nil, fmt.Errorf("scanning child: %w", err)
+		}
+		acc.Children = append(acc.Children, child)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating children: %w", err)
+	}
+
+	return acc, nil
+}
+
+// CreateChild inserts a single child for an already-existing account
+// (specs/003-home-listado-hijos, "Agregar hijo" from the home page), reusing
+// the same insert/error-mapping as Create's per-child loop.
+func (r *Repository) CreateChild(ctx context.Context, accountID uuid.UUID, input CreateChildInput) (*Child, error) {
+	child := &Child{
+		AccountID: accountID,
+		FirstName: input.FirstName,
+		LastName:  input.LastName,
+		BirthDate: input.BirthDate,
+		Height:    input.Height,
+		Weight:    input.Weight,
+	}
+	err := r.pool.QueryRow(ctx, `
+		INSERT INTO children (account_id, first_name, last_name, birth_date, height, weight)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, created_at
+	`, child.AccountID, child.FirstName, child.LastName, child.BirthDate, child.Height, child.Weight,
+	).Scan(&child.ID, &child.CreatedAt)
+	if err != nil {
+		return nil, mapInsertError(err, "inserting child")
+	}
+	return child, nil
 }
 
 // EmailExists reports whether an account with the given email already exists.

@@ -1,5 +1,14 @@
 basePath: /
 definitions:
+  AccountNotFoundResponse:
+    properties:
+      error:
+        example: account_not_found
+        type: string
+      message:
+        example: Account not found
+        type: string
+    type: object
   EmailConflictResponse:
     properties:
       error:
@@ -221,6 +230,75 @@ paths:
           schema:
             $ref: '#/definitions/ErrorResponse'
       summary: Create an account (tutor + optional children)
+      tags:
+      - accounts
+  /accounts/{accountId}:
+    get:
+      description: |-
+        Retrieves an account (tutor + children) by id, to populate the home page's
+        children listing (FR-001). No authentication — the account id acts as a
+        de facto access token, a deliberate continuation of the posture already
+        accepted in specs/001/002 (see plan.md's privacy note).
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_account.accountResponse'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/AccountNotFoundResponse'
+      summary: Get an account and its children
+      tags:
+      - accounts
+  /accounts/{accountId}/children:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Adds a single child to an account already created, from the home page's
+        "Agregar hijo" modal (FR-004). Applies the same field validation and
+        freemium 1-child limit as POST /accounts.
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: Child to add
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_account.createChildRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_account.accountResponse'
+        "400":
+          description: Missing/invalid field
+          schema:
+            $ref: '#/definitions/ValidationErrorResponse'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/AccountNotFoundResponse'
+        "422":
+          description: Free plan already has 1 child; upgrade required
+          schema:
+            $ref: '#/definitions/FreemiumLimitResponse'
+      summary: Add a child to an existing account
       tags:
       - accounts
   /catalog/countries:

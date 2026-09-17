@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AccountSignupForm } from './AccountSignupForm'
 
@@ -8,7 +9,12 @@ function renderForm() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={queryClient}>
-      <AccountSignupForm />
+      <MemoryRouter initialEntries={['/signup']}>
+        <Routes>
+          <Route path="/signup" element={<AccountSignupForm />} />
+          <Route path="/home" element={<div>HOME PAGE</div>} />
+        </Routes>
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 }
@@ -23,6 +29,7 @@ describe('AccountSignupForm', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals()
+    window.localStorage.clear()
   })
 
   it('shows a validation error and does not submit when required fields are empty', async () => {
@@ -107,7 +114,7 @@ describe('AccountSignupForm', () => {
     await user.type(screen.getByLabelText('Correo electrónico'), 'maria@example.com')
     await user.click(screen.getByRole('button', { name: 'Guardar' }))
 
-    expect(await screen.findByText('Cuenta creada exitosamente.')).toBeInTheDocument()
+    expect(await screen.findByText('HOME PAGE')).toBeInTheDocument()
   })
 
   it('shows format and max-length errors for a child\'s first/last name', async () => {
@@ -251,14 +258,14 @@ describe('AccountSignupForm', () => {
     expect(screen.queryByTestId('child-fieldset-0')).not.toBeInTheDocument()
   })
 
-  it('shows a success message after a successful save', async () => {
+  it('saves the account id and navigates to /home after a successful save (FR-003)', async () => {
     const user = userEvent.setup()
     vi.mocked(fetch).mockImplementation(async (_input, init) => {
       if (init?.method === 'POST') {
         return {
           ok: true,
           json: async () => ({
-            id: '1', firstName: 'Ana', lastName: 'Gómez', email: 'ana@example.com',
+            id: 'account-123', firstName: 'Ana', lastName: 'Gómez', email: 'ana@example.com',
             countryCode: null, stateCode: null, plan: 'free', children: [],
           }),
         } as Response
@@ -272,7 +279,8 @@ describe('AccountSignupForm', () => {
     await user.type(screen.getByLabelText('Correo electrónico'), 'ana@example.com')
     await user.click(screen.getByRole('button', { name: 'Guardar' }))
 
-    expect(await screen.findByText('Cuenta creada exitosamente.')).toBeInTheDocument()
+    expect(await screen.findByText('HOME PAGE')).toBeInTheDocument()
+    expect(window.localStorage.getItem('peditrack.accountId')).toBe('account-123')
   })
 
   it('shows an inline message when the email is already in use', async () => {
@@ -396,7 +404,7 @@ describe('AccountSignupForm', () => {
     await user.type(document.getElementById('children.0.weight')!, '14.2')
     await user.click(screen.getByRole('button', { name: 'Guardar' }))
 
-    await screen.findByText('Cuenta creada exitosamente.')
+    await screen.findByText('HOME PAGE')
     expect(sentBody).toMatchObject({ children: [{ height: 95.5, weight: 14.2 }] })
   })
 

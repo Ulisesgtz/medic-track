@@ -16,6 +16,11 @@ var (
 	// CHECK constraint rejects a row that passed service-layer validation —
 	// defense in depth against drift between the two (FR-001a).
 	ErrInvalidNameFormat = errors.New("name contains invalid characters or exceeds the maximum length")
+
+	// ErrAccountNotFound is returned when no account exists for a given id —
+	// e.g. an accountId saved in the browser that no longer corresponds to
+	// any account server-side (specs/003-home-listado-hijos FR-002).
+	ErrAccountNotFound = errors.New("account not found")
 )
 
 // ValidationError describes a single field-level validation failure.
