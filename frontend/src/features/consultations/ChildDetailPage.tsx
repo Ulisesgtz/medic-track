@@ -78,14 +78,16 @@ export function ChildDetailPage() {
 
   const doctorCount = new Set(consultations.map((c) => c.doctorName)).size
 
+  // Top-right corner at every width (desktop mock: 151x48, beside the title;
+  // without the sidebar it sits opposite the logo).
   const registerButton = (
     <button
       type="button"
       onClick={() => setShowForm(true)}
-      className={`min-h-12 w-full cursor-pointer rounded-2xl bg-confirmed px-6 py-3 text-[15px] font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
+      className={`min-h-12 w-[151px] shrink-0 cursor-pointer rounded-2xl bg-confirmed px-0 py-3 text-[15px] font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
         hasSidebar
-          ? 'focus-visible:ring-confirmed md:-mb-1.5 md:w-[151px] md:px-0'
-          : 'focus-visible:ring-bright focus-visible:ring-offset-ink md:w-auto md:self-start'
+          ? '-mb-1.5 focus-visible:ring-confirmed'
+          : 'focus-visible:ring-bright focus-visible:ring-offset-ink'
       }`}
     >
       Nueva consulta
@@ -111,10 +113,8 @@ export function ChildDetailPage() {
           </>
         }
         title={child ? formatAgeLong(child.birthDate) : 'Consultas médicas'}
-        action={hasSidebar ? registerButton : undefined}
-      >
-        {hasSidebar ? null : registerButton}
-      </AppHeader>
+        action={registerButton}
+      />
 
       <div className="mx-auto max-w-5xl px-5 py-7 md:px-10 md:py-9">
         {consultations.length > 0 && (

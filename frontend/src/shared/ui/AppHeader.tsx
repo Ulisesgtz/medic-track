@@ -32,14 +32,14 @@ export function AppHeader({ eyebrow, title, action, children }: AppHeaderProps) 
     >
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         {!hasSidebar && (
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
             <div className="flex items-center gap-2.5">
               <Logo size={32} />
               <span className="text-lg font-black tracking-tight text-white">
                 Pedi<span className="text-bright">Track</span>
               </span>
             </div>
-            {action}
+            {action ? <div className="ml-auto">{action}</div> : null}
           </div>
         )}
         <div className="flex items-end justify-between gap-4">
