@@ -240,6 +240,181 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/children/{childId}/consultations": {
+            "get": {
+                "description": "Lists a child's medical consultations (date + doctor), most recent first (FR-001).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "List a child's consultations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationListResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ChildNotFoundResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Registers a consultation with its prescription photo, medications and symptoms\n(FR-003, FR-004). At least one medication is required (FR-015). Doses for any\nmedication with a startTime are generated all at once (research.md).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "Register a new medical consultation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Consultation to register",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_consultation.createConsultationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationDetailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing/invalid field",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationValidationErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ChildNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/consultations/{consultationId}": {
+            "get": {
+                "description": "Retrieves the prescription photo, doctor, date, medications (with their doses,\nif any), and symptoms of a consultation (FR-013).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "Get a consultation's full detail",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Consultation UUID",
+                        "name": "consultationId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationDetailResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No consultation exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/consultations/{consultationId}/doses/{doseId}": {
+            "patch": {
+                "description": "Sets a dose's taken status. No validation of scheduled date or treatment\nstatus — a dose can be marked/unmarked at any time (FR-011, FR-016).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "Mark or unmark a dose as taken",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Consultation UUID",
+                        "name": "consultationId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Dose UUID",
+                        "name": "doseId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New taken status",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_consultation.updateDoseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/DoseResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No dose exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/DoseNotFoundResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -253,6 +428,160 @@ const docTemplate = `{
                 "message": {
                     "type": "string",
                     "example": "Account not found"
+                }
+            }
+        },
+        "ChildNotFoundResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "child_not_found"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Child not found"
+                }
+            }
+        },
+        "ConsultationDetailResponse": {
+            "type": "object",
+            "properties": {
+                "childId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "consultDate": {
+                    "type": "string",
+                    "example": "2026-01-15"
+                },
+                "doctorName": {
+                    "type": "string",
+                    "example": "Dra. López"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "medications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/MedicationResponse"
+                    }
+                },
+                "photoBase64": {
+                    "type": "string"
+                },
+                "symptoms": {
+                    "type": "string",
+                    "example": "Tos y fiebre leve"
+                }
+            }
+        },
+        "ConsultationFieldError": {
+            "type": "object",
+            "properties": {
+                "field": {
+                    "type": "string",
+                    "example": "doctorName"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "doctor name is required"
+                }
+            }
+        },
+        "ConsultationListResponse": {
+            "type": "object",
+            "properties": {
+                "childId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "consultations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ConsultationSummaryResponse"
+                    }
+                }
+            }
+        },
+        "ConsultationNotFoundResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "consultation_not_found"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Consultation not found"
+                }
+            }
+        },
+        "ConsultationSummaryResponse": {
+            "type": "object",
+            "properties": {
+                "consultDate": {
+                    "type": "string",
+                    "example": "2026-01-15"
+                },
+                "doctorName": {
+                    "type": "string",
+                    "example": "Dra. López"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                }
+            }
+        },
+        "ConsultationValidationErrorResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ConsultationFieldError"
+                    }
+                },
+                "error": {
+                    "type": "string",
+                    "example": "validation_error"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "One or more fields are invalid"
+                }
+            }
+        },
+        "DoseNotFoundResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "dose_not_found"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Dose not found"
+                }
+            }
+        },
+        "DoseResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "scheduledAt": {
+                    "type": "string",
+                    "example": "2026-01-15T08:00:00Z"
+                },
+                "taken": {
+                    "type": "boolean",
+                    "example": false
                 }
             }
         },
@@ -313,6 +642,37 @@ const docTemplate = `{
                 "received": {
                     "type": "integer",
                     "example": 2
+                }
+            }
+        },
+        "MedicationResponse": {
+            "type": "object",
+            "properties": {
+                "doses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/DoseResponse"
+                    }
+                },
+                "durationDays": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "frequencyHours": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Amoxicilina"
+                },
+                "startTime": {
+                    "type": "string",
+                    "example": "08:00"
                 }
             }
         },
@@ -495,6 +855,62 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "example": "Jalisco"
+                }
+            }
+        },
+        "internal_consultation.createConsultationRequest": {
+            "type": "object",
+            "properties": {
+                "consultDate": {
+                    "type": "string",
+                    "example": "2026-01-15"
+                },
+                "doctorName": {
+                    "type": "string",
+                    "example": "Dra. López"
+                },
+                "medications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_consultation.createMedicationRequest"
+                    }
+                },
+                "photoBase64": {
+                    "type": "string"
+                },
+                "symptoms": {
+                    "type": "string",
+                    "example": "Tos y fiebre leve"
+                }
+            }
+        },
+        "internal_consultation.createMedicationRequest": {
+            "type": "object",
+            "properties": {
+                "durationDays": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "frequencyHours": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Amoxicilina"
+                },
+                "startTime": {
+                    "type": "string",
+                    "example": "08:00"
+                }
+            }
+        },
+        "internal_consultation.updateDoseRequest": {
+            "type": "object",
+            "properties": {
+                "taken": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         }

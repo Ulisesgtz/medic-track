@@ -6,14 +6,16 @@ Vite + React 18 + TypeScript. Forms: React Hook Form. Server state: TanStack Que
 
 | Path | What's there |
 |---|---|
-| `src/App.tsx` | Router + QueryClientProvider — routes `/signup` → `AccountSignupPage`, `/home` → `HomePage`, `/children/:childId` → `ChildDetailPlaceholder` |
+| `src/App.tsx` | Router + QueryClientProvider — routes `/signup` → `AccountSignupPage`, `/home` → `HomePage`, `/children/:childId` → `ChildDetailPage`, `/consultations/:consultationId` → `ConsultationDetailPage` |
 | `src/features/account-signup/` | The account + children signup feature (see below) |
 | `src/features/home/` | The home page feature: children listing, "Agregar hijo" modal, the `account_id`-in-`localStorage` session (see below) |
+| `src/features/consultations/` | Child detail page, consultation registration form (with client-side OCR) and detail, dose marking (see below) |
 | `src/shared/catalog/` | Country/state catalog fetch hooks (`useCountries`, `useStates`) shared across features |
 | `src/shared/age.ts` | `computeAge(birthDate)` — pure function, months under 2 years old, whole years after |
 | `src/shared/apiError.ts` | `ApiError<Kind>` base class (`kind`, `message`, optional `details`) — each feature's `api.ts` defines its own subclass (`CreateAccountError`, `AccountApiError`) with just the `Kind` union it needs, instead of duplicating the constructor |
 | `e2e/account-signup.spec.ts` | Playwright E2E specs for signup — requires backend running locally |
 | `e2e/home-listado-hijos.spec.ts` | Playwright E2E specs for the home page flow (specs/003-home-listado-hijos) |
+| `e2e/detalle-consulta-hijo.spec.ts` | Playwright E2E specs for registering a consultation and marking a dose (specs/004-detalle-consulta-hijo) |
 | `vite.config.ts` | Includes the Tailwind v4 Vite plugin — don't remove it, the whole UI silently loses styling if it's dropped |
 | `vitest.config.ts` | Coverage thresholds (>90%), `coverage.all: true` so untested files count |
 
@@ -42,14 +44,29 @@ Vite + React 18 + TypeScript. Forms: React Hook Form. Server state: TanStack Que
 | File | Role |
 |---|---|
 | `HomePage.tsx` | 3 states: no account saved / cuenta sin hijos / listado; clears the saved `account_id` and falls back to the "no account" state on a 404 from `fetchAccount` |
-| `ChildCard.tsx` | Name + `computeAge`; links to the (placeholder) child detail route |
-| `ChildDetailPlaceholder.tsx` | Minimal stub rendered at `/children/:childId` — the real consultas/recetas screen is a separate future feature (FR-005/FR-007) |
+| `ChildCard.tsx` | Name + `computeAge`; links to the child detail route (`ChildDetailPage`, in `features/consultations/` — specs/004-detalle-consulta-hijo) |
 | `AddChildModal.tsx` | Modal for "Agregar hijo"; reuses `ChildFieldset` and `FreemiumLimitModal` from `features/account-signup/` as-is, no duplication. `ChildFieldset`'s "Quitar hijo" button is the modal's only dismiss control (wired to `onClose`) — valid only while the child is still unsaved, since it can never be removed once persisted (FR-006a); there's no separate "Cancelar" button duplicating the same action |
 | `useAccountSession.ts` | `getAccountId`/`setAccountId`/`clearAccountId` over `localStorage`, each wrapped in `try/catch` — the only "session" this app has (no real login yet) |
 | `api.ts` | `fetchAccount()`, `addChild()`, `AccountApiError extends ApiError<...>` (discriminated by `.kind`: `not_found` | `validation_error` | `freemium_child_limit_exceeded` | `unknown`) |
 | `types.ts` | `Account`/`Child` shapes matching `GET /accounts/{accountId}`'s response |
 
 Because `AddChildModal.tsx` reuses `ChildFieldset` cross-feature, both `useAccountSession` and `AddChildModal` are imported from `features/home/` inside `features/account-signup/AccountSignupForm.tsx` too — a deliberate cross-feature import rather than moving shared pieces into `shared/` prematurely (see specs/003-home-listado-hijos/research.md).
+
+## `src/features/consultations/` — child detail, consultations, doses
+
+| File | Role |
+|---|---|
+| `ChildDetailPage.tsx` | Lists a child's consultations (empty/listed states) and owns the "Registrar consulta" modal (renders `ConsultationForm`). The modal box itself scrolls internally (`max-h-[85vh] overflow-y-auto`) instead of the fixed backdrop — don't move that scroll back onto the backdrop, or a content-height change (e.g. collapsing a medication) can desync the scroll position enough that a click lands on the backdrop and closes the modal mid-edit |
+| `ConsultationCard.tsx` | Doctor + date; links to the consultation's detail |
+| `ConsultationForm.tsx` | Registration form: doctor, date, prescription photo (custom "Seleccionar archivo" button triggering a `hidden` `<input type="file" accept="image/*" capture>` via ref — never `sr-only` for this input, its native intrinsic width leaks into the modal's layout and causes horizontal overflow; never `getUserMedia`), medications field array, symptoms. Runs OCR on the photo via `useOcrSuggestion` purely as an editable autofill hint — the raw OCR text is never submitted directly, only whatever ends up in the form fields. `extractPrescriptionHints`/`extractMedications` parse the OCR text for doctor/date/medications (numbered-list prescriptions yield one medication per line via `extractNumberedMedications`, falling back to a single best-guess via `extractSingleMedication` otherwise); newly-needed fieldsets are `append`ed one at a time with a short stagger (`MEDICATION_STAGGER_MS`) and a visible "Agregando medicamentos… N de M" progress line, instead of dumping every fieldset at once — a hint only ever fills a field the parent left empty, never overwrites |
+| `MedicationFieldset.tsx` | One repeatable medication: name, frequency (hours), duration (days), optional start time. Collapsible to a one-line summary (name — frequency — duration) via a header toggle for scanning a prescription with many medications — never collapsed by default, the parent must see every OCR-derived value before trusting it (Principio I). The header row uses CSS Grid (`grid-cols-[minmax(0,1fr)_auto]`, nested for the badge/summary/chevron) rather than flexbox — nested flex-shrink didn't reliably truncate the summary text, letting it overflow the modal |
+| `useOcrSuggestion.ts` | Runs `tesseract.js` **in the browser** on the selected photo — the photo is never sent to any OCR service, only to this app's own backend (privacy: Principio II). A failed/empty OCR result never blocks the form. Cloud/AI vision OCR (which reads handwriting far better) was deliberately rejected for this project — see `specs/004-detalle-consulta-hijo/research.md` and the project's memory — don't propose it again |
+| `ConsultationDetailPage.tsx` | Full detail: photo, doctor, date, medications with their doses (if any), symptoms |
+| `DoseCheckbox.tsx` | Marks/unmarks a dose — always enabled, no "treatment still active" restriction (a dose can be toggled regardless of its date) |
+| `api.ts` | `fetchConsultations`, `createConsultation`, `fetchConsultationDetail`, `updateDoseStatus`, `ConsultationApiError extends ApiError<...>` |
+| `types.ts` | `ConsultationSummary`, `ConsultationDetail`, `Medication`, `Dose` |
+
+Consultations, medications and their doses' schedule are immutable once created — there is no edit/delete UI anywhere in this feature, only `DoseCheckbox`'s taken/not-taken toggle.
 
 ## Running tests
 

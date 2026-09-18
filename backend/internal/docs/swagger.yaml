@@ -9,6 +9,113 @@ definitions:
         example: Account not found
         type: string
     type: object
+  ChildNotFoundResponse:
+    properties:
+      error:
+        example: child_not_found
+        type: string
+      message:
+        example: Child not found
+        type: string
+    type: object
+  ConsultationDetailResponse:
+    properties:
+      childId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      consultDate:
+        example: "2026-01-15"
+        type: string
+      doctorName:
+        example: Dra. López
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      medications:
+        items:
+          $ref: '#/definitions/MedicationResponse'
+        type: array
+      photoBase64:
+        type: string
+      symptoms:
+        example: Tos y fiebre leve
+        type: string
+    type: object
+  ConsultationFieldError:
+    properties:
+      field:
+        example: doctorName
+        type: string
+      message:
+        example: doctor name is required
+        type: string
+    type: object
+  ConsultationListResponse:
+    properties:
+      childId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      consultations:
+        items:
+          $ref: '#/definitions/ConsultationSummaryResponse'
+        type: array
+    type: object
+  ConsultationNotFoundResponse:
+    properties:
+      error:
+        example: consultation_not_found
+        type: string
+      message:
+        example: Consultation not found
+        type: string
+    type: object
+  ConsultationSummaryResponse:
+    properties:
+      consultDate:
+        example: "2026-01-15"
+        type: string
+      doctorName:
+        example: Dra. López
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+    type: object
+  ConsultationValidationErrorResponse:
+    properties:
+      details:
+        items:
+          $ref: '#/definitions/ConsultationFieldError'
+        type: array
+      error:
+        example: validation_error
+        type: string
+      message:
+        example: One or more fields are invalid
+        type: string
+    type: object
+  DoseNotFoundResponse:
+    properties:
+      error:
+        example: dose_not_found
+        type: string
+      message:
+        example: Dose not found
+        type: string
+    type: object
+  DoseResponse:
+    properties:
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      scheduledAt:
+        example: "2026-01-15T08:00:00Z"
+        type: string
+      taken:
+        example: false
+        type: boolean
+    type: object
   EmailConflictResponse:
     properties:
       error:
@@ -50,6 +157,28 @@ definitions:
       received:
         example: 2
         type: integer
+    type: object
+  MedicationResponse:
+    properties:
+      doses:
+        items:
+          $ref: '#/definitions/DoseResponse'
+        type: array
+      durationDays:
+        example: 5
+        type: integer
+      frequencyHours:
+        example: 8
+        type: integer
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      name:
+        example: Amoxicilina
+        type: string
+      startTime:
+        example: "08:00"
+        type: string
     type: object
   NotFoundResponse:
     properties:
@@ -179,6 +308,45 @@ definitions:
       name:
         example: Jalisco
         type: string
+    type: object
+  internal_consultation.createConsultationRequest:
+    properties:
+      consultDate:
+        example: "2026-01-15"
+        type: string
+      doctorName:
+        example: Dra. López
+        type: string
+      medications:
+        items:
+          $ref: '#/definitions/internal_consultation.createMedicationRequest'
+        type: array
+      photoBase64:
+        type: string
+      symptoms:
+        example: Tos y fiebre leve
+        type: string
+    type: object
+  internal_consultation.createMedicationRequest:
+    properties:
+      durationDays:
+        example: 5
+        type: integer
+      frequencyHours:
+        example: 8
+        type: integer
+      name:
+        example: Amoxicilina
+        type: string
+      startTime:
+        example: "08:00"
+        type: string
+    type: object
+  internal_consultation.updateDoseRequest:
+    properties:
+      taken:
+        example: true
+        type: boolean
     type: object
 info:
   contact: {}
@@ -352,4 +520,128 @@ paths:
       summary: List states/provinces for a country
       tags:
       - catalog
+  /children/{childId}/consultations:
+    get:
+      description: Lists a child's medical consultations (date + doctor), most recent
+        first (FR-001).
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ConsultationListResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/ChildNotFoundResponse'
+      summary: List a child's consultations
+      tags:
+      - consultations
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Registers a consultation with its prescription photo, medications and symptoms
+        (FR-003, FR-004). At least one medication is required (FR-015). Doses for any
+        medication with a startTime are generated all at once (research.md).
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: Consultation to register
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_consultation.createConsultationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ConsultationDetailResponse'
+        "400":
+          description: Missing/invalid field
+          schema:
+            $ref: '#/definitions/ConsultationValidationErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/ChildNotFoundResponse'
+      summary: Register a new medical consultation
+      tags:
+      - consultations
+  /consultations/{consultationId}:
+    get:
+      description: |-
+        Retrieves the prescription photo, doctor, date, medications (with their doses,
+        if any), and symptoms of a consultation (FR-013).
+      parameters:
+      - description: Consultation UUID
+        in: path
+        name: consultationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ConsultationDetailResponse'
+        "404":
+          description: No consultation exists for this id
+          schema:
+            $ref: '#/definitions/ConsultationNotFoundResponse'
+      summary: Get a consultation's full detail
+      tags:
+      - consultations
+  /consultations/{consultationId}/doses/{doseId}:
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Sets a dose's taken status. No validation of scheduled date or treatment
+        status — a dose can be marked/unmarked at any time (FR-011, FR-016).
+      parameters:
+      - description: Consultation UUID
+        in: path
+        name: consultationId
+        required: true
+        type: string
+      - description: Dose UUID
+        in: path
+        name: doseId
+        required: true
+        type: string
+      - description: New taken status
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_consultation.updateDoseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/DoseResponse'
+        "404":
+          description: No dose exists for this id
+          schema:
+            $ref: '#/definitions/DoseNotFoundResponse'
+      summary: Mark or unmark a dose as taken
+      tags:
+      - consultations
 swagger: "2.0"

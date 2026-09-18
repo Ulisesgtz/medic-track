@@ -30,14 +30,23 @@ y se elimina (o se marca) aquí.
   Principio II). Cuando se diseñe la autenticación real, revisar `GET /accounts/{accountId}` y
   `POST /accounts/{accountId}/children` (hoy sin autenticación) y `useAccountSession` en el
   frontend.
+- **Almacenamiento de fotos de recetas en object storage** — `specs/004-detalle-consulta-hijo/`
+  guarda la foto de la receta como `bytea` directamente en Postgres (ver research.md), por
+  simplicidad y porque no hay infraestructura de archivos decidida todavía. Revisar migrar a un
+  object storage (S3/GCS) si el volumen de fotos crece lo suficiente para justificarlo.
+- **Helper compartido para "UUID malformado en la ruta → 404"** — el patrón de parsear un UUID de
+  la ruta y tratar un error de parseo igual que un recurso no encontrado se repite ya 6 veces entre
+  `internal/account` y `internal/consultation` sin ningún helper común. No se centralizó
+  deliberadamente en `specs/004-detalle-consulta-hijo` porque un helper que llame a
+  `*httpx.Responder` internamente colapsaría la atribución por línea de `error_logs` que
+  `backend/CLAUDE.md` exige mantener distinta por sitio de llamada (ver el patrón ya documentado en
+  `writeCreateAccountError`). Si el patrón se repite una vez más, vale la pena diseñar un mecanismo
+  (p. ej. middleware de chi) que preserve esa atribución.
 
 ## Producto / Feature futura
 
-- **Pantalla de detalle de hijo (consultas/recetas médicas)** — `specs/003-home-listado-hijos/`
-  agrega una ruta placeholder (`/children/:childId`, `ChildDetailPlaceholder.tsx`) sin contenido
-  real; el reporte de consultas, recetas, medicamentos, horarios de toma y síntomas es una
-  funcionalidad futura separada, ya descrita en conversación con el usuario pero sin su propia
-  `specs/NNN-.../spec.md` todavía.
+- La pantalla de detalle de hijo (consultas médicas, recetas, medicamentos, horarios de toma y
+  síntomas) fue implementada en `specs/004-detalle-consulta-hijo/` — este ítem ya no está pendiente.
 
 ## Producto / Legal
 

@@ -21,6 +21,7 @@ import (
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
+	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	_ "github.com/Ulisesgtz/medic-track/backend/internal/docs"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
@@ -46,6 +47,10 @@ func main() {
 	accountService := account.NewService(accountRepo)
 	accountHandler := account.NewHandler(accountService, responder)
 
+	consultationRepo := consultation.NewRepository(pool)
+	consultationService := consultation.NewService(consultationRepo)
+	consultationHandler := consultation.NewHandler(consultationService, responder)
+
 	frontendOrigin := os.Getenv("FRONTEND_ORIGIN")
 	if frontendOrigin == "" {
 		frontendOrigin = "http://localhost:5173"
@@ -56,7 +61,7 @@ func main() {
 	r.Use(middleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{frontendOrigin},
-		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},
+		AllowedMethods:   []string{"GET", "POST", "PATCH", "OPTIONS"},
 		AllowedHeaders:   []string{"Content-Type"},
 		AllowCredentials: false,
 		MaxAge:           300,
@@ -68,6 +73,11 @@ func main() {
 	r.Post("/accounts", accountHandler.CreateAccount)
 	r.Get("/accounts/{accountId}", accountHandler.GetAccount)
 	r.Post("/accounts/{accountId}/children", accountHandler.AddChild)
+
+	r.Get("/children/{childId}/consultations", consultationHandler.ListConsultations)
+	r.Post("/children/{childId}/consultations", consultationHandler.CreateConsultation)
+	r.Get("/consultations/{consultationId}", consultationHandler.GetConsultation)
+	r.Patch("/consultations/{consultationId}/doses/{doseId}", consultationHandler.UpdateDose)
 
 	// Swagger UI, generated from the @swag annotations on the handlers below
 	// (run `swag init` from backend/ after changing any of them — see
