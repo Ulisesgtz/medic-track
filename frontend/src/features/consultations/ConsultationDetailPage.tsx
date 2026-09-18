@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AppHeader } from '../../shared/ui/AppHeader'
+import { AppShell } from '../home/AppShell'
 import { fetchConsultationDetail, ConsultationApiError } from './api'
 import { DoseCheckbox } from './DoseCheckbox'
 import { sniffImageMimeType } from './imageMime'
@@ -101,6 +102,7 @@ export function ConsultationDetailPage() {
   const photoSrc = `data:${sniffImageMimeType(consultation.photoBase64)};base64,${consultation.photoBase64}`
 
   return (
+    <AppShell activeChildId={consultation.childId}>
     <main className="min-h-screen bg-canvas pb-16">
       <AppHeader
         eyebrow={
@@ -168,5 +170,6 @@ export function ConsultationDetailPage() {
 
       {viewerOpen && <PhotoViewer src={photoSrc} onClose={() => setViewerOpen(false)} />}
     </main>
+    </AppShell>
   )
 }

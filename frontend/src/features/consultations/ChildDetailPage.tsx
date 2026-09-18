@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AppHeader } from '../../shared/ui/AppHeader'
+import { AppShell } from '../home/AppShell'
 import { fetchConsultations, ConsultationApiError } from './api'
 import { ConsultationCard } from './ConsultationCard'
 import { ConsultationForm } from './ConsultationForm'
+import { SummaryCard } from './SummaryCard'
 
 /**
  * A child's detail page: lists their medical consultations (FR-001) with an
@@ -53,7 +55,10 @@ export function ChildDetailPage() {
 
   const consultations = query.data ?? []
 
+  const doctorCount = new Set(consultations.map((c) => c.doctorName)).size
+
   return (
+    <AppShell activeChildId={childId}>
     <main className="min-h-screen bg-canvas pb-16">
       <AppHeader
         eyebrow={
@@ -73,6 +78,13 @@ export function ChildDetailPage() {
       </AppHeader>
 
       <div className="mx-auto max-w-5xl px-5 py-7 md:px-10 md:py-9">
+        {consultations.length > 0 && (
+          <div className="mb-5 grid gap-4 sm:grid-cols-3">
+            <SummaryCard label="Consultas" value={String(consultations.length)} />
+            <SummaryCard label="Última consulta" value={consultations[0].consultDate} />
+            <SummaryCard label="Doctores" value={String(doctorCount)} />
+          </div>
+        )}
         {consultations.length === 0 ? (
           <div className="rounded-3xl bg-surface p-8 text-center shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
             <p className="text-lg font-bold tracking-tight text-ink">
@@ -124,5 +136,6 @@ export function ChildDetailPage() {
         </div>
       )}
     </main>
+    </AppShell>
   )
 }

@@ -50,6 +50,11 @@ y se elimina (o se marca) aquí.
 - **Modo oscuro de la app** — el sistema visual de `specs/005-identidad-visual-front-end/` ya define la
   superficie oscura base (`#04252b`), pero no sus equivalentes de superficie, borde y tinta secundaria.
   Definirlos antes de implementarlo.
+- **Resumen de tomas en el detalle del hijo** — `specs/005-identidad-visual-front-end/` previó tarjetas
+  de "tomas de hoy" y "tratamiento activo" (T010, T019), pero `GET /children/{childId}/consultations`
+  solo devuelve doctor y fecha, sin dosis. El resumen actual usa solo lo que ese endpoint ya trae
+  (consultas, última consulta, doctores). Para las otras dos hace falta un endpoint agregado de
+  dosis por hijo.
 - **Pantalla de planes de pago** — el modal de límite freemium (franja ámbar) es el punto de entrada
   visual ya establecido; la pantalla de planes debe continuarlo. Ver `specs/005-identidad-visual-front-end/spec.md`,
   "Adiciones Futuras Previstas".

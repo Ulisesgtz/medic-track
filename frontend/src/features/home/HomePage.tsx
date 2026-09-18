@@ -6,6 +6,7 @@ import { fetchAccount, AccountApiError } from './api'
 import { ChildCard } from './ChildCard'
 import { AddChildModal } from './AddChildModal'
 import { AppHeader } from '../../shared/ui/AppHeader'
+import { AppShell } from './AppShell'
 import { Logo } from '../../shared/ui/Logo'
 
 /**
@@ -73,6 +74,7 @@ export function HomePage() {
   const account = query.data
 
   return (
+    <AppShell>
     <main className="min-h-screen bg-canvas pb-16">
       <AppHeader title="Tus hijos" />
 
@@ -115,5 +117,6 @@ export function HomePage() {
         <AddChildModal accountId={accountId} onClose={() => setShowAddChild(false)} />
       )}
     </main>
+    </AppShell>
   )
 }

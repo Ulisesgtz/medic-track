@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react'
+import { useContext, type ReactNode } from 'react'
 import { Logo } from './Logo'
+import { SidebarContext } from './SidebarContext'
 
 interface AppHeaderProps {
   /** Small line above the title (e.g. a greeting or a back link). */
@@ -15,11 +16,14 @@ interface AppHeaderProps {
  * "Componentes base"): ink background, logo, eyebrow + large title.
  */
 export function AppHeader({ eyebrow, title, action, children }: AppHeaderProps) {
+  // With the sidebar on screen the logo already lives there: drop the brand row.
+  const hasSidebar = useContext(SidebarContext)
+
   return (
     <header className="bg-ink px-5 pt-6 pb-7 md:px-10 md:pt-8 md:pb-9">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2.5">
+        <div className={`flex items-center justify-between gap-4 ${hasSidebar && !action ? 'hidden' : ''}`}>
+          <div className={`flex items-center gap-2.5 ${hasSidebar ? 'hidden' : ''}`}>
             <Logo size={32} />
             <span className="text-lg font-black tracking-tight text-white">
               Pedi<span className="text-bright">Track</span>

@@ -11,6 +11,7 @@ Vite + React 18 + TypeScript. Forms: React Hook Form. Server state: TanStack Que
 | `src/features/home/` | The home page feature: children listing, "Agregar hijo" modal, the `account_id`-in-`localStorage` session (see below) |
 | `src/features/consultations/` | Child detail page, consultation registration form (with client-side OCR) and detail, dose marking (see below) |
 | `src/shared/catalog/` | Country/state catalog fetch hooks (`useCountries`, `useStates`) shared across features |
+| `src/shared/ui/` | Presentational pieces used by more than one feature: `Logo`, `AppHeader` (dark screen header), `useIsDesktop` (true from 1024px, `matchMedia`-based), `SidebarContext` (lets `AppHeader` drop its own logo row while the sidebar shows it) |
 | `src/shared/age.ts` | `computeAge(birthDate)` — pure function, months under 2 years old, whole years after |
 | `src/shared/apiError.ts` | `ApiError<Kind>` base class (`kind`, `message`, optional `details`) — each feature's `api.ts` defines its own subclass (`CreateAccountError`, `AccountApiError`) with just the `Kind` union it needs, instead of duplicating the constructor |
 | `e2e/account-signup.spec.ts` | Playwright E2E specs for signup — requires backend running locally |
@@ -33,6 +34,8 @@ Tokens de color y tipografía viven en el bloque `@theme` de `src/index.css`; la
 - La jerarquía la hace la escala tipográfica (900 en titulares, números de resumen en 34 px), no los
   bordes grises — no reintroducir `border-slate-*` en las tarjetas.
 - El logo (`src/shared/ui/Logo.tsx`) solo va en header, pantalla de registro e icono/splash de la PWA.
+- Desde 1024 px las pantallas con sesión (home, detalle del hijo, detalle de consulta) van dentro de `features/home/AppShell.tsx`, que agrega `ChildrenSidebar` (lista de hijos, "Agregar hijo", nombre y plan). La barra se **renderiza condicionalmente** con `useIsDesktop`, no se oculta con CSS: así nunca hay dos copias de la lista de hijos en el DOM/árbol de accesibilidad. Toda pantalla nueva con sesión debe envolverse en `AppShell`.
+- El visor de la receta (`ConsultationDetailPage`) es un modal dentro de la app: no enlazar la foto como URL `data:` con `target="_blank"` — los navegadores bloquean esa navegación y la pestaña sale en blanco.
 
 ## `src/features/account-signup/` — signup form
 
