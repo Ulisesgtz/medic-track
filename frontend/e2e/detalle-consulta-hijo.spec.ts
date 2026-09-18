@@ -21,7 +21,7 @@ test('registrar consulta → ver detalle con tomas generadas → marcar una toma
 
   await page.getByLabel('Nombre').fill('Ana')
   await page.getByLabel('Apellido').fill('Gómez')
-  await page.getByLabel('Correo electrónico').fill(`ana.consulta.e2e.${Date.now()}@example.com`)
+  await page.getByLabel('Correo electrónico').fill(`ana.consulta.e2e.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@example.com`)
 
   await page.getByRole('button', { name: 'Agregar hijo' }).click()
   await page.locator('#children\\.0\\.firstName').fill('Luis')

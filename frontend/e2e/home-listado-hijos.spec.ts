@@ -11,7 +11,7 @@ test('crear cuenta → home → ver hijo → recargar → agregar segundo hijo �
 
   await page.getByLabel('Nombre').fill('Ana')
   await page.getByLabel('Apellido').fill('Gómez')
-  await page.getByLabel('Correo electrónico').fill(`ana.home.e2e.${Date.now()}@example.com`)
+  await page.getByLabel('Correo electrónico').fill(`ana.home.e2e.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@example.com`)
 
   await page.getByRole('main').getByRole('button', { name: 'Agregar hijo' }).click()
   await page.locator('#children\\.0\\.firstName').fill('Luis')
@@ -57,7 +57,7 @@ test('click en el nombre de un hijo navega a su pantalla de detalle (FR-005)', a
 
   await page.getByLabel('Nombre').fill('Carla')
   await page.getByLabel('Apellido').fill('Ruiz')
-  await page.getByLabel('Correo electrónico').fill(`carla.home.e2e.${Date.now()}@example.com`)
+  await page.getByLabel('Correo electrónico').fill(`carla.home.e2e.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@example.com`)
 
   await page.getByRole('main').getByRole('button', { name: 'Agregar hijo' }).click()
   await page.locator('#children\\.0\\.firstName').fill('Mateo')
