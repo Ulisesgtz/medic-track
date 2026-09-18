@@ -19,6 +19,21 @@ Vite + React 18 + TypeScript. Forms: React Hook Form. Server state: TanStack Que
 | `vite.config.ts` | Includes the Tailwind v4 Vite plugin — don't remove it, the whole UI silently loses styling if it's dropped |
 | `vitest.config.ts` | Coverage thresholds (>90%), `coverage.all: true` so untested files count |
 
+## Sistema visual
+
+Tokens de color y tipografía viven en el bloque `@theme` de `src/index.css`; la referencia de uso es
+`specs/005-identidad-visual-front-end/design-tokens.md`. Reglas que rompen el diseño si se ignoran:
+
+- Un solo botón sólido (`--color-confirmed`) por pantalla; las acciones secundarias van con contorno
+  `--color-action`. Dos botones sólidos en la misma vista es el error más común.
+- Texto blanco solo sobre `--color-ink`, `--color-action` y `--color-confirmed`. Sobre `--color-bright`
+  y `--color-pending` va tinta oscura — invertirlo baja el contraste por debajo de 4.5:1.
+- Ámbar (`--color-pending`) significa "el padre no lo ha marcado", nunca una advertencia médica
+  (Principio I). No hay rojo de alerta en la app.
+- La jerarquía la hace la escala tipográfica (900 en titulares, números de resumen en 34 px), no los
+  bordes grises — no reintroducir `border-slate-*` en las tarjetas.
+- El logo (`src/shared/ui/Logo.tsx`) solo va en header, pantalla de registro e icono/splash de la PWA.
+
 ## `src/features/account-signup/` — signup form
 
 | File | Role |

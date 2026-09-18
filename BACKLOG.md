@@ -47,6 +47,12 @@ y se elimina (o se marca) aquí.
 
 - La pantalla de detalle de hijo (consultas médicas, recetas, medicamentos, horarios de toma y
   síntomas) fue implementada en `specs/004-detalle-consulta-hijo/` — este ítem ya no está pendiente.
+- **Modo oscuro de la app** — el sistema visual de `specs/005-identidad-visual-front-end/` ya define la
+  superficie oscura base (`#04252b`), pero no sus equivalentes de superficie, borde y tinta secundaria.
+  Definirlos antes de implementarlo.
+- **Pantalla de planes de pago** — el modal de límite freemium (franja ámbar) es el punto de entrada
+  visual ya establecido; la pantalla de planes debe continuarlo. Ver `specs/005-identidad-visual-front-end/spec.md`,
+  "Adiciones Futuras Previstas".
 
 ## Producto / Legal
 
