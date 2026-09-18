@@ -1,3 +1,5 @@
+import { useId } from 'react'
+
 interface LogoProps {
   /** Rendered square size in px. */
   size?: number
@@ -17,7 +19,8 @@ interface LogoProps {
  */
 export function Logo({ size = 32, variant = 'dark', className }: LogoProps) {
   const tile = variant === 'dark' ? '#22d3ee' : '#0e7490'
-  const clipId = `pt-logo-${variant}`
+  // Unique per instance: two logos on one screen must not share a clipPath id.
+  const clipId = `pt-logo-${useId().replace(/:/g, '')}`
 
   return (
     <svg

@@ -8,15 +8,17 @@ describe('Logo', () => {
     expect(screen.getByRole('img', { name: 'PediTrack' })).toBeInTheDocument()
   })
 
-  it('uses a distinct clip id per variant so both can coexist on one page', () => {
+  it('uses a distinct clip id per instance, even for the same variant', () => {
     const { container } = render(
       <>
+        <Logo variant="dark" />
         <Logo variant="dark" />
         <Logo variant="light" />
       </>,
     )
     const ids = Array.from(container.querySelectorAll('clipPath')).map((node) => node.id)
-    expect(new Set(ids).size).toBe(2)
+    expect(new Set(ids).size).toBe(3)
+    for (const id of ids) expect(id).not.toMatch(/:/)
   })
 
   it('honors the requested size', () => {

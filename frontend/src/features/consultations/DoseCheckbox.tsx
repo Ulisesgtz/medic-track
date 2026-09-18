@@ -32,7 +32,7 @@ export function DoseCheckbox({ consultationId, dose }: DoseCheckboxProps) {
   const chipClass = dose.taken
     ? 'border-confirmed bg-confirmed text-white'
     : isFuture
-      ? 'border-slate-100 bg-slate-100 text-slate-500'
+      ? 'border-slate-100 bg-slate-100 text-slate-600'
       : 'border-pending bg-pending-soft text-pending-strong'
   const stateText = dose.taken ? 'Tomada' : isFuture ? 'Próxima' : 'Sin marcar'
 

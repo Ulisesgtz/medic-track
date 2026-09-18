@@ -136,5 +136,22 @@ describe('ConsultationDetailPage', () => {
       await user.keyboard('{Escape}')
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
+
+    it('moves focus into the viewer, keeps it there on Tab, and returns it to the opener on close', async () => {
+      const user = userEvent.setup()
+      stubConsultation()
+      renderPage()
+
+      const opener = await screen.findByRole('button', { name: 'Ver completa' })
+      await user.click(opener)
+      const close = screen.getByRole('button', { name: 'Cerrar' })
+      expect(close).toHaveFocus()
+
+      await user.tab()
+      expect(close).toHaveFocus()
+
+      await user.click(close)
+      expect(opener).toHaveFocus()
+    })
   })
 })

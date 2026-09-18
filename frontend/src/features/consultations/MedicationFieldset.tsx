@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useWatch, type Control, type UseFormRegister, type FieldErrors } from 'react-hook-form'
 import type { ConsultationFormValues } from './ConsultationForm'
+import { errorClass, inputClass, labelClass, optionalClass, suggestedInputClass } from '../../shared/ui/formStyles'
 
 interface MedicationFieldsetProps {
   index: number
@@ -13,12 +14,6 @@ interface MedicationFieldsetProps {
   suggested?: ReadonlySet<string>
 }
 
-const inputBase =
-  'min-h-11 w-full rounded-[14px] bg-surface px-4 py-2.5 text-base font-medium text-ink placeholder-slate-400 outline-none focus:border-ink'
-const inputClass = `${inputBase} border-[1.5px] border-slate-300 focus:ring-[0.5px] focus:ring-ink`
-const suggestedInputClass = `${inputBase} border-2 border-bright`
-const labelClass = 'mb-1.5 block text-[13px] font-bold text-ink'
-const errorClass = 'mt-1.5 block text-sm font-semibold text-red-700'
 
 const positiveIntegerValidation = {
   required: true,
@@ -157,7 +152,7 @@ export function MedicationFieldset({
 
         <div className="col-span-2">
           <label className={labelClass} htmlFor={`medications.${index}.startTime`}>
-            Horario de inicio <span className="font-medium text-slate-500">(opcional)</span>
+            Horario de inicio <span className={optionalClass}>(opcional)</span>
           </label>
           <input
             id={`medications.${index}.startTime`}

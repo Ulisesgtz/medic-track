@@ -236,6 +236,38 @@ describe('ConsultationForm', () => {
     expect(screen.queryByText(/Agregando medicamentos de la receta/)).not.toBeInTheDocument()
   })
 
+  it('keeps the OCR-suggestion border on the right row after removing a medication', async () => {
+    const tesseract = await import('tesseract.js')
+    vi.mocked(tesseract.default.recognize).mockResolvedValue({
+      data: {
+        text:
+          'Médicamentos:\n' +
+          '1. PARACETAMOL500 MG (TYLENOL)\nTomar 2 tableta cada 6-8 horas por 7 días.\n' +
+          '2. DEXKETOPROFENO25MG (STADIUM)\nTomar 1 tableta cada 12 horas por 7 días.\n',
+      },
+    } as never)
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.upload(screen.getByLabelText('Foto de la receta'), samplePhoto())
+    await waitFor(
+      () => expect(document.getElementById('medications.1.name')).toHaveValue('DEXKETOPROFENO'),
+      { timeout: 5000 },
+    )
+    await waitFor(() =>
+      expect(screen.queryByText(/Agregando medicamentos de la receta/)).not.toBeInTheDocument(),
+    )
+
+    await user.click(screen.getAllByRole('button', { name: 'Quitar medicamento' })[0])
+
+    // The former second medication is now first and keeps the suggestion border...
+    expect(document.getElementById('medications.0.name')).toHaveValue('DEXKETOPROFENO')
+    expect(document.getElementById('medications.0.name')).toHaveClass('border-bright')
+    // ...and a medication the parent adds afterwards does not inherit it.
+    await user.click(screen.getByRole('button', { name: /Agregar medicamento/ }))
+    expect(document.getElementById('medications.1.name')).not.toHaveClass('border-bright')
+  })
+
   it('collapses a medication fieldset to a one-line summary and back (scannability)', async () => {
     const user = userEvent.setup()
     renderForm()

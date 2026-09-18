@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AppHeader } from '../../shared/ui/AppHeader'
@@ -19,10 +19,24 @@ const overlineClass = 'text-xs font-extrabold uppercase tracking-[0.1em] text-ac
  */
 function PhotoViewer({ src, onClose }: { src: string; onClose: () => void }) {
   const [actualSize, setActualSize] = useState(false)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+
+  // Focus management for a real modal: move focus in on open, keep it on the
+  // only control while open (Tab would otherwise reach the page behind the
+  // overlay), and give it back to whatever opened the viewer on close.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null
+    closeButtonRef.current?.focus()
+    return () => opener?.focus()
+  }, [])
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') onClose()
+      if (event.key === 'Tab') {
+        event.preventDefault()
+        closeButtonRef.current?.focus()
+      }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
@@ -40,6 +54,7 @@ function PhotoViewer({ src, onClose }: { src: string; onClose: () => void }) {
           {actualSize ? 'Tamaño real — toca la imagen para ajustar' : 'Toca la imagen para ampliar'}
         </p>
         <button
+          ref={closeButtonRef}
           type="button"
           onClick={onClose}
           className="min-h-11 cursor-pointer rounded-2xl border-2 border-bright px-5 py-2 text-base font-extrabold text-bright transition-colors duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-bright"

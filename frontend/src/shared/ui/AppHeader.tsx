@@ -23,12 +23,14 @@ export function AppHeader({ eyebrow, title, action, children }: AppHeaderProps) 
     <header className="bg-ink px-5 pt-6 pb-7 md:px-10 md:pt-8 md:pb-9">
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         <div className={`flex items-center justify-between gap-4 ${hasSidebar && !action ? 'hidden' : ''}`}>
-          <div className={`flex items-center gap-2.5 ${hasSidebar ? 'hidden' : ''}`}>
-            <Logo size={32} />
-            <span className="text-lg font-black tracking-tight text-white">
-              Pedi<span className="text-bright">Track</span>
-            </span>
-          </div>
+          {!hasSidebar && (
+            <div className="flex items-center gap-2.5">
+              <Logo size={32} />
+              <span className="text-lg font-black tracking-tight text-white">
+                Pedi<span className="text-bright">Track</span>
+              </span>
+            </div>
+          )}
           {action}
         </div>
         <div className="flex flex-col gap-1.5">

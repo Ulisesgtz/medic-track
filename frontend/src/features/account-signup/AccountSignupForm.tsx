@@ -10,13 +10,8 @@ import { FreemiumLimitModal } from './FreemiumLimitModal'
 import { CreateAccountError, type CreateAccountPayload } from './api'
 import type { AccountSignupFormValues } from './types'
 import { emptyChild, NAME_MAX_LENGTH, NAME_PATTERN } from './types'
+import { errorClass, inputClass, labelClass, optionalClass, overlineClass } from '../../shared/ui/formStyles'
 
-const inputClass =
-  'min-h-11 w-full rounded-[14px] border-[1.5px] border-slate-300 bg-surface px-4 py-2.5 text-base font-medium text-ink placeholder-slate-400 outline-none focus:border-ink focus:ring-[0.5px] focus:ring-ink'
-const labelClass = 'mb-1.5 block text-[13px] font-bold text-ink'
-const errorClass = 'mt-1.5 block text-sm font-semibold text-red-700'
-const overlineClass = 'text-xs font-extrabold uppercase tracking-[0.1em] text-action'
-const optionalClass = 'font-medium text-slate-500'
 
 // FR-007: the free plan allows at most this many children. There is no paid
 // plan implemented yet (see Supuestos in spec.md), so this is a hardcoded

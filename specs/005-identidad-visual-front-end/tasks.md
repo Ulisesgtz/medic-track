@@ -52,7 +52,7 @@ Convención: `[P]` = paralelizable con las tareas marcadas igual dentro de la mi
 - **T021 (contraste)**: auditoría automática sobre el DOM real (color efectivo compuesto sobre el fondo,
   umbral 4.5:1 / 3:1 para ≥24 px en peso ≥700) en registro, home, detalle del hijo, detalle de consulta
   y los modales (registrar consulta con errores, freemium, agregar hijo, visor de receta), a 390 y 1280 px:
-  **0 pares por debajo del umbral**. Pares de los tokens: blanco/ink 16.1, blanco/action 5.36,
+  **0 pares por debajo del umbral** en el texto visible con los datos de prueba. La revisión de código encontró dos casos que esa auditoría no cubría — el chip de toma futura ("Próxima", 4.34:1, porque los datos de prueba solo tenían tomas pasadas) y los placeholders (`slate-400`, ~2.6:1, porque no son nodos de texto) — y se corrigieron (`slate-600` y `slate-500`). Pares de los tokens: blanco/ink 16.1, blanco/action 5.36,
   blanco/confirmed 5.48, ink/bright 8.91, on-pending/pending 6.97, action/hint 5.15,
   pending-strong/pending-soft 6.37, confirmed-strong/confirmed-soft 6.78, bright/ink-soft 6.74.
 - **T022 (áreas táctiles)**: la misma auditoría midió todo `a`, `button`, `input`, `select`, `textarea`

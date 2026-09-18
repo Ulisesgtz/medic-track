@@ -1,6 +1,7 @@
 import type { UseFormRegister, FieldErrors } from 'react-hook-form'
 import type { AccountSignupFormValues } from './types'
 import { NAME_MAX_LENGTH, NAME_PATTERN } from './types'
+import { errorClass, inputClass, labelClass } from '../../shared/ui/formStyles'
 
 const nameValidation = { required: true, maxLength: NAME_MAX_LENGTH, pattern: NAME_PATTERN }
 
@@ -17,10 +18,6 @@ interface ChildFieldsetProps {
   onRemove: () => void
 }
 
-const inputClass =
-  'min-h-11 w-full rounded-[14px] border-[1.5px] border-slate-300 bg-surface px-4 py-2.5 text-base font-medium text-ink placeholder-slate-400 outline-none focus:border-ink focus:ring-[0.5px] focus:ring-ink'
-const labelClass = 'mb-1.5 block text-[13px] font-bold text-ink'
-const errorClass = 'mt-1.5 block text-sm font-semibold text-red-700'
 
 /**
  * A single child's fields (firstName, lastName required; birthDate required

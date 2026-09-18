@@ -52,7 +52,7 @@ Mínimo absoluto de texto: 13 px. Los números de resumen (edad, conteos) van en
 - **Tarjeta**: `--color-surface`, radio 20–22 px, sombra `0 8px 20px rgba(4,37,43,0.07)`, padding 20–22 px. Sin borde gris.
 - **Tarjeta de consulta**: la misma, con barra de acento izquierda de 5 px — `--color-bright` para la más reciente, `#cffafe` para las anteriores.
 - **Campo de formulario**: radio 14 px, borde 1.5 px `#cbd5e1`; enfocado o con valor confirmado, borde 2 px `--color-ink`; sugerido por OCR, borde 2 px `--color-bright`.
-- **Chip de toma**: radio 12 px, alto mínimo 44 px. Tomada: `--color-confirmed` + blanco. Pendiente: `--color-pending-soft` + borde ámbar. Futura: `#f1f5f9` + `#64748b`.
+- **Chip de toma**: radio 12 px, alto mínimo 44 px. Tomada: `--color-confirmed` + blanco. Pendiente: `--color-pending-soft` + borde ámbar. Futura: `#f1f5f9` + `#475569` (con `#64748b` el contraste es 4.34:1 y no llega a 4.5:1).
 - **Modal**: radio 24 px, padding 28 px, encabezado con título 24 px/900 y botón de cierre (X) con área táctil de 44 px, acciones alineadas a la derecha (contorno + sólido). El de límite freemium lleva franja superior ámbar con overline "Plan gratuito".
 - **Vacío / agregar**: contorno punteado 2 px `#67e8f9`, radio 22 px, texto 15 px/800 en `--color-action`.
 
@@ -68,12 +68,12 @@ Marca: cápsula con rotación de -45°, partida a la mitad — mitad clara (regi
 
 ## Recetas de implementación (Tailwind v4)
 
-Las clases exactas que ya usan las pantallas. Una pantalla nueva copia estas, no las reinventa.
+Las clases exactas que ya usan las pantallas. Una pantalla nueva las importa de `frontend/src/shared/ui/formStyles.ts` (`inputClass`, `suggestedInputClass`, `labelClass`, `errorClass`, `overlineClass`, `optionalClass`), no las reinventa ni las copia. Los placeholders van en `slate-500` como mínimo: `slate-400` sobre blanco da ~2.6:1.
 Los tokens se usan como utilidades: `bg-ink`, `text-action`, `bg-confirmed`, `bg-canvas`, `bg-surface`, `border-hint-border`, etc.
 
 | Pieza | Clases |
 |---|---|
-| Campo | `min-h-11 w-full rounded-[14px] border-[1.5px] border-slate-300 bg-surface px-4 py-2.5 text-base font-medium text-ink placeholder-slate-400 outline-none focus:border-ink focus:ring-[0.5px] focus:ring-ink` |
+| Campo | `min-h-11 w-full rounded-[14px] border-[1.5px] border-slate-300 bg-surface px-4 py-2.5 text-base font-medium text-ink placeholder-slate-500 outline-none focus:border-ink focus:ring-[0.5px] focus:ring-ink` |
 | Campo sugerido por OCR | mismo, con `border-2 border-bright` en lugar del borde gris |
 | Etiqueta de campo | `mb-1.5 block text-[13px] font-bold text-ink` (y `font-medium text-slate-500` para "opcional") |
 | Error de campo | `mt-1.5 block text-sm font-semibold text-red-700` |

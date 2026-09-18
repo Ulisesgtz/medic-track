@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query'
 import { MedicationFieldset } from './MedicationFieldset'
 import { useOcrSuggestion } from './useOcrSuggestion'
 import { createConsultation, ConsultationApiError, type CreateConsultationPayload } from './api'
+import { errorClass, inputClass, labelClass, overlineClass, suggestedInputClass } from '../../shared/ui/formStyles'
 
 export interface MedicationFormValues {
   name: string
@@ -26,14 +27,6 @@ const emptyMedication: MedicationFormValues = {
   startTime: '',
 }
 
-const inputBase =
-  'min-h-11 w-full rounded-[14px] bg-surface px-4 py-2.5 text-base font-medium text-ink placeholder-slate-400 outline-none focus:border-ink'
-// Fields the OCR filled in carry the bright border until the parent reviews them.
-const inputClass = `${inputBase} border-[1.5px] border-slate-300 focus:ring-[0.5px] focus:ring-ink`
-const suggestedInputClass = `${inputBase} border-2 border-bright`
-const labelClass = 'mb-1.5 block text-[13px] font-bold text-ink'
-const errorClass = 'mt-1.5 block text-sm font-semibold text-red-700'
-const overlineClass = 'text-xs font-extrabold uppercase tracking-[0.1em] text-action'
 
 interface PrescriptionHints {
   doctorName?: string
@@ -268,6 +261,28 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
     }
   }, [suggestion, getValues, setValue, append, remove])
 
+  // `suggested` is keyed by index-based paths, so removing a medication row
+  // must drop that row's entries and shift the ones after it down by one —
+  // otherwise the "OCR suggestion" border would stick to whichever row now
+  // occupies the old index (including one the parent typed themselves).
+  function removeMedication(index: number) {
+    remove(index)
+    setSuggested((prev) => {
+      const next = new Set<string>()
+      for (const path of prev) {
+        const match = /^medications\.(\d+)\.(.+)$/.exec(path)
+        if (!match) {
+          next.add(path)
+          continue
+        }
+        const n = Number(match[1])
+        if (n === index) continue
+        next.add(n > index ? `medications.${n - 1}.${match[2]}` : path)
+      }
+      return next
+    })
+  }
+
   const onSubmit = handleSubmit((values) => {
     mutation.mutate(values)
   })
@@ -381,7 +396,7 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
               register={register}
               errors={errors}
               control={control}
-              onRemove={() => remove(index)}
+              onRemove={() => removeMedication(index)}
               removeDisabled={ocrProgress !== null}
               suggested={suggested}
             />

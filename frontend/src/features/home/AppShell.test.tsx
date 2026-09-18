@@ -106,7 +106,7 @@ describe('AppShell', () => {
     expect(screen.getByRole('dialog', { name: 'Agregar hijo' })).toBeInTheDocument()
   })
 
-  it('drops the header brand row while the sidebar (which has the logo) is on screen', async () => {
+  it('does not render the header brand row while the sidebar (which has the logo) is on screen', async () => {
     stubMatchMedia(true)
     const { AppHeader } = await import('../../shared/ui/AppHeader')
     const queryClient = new QueryClient()
@@ -121,7 +121,9 @@ describe('AppShell', () => {
     )
 
     await screen.findByRole('navigation', { name: 'Tus hijos' })
-    const headerBrand = document.querySelector('header span.text-lg')!
-    expect(headerBrand.parentElement).toHaveClass('hidden')
+    // Not just hidden: the header's brand is not rendered at all, so the
+    // page holds a single logo (the sidebar's).
+    expect(document.querySelector('header span.text-lg')).toBeNull()
+    expect(screen.getAllByRole('img', { name: 'PediTrack' })).toHaveLength(1)
   })
 })
