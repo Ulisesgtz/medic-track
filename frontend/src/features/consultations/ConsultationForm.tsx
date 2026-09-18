@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { useForm, useFieldArray } from 'react-hook-form'
+import { useForm, useFieldArray, type Path } from 'react-hook-form'
 import { useMutation } from '@tanstack/react-query'
 import { MedicationFieldset } from './MedicationFieldset'
 import { useOcrSuggestion } from './useOcrSuggestion'
 import { createConsultation, ConsultationApiError, type CreateConsultationPayload } from './api'
+import { errorClass, inputClass, labelClass, overlineClass, suggestedInputClass } from '../../shared/ui/formStyles'
 
 export interface MedicationFormValues {
   name: string
@@ -26,10 +27,6 @@ const emptyMedication: MedicationFormValues = {
   startTime: '',
 }
 
-const inputClass =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30'
-const labelClass = 'mb-1 block text-sm font-medium text-slate-700'
-const errorClass = 'mt-1 text-sm text-red-600'
 
 interface PrescriptionHints {
   doctorName?: string
@@ -156,6 +153,7 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
   const { suggestion, isRunning, runOcr } = useOcrSuggestion()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [ocrProgress, setOcrProgress] = useState<{ current: number; total: number } | null>(null)
+  const [suggested, setSuggested] = useState<ReadonlySet<string>>(new Set())
 
   const {
     register,
@@ -213,14 +211,18 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
     // the cleanup below can remove exactly the ones it added and no others.
     let appendedCount = 0
 
+    // Fills a field only if the parent left it empty, and marks it as an
+    // OCR suggestion (bright border) so it's visibly "to review" (Principio I).
+    function fill(path: Path<ConsultationFormValues>, value: string | undefined) {
+      if (!value || getValues(path)) return
+      setValue(path, value as never)
+      setSuggested((prev) => new Set(prev).add(path))
+    }
+
     async function applyHints() {
       const hints = extractPrescriptionHints(suggestion as string)
-      if (hints.doctorName && !getValues('doctorName')) {
-        setValue('doctorName', hints.doctorName)
-      }
-      if (hints.consultDate && !getValues('consultDate')) {
-        setValue('consultDate', hints.consultDate)
-      }
+      fill('doctorName', hints.doctorName)
+      fill('consultDate', hints.consultDate)
 
       const meds = extractMedications(suggestion as string)
       if (meds.length === 0) return
@@ -239,15 +241,9 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
           if (cancelled) return
         }
         const med = meds[index]
-        if (med.name && !getValues(`medications.${index}.name`)) {
-          setValue(`medications.${index}.name`, med.name)
-        }
-        if (med.frequencyHours && !getValues(`medications.${index}.frequencyHours`)) {
-          setValue(`medications.${index}.frequencyHours`, med.frequencyHours)
-        }
-        if (med.durationDays && !getValues(`medications.${index}.durationDays`)) {
-          setValue(`medications.${index}.durationDays`, med.durationDays)
-        }
+        fill(`medications.${index}.name`, med.name)
+        fill(`medications.${index}.frequencyHours`, med.frequencyHours)
+        fill(`medications.${index}.durationDays`, med.durationDays)
         setOcrProgress({ current: index + 1, total: meds.length })
       }
       if (!cancelled) setOcrProgress(null)
@@ -256,6 +252,7 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
     applyHints()
     return () => {
       cancelled = true
+      setSuggested(new Set())
       if (appendedCount > 0) {
         const currentCount = getValues('medications').length
         const start = currentCount - appendedCount
@@ -264,40 +261,72 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
     }
   }, [suggestion, getValues, setValue, append, remove])
 
+  // `suggested` is keyed by index-based paths, so removing a medication row
+  // must drop that row's entries and shift the ones after it down by one —
+  // otherwise the "OCR suggestion" border would stick to whichever row now
+  // occupies the old index (including one the parent typed themselves).
+  function removeMedication(index: number) {
+    remove(index)
+    setSuggested((prev) => {
+      const next = new Set<string>()
+      for (const path of prev) {
+        const match = /^medications\.(\d+)\.(.+)$/.exec(path)
+        if (!match) {
+          next.add(path)
+          continue
+        }
+        const n = Number(match[1])
+        if (n === index) continue
+        next.add(n > index ? `medications.${n - 1}.${match[2]}` : path)
+      }
+      return next
+    })
+  }
+
   const onSubmit = handleSubmit((values) => {
     mutation.mutate(values)
   })
 
   return (
-    <form onSubmit={onSubmit} noValidate className="space-y-6">
-      <div>
-        <label className={labelClass} htmlFor="doctorName">
-          Doctor
-        </label>
-        <input id="doctorName" className={inputClass} {...register('doctorName', { required: true })} />
-        {errors.doctorName && <span className={errorClass}>El nombre del doctor es obligatorio</span>}
+    <form onSubmit={onSubmit} noValidate className="space-y-7">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        <div>
+          <label className={labelClass} htmlFor="doctorName">
+            Doctor
+          </label>
+          <input
+            id="doctorName"
+            className={suggested.has('doctorName') ? suggestedInputClass : inputClass}
+            {...register('doctorName', { required: true })}
+          />
+          {errors.doctorName && <span className={errorClass}>El nombre del doctor es obligatorio</span>}
+        </div>
+
+        <div>
+          <label className={labelClass} htmlFor="consultDate">
+            Fecha de la consulta
+          </label>
+          <input
+            id="consultDate"
+            type="date"
+            className={suggested.has('consultDate') ? suggestedInputClass : inputClass}
+            {...register('consultDate', { required: true })}
+          />
+          {errors.consultDate && <span className={errorClass}>La fecha es obligatoria</span>}
+        </div>
       </div>
 
-      <div>
-        <label className={labelClass} htmlFor="consultDate">
-          Fecha de la consulta
-        </label>
-        <input
-          id="consultDate"
-          type="date"
-          className={inputClass}
-          {...register('consultDate', { required: true })}
-        />
-        {errors.consultDate && <span className={errorClass}>La fecha es obligatoria</span>}
-      </div>
-
-      <div>
+      <div className="rounded-2xl bg-ink-soft p-5 text-white">
         {/* Not a real <label htmlFor>: the file input is `hidden` (display:none),
             which removes it from the accessibility tree, so a htmlFor association
             would point at a node assistive tech never reaches. The button below
             carries its own accessible name and is described by this text instead. */}
-        <p id="photo-label" className={labelClass}>
+        <p id="photo-label" className="text-[13px] font-bold text-white">
           Foto de la receta
+        </p>
+        <p className="mt-1 text-sm text-white/70">
+          La receta se lee en tu dispositivo y no se comparte con terceros. Revisa lo que se
+          autocompleta antes de guardar.
         </p>
         <input
           id="photo"
@@ -309,40 +338,57 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
           aria-labelledby="photo-label"
           onChange={handlePhotoChange}
         />
-        <div className="flex items-center gap-3">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             aria-describedby={photoFile ? 'photo-label photo-filename' : 'photo-label'}
-            className="cursor-pointer rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors duration-200 hover:bg-slate-50"
+            className="min-h-11 cursor-pointer rounded-2xl border-2 border-bright px-5 py-2.5 text-base font-extrabold text-bright transition-colors duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-bright focus-visible:ring-offset-2 focus-visible:ring-offset-ink-soft"
           >
             Seleccionar archivo
           </button>
           {photoFile && (
-            <span id="photo-filename" className="truncate text-sm text-slate-600">
+            <span id="photo-filename" className="min-w-0 truncate text-sm font-semibold text-white/80">
               {photoFile.name}
             </span>
           )}
         </div>
         {isRunning && (
-          <p className="mt-1 text-sm text-slate-500" aria-live="polite">
+          <p className="mt-3 text-sm font-semibold text-bright" aria-live="polite">
             Analizando la foto…
           </p>
         )}
         {ocrProgress && (
-          <p className="mt-1 text-sm text-cyan-700" aria-live="polite">
-            Agregando medicamentos de la receta… {ocrProgress.current} de {ocrProgress.total}
-          </p>
+          <div className="mt-3">
+            <p className="text-sm font-semibold text-bright" aria-live="polite">
+              Agregando medicamentos de la receta… {ocrProgress.current} de {ocrProgress.total}
+            </p>
+            <div
+              role="progressbar"
+              aria-label="Progreso de lectura de la receta"
+              aria-valuemin={0}
+              aria-valuemax={ocrProgress.total}
+              aria-valuenow={ocrProgress.current}
+              className="mt-2 h-2 overflow-hidden rounded-full bg-white/15"
+            >
+              <div
+                className="h-full rounded-full bg-bright transition-[width] duration-200 ease-out"
+                style={{ width: `${(ocrProgress.current / ocrProgress.total) * 100}%` }}
+              />
+            </div>
+          </div>
         )}
         {mutation.isError &&
           mutation.error instanceof ConsultationApiError &&
           mutation.error.kind === 'validation_error' &&
-          !photoFile && <span className={errorClass}>{mutation.error.message}</span>}
+          !photoFile && (
+            <span className="mt-3 block text-sm font-semibold text-red-200">{mutation.error.message}</span>
+          )}
       </div>
 
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Medicamentos</h2>
-        <div className="space-y-3">
+      <section className="space-y-5">
+        <h2 className={overlineClass}>Medicamentos</h2>
+        <div className="space-y-4">
           {fields.map((field, index) => (
             <MedicationFieldset
               key={field.id}
@@ -350,8 +396,9 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
               register={register}
               errors={errors}
               control={control}
-              onRemove={() => remove(index)}
+              onRemove={() => removeMedication(index)}
               removeDisabled={ocrProgress !== null}
+              suggested={suggested}
             />
           ))}
         </div>
@@ -359,7 +406,7 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
           type="button"
           onClick={() => append(emptyMedication)}
           disabled={ocrProgress !== null}
-          className="cursor-pointer rounded-lg border border-cyan-600 px-4 py-2 text-sm font-medium text-cyan-700 transition-colors duration-200 hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-11 cursor-pointer rounded-2xl border-2 border-action px-5 py-2.5 text-base font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Agregar medicamento
         </button>
@@ -374,25 +421,25 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
 
       {mutation.isError &&
         !(mutation.error instanceof ConsultationApiError && mutation.error.kind === 'validation_error' && !photoFile) && (
-          <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <p role="alert" className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-800">
             {mutation.error instanceof ConsultationApiError
               ? mutation.error.message
               : 'Ocurrió un error al guardar la consulta. Intenta de nuevo.'}
           </p>
         )}
 
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
         <button
           type="button"
           onClick={onCancel}
-          className="cursor-pointer rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition-colors duration-200 hover:bg-slate-50"
+          className="min-h-11 cursor-pointer rounded-2xl border-2 border-action px-6 py-2.5 text-base font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
         >
           Cancelar
         </button>
         <button
           type="submit"
           disabled={mutation.isPending}
-          className="cursor-pointer rounded-lg bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-11 cursor-pointer rounded-2xl bg-confirmed px-8 py-3 text-base font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-confirmed focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {mutation.isPending ? 'Guardando…' : 'Guardar'}
         </button>

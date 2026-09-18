@@ -186,7 +186,7 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Consultation, 
 	}
 
 	medRows, err := r.pool.Query(ctx, `
-		SELECT id, name, frequency_hours, duration_days, start_time, created_at
+		SELECT id, name, frequency_hours, duration_days, to_char(start_time, 'HH24:MI'), created_at
 		FROM medications WHERE consultation_id = $1 ORDER BY created_at ASC
 	`, id)
 	if err != nil {

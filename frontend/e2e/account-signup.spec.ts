@@ -10,13 +10,13 @@ test.describe('Registro de cuenta de usuario', () => {
 
     await page.getByLabel('Nombre').fill('Ana')
     await page.getByLabel('Apellido').fill('Gómez')
-    await page.getByLabel('Correo electrónico').fill(`ana.e2e.${Date.now()}@example.com`)
+    await page.getByLabel('Correo electrónico').fill(`ana.e2e.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@example.com`)
 
     await page.getByRole('button', { name: 'Guardar' }).click()
 
     // FR-003: a successful signup navigates straight to the home page.
     await expect(page).toHaveURL(/\/home/)
-    await expect(page.getByRole('heading', { name: 'Mis hijos' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Tus hijos' })).toBeVisible()
   })
 
   test('Escenario 2 — crear cuenta con un hijo', async ({ page }) => {
@@ -24,7 +24,7 @@ test.describe('Registro de cuenta de usuario', () => {
 
     await page.getByLabel('Nombre').fill('Ana')
     await page.getByLabel('Apellido').fill('Gómez')
-    await page.getByLabel('Correo electrónico').fill(`ana.e2e.${Date.now()}@example.com`)
+    await page.getByLabel('Correo electrónico').fill(`ana.e2e.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@example.com`)
 
     await page.getByRole('button', { name: 'Agregar hijo' }).click()
     await page.locator('#children\\.0\\.firstName').fill('Luis')
@@ -34,7 +34,7 @@ test.describe('Registro de cuenta de usuario', () => {
     await page.getByRole('button', { name: 'Guardar' }).click()
 
     await expect(page).toHaveURL(/\/home/)
-    await expect(page.getByText('Luis Gómez')).toBeVisible()
+    await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
   })
 
   test('Escenario 4 — pop-up freemium al intentar un segundo hijo, sin crear su formulario', async ({
@@ -44,7 +44,7 @@ test.describe('Registro de cuenta de usuario', () => {
 
     await page.getByLabel('Nombre').fill('Carla')
     await page.getByLabel('Apellido').fill('Ruiz')
-    const email = `carla.e2e.${Date.now()}@example.com`
+    const email = `carla.e2e.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@example.com`
     await page.getByLabel('Correo electrónico').fill(email)
 
     await page.getByRole('button', { name: 'Agregar hijo' }).click()
@@ -77,7 +77,7 @@ test.describe('Registro de cuenta de usuario', () => {
 
     await page.getByLabel('Nombre').fill('Diego')
     await page.getByLabel('Apellido').fill('Torres')
-    await page.getByLabel('Correo electrónico').fill(`diego.e2e.${Date.now()}@example.com`)
+    await page.getByLabel('Correo electrónico').fill(`diego.e2e.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@example.com`)
 
     await page.getByRole('button', { name: 'Agregar hijo' }).click()
     await page.locator('#children\\.0\\.firstName').fill('Hijo Uno')
@@ -117,7 +117,7 @@ test.describe('Validaciones del formulario (navegador real)', () => {
 
     await page.getByLabel('Nombre').fill('Ana')
     await page.getByLabel('Apellido').fill('Gómez')
-    await page.getByLabel('Correo electrónico').fill(`ana.e2e.${Date.now()}@example.com`)
+    await page.getByLabel('Correo electrónico').fill(`ana.e2e.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@example.com`)
     await page.getByRole('button', { name: 'Agregar hijo' }).click()
 
     await page.getByRole('button', { name: 'Guardar' }).click()
@@ -132,7 +132,7 @@ test.describe('Validaciones del formulario (navegador real)', () => {
 
     await page.getByLabel('Nombre').fill('Ana')
     await page.getByLabel('Apellido').fill('Gómez')
-    await page.getByLabel('Correo electrónico').fill(`ana.e2e.${Date.now()}@example.com`)
+    await page.getByLabel('Correo electrónico').fill(`ana.e2e.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@example.com`)
 
     await page.getByRole('button', { name: 'Agregar hijo' }).click()
     await page.locator('#children\\.0\\.firstName').fill('Luis')
@@ -161,7 +161,7 @@ test.describe('Validaciones del formulario (navegador real)', () => {
     await page.goto('/signup')
     await page.getByLabel('Nombre').fill('Ana123')
     await page.getByLabel('Apellido').fill('Gómez')
-    await page.getByLabel('Correo electrónico').fill(`ana.e2e.${Date.now()}@example.com`)
+    await page.getByLabel('Correo electrónico').fill(`ana.e2e.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@example.com`)
     await page.getByRole('button', { name: 'Guardar' }).click()
 
     await expect(
@@ -182,7 +182,7 @@ test.describe('Validaciones del formulario (navegador real)', () => {
     await page.goto('/signup')
     await page.getByLabel('Nombre').fill('a'.repeat(101))
     await page.getByLabel('Apellido').fill('Gómez')
-    await page.getByLabel('Correo electrónico').fill(`ana.e2e.${Date.now()}@example.com`)
+    await page.getByLabel('Correo electrónico').fill(`ana.e2e.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@example.com`)
     await page.getByRole('button', { name: 'Guardar' }).click()
 
     await expect(page.getByText('El nombre debe tener máximo 100 caracteres')).toBeVisible()
@@ -192,7 +192,7 @@ test.describe('Validaciones del formulario (navegador real)', () => {
   test('correo duplicado: el servidor responde 409 y el mensaje se muestra (FR-002)', async ({
     page,
   }) => {
-    const email = `ana.dup.e2e.${Date.now()}@example.com`
+    const email = `ana.dup.e2e.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@example.com`
 
     await page.goto('/signup')
     await page.getByLabel('Nombre').fill('Ana')

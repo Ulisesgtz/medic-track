@@ -21,7 +21,7 @@ test('registrar consulta → ver detalle con tomas generadas → marcar una toma
 
   await page.getByLabel('Nombre').fill('Ana')
   await page.getByLabel('Apellido').fill('Gómez')
-  await page.getByLabel('Correo electrónico').fill(`ana.consulta.e2e.${Date.now()}@example.com`)
+  await page.getByLabel('Correo electrónico').fill(`ana.consulta.e2e.${Date.now()}.${Math.random().toString(36).slice(2, 8)}@example.com`)
 
   await page.getByRole('button', { name: 'Agregar hijo' }).click()
   await page.locator('#children\\.0\\.firstName').fill('Luis')
@@ -30,7 +30,7 @@ test('registrar consulta → ver detalle con tomas generadas → marcar una toma
   await page.getByRole('button', { name: 'Guardar' }).click()
 
   await expect(page).toHaveURL(/\/home/)
-  await page.getByText('Luis Gómez').click()
+  await page.getByRole('main').getByText('Luis Gómez').click()
 
   await expect(page).toHaveURL(/\/children\//)
   await expect(page.getByText(/todavía no hay consultas/i)).toBeVisible()
@@ -60,7 +60,8 @@ test('registrar consulta → ver detalle con tomas generadas → marcar una toma
   // FR-011: marking a dose works and is reflected immediately.
   const firstDose = doseCheckboxes.first()
   await expect(firstDose).not.toBeChecked()
-  await firstDose.click()
+  // The checkbox is visually hidden inside a chip <label> (feature 005): click the chip, as a parent would.
+  await page.locator('label', { has: doseCheckboxes }).first().click()
   await expect(firstDose).toBeChecked()
 
   // Back on the child's detail, the new consultation is now listed (FR-001).

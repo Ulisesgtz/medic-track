@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -52,8 +52,43 @@ describe('ChildDetailPage', () => {
     renderPage()
 
     expect(await screen.findByText('Dra. López')).toBeInTheDocument()
-    expect(screen.getByText('2026-01-15')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Dra. López/ })).toHaveAttribute('href', '/consultations/c1')
+    const card = screen.getByRole('link', { name: /Dra. López/ })
+    expect(card).toHaveAttribute('href', '/consultations/c1')
+    expect(within(card).getByText('2026-01-15')).toBeInTheDocument()
+  })
+
+  it('summarizes the consultations: count, latest date and distinct doctors', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          childId: 'child-1',
+          consultations: [
+            { id: 'c2', doctorName: 'Dra. López', consultDate: '2026-03-01' },
+            { id: 'c1', doctorName: 'Dr. Pérez', consultDate: '2026-01-15' },
+            { id: 'c0', doctorName: 'Dra. López', consultDate: '2025-11-02' },
+          ],
+        }),
+      }),
+    )
+    renderPage()
+
+    const consultas = (await screen.findByText('Consultas')).parentElement!
+    expect(within(consultas).getByText('3')).toBeInTheDocument()
+    expect(within(screen.getByText('Doctores').parentElement!).getByText('2')).toBeInTheDocument()
+    expect(within(screen.getByText('Última consulta').parentElement!).getByText('2026-03-01')).toBeInTheDocument()
+  })
+
+  it('shows no summary grid when there are no consultations yet', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ childId: 'child-1', consultations: [] }) }),
+    )
+    renderPage()
+
+    await screen.findByText(/todavía no hay consultas/i)
+    expect(screen.queryByText('Doctores')).not.toBeInTheDocument()
   })
 
   it('opens the registration modal, submits, and navigates to the new consultation detail', async () => {

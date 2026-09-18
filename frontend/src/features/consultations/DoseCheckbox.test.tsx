@@ -43,4 +43,23 @@ describe('DoseCheckbox', () => {
 
     expect(screen.getByRole('checkbox')).toBeChecked()
   })
+
+  it('shows each dose state as text as well as color (FR-007)', () => {
+    renderCheckbox({ id: 'd1', scheduledAt: '2020-01-01T08:00:00Z', taken: true })
+    expect(screen.getByText('Tomada')).toBeInTheDocument()
+  })
+
+  it('labels a past, unmarked dose "Sin marcar" with the pending (amber) chip', () => {
+    renderCheckbox({ id: 'd1', scheduledAt: '2020-01-01T08:00:00Z', taken: false })
+
+    expect(screen.getByText('Sin marcar')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox').closest('label')).toHaveClass('bg-pending-soft')
+  })
+
+  it('labels a future, unmarked dose "Próxima" with the neutral chip', () => {
+    renderCheckbox({ id: 'd1', scheduledAt: '2999-01-01T08:00:00Z', taken: false })
+
+    expect(screen.getByText('Próxima')).toBeInTheDocument()
+    expect(screen.getByRole('checkbox').closest('label')).toHaveClass('bg-slate-100')
+  })
 })

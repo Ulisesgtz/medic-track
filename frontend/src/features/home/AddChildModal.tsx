@@ -81,21 +81,24 @@ export function AddChildModal({ accountId, onClose }: AddChildModalProps) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4"
       onClick={onClose}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="add-child-title"
-        className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl"
+        className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-surface p-7 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id="add-child-title" className="text-lg font-semibold text-slate-900">
-          Agregar hijo
-        </h2>
+        <div className="flex flex-col gap-1.5">
+          <h2 id="add-child-title" className="text-2xl font-black tracking-tight text-ink">
+            Agregar hijo
+          </h2>
+          <p className="text-sm text-slate-600">Se guarda en tu cuenta, no se comparte.</p>
+        </div>
 
-        <form onSubmit={onSubmit} noValidate className="mt-4 space-y-4">
+        <form onSubmit={onSubmit} noValidate className="mt-6 space-y-5">
           {/* "Quitar hijo" (from the reused ChildFieldset) discards this
               still-unsaved entry and closes the modal — valid only while
               filling the form, since a child can never be removed once
@@ -112,19 +115,25 @@ export function AddChildModal({ accountId, onClose }: AddChildModalProps) {
           ))}
 
           {mutation.isError &&
-            !(mutation.error instanceof AccountApiError && mutation.error.kind === 'freemium_child_limit_exceeded') && (
-              <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            !(
+              mutation.error instanceof AccountApiError &&
+              mutation.error.kind === 'freemium_child_limit_exceeded'
+            ) && (
+              <p
+                role="alert"
+                className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-800"
+              >
                 {mutation.error instanceof AccountApiError
                   ? mutation.error.message
                   : 'Ocurrió un error al agregar al hijo. Intenta de nuevo.'}
               </p>
             )}
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end">
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="cursor-pointer rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors duration-200 hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="min-h-11 cursor-pointer rounded-2xl bg-confirmed px-7 py-3 text-base font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {mutation.isPending ? 'Guardando…' : 'Guardar'}
             </button>

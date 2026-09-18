@@ -129,6 +129,34 @@ func TestRepository_Create_ChildNotFound(t *testing.T) {
 	require.ErrorIs(t, err, consultation.ErrChildNotFound)
 }
 
+// TestRepository_GetByID_StartTimeFormat verifies the contract's "HH:MM"
+// shape for startTime (contracts/get-consultation-detail.md) — Postgres's
+// TIME type would otherwise come back as "08:00:00.000000".
+func TestRepository_GetByID_StartTimeFormat(t *testing.T) {
+	pool := testPool(t)
+	repo := consultation.NewRepository(pool)
+	childID := createTestChild(t, pool)
+
+	c := &consultation.Consultation{
+		DoctorName:  "Dra. López",
+		ConsultDate: time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
+		Photo:       samplePhoto(),
+		Medications: []consultation.Medication{
+			{Name: "Amoxicilina", FrequencyHours: 8, DurationDays: 1, StartTime: strPtr("08:00")},
+			{Name: "Jarabe", FrequencyHours: 8, DurationDays: 1},
+		},
+	}
+	require.NoError(t, repo.Create(context.Background(), childID, c))
+
+	got, err := repo.GetByID(context.Background(), c.ID)
+
+	require.NoError(t, err)
+	require.Len(t, got.Medications, 2)
+	require.NotNil(t, got.Medications[0].StartTime)
+	require.Equal(t, "08:00", *got.Medications[0].StartTime)
+	require.Nil(t, got.Medications[1].StartTime)
+}
+
 // TestRepository_GetByID_NotFound covers FR-013's 404 case.
 func TestRepository_GetByID_NotFound(t *testing.T) {
 	pool := testPool(t)

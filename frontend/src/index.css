@@ -1,10 +1,28 @@
-@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap');
 @import 'tailwindcss';
 
 @theme {
   --font-sans: 'Figtree', system-ui, -apple-system, sans-serif;
+
+  /* Visual system — specs/005-identidad-visual-front-end/design-tokens.md */
+  --color-ink: #04252b;
+  --color-ink-soft: #0b3b44;
+  --color-action: #0e7490;
+  --color-bright: #22d3ee;
+  --color-confirmed: #047857;
+  --color-confirmed-soft: #d1fae5;
+  --color-pending: #f59e0b;
+  --color-pending-soft: #fef3c7;
+  --color-canvas: #f8feff;
+  --color-surface: #ffffff;
+  --color-hint: #ecfeff;
+  --color-hint-border: #a5f3fc;
+  /* Tinta de texto que el sistema fija sobre cada superficie de estado */
+  --color-on-pending: #451a03;
+  --color-pending-strong: #92400e;
+  --color-confirmed-strong: #065f46;
 }
 
 body {
-  @apply bg-cyan-50 text-slate-900;
+  @apply bg-canvas text-ink;
 }

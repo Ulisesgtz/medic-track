@@ -7,21 +7,29 @@ interface ChildCardProps {
 }
 
 /** One child's card on the home page: name + calculated age (FR-001). Clicking
- * the name navigates to that child's placeholder detail route (FR-005). */
+ * the name navigates to that child's detail route (FR-005). */
 export function ChildCard({ child }: ChildCardProps) {
   const age = computeAge(child.birthDate)
 
   return (
     <Link
       to={`/children/${child.id}`}
-      className="block cursor-pointer rounded-xl border border-slate-100 bg-white p-4 shadow-sm transition-colors duration-200 hover:border-cyan-300 hover:bg-cyan-50/40"
+      className="flex cursor-pointer items-center gap-4 rounded-3xl bg-surface p-5 shadow-[0_8px_20px_rgba(4,37,43,0.07)] transition-transform duration-200 hover:-translate-y-0.5"
     >
-      <p className="text-base font-semibold text-slate-900">
-        {child.firstName} {child.lastName}
-      </p>
-      <p className="mt-1 text-sm text-slate-500">
-        {age.value} {age.unit}
-      </p>
+      <span
+        aria-hidden="true"
+        className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-bright text-2xl font-black text-ink"
+      >
+        {child.firstName.charAt(0)}
+      </span>
+      <span className="min-w-0">
+        <span className="block truncate text-xl font-extrabold tracking-tight text-ink">
+          {child.firstName} {child.lastName}
+        </span>
+        <span className="mt-1 block text-sm font-semibold text-action">
+          {age.value} {age.unit}
+        </span>
+      </span>
     </Link>
   )
 }

@@ -4,16 +4,14 @@ import { useNavigate } from 'react-router-dom'
 import { useCountries, useStates } from '../../shared/catalog/useCatalog'
 import { useAccountSignup } from './useAccountSignup'
 import { useAccountSession } from '../home/useAccountSession'
+import { AppHeader } from '../../shared/ui/AppHeader'
 import { ChildFieldset } from './ChildFieldset'
 import { FreemiumLimitModal } from './FreemiumLimitModal'
 import { CreateAccountError, type CreateAccountPayload } from './api'
 import type { AccountSignupFormValues } from './types'
 import { emptyChild, NAME_MAX_LENGTH, NAME_PATTERN } from './types'
+import { errorClass, inputClass, labelClass, optionalClass, overlineClass } from '../../shared/ui/formStyles'
 
-const inputClass =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30'
-const labelClass = 'mb-1 block text-sm font-medium text-slate-700'
-const errorClass = 'mt-1 text-sm text-red-600'
 
 // FR-007: the free plan allows at most this many children. There is no paid
 // plan implemented yet (see Supuestos in spec.md), so this is a hardcoded
@@ -113,19 +111,17 @@ export function AccountSignupForm() {
     <form
       onSubmit={onSubmit}
       noValidate
-      className="space-y-8 rounded-2xl border border-slate-100 bg-white p-6 shadow-md md:p-8"
+      className="overflow-hidden bg-surface shadow-[0_8px_20px_rgba(4,37,43,0.07)] md:rounded-3xl"
     >
-      <div>
-        <h1 className="text-2xl font-semibold text-slate-900">Crear cuenta</h1>
-        <p className="mt-1 text-sm text-slate-500">
+      <AppHeader title="Crear cuenta">
+        <p className="max-w-md text-base leading-relaxed text-white/80">
           Registra tus datos y, si quieres, agrega a tus hijos para empezar a llevar su bitácora.
         </p>
-      </div>
+      </AppHeader>
 
-      <section className="space-y-4">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
-          Datos del tutor
-        </h2>
+      <div className="space-y-9 px-5 py-8 md:px-10 md:py-10">
+      <section className="space-y-5">
+        <h2 className={overlineClass}>Datos del tutor</h2>
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
@@ -177,7 +173,7 @@ export function AccountSignupForm() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className={labelClass} htmlFor="countryCode">
-              País <span className="font-normal text-slate-400">(opcional)</span>
+              País <span className={optionalClass}>(opcional)</span>
             </label>
             <select
               id="countryCode"
@@ -203,7 +199,7 @@ export function AccountSignupForm() {
           {countryCode && states && states.length > 0 && (
             <div>
               <label className={labelClass} htmlFor="stateCode">
-                Estado <span className="font-normal text-slate-400">(opcional)</span>
+                Estado <span className={optionalClass}>(opcional)</span>
               </label>
               <select id="stateCode" className={inputClass} {...register('stateCode')}>
                 <option value="">Selecciona un estado</option>
@@ -218,15 +214,15 @@ export function AccountSignupForm() {
         </div>
       </section>
 
-      <section className="space-y-4">
+      <section className="space-y-5">
         <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Hijos</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className={overlineClass}>Hijos</h2>
+          <p className="mt-2 text-base text-slate-600">
             El plan gratuito incluye un hijo. Puedes agregar más y decidir después.
           </p>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           {fields.map((field, index) => (
             <ChildFieldset
               key={field.id}
@@ -241,9 +237,9 @@ export function AccountSignupForm() {
         <button
           type="button"
           onClick={handleAddChild}
-          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-cyan-600 px-4 py-2 text-sm font-medium text-cyan-700 transition-colors duration-200 hover:bg-cyan-50 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2"
+          className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-2xl border-2 border-action px-5 py-2.5 text-base font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
         >
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m-7-7h14" />
           </svg>
           Agregar hijo
@@ -260,7 +256,7 @@ export function AccountSignupForm() {
       {signup.isError &&
         signup.error instanceof CreateAccountError &&
         signup.error.kind === 'email_already_exists' && (
-          <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <p role="alert" className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-800">
             Este correo ya está en uso.
           </p>
         )}
@@ -272,7 +268,7 @@ export function AccountSignupForm() {
       {signup.isError &&
         !showFreemiumModal &&
         !(signup.error instanceof CreateAccountError && signup.error.kind === 'email_already_exists') && (
-          <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+          <p role="alert" className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-800">
             {signup.error instanceof CreateAccountError
               ? (signup.error.message ?? 'Ocurrió un error al guardar la cuenta. Intenta de nuevo.')
               : 'Ocurrió un error al guardar la cuenta. Intenta de nuevo.'}
@@ -282,10 +278,11 @@ export function AccountSignupForm() {
       <button
         type="submit"
         disabled={signup.isPending}
-        className="w-full cursor-pointer rounded-lg bg-emerald-600 px-6 py-3 text-sm font-semibold text-white transition-colors duration-200 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:w-auto"
+        className="min-h-11 w-full cursor-pointer rounded-2xl bg-confirmed px-8 py-3.5 text-base font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-confirmed focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:w-auto"
       >
         {signup.isPending ? 'Guardando…' : 'Guardar'}
       </button>
+      </div>
     </form>
   )
 }
