@@ -1,0 +1,29 @@
+{
+  "name": "PediTrack",
+  "short_name": "PediTrack",
+  "description": "Bitácora médica digital para el seguimiento de consultas, recetas y dosis de tus hijos.",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#04252b",
+  "background_color": "#04252b",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
