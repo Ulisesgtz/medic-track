@@ -65,8 +65,8 @@ y se elimina (o se marca) aquí.
   - **"Sin receta"** (consulta sin foto): hoy la foto es obligatoria (FR-004 de la 004), así que ese estado
     solo existe si el producto decide hacerla opcional.
   Mientras tanto el resumen del detalle muestra Consultas, Última consulta y Doctores, que sí salen de
-  los datos actuales. El resto del mock que solo es diseño (titular con nombre y edad, edades en la barra
-  lateral, avatar del tutor, formato de fechas "15 sep 2026") no depende de la API y va en su propia rama.
+  los datos actuales. La parte del mock que solo era diseño (titular con nombre y edad, edades en la barra
+  lateral, avatar del tutor, fechas "15 sep 2026") ya está hecha (`feature/005b-alinear-mock-escritorio`).
 - **Pop-up freemium al tocar "Agregar hijo" en el home** — hoy, con plan gratuito y un hijo ya
   registrado, el botón abre el formulario y el límite solo lo detecta el servidor al guardar
   (comportamiento de `specs/003-home-listado-hijos/`). En el registro el pop-up sale al tocar el botón.

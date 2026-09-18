@@ -44,11 +44,13 @@ Figtree (ya cargada en `index.css`), con pesos 400/500/700/800/900.
 | Etiqueta de campo | 13 px | 700 | normal |
 | Badge / overline | 12 px | 800 | `0.1em`, mayúsculas |
 
+Formatos: fechas como "15 sep 2026" (`shared/date.ts`, `formatDateShort`; no mostrar `2026-09-15` al usuario), edad larga "5 años 6 meses" y corta "5a 6m" (`shared/age.ts`, `formatAgeLong`/`formatAgeShort`).
+
 Mínimo absoluto de texto: 13 px. Los números de resumen (edad, conteos) van en 34 px peso 900 — la app se lee de un vistazo por tamaño, no por color de borde.
 
 ## Componentes base
 
-- **Header de pantalla**: fondo `--color-ink`, esquina inferior recta, contiene volver / logo / título. (El avatar de inicial del hijo en el header no se implementó; solo aparece en las tarjetas y en la barra lateral.) Se usa siempre `AppHeader`, no se rearma a mano.
+- **Header de pantalla**: fondo `--color-ink`, esquina inferior recta, contiene volver / logo / título. (El avatar de inicial del hijo en el header no se implementó; solo aparece en las tarjetas y en la barra lateral.) Se usa siempre `AppHeader`, no se rearma a mano. En la vista de un hijo: eyebrow = "Nombre Apellido · fecha de nacimiento", titular = su edad ("5 años 6 meses"), y con la barra lateral visible el botón de acción va a la derecha del titular (sin la fila del logo).
 - **Tarjeta**: `--color-surface`, radio 20–22 px, sombra `0 8px 20px rgba(4,37,43,0.07)`, padding 20–22 px. Sin borde gris.
 - **Tarjeta de consulta**: la misma, con barra de acento izquierda de 5 px — `--color-bright` para la más reciente, `#cffafe` para las anteriores.
 - **Campo de formulario**: radio 14 px, borde 1.5 px `#cbd5e1`; enfocado o con valor confirmado, borde 2 px `--color-ink`; sugerido por OCR, borde 2 px `--color-bright`.

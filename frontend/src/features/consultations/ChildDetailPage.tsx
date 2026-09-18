@@ -1,8 +1,13 @@
 import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { formatAgeLong } from '../../shared/age'
+import { formatDateShort } from '../../shared/date'
 import { AppHeader } from '../../shared/ui/AppHeader'
+import { useIsDesktop } from '../../shared/ui/useIsDesktop'
 import { AppShell } from '../home/AppShell'
+import { fetchAccount } from '../home/api'
+import { useAccountSession } from '../home/useAccountSession'
 import { fetchConsultations, ConsultationApiError } from './api'
 import { ConsultationCard } from './ConsultationCard'
 import { ConsultationForm } from './ConsultationForm'
@@ -18,6 +23,22 @@ export function ChildDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
+  const isDesktop = useIsDesktop()
+  const { getAccountId } = useAccountSession()
+  const [accountId] = useState<string | null>(() => getAccountId())
+
+  // The child's own data (name, birth date) comes from the account the
+  // sidebar already loads — same query key, so no extra request. Without a
+  // saved account the header just falls back to the generic title.
+  const accountQuery = useQuery({
+    queryKey: ['account', accountId],
+    queryFn: () => fetchAccount(accountId!),
+    enabled: accountId !== null,
+    retry: false,
+  })
+  const child = accountQuery.data?.children.find((c) => c.id === childId)
+  // Same condition AppShell uses to show the sidebar.
+  const hasSidebar = isDesktop && accountId !== null
 
   const query = useQuery({
     queryKey: ['consultations', childId],
@@ -57,31 +78,45 @@ export function ChildDetailPage() {
 
   const doctorCount = new Set(consultations.map((c) => c.doctorName)).size
 
+  const registerButton = (
+    <button
+      type="button"
+      onClick={() => setShowForm(true)}
+      className="min-h-11 w-full cursor-pointer rounded-2xl bg-confirmed px-7 py-3 text-base font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-bright focus-visible:ring-offset-2 focus-visible:ring-offset-ink md:w-auto md:self-start"
+    >
+      Registrar consulta
+    </button>
+  )
+
   return (
     <AppShell activeChildId={childId}>
     <main className="min-h-screen bg-canvas pb-16">
       <AppHeader
         eyebrow={
-          <Link to="/home" className="-my-3 inline-flex min-h-11 items-center hover:underline">
-            ← Volver a mi home
-          </Link>
+          <>
+            {!hasSidebar && (
+              <Link to="/home" className="-my-3 inline-flex min-h-11 items-center hover:underline">
+                ← Volver a mi home
+              </Link>
+            )}
+            {child && (
+              <span className="block">
+                {child.firstName} {child.lastName} · {formatDateShort(child.birthDate)}
+              </span>
+            )}
+          </>
         }
-        title="Consultas médicas"
+        title={child ? formatAgeLong(child.birthDate) : 'Consultas médicas'}
+        action={hasSidebar ? registerButton : undefined}
       >
-        <button
-          type="button"
-          onClick={() => setShowForm(true)}
-          className="min-h-11 w-full cursor-pointer rounded-2xl bg-confirmed px-7 py-3 text-base font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-bright focus-visible:ring-offset-2 focus-visible:ring-offset-ink md:w-auto md:self-start"
-        >
-          Registrar consulta
-        </button>
+        {hasSidebar ? null : registerButton}
       </AppHeader>
 
       <div className="mx-auto max-w-5xl px-5 py-7 md:px-10 md:py-9">
         {consultations.length > 0 && (
           <div className="mb-5 grid gap-4 sm:grid-cols-3">
             <SummaryCard label="Consultas" value={String(consultations.length)} />
-            <SummaryCard label="Última consulta" value={consultations[0].consultDate} />
+            <SummaryCard label="Última consulta" value={formatDateShort(consultations[0].consultDate)} />
             <SummaryCard label="Doctores" value={String(doctorCount)} />
           </div>
         )}
@@ -93,11 +128,14 @@ export function ChildDetailPage() {
             <p className="mt-2 text-base text-slate-600">Registra la primera para empezar.</p>
           </div>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {consultations.map((c, index) => (
-              <ConsultationCard key={c.id} consultation={c} isLatest={index === 0} />
-            ))}
-          </div>
+          <>
+            <h2 className="mb-4 text-xl font-black tracking-tight text-ink">Consultas</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {consultations.map((c, index) => (
+                <ConsultationCard key={c.id} consultation={c} isLatest={index === 0} />
+              ))}
+            </div>
+          </>
         )}
       </div>
 

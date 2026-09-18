@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { formatAgeShort } from '../../shared/age'
 import { Logo } from '../../shared/ui/Logo'
 import { fetchAccount } from './api'
 import { AddChildModal } from './AddChildModal'
@@ -43,18 +44,17 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
               key={child.id}
               to={`/children/${child.id}`}
               aria-current={isActive ? 'page' : undefined}
-              className={`flex min-h-12 items-center gap-3 rounded-2xl px-3 py-2 transition-colors duration-200 hover:bg-ink-soft ${
-                isActive ? 'bg-ink-soft' : ''
+              className={`flex min-h-12 items-center justify-between gap-3 rounded-2xl px-4 py-2 transition-colors duration-200 ${
+                isActive ? 'bg-action' : 'hover:bg-ink-soft'
               }`}
             >
-              <span
-                aria-hidden="true"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-bright text-lg font-black text-ink"
-              >
-                {child.firstName.charAt(0)}
-              </span>
               <span className="min-w-0 truncate text-base font-extrabold tracking-tight text-white">
                 {child.firstName} {child.lastName}
+              </span>
+              <span
+                className={`shrink-0 text-sm font-bold ${isActive ? 'text-white' : 'text-white/70'}`}
+              >
+                {formatAgeShort(child.birthDate)}
               </span>
             </Link>
           )
@@ -73,13 +73,22 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
       </nav>
 
       {account && (
-        <div className="border-t border-white/15 pt-4">
-          <p className="truncate text-base font-extrabold text-white">
-            {account.firstName} {account.lastName}
-          </p>
-          <p className="mt-0.5 text-sm font-semibold text-bright">
-            {account.plan === 'free' ? 'Plan gratuito' : 'Plan completo'}
-          </p>
+        <div className="flex items-center gap-3 border-t border-white/15 pt-4">
+          <span
+            aria-hidden="true"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-action text-sm font-black text-white"
+          >
+            {account.firstName.charAt(0)}
+            {account.lastName.charAt(0)}
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-base font-extrabold text-white">
+              {account.firstName} {account.lastName}
+            </p>
+            <p className="mt-0.5 text-sm font-semibold text-bright">
+              {account.plan === 'free' ? 'Plan gratuito' : 'Plan completo'}
+            </p>
+          </div>
         </div>
       )}
 

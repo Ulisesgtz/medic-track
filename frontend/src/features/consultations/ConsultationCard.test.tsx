@@ -19,7 +19,7 @@ describe('ConsultationCard', () => {
 
     const link = screen.getByRole('link', { name: /Dra. López/ })
     expect(link).toHaveAttribute('href', '/consultations/c1')
-    expect(screen.getByText('2026-01-15')).toBeInTheDocument()
+    expect(screen.getByText('15 ene 2026')).toBeInTheDocument()
   })
 
   it('uses the bright accent bar only for the most recent consultation', () => {

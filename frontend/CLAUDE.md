@@ -12,7 +12,8 @@ Vite + React 18 + TypeScript. Forms: React Hook Form. Server state: TanStack Que
 | `src/features/consultations/` | Child detail page, consultation registration form (with client-side OCR) and detail, dose marking (see below) |
 | `src/shared/catalog/` | Country/state catalog fetch hooks (`useCountries`, `useStates`) shared across features |
 | `src/shared/ui/` | Presentational pieces used by more than one feature: `Logo`, `AppHeader` (dark screen header), `formStyles.ts` (Tailwind class recipes for fields/labels/errors — import them, don't copy), `useIsDesktop` (true from 1024px, `matchMedia`-based), `SidebarContext` (lets `AppHeader` drop its own logo row while the sidebar shows it) |
-| `src/shared/age.ts` | `computeAge(birthDate)` — pure function, months under 2 years old, whole years after |
+| `src/shared/age.ts` | `computeAge(birthDate)` — pure function, months under 2 years old, whole years after (used by the home cards). `formatAgeLong`/`formatAgeShort` give "5 años 6 meses" / "5a 6m" for the child header and the sidebar |
+| `src/shared/date.ts` | `formatDateShort('2026-09-15')` → `15 sep 2026` — every date shown to the user goes through it (fixed month names, no `Intl`, no timezone shift) |
 | `src/shared/apiError.ts` | `ApiError<Kind>` base class (`kind`, `message`, optional `details`) — each feature's `api.ts` defines its own subclass (`CreateAccountError`, `AccountApiError`) with just the `Kind` union it needs, instead of duplicating the constructor |
 | `e2e/account-signup.spec.ts` | Playwright E2E specs for signup — requires backend running locally |
 | `e2e/home-listado-hijos.spec.ts` | Playwright E2E specs for the home page flow (specs/003-home-listado-hijos) |

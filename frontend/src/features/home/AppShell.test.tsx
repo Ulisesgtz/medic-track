@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -78,6 +78,19 @@ describe('AppShell', () => {
     expect(luis).toHaveAttribute('href', '/children/k1')
     expect(luis).not.toHaveAttribute('aria-current')
     expect(sofia).toHaveAttribute('aria-current', 'page')
+  })
+
+  it("shows each child's age and the tutor's initials", async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 8, 16, 12))
+    stubMatchMedia(true)
+    renderShell('k1')
+
+    const nav = await screen.findByRole('navigation', { name: 'Tus hijos' })
+    expect(await within(nav).findByText('5a 4m')).toBeInTheDocument()
+    expect(within(nav).getByText('3a 7m')).toBeInTheDocument()
+    expect(await screen.findByText('AG')).toBeInTheDocument()
+    vi.useRealTimers()
   })
 
   it('shows the account name and plan at the bottom of the sidebar', async () => {
