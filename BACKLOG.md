@@ -55,6 +55,11 @@ y se elimina (o se marca) aquí.
   solo devuelve doctor y fecha, sin dosis. El resumen actual usa solo lo que ese endpoint ya trae
   (consultas, última consulta, doctores). Para las otras dos hace falta un endpoint agregado de
   dosis por hijo.
+- **Pop-up freemium al tocar "Agregar hijo" en el home** — hoy, con plan gratuito y un hijo ya
+  registrado, el botón abre el formulario y el límite solo lo detecta el servidor al guardar
+  (comportamiento de `specs/003-home-listado-hijos/`). En el registro el pop-up sale al tocar el botón.
+  Mejora acordada pero no construida: si `plan === 'free'` y ya hay 1 hijo, abrir directo
+  `FreemiumLimitModal` (home y barra lateral), dejando la validación del servidor como respaldo.
 - **Pantalla de planes de pago** — el modal de límite freemium (franja ámbar) es el punto de entrada
   visual ya establecido; la pantalla de planes debe continuarlo. Ver `specs/005-identidad-visual-front-end/spec.md`,
   "Adiciones Futuras Previstas".
