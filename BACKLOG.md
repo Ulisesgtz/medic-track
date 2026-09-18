@@ -29,7 +29,8 @@ y se elimina (o se marca) aquí.
   login, explícitamente aceptado como solución interina (ver plan.md, nota de Privacidad del
   Principio II). Cuando se diseñe la autenticación real, revisar `GET /accounts/{accountId}` y
   `POST /accounts/{accountId}/children` (hoy sin autenticación) y `useAccountSession` en el
-  frontend.
+  frontend. Consecuencia visible hoy: si se abre la URL de un hijo en un navegador donde nunca se creó la
+  cuenta (sin `account_id` guardado), la pantalla carga pero sin la barra lateral de escritorio.
 - **Almacenamiento de fotos de recetas en object storage** — `specs/004-detalle-consulta-hijo/`
   guarda la foto de la receta como `bytea` directamente en Postgres (ver research.md), por
   simplicidad y porque no hay infraestructura de archivos decidida todavía. Revisar migrar a un
@@ -50,11 +51,22 @@ y se elimina (o se marca) aquí.
 - **Modo oscuro de la app** — el sistema visual de `specs/005-identidad-visual-front-end/` ya define la
   superficie oscura base (`#04252b`), pero no sus equivalentes de superficie, borde y tinta secundaria.
   Definirlos antes de implementarlo.
-- **Resumen de tomas en el detalle del hijo** — `specs/005-identidad-visual-front-end/` previó tarjetas
-  de "tomas de hoy" y "tratamiento activo" (T010, T019), pero `GET /children/{childId}/consultations`
-  solo devuelve doctor y fecha, sin dosis. El resumen actual usa solo lo que ese endpoint ya trae
-  (consultas, última consulta, doctores). Para las otras dos hace falta un endpoint agregado de
-  dosis por hijo.
+- **Detalle del hijo al nivel del mock de escritorio** — el mock de `specs/005-identidad-visual-front-end/`
+  (pantalla "Escritorio · Home con detalle") muestra datos que hoy ninguna API entrega. Para construirlos
+  hace falta backend (cada punto es su propia feature con `/speckit-specify`):
+  - **Tarjetas "Tomas de hoy" y "Tratamiento activo" + panel derecho "Tomas de hoy"** (T010, T019 de la 005):
+    endpoint agregado de dosis por hijo (dosis del día con su hora, medicamento y estado tomada/sin marcar; y
+    el tratamiento vigente con su fecha de término). El panel permite marcar la toma desde ahí (reusa
+    `PATCH /consultations/{id}/doses/{doseId}`). Nota: la spec 004 no tiene concepto de "tratamiento activo"
+    (FR-016), habría que definirlo (p. ej. medicamento con dosis futuras) sin que implique interpretación
+    médica (Principio I).
+  - **Subtítulo de cada consulta** ("Fiebre y tos · 2 medicamentos"): `GET /children/{childId}/consultations`
+    solo devuelve doctor y fecha; habría que agregar síntomas y cantidad de medicamentos a la respuesta.
+  - **"Sin receta"** (consulta sin foto): hoy la foto es obligatoria (FR-004 de la 004), así que ese estado
+    solo existe si el producto decide hacerla opcional.
+  Mientras tanto el resumen del detalle muestra Consultas, Última consulta y Doctores, que sí salen de
+  los datos actuales. El resto del mock que solo es diseño (titular con nombre y edad, edades en la barra
+  lateral, avatar del tutor, formato de fechas "15 sep 2026") no depende de la API y va en su propia rama.
 - **Pop-up freemium al tocar "Agregar hijo" en el home** — hoy, con plan gratuito y un hijo ya
   registrado, el botón abre el formulario y el límite solo lo detecta el servidor al guardar
   (comportamiento de `specs/003-home-listado-hijos/`). En el registro el pop-up sale al tocar el botón.
