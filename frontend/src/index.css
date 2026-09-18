@@ -1,13 +1,10 @@
-@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap');
 @import 'tailwindcss';
 
-/*
- * Sistema visual — ver specs/005-identidad-visual-front-end/design-tokens.md
- * para el rol de cada token. No usar colores sueltos fuera de este conjunto.
- */
 @theme {
   --font-sans: 'Figtree', system-ui, -apple-system, sans-serif;
 
+  /* Visual system — specs/005-identidad-visual-front-end/design-tokens.md */
   --color-ink: #04252b;
   --color-ink-soft: #0b3b44;
   --color-action: #0e7490;

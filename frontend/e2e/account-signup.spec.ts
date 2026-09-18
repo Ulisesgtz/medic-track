@@ -16,7 +16,7 @@ test.describe('Registro de cuenta de usuario', () => {
 
     // FR-003: a successful signup navigates straight to the home page.
     await expect(page).toHaveURL(/\/home/)
-    await expect(page.getByRole('heading', { name: 'Mis hijos' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Tus hijos' })).toBeVisible()
   })
 
   test('Escenario 2 — crear cuenta con un hijo', async ({ page }) => {
