@@ -17,6 +17,10 @@
   --color-surface: #ffffff;
   --color-hint: #ecfeff;
   --color-hint-border: #a5f3fc;
+  /* Tinta de texto que el sistema fija sobre cada superficie de estado */
+  --color-on-pending: #451a03;
+  --color-pending-strong: #92400e;
+  --color-confirmed-strong: #065f46;
 }
 
 body {

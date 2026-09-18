@@ -9,12 +9,16 @@ interface MedicationFieldsetProps {
   errors: FieldErrors<ConsultationFormValues>
   onRemove: () => void
   removeDisabled?: boolean
+  /** Field paths the OCR filled in — rendered with the bright "to review" border. */
+  suggested?: ReadonlySet<string>
 }
 
-const inputClass =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30'
-const labelClass = 'mb-1 block text-sm font-medium text-slate-700'
-const errorClass = 'mt-1 text-sm text-red-600'
+const inputBase =
+  'min-h-11 w-full rounded-[14px] bg-surface px-4 py-2.5 text-base font-medium text-ink placeholder-slate-400 outline-none focus:border-ink'
+const inputClass = `${inputBase} border-[1.5px] border-slate-300 focus:ring-[0.5px] focus:ring-ink`
+const suggestedInputClass = `${inputBase} border-2 border-bright`
+const labelClass = 'mb-1.5 block text-[13px] font-bold text-ink'
+const errorClass = 'mt-1.5 block text-sm font-semibold text-red-700'
 
 const positiveIntegerValidation = {
   required: true,
@@ -55,11 +59,14 @@ export function MedicationFieldset({
   errors,
   onRemove,
   removeDisabled = false,
+  suggested,
 }: MedicationFieldsetProps) {
   const medErrors = errors.medications?.[index]
   const [mounted, setMounted] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
   const watched = useWatch({ control, name: `medications.${index}` })
+  const fieldClass = (name: string) =>
+    suggested?.has(`medications.${index}.${name}`) ? suggestedInputClass : inputClass
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => setMounted(true))
@@ -76,7 +83,7 @@ export function MedicationFieldset({
 
   return (
     <fieldset
-      className={`rounded-xl border border-cyan-100 bg-cyan-50/60 p-4 transition-all duration-300 ease-out motion-reduce:transition-none motion-reduce:transform-none ${
+      className={`rounded-2xl border border-hint-border bg-hint p-5 transition-all duration-300 ease-out motion-reduce:transition-none motion-reduce:transform-none ${
         mounted ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
       }`}
       data-testid={`medication-fieldset-${index}`}
@@ -90,66 +97,67 @@ export function MedicationFieldset({
           type="button"
           onClick={() => setCollapsed((c) => !c)}
           aria-expanded={!collapsed}
-          className="grid min-w-0 cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md py-1 text-left outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 focus-visible:ring-offset-2 focus-visible:ring-offset-cyan-50"
+          className="grid min-h-11 min-w-0 cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md py-1 text-left text-action outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-hint"
         >
-          <span className="inline-flex items-center justify-self-start rounded-full bg-cyan-600 px-2.5 py-1 text-xs font-semibold text-white">
+          <span className="inline-flex items-center justify-self-start rounded-full bg-action px-3 py-1 text-xs font-extrabold tracking-[0.1em] whitespace-nowrap text-white uppercase">
             Medicamento {index + 1}
           </span>
-          {collapsed && <span className="min-w-0 truncate text-sm text-slate-600">{summary}</span>}
+          {collapsed && <span className="min-w-0 truncate text-sm font-semibold text-slate-600">{summary}</span>}
           <ChevronIcon collapsed={collapsed} />
         </button>
         <button
           type="button"
           onClick={onRemove}
           disabled={removeDisabled}
-          className="cursor-pointer justify-self-end text-sm font-medium text-red-600 transition-colors duration-200 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="inline-flex min-h-11 cursor-pointer items-center justify-self-end text-sm font-bold text-red-700 transition-colors duration-200 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Quitar medicamento
+          Quitar{' '}
+          <span className="sr-only sm:not-sr-only">medicamento</span>
         </button>
       </div>
 
-      <div className={`grid grid-cols-1 gap-3 md:grid-cols-2 ${collapsed ? 'hidden' : ''}`}>
-        <div>
+      <div className={`grid grid-cols-2 gap-4 ${collapsed ? 'hidden' : ''}`}>
+        <div className="col-span-2">
           <label className={labelClass} htmlFor={`medications.${index}.name`}>
             Nombre
           </label>
           <input
             id={`medications.${index}.name`}
-            className={inputClass}
+            className={fieldClass('name')}
             {...register(`medications.${index}.name`, { required: true })}
           />
           {medErrors?.name && <span className={errorClass}>El nombre del medicamento es obligatorio</span>}
         </div>
 
         <div>
-          <label className={labelClass} htmlFor={`medications.${index}.frequencyHours`}>
+          <label className={`${labelClass} flex min-h-10 items-end`} htmlFor={`medications.${index}.frequencyHours`}>
             Cada cuántas horas
           </label>
           <input
             id={`medications.${index}.frequencyHours`}
             type="number"
-            className={inputClass}
+            className={fieldClass('frequencyHours')}
             {...register(`medications.${index}.frequencyHours`, positiveIntegerValidation)}
           />
           {medErrors?.frequencyHours && <span className={errorClass}>Debe ser un número positivo</span>}
         </div>
 
         <div>
-          <label className={labelClass} htmlFor={`medications.${index}.durationDays`}>
+          <label className={`${labelClass} flex min-h-10 items-end`} htmlFor={`medications.${index}.durationDays`}>
             Duración (días)
           </label>
           <input
             id={`medications.${index}.durationDays`}
             type="number"
-            className={inputClass}
+            className={fieldClass('durationDays')}
             {...register(`medications.${index}.durationDays`, positiveIntegerValidation)}
           />
           {medErrors?.durationDays && <span className={errorClass}>Debe ser un número positivo</span>}
         </div>
 
-        <div>
+        <div className="col-span-2">
           <label className={labelClass} htmlFor={`medications.${index}.startTime`}>
-            Horario de inicio <span className="font-normal text-slate-400">(opcional)</span>
+            Horario de inicio <span className="font-medium text-slate-500">(opcional)</span>
           </label>
           <input
             id={`medications.${index}.startTime`}

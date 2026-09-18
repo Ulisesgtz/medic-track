@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { AppHeader } from '../../shared/ui/AppHeader'
 import { fetchConsultations, ConsultationApiError } from './api'
 import { ConsultationCard } from './ConsultationCard'
 import { ConsultationForm } from './ConsultationForm'
@@ -25,8 +26,8 @@ export function ChildDetailPage() {
 
   if (query.isPending) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-cyan-50 px-4 py-8">
-        <p className="text-sm text-slate-500">Cargando…</p>
+      <main className="flex min-h-screen items-center justify-center bg-canvas px-5 py-10">
+        <p className="text-base font-semibold text-action">Cargando…</p>
       </main>
     )
   }
@@ -34,14 +35,14 @@ export function ChildDetailPage() {
   if (query.isError) {
     const notFound = query.error instanceof ConsultationApiError && query.error.kind === 'child_not_found'
     return (
-      <main className="flex min-h-screen items-center justify-center bg-cyan-50 px-4 py-8">
-        <div className="w-full max-w-md rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-md">
-          <p className="text-sm text-slate-500">
+      <main className="flex min-h-screen items-center justify-center bg-canvas px-5 py-10">
+        <div className="w-full max-w-md rounded-3xl bg-surface p-8 text-center shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
+          <p className="text-lg font-bold tracking-tight text-ink">
             {notFound ? 'No se encontró este hijo.' : 'Ocurrió un error al cargar sus consultas.'}
           </p>
           <Link
             to="/home"
-            className="mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-cyan-600 px-4 py-2 text-sm font-medium text-cyan-700 transition-colors duration-200 hover:bg-cyan-50"
+            className="mt-6 inline-flex min-h-11 cursor-pointer items-center rounded-2xl border-2 border-action px-5 py-2.5 text-base font-extrabold text-action transition-colors duration-200 hover:bg-hint"
           >
             Volver a mi home
           </Link>
@@ -53,33 +54,36 @@ export function ChildDetailPage() {
   const consultations = query.data ?? []
 
   return (
-    <main className="min-h-screen bg-cyan-50 px-4 py-8 md:py-12">
-      <div className="mx-auto max-w-2xl space-y-6">
-        <Link to="/home" className="text-sm text-cyan-700 hover:underline">
-          ← Volver a mi home
-        </Link>
+    <main className="min-h-screen bg-canvas pb-16">
+      <AppHeader
+        eyebrow={
+          <Link to="/home" className="hover:underline">
+            ← Volver a mi home
+          </Link>
+        }
+        title="Consultas médicas"
+      >
+        <button
+          type="button"
+          onClick={() => setShowForm(true)}
+          className="min-h-11 w-full cursor-pointer rounded-2xl bg-confirmed px-7 py-3 text-base font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-bright focus-visible:ring-offset-2 focus-visible:ring-offset-ink md:w-auto md:self-start"
+        >
+          Registrar consulta
+        </button>
+      </AppHeader>
 
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold text-slate-900">Consultas médicas</h1>
-          <button
-            type="button"
-            onClick={() => setShowForm(true)}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-cyan-600 px-4 py-2 text-sm font-medium text-cyan-700 transition-colors duration-200 hover:bg-cyan-50"
-          >
-            Registrar consulta
-          </button>
-        </div>
-
+      <div className="mx-auto max-w-5xl px-5 py-7 md:px-10 md:py-9">
         {consultations.length === 0 ? (
-          <div className="rounded-2xl border border-slate-100 bg-white p-6 text-center shadow-sm">
-            <p className="text-sm text-slate-500">
-              Todavía no hay consultas registradas. Registra la primera para empezar.
+          <div className="rounded-3xl bg-surface p-8 text-center shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
+            <p className="text-lg font-bold tracking-tight text-ink">
+              Todavía no hay consultas registradas.
             </p>
+            <p className="mt-2 text-base text-slate-600">Registra la primera para empezar.</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {consultations.map((c) => (
-              <ConsultationCard key={c.id} consultation={c} />
+          <div className="grid gap-4 md:grid-cols-2">
+            {consultations.map((c, index) => (
+              <ConsultationCard key={c.id} consultation={c} isLatest={index === 0} />
             ))}
           </div>
         )}
@@ -87,14 +91,26 @@ export function ChildDetailPage() {
 
       {showForm && childId && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4"
           onClick={() => setShowForm(false)}
         >
           <div
-            className="max-h-[85vh] w-full max-w-lg overflow-y-auto overflow-x-hidden rounded-2xl bg-white p-6 shadow-xl"
+            className="max-h-[85vh] w-full max-w-lg overflow-x-hidden overflow-y-auto rounded-3xl bg-surface p-7 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="mb-4 text-lg font-semibold text-slate-900">Registrar consulta</h2>
+            <div className="mb-6 flex items-start justify-between gap-4">
+              <h2 className="text-2xl font-black tracking-tight text-ink">Registrar consulta</h2>
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                aria-label="Cerrar"
+                className="flex h-[34px] w-[34px] shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-500 transition-colors duration-200 hover:bg-hint hover:text-ink"
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6 6 18" />
+                </svg>
+              </button>
+            </div>
             <ConsultationForm
               childId={childId}
               onCancel={() => setShowForm(false)}

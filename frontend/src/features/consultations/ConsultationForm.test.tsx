@@ -131,6 +131,10 @@ describe('ConsultationForm', () => {
     expect(document.getElementById('medications.0.name')).toHaveValue('Amoxicilina')
     expect(document.getElementById('medications.0.frequencyHours')).toHaveValue(8)
     expect(document.getElementById('medications.0.durationDays')).toHaveValue(5)
+    // Fields the OCR filled carry the bright "to review" border.
+    expect(screen.getByLabelText('Doctor')).toHaveClass('border-bright')
+    expect(document.getElementById('medications.0.name')).toHaveClass('border-bright')
+    expect(document.getElementById('symptoms')).not.toHaveClass('border-bright')
   })
 
   it('never overwrites fields the parent already filled in (FR-006, Principio I)', async () => {
