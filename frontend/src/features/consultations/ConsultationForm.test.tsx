@@ -249,4 +249,134 @@ describe('ConsultationForm', () => {
 
     expect(document.getElementById('medications.0.name')!.closest('.grid')).not.toHaveClass('hidden')
   })
+
+  it('disables Agregar/Quitar medicamento while OCR is still filling the list (race prevention)', async () => {
+    const tesseract = await import('tesseract.js')
+    vi.mocked(tesseract.default.recognize).mockResolvedValue({
+      data: { text: '1. Med A 100mg\nTomar cada 8 horas por 5 dias.\n2. Med B 200mg\nTomar cada 12 horas por 5 dias.' },
+    } as never)
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.upload(screen.getByLabelText('Foto de la receta'), samplePhoto())
+
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Agregar medicamento' })).toBeDisabled())
+
+    await waitFor(() => expect(document.getElementById('medications.1.name')).toHaveValue('Med B'), {
+      timeout: 5000,
+    })
+    expect(screen.getByRole('button', { name: 'Agregar medicamento' })).toBeEnabled()
+  })
+
+  it('extracts every unlisted medication, not just the first (FR-006)', async () => {
+    const tesseract = await import('tesseract.js')
+    vi.mocked(tesseract.default.recognize).mockResolvedValue({
+      data: {
+        text: 'Amoxicilina 500mg cada 8 horas por 7 dias\nParacetamol 500mg cada 6 horas por 3 dias',
+      },
+    } as never)
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.upload(screen.getByLabelText('Foto de la receta'), samplePhoto())
+
+    await waitFor(() => expect(document.getElementById('medications.1.name')).toHaveValue('Paracetamol'), {
+      timeout: 5000,
+    })
+    expect(document.getElementById('medications.0.name')).toHaveValue('Amoxicilina')
+    expect(document.getElementById('medications.1.frequencyHours')).toHaveValue(6)
+    expect(document.getElementById('medications.1.durationDays')).toHaveValue(3)
+  })
+
+  it('captures the medication name even when a descriptor word precedes the dosage (unlisted fallback)', async () => {
+    const tesseract = await import('tesseract.js')
+    vi.mocked(tesseract.default.recognize).mockResolvedValue({
+      data: { text: 'Amoxicilina suspensión 250mg cada 8 horas por 7 dias' },
+    } as never)
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.upload(screen.getByLabelText('Foto de la receta'), samplePhoto())
+
+    await waitFor(() => expect(document.getElementById('medications.0.name')).toHaveValue('Amoxicilina suspensión'))
+  })
+
+  it('stops a numbered medication name at "cada" when no dosage number follows it', async () => {
+    const tesseract = await import('tesseract.js')
+    vi.mocked(tesseract.default.recognize).mockResolvedValue({
+      data: { text: '1. Loratadina jarabe cada 12 horas por 5 dias' },
+    } as never)
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.upload(screen.getByLabelText('Foto de la receta'), samplePhoto())
+
+    await waitFor(() => expect(document.getElementById('medications.0.name')).toHaveValue('Loratadina jarabe'))
+    expect(document.getElementById('medications.0.frequencyHours')).toHaveValue(12)
+  })
+
+  it('prefers a "Fecha:"-labeled date over an unrelated date-shaped number', async () => {
+    const tesseract = await import('tesseract.js')
+    vi.mocked(tesseract.default.recognize).mockResolvedValue({
+      data: { text: 'Cédula 01/01/1990\nFecha: 15/03/2026\nAmoxicilina 500mg cada 8 horas por 7 dias' },
+    } as never)
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.upload(screen.getByLabelText('Foto de la receta'), samplePhoto())
+
+    await waitFor(() => expect(screen.getByLabelText('Fecha de la consulta')).toHaveValue('2026-03-15'))
+  })
+
+  it('removes stray fieldsets left by a superseded OCR run when the photo is swapped mid-fill', async () => {
+    const tesseract = await import('tesseract.js')
+    vi.mocked(tesseract.default.recognize)
+      .mockResolvedValueOnce({
+        data: {
+          text:
+            '1. Med A 100mg\nTomar cada 8 horas por 5 dias.\n2. Med B 200mg\nTomar cada 12 horas por 5 dias.\n' +
+            '3. Med C 300mg\nTomar cada 6 horas por 3 dias.',
+        },
+      } as never)
+      .mockResolvedValueOnce({
+        data: { text: '1. Med Z 50mg\nTomar cada 24 horas por 2 dias.' },
+      } as never)
+    const user = userEvent.setup()
+    renderForm()
+
+    const fileInput = screen.getByLabelText('Foto de la receta')
+    await user.upload(fileInput, samplePhoto())
+    // Wait for the first run to actually start appending before superseding
+    // it, so the race this test targets (stray fieldsets left behind) is
+    // reliably exercised rather than timing-dependent.
+    await waitFor(() => expect(screen.getByTestId('medication-fieldset-1')).toBeInTheDocument())
+    await user.upload(fileInput, samplePhoto())
+
+    // The interrupted first run already filled medications.0 ("Med A") —
+    // that value is a parent-facing autofill like any other and is never
+    // overwritten (Principio I), so it's expected to remain. What must NOT
+    // remain is the extra empty fieldset(s) the interrupted run appended.
+    await waitFor(() => expect(screen.queryByText(/Agregando medicamentos de la receta/)).not.toBeInTheDocument(), {
+      timeout: 5000,
+    })
+    expect(document.getElementById('medications.0.name')).toHaveValue('Med A')
+    expect(screen.queryByTestId('medication-fieldset-1')).not.toBeInTheDocument()
+  })
+
+  it('gives each medication fieldset an accessible group name (Principio I review context)', async () => {
+    const user = userEvent.setup()
+    renderForm()
+
+    await user.click(screen.getByRole('button', { name: 'Agregar medicamento' }))
+
+    expect(screen.getByRole('group', { name: 'Medicamento 1' })).toBeInTheDocument()
+    expect(screen.getByRole('group', { name: 'Medicamento 2' })).toBeInTheDocument()
+  })
+
+  it('describes the photo picker button with the "Foto de la receta" text via aria-describedby', () => {
+    renderForm()
+
+    const button = screen.getByRole('button', { name: 'Seleccionar archivo' })
+    expect(button).toHaveAccessibleDescription('Foto de la receta')
+  })
 })

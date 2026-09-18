@@ -51,7 +51,13 @@ function extractPrescriptionHints(ocrText: string): PrescriptionHints {
   const doctorMatch = ocrText.match(
     /dra?\.?[ \t]+([A-Za-zÁÉÍÓÚÑáéíóúñ.]+(?:[ \t]+[A-Za-zÁÉÍÓÚÑáéíóúñ.]+){1,3})/i,
   )
-  const dateMatch = ocrText.match(/(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/)
+  // Prefer a date explicitly labeled "fecha" (the consult date) over the
+  // first date-shaped number anywhere in the text (which could be a
+  // birthdate, license validity, etc.) — fall back to that loose match
+  // only when no labeled date is found.
+  const dateMatch =
+    ocrText.match(/fecha\s*:?\s*(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/i) ??
+    ocrText.match(/(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/)
 
   let consultDate: string | undefined
   if (dateMatch) {
@@ -80,7 +86,12 @@ function extractNumberedMedications(ocrText: string): MedicationHint[] {
   const blocks = ocrText.split(/(?=^\d{1,2}\.\s)/m).filter((block) => /^\d{1,2}\.\s/.test(block))
   const meds: MedicationHint[] = []
   for (const block of blocks) {
-    const nameMatch = block.match(/^\d{1,2}\.\s*([A-Za-zÁÉÍÓÚÑáéíóúñ/ ]+?)(?=\d)/)
+    // Stop the name at the first digit (a dosage number), newline, or the
+    // word "cada" (start of the frequency instructions) — whichever comes
+    // first — so a medication with no dosage number right after its name
+    // (e.g. a liquid measured only by "cada N horas") doesn't swallow the
+    // instructions into the name.
+    const nameMatch = block.match(/^\d{1,2}\.\s*([A-Za-zÁÉÍÓÚÑáéíóúñ/ ]+?)(?=\d|\n|cada\b)/i)
     if (!nameMatch) continue
     meds.push({
       name: nameMatch[1].replace(/\s+/g, ' ').trim(),
@@ -90,23 +101,33 @@ function extractNumberedMedications(ocrText: string): MedicationHint[] {
   return meds
 }
 
-/** Fallback for a single, unlisted medication ("Amoxicilina 250mg ... cada 8 horas ... 5 dias"). */
-function extractSingleMedication(ocrText: string): MedicationHint | undefined {
-  const nameMatch = ocrText.match(/([A-Za-zÁÉÍÓÚÑáéíóúñ]{4,})\s*\d{2,4}\s*mg/i)
-  if (!nameMatch) return undefined
-  return { name: nameMatch[1], ...frequencyAndDurationHints(ocrText) }
+/**
+ * Fallback for prescriptions with no numbered list — one entry per
+ * "NAME ###mg" occurrence found anywhere in the text (e.g. "Amoxicilina
+ * 250mg ... cada 8 horas ... 5 dias\nParacetamol 500mg ..."), rather than
+ * just the first one, so a prescription with several unlisted medications
+ * still surfaces all of them.
+ */
+function extractUnlistedMedications(ocrText: string): MedicationHint[] {
+  const nameRegex = /([A-Za-zÁÉÍÓÚÑáéíóúñ]+(?:[ /][A-Za-zÁÉÍÓÚÑáéíóúñ]+){0,2})\s*\d{2,4}\s*mg/gi
+  const matches = [...ocrText.matchAll(nameRegex)]
+  return matches.map((match, i) => {
+    const start = match.index ?? 0
+    const end = matches[i + 1]?.index ?? ocrText.length
+    return { name: match[1].trim(), ...frequencyAndDurationHints(ocrText.slice(start, end)) }
+  })
 }
 
 /**
  * Best-effort medication guesses from OCR-extracted free text (FR-006) —
  * never authoritative. Prescriptions with a numbered medication list yield
- * one entry per line; otherwise falls back to a single best-guess entry.
+ * one entry per line; otherwise falls back to one entry per unlisted
+ * "NAME ###mg" occurrence.
  */
 function extractMedications(ocrText: string): MedicationHint[] {
   const numbered = extractNumberedMedications(ocrText)
   if (numbered.length > 0) return numbered
-  const single = extractSingleMedication(ocrText)
-  return single ? [single] : []
+  return extractUnlistedMedications(ocrText)
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -187,6 +208,10 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
   useEffect(() => {
     if (!suggestion) return
     let cancelled = false
+    // Tracks how many fieldsets THIS run appended, so if it gets superseded
+    // (e.g. the parent selects a second photo before the stagger finishes)
+    // the cleanup below can remove exactly the ones it added and no others.
+    let appendedCount = 0
 
     async function applyHints() {
       const hints = extractPrescriptionHints(suggestion as string)
@@ -209,6 +234,7 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
         // at once (UI/UX guidance: visible incremental progress).
         if (index >= existingCount) {
           append(emptyMedication)
+          appendedCount += 1
           await new Promise((resolve) => setTimeout(resolve, MEDICATION_STAGGER_MS))
           if (cancelled) return
         }
@@ -230,8 +256,13 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
     applyHints()
     return () => {
       cancelled = true
+      if (appendedCount > 0) {
+        const currentCount = getValues('medications').length
+        const start = currentCount - appendedCount
+        remove(Array.from({ length: appendedCount }, (_, i) => start + i))
+      }
     }
-  }, [suggestion, getValues, setValue, append])
+  }, [suggestion, getValues, setValue, append, remove])
 
   const onSubmit = handleSubmit((values) => {
     mutation.mutate(values)
@@ -261,9 +292,13 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
       </div>
 
       <div>
-        <label className={labelClass} htmlFor="photo">
+        {/* Not a real <label htmlFor>: the file input is `hidden` (display:none),
+            which removes it from the accessibility tree, so a htmlFor association
+            would point at a node assistive tech never reaches. The button below
+            carries its own accessible name and is described by this text instead. */}
+        <p id="photo-label" className={labelClass}>
           Foto de la receta
-        </label>
+        </p>
         <input
           id="photo"
           ref={fileInputRef}
@@ -271,17 +306,23 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
           accept="image/*"
           capture="environment"
           className="hidden"
+          aria-labelledby="photo-label"
           onChange={handlePhotoChange}
         />
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
+            aria-describedby={photoFile ? 'photo-label photo-filename' : 'photo-label'}
             className="cursor-pointer rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors duration-200 hover:bg-slate-50"
           >
             Seleccionar archivo
           </button>
-          {photoFile && <span className="truncate text-sm text-slate-600">{photoFile.name}</span>}
+          {photoFile && (
+            <span id="photo-filename" className="truncate text-sm text-slate-600">
+              {photoFile.name}
+            </span>
+          )}
         </div>
         {isRunning && (
           <p className="mt-1 text-sm text-slate-500" aria-live="polite">
@@ -310,13 +351,15 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
               errors={errors}
               control={control}
               onRemove={() => remove(index)}
+              removeDisabled={ocrProgress !== null}
             />
           ))}
         </div>
         <button
           type="button"
           onClick={() => append(emptyMedication)}
-          className="cursor-pointer rounded-lg border border-cyan-600 px-4 py-2 text-sm font-medium text-cyan-700 transition-colors duration-200 hover:bg-cyan-50"
+          disabled={ocrProgress !== null}
+          className="cursor-pointer rounded-lg border border-cyan-600 px-4 py-2 text-sm font-medium text-cyan-700 transition-colors duration-200 hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Agregar medicamento
         </button>

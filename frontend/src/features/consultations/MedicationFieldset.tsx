@@ -8,6 +8,7 @@ interface MedicationFieldsetProps {
   register: UseFormRegister<ConsultationFormValues>
   errors: FieldErrors<ConsultationFormValues>
   onRemove: () => void
+  removeDisabled?: boolean
 }
 
 const inputClass =
@@ -47,7 +48,14 @@ function ChevronIcon({ collapsed }: { collapsed: boolean }) {
  * summary for scanning a long list — never collapsed by default, since the
  * parent must be able to see and correct every OCR-derived value (Principio I).
  */
-export function MedicationFieldset({ index, control, register, errors, onRemove }: MedicationFieldsetProps) {
+export function MedicationFieldset({
+  index,
+  control,
+  register,
+  errors,
+  onRemove,
+  removeDisabled = false,
+}: MedicationFieldsetProps) {
   const medErrors = errors.medications?.[index]
   const [mounted, setMounted] = useState(false)
   const [collapsed, setCollapsed] = useState(false)
@@ -73,6 +81,10 @@ export function MedicationFieldset({ index, control, register, errors, onRemove 
       }`}
       data-testid={`medication-fieldset-${index}`}
     >
+      {/* A real <legend> (not the visual badge below, which is nested inside
+          a button and can't serve as the fieldset's accessible name) so
+          screen readers announce which medication group is focused. */}
+      <legend className="sr-only">Medicamento {index + 1}</legend>
       <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
         <button
           type="button"
@@ -89,7 +101,8 @@ export function MedicationFieldset({ index, control, register, errors, onRemove 
         <button
           type="button"
           onClick={onRemove}
-          className="cursor-pointer justify-self-end text-sm font-medium text-red-600 transition-colors duration-200 hover:text-red-700"
+          disabled={removeDisabled}
+          className="cursor-pointer justify-self-end text-sm font-medium text-red-600 transition-colors duration-200 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           Quitar medicamento
         </button>
