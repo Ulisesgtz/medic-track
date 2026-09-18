@@ -61,7 +61,7 @@ y se elimina (o se marca) aquí.
   (comportamiento de `specs/003-home-listado-hijos/`). En el registro el pop-up sale al tocar el botón.
   Mejora acordada pero no construida: si `plan === 'free'` y ya hay 1 hijo, abrir directo
   `FreemiumLimitModal` (home y barra lateral), dejando la validación del servidor como respaldo.
-- **Pantalla de planes de pago** — el modal de límite freemium (franja ámbar) es el punto de entrada
+- **Pantalla de planes de pago** — hoy `/planes` muestra un aviso "Estamos preparando los planes" (`MessagePage`) para que "Ver planes" no caiga en una pantalla en blanco. El modal de límite freemium (franja ámbar) es el punto de entrada
   visual ya establecido; la pantalla de planes debe continuarlo. Ver `specs/005-identidad-visual-front-end/spec.md`,
   "Adiciones Futuras Previstas".
 

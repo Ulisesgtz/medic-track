@@ -282,6 +282,32 @@ describe('ChildDetailPage', () => {
     expect(screen.getByText('sin consultas')).toBeInTheDocument()
   })
 
+  it('shows the registration form as a real dialog: Escape closes it and focus goes back to the button', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (input: string) => ({
+        ok: true,
+        json: async () =>
+          String(input).includes('/overview')
+            ? { childId: 'child-1', doses: [], activeTreatment: null }
+            : { childId: 'child-1', consultations: [] },
+      })),
+    )
+    renderPage()
+
+    const opener = await screen.findByRole('button', { name: 'Nueva consulta' })
+    await user.click(opener)
+    const dialog = screen.getByRole('dialog', { name: 'Registrar consulta' })
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(dialog).toHaveFocus()
+
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(opener).toHaveFocus()
+  })
+
   it('opens the registration modal, submits, and navigates to the new consultation detail', async () => {
     const user = userEvent.setup()
     vi.stubGlobal(

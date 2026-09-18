@@ -101,6 +101,18 @@ describe('AppShell', () => {
     expect(screen.getByText('Plan gratuito')).toBeInTheDocument()
   })
 
+  it('renders the add-child modal in <body>, not inside the sticky sidebar (it would paint under the page otherwise)', async () => {
+    stubMatchMedia(true)
+    const user = userEvent.setup()
+    renderShell()
+
+    await user.click(await screen.findByRole('button', { name: /Agregar hijo/ }))
+
+    const dialog = screen.getByRole('dialog', { name: 'Agregar hijo' })
+    expect(dialog.closest('aside')).toBeNull()
+    expect(document.body.contains(dialog)).toBe(true)
+  })
+
   it('labels a paid account "Plan completo"', async () => {
     stubMatchMedia(true)
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ...account, plan: 'paid' }) }))

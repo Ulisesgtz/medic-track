@@ -103,11 +103,13 @@ export function MedicationFieldset({
         <button
           type="button"
           onClick={onRemove}
+          aria-label="Quitar medicamento"
           disabled={removeDisabled}
           className="inline-flex min-h-11 cursor-pointer items-center justify-self-end text-sm font-bold text-red-700 transition-colors duration-200 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Quitar{' '}
-          <span className="sr-only sm:not-sr-only">medicamento</span>
+          <span>
+            Quitar<span className="hidden sm:inline"> medicamento</span>
+          </span>
         </button>
       </div>
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatAgeLong } from '../../shared/age'
@@ -24,6 +24,23 @@ export function ChildDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  // Real-modal behavior for the registration form: Escape closes it, focus
+  // moves into it on open and returns to "Nueva consulta" on close.
+  useEffect(() => {
+    if (!showForm) return
+    const opener = document.activeElement as HTMLElement | null
+    dialogRef.current?.focus()
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setShowForm(false)
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      opener?.focus()
+    }
+  }, [showForm])
   const isDesktop = useIsDesktop()
   const { getAccountId } = useAccountSession()
   const [accountId] = useState<string | null>(() => getAccountId())
@@ -205,11 +222,18 @@ export function ChildDetailPage() {
           onClick={() => setShowForm(false)}
         >
           <div
-            className="max-h-[85vh] w-full max-w-lg overflow-x-hidden overflow-y-auto rounded-3xl bg-surface p-7 shadow-2xl"
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="register-consultation-title"
+            tabIndex={-1}
+            className="max-h-[85vh] w-full max-w-lg overflow-x-hidden overflow-y-auto rounded-3xl bg-surface p-7 shadow-2xl outline-none"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-6 flex items-start justify-between gap-4">
-              <h2 className="text-2xl font-black tracking-tight text-ink">Registrar consulta</h2>
+              <h2 id="register-consultation-title" className="text-2xl font-black tracking-tight text-ink">
+                Registrar consulta
+              </h2>
               <button
                 type="button"
                 onClick={() => setShowForm(false)}

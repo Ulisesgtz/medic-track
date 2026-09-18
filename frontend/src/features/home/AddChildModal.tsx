@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { ChildFieldset } from '../account-signup/ChildFieldset'
@@ -70,16 +71,20 @@ export function AddChildModal({ accountId, onClose }: AddChildModalProps) {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
 
+  // Rendered into <body>: opened from the desktop sidebar (a sticky element,
+  // which makes its own stacking context) it would otherwise paint *under*
+  // positioned content of the page, e.g. the consultation cards.
   if (showFreemiumModal) {
-    return (
+    return createPortal(
       <FreemiumLimitModal
         onViewPlans={() => window.location.assign('/planes')}
         onStayFree={() => mutation.reset()}
-      />
+      />,
+      document.body,
     )
   }
 
-  return (
+  return createPortal(
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4"
       onClick={onClose}
@@ -140,6 +145,7 @@ export function AddChildModal({ accountId, onClose }: AddChildModalProps) {
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

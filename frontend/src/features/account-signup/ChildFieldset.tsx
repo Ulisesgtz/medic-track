@@ -102,7 +102,7 @@ export function ChildFieldset({ index, register, errors, onRemove }: ChildFields
           )}
         </div>
 
-        <div>
+        <div className="md:col-span-2">
           <label className={labelClass} htmlFor={`children.${index}.birthDate`}>
             Fecha de nacimiento
           </label>
@@ -119,7 +119,7 @@ export function ChildFieldset({ index, register, errors, onRemove }: ChildFields
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3 md:col-span-2">
           <div>
             <label className={labelClass} htmlFor={`children.${index}.height`}>
               Talla (cm)

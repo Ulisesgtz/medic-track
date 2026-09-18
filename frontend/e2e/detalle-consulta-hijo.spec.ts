@@ -70,4 +70,26 @@ test('registrar consulta → ver detalle con tomas generadas → marcar una toma
   // The mock's "Tomas de hoy" panel and summary cards are part of that screen.
   await expect(page.getByRole('heading', { name: 'Tomas de hoy' })).toBeVisible()
   await expect(page.getByText('Tratamiento activo')).toBeVisible()
+
+  // A dialog opened from the desktop sidebar must sit above the page content
+  // (it used to paint under the consultation cards).
+  await page.locator('aside').getByRole('button', { name: 'Agregar hijo' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Agregar hijo' })
+  await expect(dialog).toBeVisible()
+  // Sample a grid of points across the dialog: every one must hit the dialog itself.
+  const box = (await dialog.boundingBox())!
+  const covered = await page.evaluate(({ x, y, width, height }) => {
+    const dlg = document.querySelector('[role=dialog]')!
+    const misses: string[] = []
+    for (let i = 1; i <= 5; i++) {
+      for (let k = 1; k <= 5; k++) {
+        const el = document.elementFromPoint(x + (width * i) / 6, y + (height * k) / 6)
+        if (!el || !dlg.contains(el)) misses.push(`${i},${k}`)
+      }
+    }
+    return misses
+  }, box)
+  expect(covered).toEqual([])
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
 })
