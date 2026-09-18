@@ -169,7 +169,7 @@ export function ChildDetailPage() {
           )}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,330px)] lg:items-start">
+        <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,330px)] lg:items-start">
           <section>
             <h2 className="mb-4 text-xl font-black tracking-tight text-ink">Consultas</h2>
             {consultations.length === 0 ? (
