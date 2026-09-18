@@ -27,7 +27,7 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
 
   return (
     <aside className="sticky top-0 flex h-screen flex-col gap-6 overflow-y-auto bg-ink p-6">
-      <Link to="/home" className="flex items-center gap-2.5" aria-label="PediTrack — ir a mi home">
+      <Link to="/home" className="flex min-h-11 items-center gap-2.5" aria-label="PediTrack — ir a mi home">
         <Logo size={36} />
         <span className="text-xl font-black tracking-tight text-white">
           Pedi<span className="text-bright">Track</span>

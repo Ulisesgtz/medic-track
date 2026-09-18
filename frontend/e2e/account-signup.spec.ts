@@ -34,7 +34,7 @@ test.describe('Registro de cuenta de usuario', () => {
     await page.getByRole('button', { name: 'Guardar' }).click()
 
     await expect(page).toHaveURL(/\/home/)
-    await expect(page.getByText('Luis Gómez')).toBeVisible()
+    await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
   })
 
   test('Escenario 4 — pop-up freemium al intentar un segundo hijo, sin crear su formulario', async ({

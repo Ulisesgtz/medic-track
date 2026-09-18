@@ -62,7 +62,7 @@ export function ChildDetailPage() {
     <main className="min-h-screen bg-canvas pb-16">
       <AppHeader
         eyebrow={
-          <Link to="/home" className="hover:underline">
+          <Link to="/home" className="-my-3 inline-flex min-h-11 items-center hover:underline">
             ← Volver a mi home
           </Link>
         }
@@ -116,7 +116,7 @@ export function ChildDetailPage() {
                 type="button"
                 onClick={() => setShowForm(false)}
                 aria-label="Cerrar"
-                className="flex h-[34px] w-[34px] shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-500 transition-colors duration-200 hover:bg-hint hover:text-ink"
+                className="-mt-2 -mr-2 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-500 transition-colors duration-200 hover:bg-hint hover:text-ink"
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6 6 18" />

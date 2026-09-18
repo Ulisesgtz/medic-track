@@ -35,6 +35,7 @@ Tokens de color y tipografía viven en el bloque `@theme` de `src/index.css`; la
   bordes grises — no reintroducir `border-slate-*` en las tarjetas.
 - El logo (`src/shared/ui/Logo.tsx`) solo va en header, pantalla de registro e icono/splash de la PWA.
 - Desde 1024 px las pantallas con sesión (home, detalle del hijo, detalle de consulta) van dentro de `features/home/AppShell.tsx`, que agrega `ChildrenSidebar` (lista de hijos, "Agregar hijo", nombre y plan). La barra se **renderiza condicionalmente** con `useIsDesktop`, no se oculta con CSS: así nunca hay dos copias de la lista de hijos en el DOM/árbol de accesibilidad. Toda pantalla nueva con sesión debe envolverse en `AppShell`.
+- En E2E (Playwright corre a 1280 px) la barra lateral duplica el nombre del hijo y el botón "Agregar hijo": acotar los selectores a `page.getByRole('main')`.
 - El visor de la receta (`ConsultationDetailPage`) es un modal dentro de la app: no enlazar la foto como URL `data:` con `target="_blank"` — los navegadores bloquean esa navegación y la pestaña sale en blanco.
 
 ## `src/features/account-signup/` — signup form

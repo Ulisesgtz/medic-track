@@ -106,7 +106,7 @@ export function ConsultationDetailPage() {
     <main className="min-h-screen bg-canvas pb-16">
       <AppHeader
         eyebrow={
-          <Link to={`/children/${consultation.childId}`} className="hover:underline">
+          <Link to={`/children/${consultation.childId}`} className="-my-3 inline-flex min-h-11 items-center hover:underline">
             ← Volver al reporte de consultas
           </Link>
         }

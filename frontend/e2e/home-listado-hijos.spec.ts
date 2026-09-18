@@ -13,7 +13,7 @@ test('crear cuenta → home → ver hijo → recargar → agregar segundo hijo �
   await page.getByLabel('Apellido').fill('Gómez')
   await page.getByLabel('Correo electrónico').fill(`ana.home.e2e.${Date.now()}@example.com`)
 
-  await page.getByRole('button', { name: 'Agregar hijo' }).click()
+  await page.getByRole('main').getByRole('button', { name: 'Agregar hijo' }).click()
   await page.locator('#children\\.0\\.firstName').fill('Luis')
   await page.locator('#children\\.0\\.lastName').fill('Gómez')
   await page.locator('#children\\.0\\.birthDate').fill('2020-01-15')
@@ -22,14 +22,14 @@ test('crear cuenta → home → ver hijo → recargar → agregar segundo hijo �
 
   // FR-003: navigates straight to the home page after signup.
   await expect(page).toHaveURL(/\/home/)
-  await expect(page.getByText('Luis Gómez')).toBeVisible()
+  await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
 
   // FR-003/SC-004: reloading keeps showing the same account, no re-signup.
   await page.reload()
-  await expect(page.getByText('Luis Gómez')).toBeVisible()
+  await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
 
   // FR-004: adding a 2nd child on a free-plan account hits the freemium limit.
-  await page.getByRole('button', { name: 'Agregar hijo' }).click()
+  await page.getByRole('main').getByRole('button', { name: 'Agregar hijo' }).click()
   await expect(page.getByRole('dialog')).toBeVisible()
   await page.locator('#children\\.0\\.firstName').fill('Hijo Dos')
   await page.locator('#children\\.0\\.lastName').fill('Gómez')
@@ -40,8 +40,8 @@ test('crear cuenta → home → ver hijo → recargar → agregar segundo hijo �
 
   // Only the original child is still listed — no second child was created.
   await page.getByRole('button', { name: 'Quedarme con el plan gratuito' }).click()
-  await expect(page.getByText('Luis Gómez')).toBeVisible()
-  await expect(page.getByText('Hijo Dos Gómez')).not.toBeVisible()
+  await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
+  await expect(page.getByRole('main').getByText('Hijo Dos Gómez')).not.toBeVisible()
 })
 
 test('sin cuenta guardada muestra la invitación a crear cuenta (FR-002)', async ({ page }) => {
@@ -59,14 +59,14 @@ test('click en el nombre de un hijo navega a su pantalla de detalle (FR-005)', a
   await page.getByLabel('Apellido').fill('Ruiz')
   await page.getByLabel('Correo electrónico').fill(`carla.home.e2e.${Date.now()}@example.com`)
 
-  await page.getByRole('button', { name: 'Agregar hijo' }).click()
+  await page.getByRole('main').getByRole('button', { name: 'Agregar hijo' }).click()
   await page.locator('#children\\.0\\.firstName').fill('Mateo')
   await page.locator('#children\\.0\\.lastName').fill('Ruiz')
   await page.locator('#children\\.0\\.birthDate').fill('2019-06-01')
   await page.getByRole('button', { name: 'Guardar' }).click()
 
   await expect(page).toHaveURL(/\/home/)
-  await page.getByText('Mateo Ruiz').click()
+  await page.getByRole('main').getByText('Mateo Ruiz').click()
 
   await expect(page).toHaveURL(/\/children\//)
   // specs/004-detalle-consulta-hijo replaced the placeholder with the real
