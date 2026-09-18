@@ -14,15 +14,22 @@ interface AppHeaderProps {
 /**
  * The dark screen header of the visual system (design-tokens.md,
  * "Componentes base"): ink background, logo, eyebrow + large title. The
- * optional `action` goes next to the logo, or next to the title when the
- * sidebar (which carries the logo) is on screen.
+ * optional `action` goes next to the logo. With the desktop sidebar on screen
+ * (which carries the logo) the header turns light — ink title on the canvas,
+ * action beside the title — as in the desktop mock.
  */
 export function AppHeader({ eyebrow, title, action, children }: AppHeaderProps) {
   // With the sidebar on screen the logo already lives there: drop the brand row.
   const hasSidebar = useContext(SidebarContext)
 
   return (
-    <header className="bg-ink px-5 pt-6 pb-7 md:px-10 md:pt-8 md:pb-9">
+    <header
+      className={
+        hasSidebar
+          ? 'px-5 pt-[35px] pb-0 text-ink md:px-10'
+          : 'bg-ink px-5 pt-6 pb-7 text-white md:px-10 md:pt-8 md:pb-9'
+      }
+    >
       <div className="mx-auto flex max-w-5xl flex-col gap-6">
         {!hasSidebar && (
           <div className="flex items-center justify-between gap-4">
@@ -37,8 +44,10 @@ export function AppHeader({ eyebrow, title, action, children }: AppHeaderProps) 
         )}
         <div className="flex items-end justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-1.5">
-            {eyebrow ? <div className="text-sm font-semibold text-bright">{eyebrow}</div> : null}
-            <h1 className="text-3xl font-black tracking-tight text-white md:text-4xl">{title}</h1>
+            {eyebrow ? (
+              <div className={`text-sm font-semibold ${hasSidebar ? 'text-action' : 'text-bright'}`}>{eyebrow}</div>
+            ) : null}
+            <h1 className="text-3xl font-black tracking-tight md:text-4xl">{title}</h1>
           </div>
           {/* With the sidebar the brand row is gone, so the action sits beside the title. */}
           {hasSidebar ? action : null}

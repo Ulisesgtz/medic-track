@@ -24,7 +24,7 @@ export function AppShell({ activeChildId, children }: AppShellProps) {
 
   return (
     <SidebarContext.Provider value={true}>
-      <div className="grid min-h-screen grid-cols-[288px_minmax(0,1fr)]">
+      <div className="grid min-h-screen grid-cols-[clamp(288px,28vw,348px)_minmax(0,1fr)]">
         <ChildrenSidebar accountId={accountId} activeChildId={activeChildId} />
         <div className="min-w-0">{children}</div>
       </div>

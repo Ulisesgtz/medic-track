@@ -73,7 +73,7 @@ describe('ChildDetailPage', () => {
 
       await screen.findByRole('heading', { level: 1, name: '5 años 6 meses' })
       expect(screen.queryByRole('link', { name: /Volver a mi home/ })).not.toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Registrar consulta' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Nueva consulta' })).toBeInTheDocument()
       expect(screen.getByRole('navigation', { name: 'Tus hijos' })).toBeInTheDocument()
     })
   })
@@ -160,7 +160,7 @@ describe('ChildDetailPage', () => {
     )
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: 'Registrar consulta' }))
+    await user.click(await screen.findByRole('button', { name: 'Nueva consulta' }))
     expect(await screen.findByRole('heading', { name: 'Registrar consulta' })).toBeInTheDocument()
 
     await user.type(screen.getByLabelText('Doctor'), 'Dra. López')
@@ -179,7 +179,7 @@ describe('ChildDetailPage', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ childId: 'child-1', consultations: [] }) }))
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: 'Registrar consulta' }))
+    await user.click(await screen.findByRole('button', { name: 'Nueva consulta' }))
     await user.click(screen.getByRole('button', { name: 'Cancelar' }))
 
     await waitFor(() => expect(screen.queryByRole('heading', { name: 'Registrar consulta' })).not.toBeInTheDocument())

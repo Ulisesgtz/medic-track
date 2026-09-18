@@ -128,7 +128,7 @@ export function ConsultationDetailPage() {
         }
         title={consultation.doctorName}
       >
-        <p className="text-base font-semibold text-white/80">{formatDateShort(consultation.consultDate)}</p>
+        <p className="text-base font-semibold opacity-80">{formatDateShort(consultation.consultDate)}</p>
       </AppHeader>
 
       <div className="mx-auto flex max-w-5xl flex-col gap-5 px-5 py-7 md:px-10 md:py-9">

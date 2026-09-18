@@ -74,5 +74,5 @@ test('click en el nombre de un hijo navega a su pantalla de detalle (FR-005)', a
   // The header now names the child (name · birth date) and titles the screen
   // with their age, so assert on the stable parts.
   await expect(page.getByText('Mateo Ruiz · 1 jun 2019')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Registrar consulta' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Nueva consulta' })).toBeVisible()
 })

@@ -82,9 +82,13 @@ export function ChildDetailPage() {
     <button
       type="button"
       onClick={() => setShowForm(true)}
-      className="min-h-11 w-full cursor-pointer rounded-2xl bg-confirmed px-7 py-3 text-base font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-bright focus-visible:ring-offset-2 focus-visible:ring-offset-ink md:w-auto md:self-start"
+      className={`min-h-12 w-full cursor-pointer rounded-2xl bg-confirmed px-6 py-3 text-[15px] font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 ${
+        hasSidebar
+          ? 'focus-visible:ring-confirmed md:-mb-1.5 md:w-[151px] md:px-0'
+          : 'focus-visible:ring-bright focus-visible:ring-offset-ink md:w-auto md:self-start'
+      }`}
     >
-      Registrar consulta
+      Nueva consulta
     </button>
   )
 

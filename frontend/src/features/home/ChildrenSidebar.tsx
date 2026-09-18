@@ -36,7 +36,6 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
       </Link>
 
       <nav aria-label="Tus hijos" className="flex flex-1 flex-col gap-2">
-        <p className="mb-1 text-xs font-extrabold tracking-[0.1em] text-bright uppercase">Tus hijos</p>
         {account?.children.map((child) => {
           const isActive = child.id === activeChildId
           return (
@@ -63,9 +62,9 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
         <button
           type="button"
           onClick={() => setShowAddChild(true)}
-          className="mt-2 flex min-h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-bright/50 px-4 py-2 text-base font-extrabold text-bright transition-colors duration-200 hover:bg-ink-soft"
+          className="mt-2 flex min-h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-2xl border-[1.5px] border-dashed border-bright/40 px-4 py-2 text-sm font-bold text-bright transition-colors duration-200 hover:bg-ink-soft"
         >
-          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m-7-7h14" />
           </svg>
           Agregar hijo
@@ -82,10 +81,10 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
             {account.lastName.charAt(0)}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-base font-extrabold text-white">
+            <p className="truncate text-sm font-extrabold text-white">
               {account.firstName} {account.lastName}
             </p>
-            <p className="mt-0.5 text-sm font-semibold text-bright">
+            <p className="mt-0.5 text-[13px] font-semibold text-bright">
               {account.plan === 'free' ? 'Plan gratuito' : 'Plan completo'}
             </p>
           </div>

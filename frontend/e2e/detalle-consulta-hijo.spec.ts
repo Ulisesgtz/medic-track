@@ -35,7 +35,7 @@ test('registrar consulta → ver detalle con tomas generadas → marcar una toma
   await expect(page).toHaveURL(/\/children\//)
   await expect(page.getByText(/todavía no hay consultas/i)).toBeVisible()
 
-  await page.getByRole('button', { name: 'Registrar consulta' }).click()
+  await page.getByRole('button', { name: 'Nueva consulta' }).click()
   await expect(page.getByRole('heading', { name: 'Registrar consulta' })).toBeVisible()
 
   await page.getByLabel('Doctor').fill('Dra. López')
