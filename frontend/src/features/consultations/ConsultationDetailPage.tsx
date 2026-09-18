@@ -39,6 +39,7 @@ export function ConsultationDetailPage() {
   }
 
   const consultation = query.data!
+  const photoSrc = `data:${sniffImageMimeType(consultation.photoBase64)};base64,${consultation.photoBase64}`
 
   return (
     <main className="min-h-screen bg-cyan-50 px-4 py-8 md:py-12">
@@ -51,11 +52,19 @@ export function ConsultationDetailPage() {
           <h1 className="text-xl font-semibold text-slate-900">{consultation.doctorName}</h1>
           <p className="mt-1 text-sm text-slate-500">{consultation.consultDate}</p>
 
-          <img
-            src={`data:${sniffImageMimeType(consultation.photoBase64)};base64,${consultation.photoBase64}`}
-            alt="Foto de la receta médica"
-            className="mt-4 max-h-96 w-full rounded-lg object-contain"
-          />
+          <a
+            href={photoSrc}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 block"
+            aria-label="Abrir la foto de la receta en tamaño completo"
+          >
+            <img
+              src={photoSrc}
+              alt="Foto de la receta médica"
+              className="max-h-[32rem] w-full cursor-zoom-in rounded-lg object-contain sm:max-h-[42rem]"
+            />
+          </a>
 
           {consultation.symptoms && (
             <div className="mt-4">
