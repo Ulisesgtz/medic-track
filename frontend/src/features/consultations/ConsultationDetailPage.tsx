@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AppHeader } from '../../shared/ui/AppHeader'
@@ -8,10 +9,64 @@ import { sniffImageMimeType } from './imageMime'
 const cardClass = 'rounded-3xl bg-surface p-6 shadow-[0_8px_20px_rgba(4,37,43,0.07)] md:p-7'
 const overlineClass = 'text-xs font-extrabold uppercase tracking-[0.1em] text-action'
 
+/**
+ * Full-screen viewer for the prescription photo. Rendered in-app instead of
+ * opening the image in a new tab: browsers block top-level navigation to
+ * `data:` URLs (the tab would just be blank), and a new tab is awkward in an
+ * installed PWA anyway. Tapping the image toggles between "fit to screen"
+ * and actual size (scrollable) so small print stays readable.
+ */
+function PhotoViewer({ src, onClose }: { src: string; onClose: () => void }) {
+  const [actualSize, setActualSize] = useState(false)
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Foto de la receta en tamaño completo"
+      className="fixed inset-0 z-50 flex flex-col bg-ink"
+    >
+      <div className="flex shrink-0 items-center justify-between gap-4 px-5 py-3">
+        <p className="text-sm font-semibold text-white/80">
+          {actualSize ? 'Tamaño real — toca la imagen para ajustar' : 'Toca la imagen para ampliar'}
+        </p>
+        <button
+          type="button"
+          onClick={onClose}
+          className="min-h-11 cursor-pointer rounded-2xl border-2 border-bright px-5 py-2 text-base font-extrabold text-bright transition-colors duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-bright"
+        >
+          Cerrar
+        </button>
+      </div>
+      <div className="flex min-h-0 flex-1 overflow-auto p-4">
+        <img
+          src={src}
+          alt="Foto de la receta médica en tamaño completo"
+          onClick={() => setActualSize((v) => !v)}
+          className={
+            actualSize
+              ? 'm-auto max-w-none cursor-zoom-out'
+              : 'm-auto h-[calc(100dvh-7.5rem)] w-full cursor-zoom-in object-contain'
+          }
+        />
+      </div>
+    </div>
+  )
+}
+
 /** Detail of a single consultation: photo, doctor, date, medications with
  * their markable doses (if any), and symptoms (FR-013). */
 export function ConsultationDetailPage() {
   const { consultationId } = useParams<{ consultationId: string }>()
+  const [viewerOpen, setViewerOpen] = useState(false)
 
   const query = useQuery({
     queryKey: ['consultation', consultationId],
@@ -61,27 +116,25 @@ export function ConsultationDetailPage() {
       <div className="mx-auto flex max-w-5xl flex-col gap-5 px-5 py-7 md:px-10 md:py-9">
         <section className={cardClass}>
           <h2 className={overlineClass}>Receta</h2>
-          <a
-            href={photoSrc}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-4 block"
+          <button
+            type="button"
+            onClick={() => setViewerOpen(true)}
             aria-label="Abrir la foto de la receta en tamaño completo"
+            className="mt-4 block w-full cursor-zoom-in"
           >
             <img
               src={photoSrc}
               alt="Foto de la receta médica"
-              className="max-h-[32rem] w-full cursor-zoom-in rounded-2xl bg-hint object-contain sm:max-h-[42rem]"
+              className="max-h-[32rem] w-full rounded-2xl bg-hint object-contain sm:max-h-[42rem]"
             />
-          </a>
-          <a
-            href={photoSrc}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-4 inline-flex min-h-11 items-center rounded-2xl border-2 border-action px-5 py-2.5 text-base font-extrabold text-action transition-colors duration-200 hover:bg-hint"
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewerOpen(true)}
+            className="mt-4 inline-flex min-h-11 cursor-pointer items-center rounded-2xl border-2 border-action px-5 py-2.5 text-base font-extrabold text-action transition-colors duration-200 hover:bg-hint"
           >
             Ver completa
-          </a>
+          </button>
         </section>
 
         {consultation.symptoms && (
@@ -112,6 +165,8 @@ export function ConsultationDetailPage() {
           ))}
         </section>
       </div>
+
+      {viewerOpen && <PhotoViewer src={photoSrc} onClose={() => setViewerOpen(false)} />}
     </main>
   )
 }
