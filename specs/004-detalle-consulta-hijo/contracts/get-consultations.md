@@ -20,11 +20,15 @@ Sin cuerpo. `childId` es un UUID en la ruta.
     {
       "id": "uuid",
       "doctorName": "string",
-      "consultDate": "string (YYYY-MM-DD)"
+      "consultDate": "string (YYYY-MM-DD)",
+      "symptoms": "string (puede ser vacío)",
+      "medicationCount": 2
     }
   ]
 }
 ```
+
+`symptoms` y `medicationCount` los agregó la spec 006 (subtítulo de cada consulta en el listado).
 
 Ordenadas de la más reciente a la más antigua (FR-001). `consultations` es `[]` (no `null`) cuando el hijo no tiene ninguna consulta — el frontend usa esto para decidir el estado vacío (FR-002).
 

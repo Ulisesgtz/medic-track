@@ -50,8 +50,9 @@ func (r *Repository) GetByChild(ctx context.Context, childID uuid.UUID) ([]Consu
 	}
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, child_id, doctor_name, consult_date, symptoms, created_at
-		FROM consultations WHERE child_id = $1 ORDER BY consult_date DESC
+		SELECT c.id, c.child_id, c.doctor_name, c.consult_date, c.symptoms, c.created_at,
+		       (SELECT count(*) FROM medications m WHERE m.consultation_id = c.id)
+		FROM consultations c WHERE c.child_id = $1 ORDER BY c.consult_date DESC
 	`, childID)
 	if err != nil {
 		return nil, fmt.Errorf("querying consultations: %w", err)
@@ -61,7 +62,7 @@ func (r *Repository) GetByChild(ctx context.Context, childID uuid.UUID) ([]Consu
 	consultations := make([]Consultation, 0)
 	for rows.Next() {
 		var c Consultation
-		if err := rows.Scan(&c.ID, &c.ChildID, &c.DoctorName, &c.ConsultDate, &c.Symptoms, &c.CreatedAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.ChildID, &c.DoctorName, &c.ConsultDate, &c.Symptoms, &c.CreatedAt, &c.MedicationCount); err != nil {
 			return nil, fmt.Errorf("scanning consultation: %w", err)
 		}
 		consultations = append(consultations, c)
@@ -116,7 +117,11 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, c *Consultat
 			return fmt.Errorf("inserting medication: %w", err)
 		}
 
-		for _, scheduledAt := range generateDoseSchedule(c.ConsultDate, med) {
+		loc := c.ScheduleLocation
+		if loc == nil {
+			loc = c.ConsultDate.Location()
+		}
+		for _, scheduledAt := range generateDoseSchedule(c.ConsultDate, loc, med) {
 			dose := Dose{MedicationID: med.ID, ScheduledAt: scheduledAt}
 			err = tx.QueryRow(ctx, `
 				INSERT INTO doses (medication_id, scheduled_at)
@@ -140,9 +145,10 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, c *Consultat
 // generateDoseSchedule computes every expected dose datetime for a
 // medication with a StartTime, all at once (research.md): total =
 // floor(duration_days*24 / frequency_hours) doses, spaced frequency_hours
-// apart starting at consultDate + StartTime. Returns nil if StartTime is
+// apart starting at consultDate + StartTime read in loc (the parent's time
+// zone, so each dose is the real instant they meant). Returns nil if StartTime is
 // nil (FR-010).
-func generateDoseSchedule(consultDate time.Time, med *Medication) []time.Time {
+func generateDoseSchedule(consultDate time.Time, loc *time.Location, med *Medication) []time.Time {
 	if med.StartTime == nil {
 		return nil
 	}
@@ -156,7 +162,7 @@ func generateDoseSchedule(consultDate time.Time, med *Medication) []time.Time {
 
 	start := time.Date(
 		consultDate.Year(), consultDate.Month(), consultDate.Day(),
-		startHour, startMinute, 0, 0, consultDate.Location(),
+		startHour, startMinute, 0, 0, loc,
 	)
 
 	totalHours := med.DurationDays * 24
@@ -255,4 +261,76 @@ func (r *Repository) UpdateDoseStatus(ctx context.Context, consultationID, id uu
 		return nil, fmt.Errorf("updating dose: %w", err)
 	}
 	return dose, nil
+}
+
+// GetOverview returns the doses of all the child's consultations scheduled in
+// [from, to) and the treatment still running at `now` (the medication whose
+// last dose is furthest ahead, plus how many others also have doses ahead).
+// Returns ErrChildNotFound if no child exists for childID.
+func (r *Repository) GetOverview(ctx context.Context, childID uuid.UUID, from, to, now time.Time) (*ChildOverview, error) {
+	exists, err := childExists(ctx, r.pool, childID)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, ErrChildNotFound
+	}
+
+	doseRows, err := r.pool.Query(ctx, `
+		SELECT d.id, m.consultation_id, m.name, d.scheduled_at, d.taken
+		FROM doses d
+		JOIN medications m ON m.id = d.medication_id
+		JOIN consultations c ON c.id = m.consultation_id
+		WHERE c.child_id = $1 AND d.scheduled_at >= $2 AND d.scheduled_at < $3
+		ORDER BY d.scheduled_at ASC, m.name ASC
+	`, childID, from, to)
+	if err != nil {
+		return nil, fmt.Errorf("querying doses in range: %w", err)
+	}
+	defer doseRows.Close()
+
+	overview := &ChildOverview{Doses: make([]DoseOverview, 0)}
+	for doseRows.Next() {
+		var d DoseOverview
+		if err := doseRows.Scan(&d.ID, &d.ConsultationID, &d.MedicationName, &d.ScheduledAt, &d.Taken); err != nil {
+			return nil, fmt.Errorf("scanning dose: %w", err)
+		}
+		overview.Doses = append(overview.Doses, d)
+	}
+	if err := doseRows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating doses: %w", err)
+	}
+
+	treatmentRows, err := r.pool.Query(ctx, `
+		SELECT m.name, max(d.scheduled_at) AS ends_at
+		FROM doses d
+		JOIN medications m ON m.id = d.medication_id
+		JOIN consultations c ON c.id = m.consultation_id
+		WHERE c.child_id = $1
+		GROUP BY m.id, m.name
+		HAVING max(d.scheduled_at) > $2
+		ORDER BY ends_at DESC, m.name ASC
+	`, childID, now)
+	if err != nil {
+		return nil, fmt.Errorf("querying active treatments: %w", err)
+	}
+	defer treatmentRows.Close()
+
+	for treatmentRows.Next() {
+		var name string
+		var endsAt time.Time
+		if err := treatmentRows.Scan(&name, &endsAt); err != nil {
+			return nil, fmt.Errorf("scanning active treatment: %w", err)
+		}
+		if overview.ActiveTreatment == nil {
+			overview.ActiveTreatment = &ActiveTreatment{MedicationName: name, EndsAt: endsAt}
+		} else {
+			overview.ActiveTreatment.OtherCount++
+		}
+	}
+	if err := treatmentRows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating active treatments: %w", err)
+	}
+
+	return overview, nil
 }

@@ -46,9 +46,11 @@ type medicationResponse struct {
 } // @name MedicationResponse
 
 type consultationSummaryResponse struct {
-	ID          string `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
-	DoctorName  string `json:"doctorName" example:"Dra. López"`
-	ConsultDate string `json:"consultDate" example:"2026-01-15"`
+	ID              string `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	DoctorName      string `json:"doctorName" example:"Dra. López"`
+	ConsultDate     string `json:"consultDate" example:"2026-01-15"`
+	Symptoms        string `json:"symptoms" example:"Tos y fiebre leve"`
+	MedicationCount int    `json:"medicationCount" example:"2"`
 } // @name ConsultationSummaryResponse
 
 type consultationListResponse struct {
@@ -96,7 +98,7 @@ type fieldErrorDoc struct {
 // (specs/004-detalle-consulta-hijo/contracts/get-consultations.md).
 //
 //	@Summary		List a child's consultations
-//	@Description	Lists a child's medical consultations (date + doctor), most recent first (FR-001).
+//	@Description	Lists a child's medical consultations (date, doctor, symptoms and medication count), most recent first (FR-001).
 //	@Tags			consultations
 //	@Produce		json
 //	@Param			childId	path		string	true	"Child UUID"
@@ -123,9 +125,11 @@ func (h *Handler) ListConsultations(w http.ResponseWriter, r *http.Request) {
 	summaries := make([]consultationSummaryResponse, 0, len(consultations))
 	for _, c := range consultations {
 		summaries = append(summaries, consultationSummaryResponse{
-			ID:          c.ID.String(),
-			DoctorName:  c.DoctorName,
-			ConsultDate: c.ConsultDate.Format("2006-01-02"),
+			ID:              c.ID.String(),
+			DoctorName:      c.DoctorName,
+			ConsultDate:     c.ConsultDate.Format("2006-01-02"),
+			Symptoms:        c.Symptoms,
+			MedicationCount: c.MedicationCount,
 		})
 	}
 
@@ -133,6 +137,99 @@ func (h *Handler) ListConsultations(w http.ResponseWriter, r *http.Request) {
 		ChildID:       childID.String(),
 		Consultations: summaries,
 	}, nil)
+}
+
+type overviewDoseResponse struct {
+	ID             string `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	ConsultationID string `json:"consultationId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	MedicationName string `json:"medicationName" example:"Amoxicilina"`
+	ScheduledAt    string `json:"scheduledAt" example:"2026-01-15T14:00:00Z"`
+	Taken          bool   `json:"taken" example:"false"`
+} // @name OverviewDoseResponse
+
+type activeTreatmentResponse struct {
+	MedicationName string `json:"medicationName" example:"Amoxicilina"`
+	EndsAt         string `json:"endsAt" example:"2026-01-18T22:00:00Z"`
+	OtherCount     int    `json:"otherCount" example:"0"`
+} // @name ActiveTreatmentResponse
+
+type childOverviewResponse struct {
+	ChildID         string                   `json:"childId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	Doses           []overviewDoseResponse   `json:"doses"`
+	ActiveTreatment *activeTreatmentResponse `json:"activeTreatment"`
+} // @name ChildOverviewResponse
+
+// GetChildOverview handles GET /children/{childId}/overview
+// (specs/006-resumen-detalle-hijo/contracts/get-overview.md).
+//
+//	@Summary		A child's doses in a window and active treatment
+//	@Description	Returns the doses scheduled in [from, to) (the parent's local "today"; the client
+//	@Description	sends the window because only it knows its timezone) and the treatment still
+//	@Description	running — the medication whose last scheduled dose is furthest ahead, derived only
+//	@Description	from the dose schedule. The window may not exceed 48 hours.
+//	@Tags			consultations
+//	@Produce		json
+//	@Param			childId	path		string	true	"Child UUID"
+//	@Param			from	query		string	true	"Window start, RFC 3339"	example(2026-01-15T00:00:00-06:00)
+//	@Param			to		query		string	true	"Window end (exclusive), RFC 3339"	example(2026-01-16T00:00:00-06:00)
+//	@Success		200		{object}	childOverviewResponse
+//	@Failure		400		{object}	validationErrorResponseDoc	"Missing/invalid window"
+//	@Failure		404		{object}	childNotFoundResponseDoc	"No child exists for this id"
+//	@Router			/children/{childId}/overview [get]
+func (h *Handler) GetChildOverview(w http.ResponseWriter, r *http.Request) {
+	childID, err := uuid.Parse(chi.URLParam(r, "childId"))
+	if err != nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, childNotFoundBody(), nil)
+		return
+	}
+
+	var fieldErrs []ValidationError
+	from, err := time.Parse(time.RFC3339, r.URL.Query().Get("from"))
+	if err != nil {
+		fieldErrs = append(fieldErrs, ValidationError{Field: "from", Message: "must be an RFC 3339 timestamp"})
+	}
+	to, err := time.Parse(time.RFC3339, r.URL.Query().Get("to"))
+	if err != nil {
+		fieldErrs = append(fieldErrs, ValidationError{Field: "to", Message: "must be an RFC 3339 timestamp"})
+	}
+	if len(fieldErrs) > 0 {
+		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody(fieldErrs, "One or more fields are invalid"), nil)
+		return
+	}
+
+	overview, err := h.service.GetChildOverview(r.Context(), childID, from, to)
+	if err != nil {
+		var validationErrs ValidationErrors
+		switch {
+		case errors.Is(err, ErrChildNotFound):
+			h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, childNotFoundBody(), nil)
+		case errors.As(err, &validationErrs):
+			h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody(validationErrs, "One or more fields are invalid"), nil)
+		default:
+			h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not load the child overview", nil)
+		}
+		return
+	}
+
+	doses := make([]overviewDoseResponse, 0, len(overview.Doses))
+	for _, d := range overview.Doses {
+		doses = append(doses, overviewDoseResponse{
+			ID:             d.ID.String(),
+			ConsultationID: d.ConsultationID.String(),
+			MedicationName: d.MedicationName,
+			ScheduledAt:    d.ScheduledAt.Format(time.RFC3339),
+			Taken:          d.Taken,
+		})
+	}
+	resp := childOverviewResponse{ChildID: childID.String(), Doses: doses}
+	if t := overview.ActiveTreatment; t != nil {
+		resp.ActiveTreatment = &activeTreatmentResponse{
+			MedicationName: t.MedicationName,
+			EndsAt:         t.EndsAt.Format(time.RFC3339),
+			OtherCount:     t.OtherCount,
+		}
+	}
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, resp, nil)
 }
 
 type createMedicationRequest struct {
@@ -148,6 +245,9 @@ type createConsultationRequest struct {
 	PhotoBase64 string                    `json:"photoBase64"`
 	Symptoms    string                    `json:"symptoms" example:"Tos y fiebre leve"`
 	Medications []createMedicationRequest `json:"medications"`
+	// UTCOffsetMinutes is the parent's UTC offset, so "startTime" is read in
+	// their own time zone. Optional: 0 (default) means UTC.
+	UTCOffsetMinutes int `json:"utcOffsetMinutes" example:"-360"`
 }
 
 // CreateConsultation handles POST /children/{childId}/consultations
@@ -212,6 +312,8 @@ func (h *Handler) CreateConsultation(w http.ResponseWriter, r *http.Request) {
 		ConsultDate: consultDate,
 		Photo:       photo,
 		Symptoms:    req.Symptoms,
+
+		UTCOffsetMinutes: req.UTCOffsetMinutes,
 	}
 	for _, m := range req.Medications {
 		input.Medications = append(input.Medications, CreateMedicationInput{

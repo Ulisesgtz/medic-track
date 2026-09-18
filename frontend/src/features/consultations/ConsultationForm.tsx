@@ -189,6 +189,8 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
           durationDays: Number(m.durationDays),
           startTime: m.startTime || undefined,
         })),
+        // Start times are read in the parent's own time zone (their offset on the consult date).
+        utcOffsetMinutes: -new Date(`${values.consultDate}T00:00:00`).getTimezoneOffset(),
       }
       return createConsultation(childId, payload)
     },

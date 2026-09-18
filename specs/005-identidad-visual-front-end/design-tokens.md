@@ -58,6 +58,10 @@ Mínimo absoluto de texto: 13 px. Los números de resumen (edad, conteos) van en
 - **Modal**: radio 24 px, padding 28 px, encabezado con título 24 px/900 y botón de cierre (X) con área táctil de 44 px, acciones alineadas a la derecha (contorno + sólido). El de límite freemium lleva franja superior ámbar con overline "Plan gratuito".
 - **Vacío / agregar**: contorno punteado 2 px `#67e8f9`, radio 22 px, texto 15 px/800 en `--color-action`.
 
+## Detalle del hijo (mock de escritorio)
+
+Tres tarjetas de resumen, columna de consultas y panel a la derecha: *Tomas de hoy* en ámbar (`--color-pending` con texto `--color-on-pending`; verde suave `--color-confirmed-soft` cuando todas están marcadas), *Consultas* en blanco ("desde AAAA") y *Tratamiento activo* en `--color-ink` (overline y nota en `--color-bright`, nombre en blanco 22 px/900). El panel *Tomas de hoy* es una tarjeta con filas de 44 px: hora + medicamento y un chip de 30 px ("Marcar": `--color-pending-soft` con borde ámbar y texto `--color-pending-strong`; "Tomada": `--color-confirmed` con texto blanco). Se implementa en `features/consultations/` (`SummaryCard`, `TodayDosesPanel`). Detalle funcional: `specs/006-resumen-detalle-hijo/`.
+
 ## Logo e iconos
 
 Marca: cápsula con rotación de -45°, partida a la mitad — mitad clara (registro) y mitad emerald (dosis confirmada), con la junta en el color del fondo.

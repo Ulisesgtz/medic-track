@@ -1,5 +1,5 @@
 import { ApiError, type ValidationErrorDetail } from '../../shared/apiError'
-import type { ConsultationDetail, ConsultationSummary, Dose } from './types'
+import type { ChildOverview, ConsultationDetail, ConsultationSummary, Dose } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 
@@ -24,6 +24,22 @@ export async function fetchConsultations(childId: string): Promise<ConsultationS
   throw new ConsultationApiError('unknown', body.message ?? 'Unexpected error fetching consultations')
 }
 
+// contracts/get-overview.md — the doses inside [from, to) (the parent's local
+// "today") and the treatment still running.
+export async function fetchChildOverview(childId: string, from: Date, to: Date): Promise<ChildOverview> {
+  const query = new URLSearchParams({ from: from.toISOString(), to: to.toISOString() })
+  const res = await fetch(`${API_BASE_URL}/children/${childId}/overview?${query}`)
+  const body = await res.json()
+
+  if (res.ok) {
+    return body as ChildOverview
+  }
+  if (res.status === 404) {
+    throw new ConsultationApiError('child_not_found', body.message ?? 'Child not found')
+  }
+  throw new ConsultationApiError('unknown', body.message ?? 'Unexpected error fetching the overview')
+}
+
 export interface CreateMedicationPayload {
   name: string
   frequencyHours: number
@@ -37,6 +53,8 @@ export interface CreateConsultationPayload {
   photoBase64: string
   symptoms?: string
   medications: CreateMedicationPayload[]
+  /** The parent's UTC offset, so each medication's start time is read in their own time zone. */
+  utcOffsetMinutes: number
 }
 
 // contracts/post-consultations.md

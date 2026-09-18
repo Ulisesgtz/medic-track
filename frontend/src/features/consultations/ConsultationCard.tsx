@@ -8,6 +8,13 @@ interface ConsultationCardProps {
   isLatest?: boolean
 }
 
+/** "Fiebre y tos · 2 medicamentos"; a visit with no medication reads "sin receta". */
+function subtitle({ symptoms, medicationCount }: ConsultationSummary): string {
+  const meds =
+    medicationCount === 0 ? 'sin receta' : `${medicationCount} ${medicationCount === 1 ? 'medicamento' : 'medicamentos'}`
+  return [symptoms.trim(), meds].filter(Boolean).join(' · ')
+}
+
 /** One consultation's card in the listing: date + doctor (FR-001). Clicking
  * navigates to that consultation's detail (Historia de Usuario 3). */
 export function ConsultationCard({ consultation, isLatest = false }: ConsultationCardProps) {
@@ -22,10 +29,11 @@ export function ConsultationCard({ consultation, isLatest = false }: Consultatio
       />
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-sm font-bold text-action">{formatDateShort(consultation.consultDate)}</p>
+          <p className="text-[13px] font-bold text-action">{formatDateShort(consultation.consultDate)}</p>
           <p className="mt-0.5 truncate text-xl font-extrabold tracking-tight text-ink">
             {consultation.doctorName}
           </p>
+          <p className="mt-1 truncate text-sm text-slate-600">{subtitle(consultation)}</p>
         </div>
         <span aria-hidden="true" className="shrink-0 text-base font-extrabold text-action">
           Ver →

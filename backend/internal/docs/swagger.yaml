@@ -9,6 +9,18 @@ definitions:
         example: Account not found
         type: string
     type: object
+  ActiveTreatmentResponse:
+    properties:
+      endsAt:
+        example: "2026-01-18T22:00:00Z"
+        type: string
+      medicationName:
+        example: Amoxicilina
+        type: string
+      otherCount:
+        example: 0
+        type: integer
+    type: object
   ChildNotFoundResponse:
     properties:
       error:
@@ -17,6 +29,18 @@ definitions:
       message:
         example: Child not found
         type: string
+    type: object
+  ChildOverviewResponse:
+    properties:
+      activeTreatment:
+        $ref: '#/definitions/ActiveTreatmentResponse'
+      childId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      doses:
+        items:
+          $ref: '#/definitions/OverviewDoseResponse'
+        type: array
     type: object
   ConsultationDetailResponse:
     properties:
@@ -80,6 +104,12 @@ definitions:
         type: string
       id:
         example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      medicationCount:
+        example: 2
+        type: integer
+      symptoms:
+        example: Tos y fiebre leve
         type: string
     type: object
   ConsultationValidationErrorResponse:
@@ -188,6 +218,24 @@ definitions:
       message:
         example: Country not found in catalog
         type: string
+    type: object
+  OverviewDoseResponse:
+    properties:
+      consultationId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      medicationName:
+        example: Amoxicilina
+        type: string
+      scheduledAt:
+        example: "2026-01-15T14:00:00Z"
+        type: string
+      taken:
+        example: false
+        type: boolean
     type: object
   ValidationErrorResponse:
     properties:
@@ -326,6 +374,12 @@ definitions:
       symptoms:
         example: Tos y fiebre leve
         type: string
+      utcOffsetMinutes:
+        description: |-
+          UTCOffsetMinutes is the parent's UTC offset, so "startTime" is read in
+          their own time zone. Optional: 0 (default) means UTC.
+        example: -360
+        type: integer
     type: object
   internal_consultation.createMedicationRequest:
     properties:
@@ -522,8 +576,8 @@ paths:
       - catalog
   /children/{childId}/consultations:
     get:
-      description: Lists a child's medical consultations (date + doctor), most recent
-        first (FR-001).
+      description: Lists a child's medical consultations (date, doctor, symptoms and
+        medication count), most recent first (FR-001).
       parameters:
       - description: Child UUID
         in: path
@@ -579,6 +633,49 @@ paths:
           schema:
             $ref: '#/definitions/ChildNotFoundResponse'
       summary: Register a new medical consultation
+      tags:
+      - consultations
+  /children/{childId}/overview:
+    get:
+      description: |-
+        Returns the doses scheduled in [from, to) (the parent's local "today"; the client
+        sends the window because only it knows its timezone) and the treatment still
+        running — the medication whose last scheduled dose is furthest ahead, derived only
+        from the dose schedule. The window may not exceed 48 hours.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: Window start, RFC 3339
+        example: "2026-01-15T00:00:00-06:00"
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: Window end (exclusive), RFC 3339
+        example: "2026-01-16T00:00:00-06:00"
+        in: query
+        name: to
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ChildOverviewResponse'
+        "400":
+          description: Missing/invalid window
+          schema:
+            $ref: '#/definitions/ConsultationValidationErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/ChildNotFoundResponse'
+      summary: A child's doses in a window and active treatment
       tags:
       - consultations
   /consultations/{consultationId}:

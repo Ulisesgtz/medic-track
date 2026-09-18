@@ -20,6 +20,13 @@ type Consultation struct {
 	Symptoms    string
 	CreatedAt   time.Time
 	Medications []Medication
+	// ScheduleLocation is the time zone in which each medication's StartTime
+	// ("08:00") is read when generating doses — the parent's, so the dose
+	// instants are real. Nil means ConsultDate's own location (UTC).
+	ScheduleLocation *time.Location
+	// MedicationCount is filled only when listing (GetByChild), where the
+	// medications themselves aren't loaded.
+	MedicationCount int
 }
 
 // Medication represents one medication prescribed within a Consultation.
@@ -43,4 +50,31 @@ type Dose struct {
 	ScheduledAt  time.Time
 	Taken        bool
 	CreatedAt    time.Time
+}
+
+// DoseOverview is one dose of any of a child's consultations, joined with its
+// medication's name — what the child's "tomas de hoy" list shows.
+type DoseOverview struct {
+	ID             uuid.UUID
+	ConsultationID uuid.UUID
+	MedicationName string
+	ScheduledAt    time.Time
+	Taken          bool
+}
+
+// ActiveTreatment is the medication whose last scheduled dose is furthest in
+// the future. It is derived only from the dose schedule (no clinical
+// judgement, Principio I): OtherCount is how many more medications still
+// have doses ahead.
+type ActiveTreatment struct {
+	MedicationName string
+	EndsAt         time.Time
+	OtherCount     int
+}
+
+// ChildOverview backs the child detail summary: the doses inside a time
+// window (the parent's "today") and the treatment still running, if any.
+type ChildOverview struct {
+	Doses           []DoseOverview
+	ActiveTreatment *ActiveTreatment
 }

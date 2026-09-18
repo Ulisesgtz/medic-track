@@ -92,6 +92,10 @@ describe('ConsultationForm', () => {
     await user.click(screen.getByRole('button', { name: 'Guardar' }))
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('consultation-1'))
+
+    // The parent's UTC offset goes along, so start times are read in their own zone.
+    const [, init] = vi.mocked(fetch).mock.calls[0]
+    expect(JSON.parse(init!.body as string).utcOffsetMinutes).toBe(-new Date('2026-01-15T00:00:00').getTimezoneOffset())
   })
 
   it('opens the native file picker when clicking "Seleccionar archivo"', async () => {

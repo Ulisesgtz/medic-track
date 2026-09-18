@@ -75,6 +75,7 @@ func main() {
 	r.Post("/accounts/{accountId}/children", accountHandler.AddChild)
 
 	r.Get("/children/{childId}/consultations", consultationHandler.ListConsultations)
+	r.Get("/children/{childId}/overview", consultationHandler.GetChildOverview)
 	r.Post("/children/{childId}/consultations", consultationHandler.CreateConsultation)
 	r.Get("/consultations/{consultationId}", consultationHandler.GetConsultation)
 	r.Patch("/consultations/{consultationId}/doses/{doseId}", consultationHandler.UpdateDose)

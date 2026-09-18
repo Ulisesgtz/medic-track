@@ -2,16 +2,17 @@ import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatAgeLong } from '../../shared/age'
-import { formatDateShort } from '../../shared/date'
+import { formatDateShort, formatDayMonth, localDayRange } from '../../shared/date'
 import { AppHeader } from '../../shared/ui/AppHeader'
 import { useIsDesktop } from '../../shared/ui/useIsDesktop'
 import { AppShell } from '../home/AppShell'
 import { fetchAccount } from '../home/api'
 import { useAccountSession } from '../home/useAccountSession'
-import { fetchConsultations, ConsultationApiError } from './api'
+import { fetchChildOverview, fetchConsultations, ConsultationApiError } from './api'
 import { ConsultationCard } from './ConsultationCard'
 import { ConsultationForm } from './ConsultationForm'
 import { SummaryCard } from './SummaryCard'
+import { TodayDosesPanel } from './TodayDosesPanel'
 
 /**
  * A child's detail page: lists their medical consultations (FR-001) with an
@@ -39,6 +40,16 @@ export function ChildDetailPage() {
   const child = accountQuery.data?.children.find((c) => c.id === childId)
   // Same condition AppShell uses to show the sidebar.
   const hasSidebar = isDesktop && accountId !== null
+
+  // "Today" is the parent's local day, fixed when the page opens; only the
+  // client knows its time zone, so it sends the window to the overview.
+  const [today] = useState(() => localDayRange())
+  const overviewQuery = useQuery({
+    queryKey: ['overview', childId, today.from.toISOString()],
+    queryFn: () => fetchChildOverview(childId!, today.from, today.to),
+    enabled: !!childId,
+    retry: false,
+  })
 
   const query = useQuery({
     queryKey: ['consultations', childId],
@@ -76,7 +87,18 @@ export function ChildDetailPage() {
 
   const consultations = query.data ?? []
 
-  const doctorCount = new Set(consultations.map((c) => c.doctorName)).size
+  // Summary row of the desktop mock: today's unmarked doses (amber), the
+  // consultation count, and the treatment still running (dark).
+  const overviewStatus = overviewQuery.isPending ? 'loading' : overviewQuery.isError ? 'error' : 'ready'
+  const overview = overviewQuery.data
+  const todayDoses = overview?.doses ?? []
+  const unmarked = todayDoses.filter((d) => !d.taken).length
+  const treatment = overview?.activeTreatment ?? null
+  const sinceYear = consultations.reduce<string | null>(
+    (min, c) => (min === null || c.consultDate < min ? c.consultDate : min),
+    null,
+  )?.slice(0, 4)
+  const placeholder = overviewStatus === 'loading' ? 'cargando…' : 'no disponible'
 
   // Top-right corner at every width (desktop mock: 151x48, beside the title;
   // without the sidebar it sits opposite the logo).
@@ -117,30 +139,64 @@ export function ChildDetailPage() {
       />
 
       <div className="mx-auto max-w-5xl px-5 py-7 md:px-10 md:py-9">
-        {consultations.length > 0 && (
-          <div className="mb-5 grid gap-4 sm:grid-cols-3">
-            <SummaryCard label="Consultas" value={String(consultations.length)} />
-            <SummaryCard label="Última consulta" value={formatDateShort(consultations[0].consultDate)} />
-            <SummaryCard label="Doctores" value={String(doctorCount)} />
-          </div>
-        )}
-        {consultations.length === 0 ? (
-          <div className="rounded-3xl bg-surface p-8 text-center shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
-            <p className="text-lg font-bold tracking-tight text-ink">
-              Todavía no hay consultas registradas.
-            </p>
-            <p className="mt-2 text-base text-slate-600">Registra la primera para empezar.</p>
-          </div>
-        ) : (
-          <>
+        <div className="mb-6 grid gap-4 sm:grid-cols-3">
+          {overviewStatus !== 'ready' ? (
+            <SummaryCard label="Tomas de hoy" value="—" sub={placeholder} />
+          ) : todayDoses.length === 0 ? (
+            <SummaryCard label="Tomas de hoy" value="0" sub="sin tomas hoy" />
+          ) : unmarked > 0 ? (
+            <SummaryCard tone="pending" label="Tomas de hoy" value={String(unmarked)} sub="sin marcar" />
+          ) : (
+            <SummaryCard tone="confirmed" label="Tomas de hoy" value="0" sub="todas marcadas" />
+          )}
+          <SummaryCard
+            label="Consultas"
+            value={String(consultations.length)}
+            sub={sinceYear ? `desde ${sinceYear}` : 'sin consultas'}
+          />
+          {overviewStatus !== 'ready' ? (
+            <SummaryCard tone="ink" size="md" label="Tratamiento activo" value="—" sub={placeholder} />
+          ) : treatment ? (
+            <SummaryCard
+              tone="ink"
+              size="md"
+              label="Tratamiento activo"
+              value={treatment.otherCount > 0 ? `${treatment.medicationName} +${treatment.otherCount}` : treatment.medicationName}
+              sub={`termina el ${formatDayMonth(treatment.endsAt)}`}
+            />
+          ) : (
+            <SummaryCard tone="ink" size="md" label="Tratamiento activo" value="Ninguno" sub="sin tomas pendientes" />
+          )}
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,330px)] lg:items-start">
+          <section>
             <h2 className="mb-4 text-xl font-black tracking-tight text-ink">Consultas</h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              {consultations.map((c, index) => (
-                <ConsultationCard key={c.id} consultation={c} isLatest={index === 0} />
-              ))}
-            </div>
-          </>
-        )}
+            {consultations.length === 0 ? (
+              <div className="rounded-3xl bg-surface p-8 text-center shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
+                <p className="text-lg font-bold tracking-tight text-ink">
+                  Todavía no hay consultas registradas.
+                </p>
+                <p className="mt-2 text-base text-slate-600">Registra la primera para empezar.</p>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                {consultations.map((c, index) => (
+                  <ConsultationCard key={c.id} consultation={c} isLatest={index === 0} />
+                ))}
+              </div>
+            )}
+          </section>
+
+          {childId && (
+            <TodayDosesPanel
+              childId={childId}
+              doses={todayDoses}
+              status={overviewStatus}
+              className="order-first lg:order-none"
+            />
+          )}
+        </div>
       </div>
 
       {showForm && childId && (

@@ -67,4 +67,7 @@ test('registrar consulta → ver detalle con tomas generadas → marcar una toma
   // Back on the child's detail, the new consultation is now listed (FR-001).
   await page.goBack()
   await expect(page.getByText('Dra. López')).toBeVisible()
+  // The mock's "Tomas de hoy" panel and summary cards are part of that screen.
+  await expect(page.getByRole('heading', { name: 'Tomas de hoy' })).toBeVisible()
+  await expect(page.getByText('Tratamiento activo')).toBeVisible()
 })
