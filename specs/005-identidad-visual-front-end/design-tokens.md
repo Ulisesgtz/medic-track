@@ -50,7 +50,7 @@ Mínimo absoluto de texto: 13 px. Los números de resumen (edad, conteos) van en
 
 ## Componentes base
 
-- **Header de pantalla**: fondo `--color-ink`, esquina inferior recta, contiene volver / logo / título. (El avatar de inicial del hijo en el header no se implementó; solo aparece en las tarjetas y en la barra lateral.) Se usa siempre `AppHeader`, no se rearma a mano. En la vista de un hijo: eyebrow = "Nombre Apellido · fecha de nacimiento", titular = su edad ("5 años 6 meses"), y con la barra lateral visible (escritorio) el encabezado es **claro** como en el mock — titular en tinta sobre el fondo, eyebrow en `--color-action`, sin fila del logo — y el botón "Nueva consulta" va siempre en la esquina superior derecha, de 151 × 48 px (texto 15 px/800, radio 16 px): a la derecha del titular con la barra lateral, y frente al logo sin ella (móvil y anchos menores a 1024 px). Nunca a todo lo ancho. La barra lateral mide `clamp(288px, 28vw, 348px)` (348 px en el marco de 1240 px del mock), sin etiqueta "Tus hijos" visible.
+- **Header de pantalla**: fondo `--color-ink`, esquina inferior recta, contiene volver / logo / título. (El avatar de inicial del hijo en el header no se implementó; solo aparece en las tarjetas y en la barra lateral.) Se usa siempre `AppHeader`, no se rearma a mano. En la vista de un hijo: eyebrow = "Nombre Apellido · fecha de nacimiento", titular = su edad ("5 años 6 meses"), y con la barra lateral visible (escritorio) el encabezado es **claro** como en el mock — titular en tinta sobre el fondo, eyebrow en `--color-action`, sin fila del logo — y el botón "Nueva consulta" va siempre en la esquina superior derecha, de 151 × 48 px (texto 15 px/800, radio 16 px): a la derecha del titular con la barra lateral, y frente al logo sin ella (móvil y anchos menores a 900 px). Nunca a todo lo ancho. La barra lateral mide `clamp(240px, 28vw, 348px)` (348 px en el marco de 1240 px del mock), sin etiqueta "Tus hijos" visible.
 - **Tarjeta**: `--color-surface`, radio 20–22 px, sombra `0 8px 20px rgba(4,37,43,0.07)`, padding 20–22 px. Sin borde gris.
 - **Tarjeta de consulta**: la misma, con barra de acento izquierda de 5 px — `--color-bright` para la más reciente, `#cffafe` para las anteriores.
 - **Campo de formulario**: radio 14 px, borde 1.5 px `#cbd5e1`; enfocado o con valor confirmado, borde 2 px `--color-ink`; sugerido por OCR, borde 2 px `--color-bright`.
@@ -90,7 +90,7 @@ Los tokens se usan como utilidades: `bg-ink`, `text-action`, `bg-confirmed`, `bg
 | Tarjeta de resumen | `SummaryCard` (`features/consultations/`): overline + número de 34 px/900 |
 | Vacío / agregar | `rounded-3xl border-2 border-dashed border-hint-border px-5 py-5 text-base font-extrabold text-action hover:bg-hint` |
 | Header | `<AppHeader eyebrow title action>` de `shared/ui/` |
-| Pantalla con sesión | envolver en `<AppShell activeChildId>` (agrega la barra lateral desde 1024 px) |
+| Pantalla con sesión | envolver en `<AppShell activeChildId>` (agrega la barra lateral desde 900 px) |
 
 Además de los colores: hover con `transition-colors duration-200`, `cursor-pointer` en todo lo clicable, foco visible, mínimo 44 px de alto en todo control (FR-009), contraste ≥ 4.5:1 (FR-008), sin scroll horizontal de 320 a 1920 px.
 

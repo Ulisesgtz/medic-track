@@ -28,7 +28,7 @@ const TONES: Record<Tone, { card: string; label: string; value: string; sub: str
 export function SummaryCard({ label, value, sub, tone = 'plain', size = 'lg' }: SummaryCardProps) {
   const t = TONES[tone]
   return (
-    <div className={`min-w-0 rounded-3xl p-[22px] shadow-[0_8px_20px_rgba(4,37,43,0.07)] ${t.card}`}>
+    <div className={`min-w-0 rounded-3xl px-[22px] py-5 shadow-[0_8px_20px_rgba(4,37,43,0.07)] ${t.card}`}>
       <p className={`text-xs font-extrabold tracking-[0.1em] uppercase ${t.label}`}>{label}</p>
       <p
         className={`mt-3 truncate leading-none font-black tracking-tight ${t.value} ${
@@ -37,7 +37,7 @@ export function SummaryCard({ label, value, sub, tone = 'plain', size = 'lg' }: 
       >
         {value}
       </p>
-      {sub ? <p className={`mt-3 truncate text-[13px] font-semibold ${t.sub}`}>{sub}</p> : null}
+      {sub ? <p className={`mt-2.5 truncate text-[13px] font-semibold ${t.sub}`}>{sub}</p> : null}
     </div>
   )
 }

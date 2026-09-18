@@ -47,7 +47,7 @@ export function AppHeader({ eyebrow, title, action, children }: AppHeaderProps) 
             {eyebrow ? (
               <div className={`text-sm font-semibold ${hasSidebar ? 'text-action' : 'text-bright'}`}>{eyebrow}</div>
             ) : null}
-            <h1 className="text-3xl font-black tracking-tight md:text-4xl">{title}</h1>
+            <h1 className="text-3xl font-black tracking-[-0.03em] md:text-[38px] md:leading-[1.1]">{title}</h1>
           </div>
           {/* With the sidebar the brand row is gone, so the action sits beside the title. */}
           {hasSidebar ? action : null}

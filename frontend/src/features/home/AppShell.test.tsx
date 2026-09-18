@@ -49,7 +49,7 @@ describe('AppShell', () => {
     window.localStorage.clear()
   })
 
-  it('shows only the screen below 1024px (no sidebar)', () => {
+  it('shows only the screen below 900px (no sidebar)', () => {
     stubMatchMedia(false)
     renderShell()
 
@@ -72,8 +72,8 @@ describe('AppShell', () => {
 
     const nav = await screen.findByRole('navigation', { name: 'Tus hijos' })
     expect(screen.getByText('SCREEN CONTENT')).toBeInTheDocument()
-    const luis = await screen.findByRole('link', { name: /Luis Gómez/ })
-    const sofia = screen.getByRole('link', { name: /Sofía Gómez/ })
+    const luis = await screen.findByRole('link', { name: /^Luis/ })
+    const sofia = screen.getByRole('link', { name: /^Sofía/ })
     expect(nav).toContainElement(luis)
     expect(luis).toHaveAttribute('href', '/children/k1')
     expect(luis).not.toHaveAttribute('aria-current')

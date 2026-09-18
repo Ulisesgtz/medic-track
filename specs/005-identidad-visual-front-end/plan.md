@@ -18,7 +18,7 @@ El front-end actual usa un solo cyan claro sobre blanco para todo (bordes, badge
 
 **Pruebas**: Vitest + Testing Library (las pruebas existentes deben pasar sin cambios de comportamiento); Playwright E2E de los 3 flujos ya cubiertos como gate de no-regresión; revisión manual de contraste y de instalación de la PWA en iOS y Android.
 
-**Plataforma Objetivo**: Misma PWA (mobile-first) + vista de escritorio con barra lateral desde 1024 px.
+**Plataforma Objetivo**: Misma PWA (mobile-first) + vista de escritorio con barra lateral desde 900 px.
 
 **Tipo de Proyecto**: Aplicación web (Opción 2) — solo `frontend/`.
 
@@ -88,7 +88,7 @@ frontend/
 - **Fase 0 — Tokens y logo**: declarar la paleta en `@theme`, crear los assets de icono y el `manifest`. Bloquea todo lo demás.
 - **Fase 1 — Pantallas móviles**: registro, home, detalle del hijo, detalle de consulta, formulario con OCR.
 - **Fase 2 — Modales**: `AddChildModal` y `FreemiumLimitModal` al patrón de FR-010, preservando foco y scroll.
-- **Fase 3 — Escritorio**: barra lateral de hijos y rejilla de resumen desde 1024 px.
+- **Fase 3 — Escritorio**: barra lateral de hijos y rejilla de resumen desde 900 px.
 - **Fase 4 — Verificación**: contraste, áreas táctiles, 320–1920 px sin scroll horizontal, cobertura y E2E en verde, instalación de la PWA en iOS y Android.
 
 ## Seguimiento de Complejidad
