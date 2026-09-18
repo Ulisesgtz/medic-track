@@ -2,7 +2,7 @@ import { AccountSignupForm } from './AccountSignupForm'
 
 export function AccountSignupPage() {
   return (
-    <main className="min-h-screen bg-cyan-50 px-4 py-8 md:py-12">
+    <main className="min-h-screen bg-canvas md:px-6 md:py-10">
       <div className="mx-auto max-w-2xl">
         <AccountSignupForm />
       </div>

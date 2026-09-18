@@ -18,9 +18,9 @@ interface ChildFieldsetProps {
 }
 
 const inputClass =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/30'
-const labelClass = 'mb-1 block text-sm font-medium text-slate-700'
-const errorClass = 'mt-1 text-sm text-red-600'
+  'min-h-11 w-full rounded-[14px] border-[1.5px] border-slate-300 bg-surface px-4 py-2.5 text-base font-medium text-ink placeholder-slate-400 outline-none focus:border-ink focus:ring-[0.5px] focus:ring-ink'
+const labelClass = 'mb-1.5 block text-[13px] font-bold text-ink'
+const errorClass = 'mt-1.5 block text-sm font-semibold text-red-700'
 
 /**
  * A single child's fields (firstName, lastName required; birthDate required
@@ -33,17 +33,17 @@ export function ChildFieldset({ index, register, errors, onRemove }: ChildFields
 
   return (
     <fieldset
-      className="rounded-xl border border-cyan-100 bg-cyan-50/60 p-4"
+      className="rounded-2xl border border-hint-border bg-hint p-5"
       data-testid={`child-fieldset-${index}`}
     >
-      <div className="mb-3 flex items-center justify-between">
-        <legend className="inline-flex items-center rounded-full bg-cyan-600 px-2.5 py-1 text-xs font-semibold text-white">
+      <div className="mb-2 flex items-center justify-between">
+        <legend className="inline-flex items-center rounded-full bg-action px-3 py-1 text-xs font-extrabold uppercase tracking-[0.1em] text-white">
           Hijo {index + 1}
         </legend>
         <button
           type="button"
           onClick={onRemove}
-          className="inline-flex cursor-pointer items-center gap-1 text-sm font-medium text-red-600 transition-colors duration-200 hover:text-red-700"
+          className="inline-flex min-h-11 cursor-pointer items-center gap-1.5 text-sm font-bold text-red-700 transition-colors duration-200 hover:text-red-800"
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 7h12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.8 12.1a2 2 0 0 1-2 1.9H9.8a2 2 0 0 1-2-1.9L7 7" />
@@ -52,7 +52,7 @@ export function ChildFieldset({ index, register, errors, onRemove }: ChildFields
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
           <label className={labelClass} htmlFor={`children.${index}.firstName`}>
             Nombre
