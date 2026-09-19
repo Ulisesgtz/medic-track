@@ -143,12 +143,14 @@ interface ConsultationFormProps {
   childId: string
   onSuccess: (consultationId: string) => void
   onCancel: () => void
+  /** Tells the parent whether the form holds anything the user would lose. */
+  onDirtyChange?: (dirty: boolean) => void
 }
 
 /** Form to register a new medical consultation (FR-003, FR-004). */
 const MEDICATION_STAGGER_MS = 180
 
-export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationFormProps) {
+export function ConsultationForm({ childId, onSuccess, onCancel, onDirtyChange }: ConsultationFormProps) {
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const { suggestion, isRunning, runOcr } = useOcrSuggestion()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -161,7 +163,7 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
     handleSubmit,
     setValue,
     getValues,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<ConsultationFormValues>({
     defaultValues: {
       doctorName: '',
@@ -171,6 +173,12 @@ export function ConsultationForm({ childId, onSuccess, onCancel }: ConsultationF
     },
   })
   const { fields, append, remove } = useFieldArray({ control, name: 'medications' })
+
+  // A typed field or a chosen photo (which OCR may have autofilled from) is worth a confirmation.
+  const dirty = isDirty || photoFile !== null
+  useEffect(() => {
+    onDirtyChange?.(dirty)
+  }, [dirty, onDirtyChange])
 
   const mutation = useMutation({
     mutationFn: async (values: ConsultationFormValues) => {

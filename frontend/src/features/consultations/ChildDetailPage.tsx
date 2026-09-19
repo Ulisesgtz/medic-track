@@ -1,13 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatAgeLong } from '../../shared/age'
-import { formatDateShort, formatDayMonth, localDayRange } from '../../shared/date'
+import { formatDateShort, formatDayMonth } from '../../shared/date'
+import { useLocalDay } from '../../shared/useLocalDay'
 import { AppHeader } from '../../shared/ui/AppHeader'
-import { useIsDesktop } from '../../shared/ui/useIsDesktop'
 import { AppShell } from '../home/AppShell'
 import { fetchAccount } from '../home/api'
-import { useAccountSession } from '../home/useAccountSession'
+import { useSidebarSession } from '../home/useSidebarSession'
 import { fetchChildOverview, fetchConsultations, ConsultationApiError } from './api'
 import { ConsultationCard } from './ConsultationCard'
 import { ConsultationForm } from './ConsultationForm'
@@ -25,6 +25,24 @@ export function ChildDetailPage() {
   const queryClient = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const dialogRef = useRef<HTMLDivElement>(null)
+  // Whether the registration form holds anything (typed fields or a photo).
+  const formDirtyRef = useRef(false)
+  const handleDirtyChange = useCallback((dirty: boolean) => {
+    formDirtyRef.current = dirty
+  }, [])
+
+  // Every way of dismissing the form (Escape, backdrop, X, Cancelar) goes
+  // through here, so a half-filled form isn't thrown away by accident.
+  const requestCloseRef = useRef(requestClose)
+  useEffect(() => {
+    requestCloseRef.current = requestClose
+  })
+
+  function requestClose() {
+    if (formDirtyRef.current && !window.confirm('¿Descartar la consulta? Se perderá lo que capturaste.')) return
+    formDirtyRef.current = false
+    setShowForm(false)
+  }
 
   // Real-modal behavior for the registration form: Escape closes it, focus
   // moves into it on open and returns to "Nueva consulta" on close.
@@ -33,7 +51,7 @@ export function ChildDetailPage() {
     const opener = document.activeElement as HTMLElement | null
     dialogRef.current?.focus()
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') setShowForm(false)
+      if (event.key === 'Escape') requestCloseRef.current()
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => {
@@ -41,9 +59,7 @@ export function ChildDetailPage() {
       opener?.focus()
     }
   }, [showForm])
-  const isDesktop = useIsDesktop()
-  const { getAccountId } = useAccountSession()
-  const [accountId] = useState<string | null>(() => getAccountId())
+  const { accountId, hasSidebar } = useSidebarSession()
 
   // The child's own data (name, birth date) comes from the account the
   // sidebar already loads — same query key, so no extra request. Without a
@@ -55,12 +71,10 @@ export function ChildDetailPage() {
     retry: false,
   })
   const child = accountQuery.data?.children.find((c) => c.id === childId)
-  // Same condition AppShell uses to show the sidebar.
-  const hasSidebar = isDesktop && accountId !== null
 
-  // "Today" is the parent's local day, fixed when the page opens; only the
-  // client knows its time zone, so it sends the window to the overview.
-  const [today] = useState(() => localDayRange())
+  // "Today" is the parent's local day (it rolls over at midnight, even with the
+  // app left open); only the client knows its time zone, so it sends the window.
+  const today = useLocalDay()
   const overviewQuery = useQuery({
     queryKey: ['overview', childId, today.from.toISOString()],
     queryFn: () => fetchChildOverview(childId!, today.from, today.to),
@@ -207,7 +221,6 @@ export function ChildDetailPage() {
 
           {childId && (
             <TodayDosesPanel
-              childId={childId}
               doses={todayDoses}
               status={overviewStatus}
               className="order-first lg:order-none"
@@ -219,7 +232,7 @@ export function ChildDetailPage() {
       {showForm && childId && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4"
-          onClick={() => setShowForm(false)}
+          onClick={requestClose}
         >
           <div
             ref={dialogRef}
@@ -236,7 +249,7 @@ export function ChildDetailPage() {
               </h2>
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={requestClose}
                 aria-label="Cerrar"
                 className="-mt-2 -mr-2 flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-500 transition-colors duration-200 hover:bg-hint hover:text-ink"
               >
@@ -247,7 +260,8 @@ export function ChildDetailPage() {
             </div>
             <ConsultationForm
               childId={childId}
-              onCancel={() => setShowForm(false)}
+              onCancel={requestClose}
+              onDirtyChange={handleDirtyChange}
               onSuccess={(consultationId) => {
                 setShowForm(false)
                 queryClient.invalidateQueries({ queryKey: ['consultations', childId] })

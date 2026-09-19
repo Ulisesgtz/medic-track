@@ -172,8 +172,11 @@ describe('ChildDetailPage', () => {
       const panel = (await screen.findByRole('heading', { name: 'Tomas de hoy' })).closest('section')!
       expect(within(panel).getByText('08:00 Amoxicilina')).toBeInTheDocument()
       expect(within(panel).getByText('16:00 Amoxicilina')).toBeInTheDocument()
-      expect(within(panel).getByRole('button', { name: /Tomada: 08:00 Amoxicilina/ })).toHaveAttribute('aria-pressed', 'true')
-      expect(within(panel).getByRole('button', { name: 'Marcar como tomada: 16:00 Amoxicilina' })).toHaveAttribute('aria-pressed', 'false')
+      // A toggle: the name is fixed and only aria-pressed carries the state.
+      expect(within(panel).getByRole('button', { name: 'Toma de 08:00 Amoxicilina' })).toHaveAttribute('aria-pressed', 'true')
+      expect(within(panel).getByRole('button', { name: 'Toma de 16:00 Amoxicilina' })).toHaveAttribute('aria-pressed', 'false')
+      expect(within(panel).getByText('Tomada')).toBeInTheDocument()
+      expect(within(panel).getByText('Marcar')).toBeInTheDocument()
     })
 
     it('marks a dose from the panel and reloads the overview', async () => {
@@ -185,7 +188,7 @@ describe('ChildDetailPage', () => {
       })
       renderPage()
 
-      await user.click(await screen.findByRole('button', { name: 'Marcar como tomada: 16:00 Amoxicilina' }))
+      await user.click(await screen.findByRole('button', { name: 'Toma de 16:00 Amoxicilina' }))
 
       await waitFor(() => {
         const patch = fetchMock.mock.calls.find(([, init]) => init?.method === 'PATCH')
@@ -206,7 +209,7 @@ describe('ChildDetailPage', () => {
       })
       renderPage()
 
-      await user.click(await screen.findByRole('button', { name: /Tomada: 08:00 Amoxicilina/ }))
+      await user.click(await screen.findByRole('button', { name: 'Toma de 08:00 Amoxicilina' }))
 
       await waitFor(() => {
         const patch = fetchMock.mock.calls.find(([, init]) => init?.method === 'PATCH')
@@ -306,6 +309,93 @@ describe('ChildDetailPage', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(opener).toHaveFocus()
+  })
+
+  describe('discarding the registration form', () => {
+    function stubEmptyChild() {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockImplementation(async (input: string) => ({
+          ok: true,
+          json: async () =>
+            String(input).includes('/overview')
+              ? { childId: 'child-1', doses: [], activeTreatment: null }
+              : { childId: 'child-1', consultations: [] },
+        })),
+      )
+    }
+
+    afterEach(() => {
+      vi.restoreAllMocks()
+    })
+
+    it('closes right away (no question) while the form is still empty', async () => {
+      const user = userEvent.setup()
+      stubEmptyChild()
+      const confirm = vi.spyOn(window, 'confirm')
+      renderPage()
+
+      await user.click(await screen.findByRole('button', { name: 'Nueva consulta' }))
+      await user.keyboard('{Escape}')
+
+      expect(confirm).not.toHaveBeenCalled()
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('asks before throwing away a form the parent already started, on every way of closing', async () => {
+      const user = userEvent.setup()
+      stubEmptyChild()
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+      renderPage()
+
+      await user.click(await screen.findByRole('button', { name: 'Nueva consulta' }))
+      await user.type(screen.getByLabelText('Doctor'), 'Dra. López')
+
+      // Declined: the form stays, whatever the way of closing.
+      await user.keyboard('{Escape}')
+      await user.click(screen.getByRole('button', { name: 'Cerrar' }))
+      await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+      expect(confirm).toHaveBeenCalledTimes(3)
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+      expect(screen.getByLabelText('Doctor')).toHaveValue('Dra. López')
+
+      // Accepted: it closes.
+      confirm.mockReturnValue(true)
+      await user.keyboard('{Escape}')
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
+    it('also counts a chosen photo as something worth confirming', async () => {
+      const user = userEvent.setup()
+      stubEmptyChild()
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+      renderPage()
+
+      await user.click(await screen.findByRole('button', { name: 'Nueva consulta' }))
+      await user.upload(screen.getByLabelText('Foto de la receta'), new File(['x'], 'receta.jpg', { type: 'image/jpeg' }))
+      await user.keyboard('{Escape}')
+
+      expect(confirm).toHaveBeenCalled()
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+
+    it('starts clean again after a form was discarded', async () => {
+      const user = userEvent.setup()
+      stubEmptyChild()
+      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
+      renderPage()
+
+      await user.click(await screen.findByRole('button', { name: 'Nueva consulta' }))
+      await user.type(screen.getByLabelText('Doctor'), 'Dra. López')
+      await user.keyboard('{Escape}')
+      confirm.mockClear()
+
+      await user.click(screen.getByRole('button', { name: 'Nueva consulta' }))
+      await user.keyboard('{Escape}')
+
+      expect(confirm).not.toHaveBeenCalled()
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
   })
 
   it('opens the registration modal, submits, and navigates to the new consultation detail', async () => {

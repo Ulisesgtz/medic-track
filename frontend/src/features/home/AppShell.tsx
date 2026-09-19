@@ -1,8 +1,7 @@
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { SidebarContext } from '../../shared/ui/SidebarContext'
-import { useIsDesktop } from '../../shared/ui/useIsDesktop'
 import { ChildrenSidebar } from './ChildrenSidebar'
-import { useAccountSession } from './useAccountSession'
+import { useSidebarSession } from './useSidebarSession'
 
 interface AppShellProps {
   activeChildId?: string
@@ -16,11 +15,9 @@ interface AppShellProps {
  * so it never renders the sidebar.
  */
 export function AppShell({ activeChildId, children }: AppShellProps) {
-  const isDesktop = useIsDesktop()
-  const { getAccountId } = useAccountSession()
-  const [accountId] = useState<string | null>(() => getAccountId())
+  const { accountId, hasSidebar } = useSidebarSession()
 
-  if (!isDesktop || !accountId) return <>{children}</>
+  if (!hasSidebar || accountId === null) return <>{children}</>
 
   return (
     <SidebarContext.Provider value={true}>

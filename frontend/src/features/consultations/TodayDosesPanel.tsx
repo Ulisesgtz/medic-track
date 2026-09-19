@@ -1,10 +1,8 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { formatTime } from '../../shared/date'
-import { updateDoseStatus } from './api'
+import { useDoseToggle } from './useDoseToggle'
 import type { OverviewDose } from './types'
 
 interface DoseRowProps {
-  childId: string
   dose: OverviewDose
 }
 
@@ -14,17 +12,9 @@ interface DoseRowProps {
  * detail, FR-016 of specs/004). Amber = "the parent hasn't marked it",
  * never a medical alert (Principio I).
  */
-function DoseRow({ childId, dose }: DoseRowProps) {
-  const queryClient = useQueryClient()
+function DoseRow({ dose }: DoseRowProps) {
   const time = formatTime(dose.scheduledAt)
-
-  const mutation = useMutation({
-    mutationFn: (taken: boolean) => updateDoseStatus(dose.consultationId, dose.id, taken),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['overview', childId] })
-      queryClient.invalidateQueries({ queryKey: ['consultation', dose.consultationId] })
-    },
-  })
+  const mutation = useDoseToggle(dose.consultationId, dose.id)
 
   return (
     <li className="flex min-h-11 items-center justify-between gap-3">
@@ -33,12 +23,10 @@ function DoseRow({ childId, dose }: DoseRowProps) {
       </span>
       <button
         type="button"
+        // A toggle: the name stays put and only aria-pressed carries the state
+        // (a name that also changed would be announced twice, contradicting itself).
         aria-pressed={dose.taken}
-        aria-label={
-          dose.taken
-            ? `Tomada: ${time} ${dose.medicationName}. Toca para desmarcar`
-            : `Marcar como tomada: ${time} ${dose.medicationName}`
-        }
+        aria-label={`Toma de ${time} ${dose.medicationName}`}
         disabled={mutation.isPending}
         onClick={() => mutation.mutate(!dose.taken)}
         className="flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 [&:focus-visible>span]:ring-2 [&:focus-visible>span]:ring-action [&:focus-visible>span]:ring-offset-2"
@@ -59,7 +47,6 @@ function DoseRow({ childId, dose }: DoseRowProps) {
 }
 
 interface TodayDosesPanelProps {
-  childId: string
   doses: OverviewDose[]
   /** Overview still loading, or it failed: shown instead of the list. */
   status: 'ready' | 'loading' | 'error'
@@ -67,7 +54,7 @@ interface TodayDosesPanelProps {
 }
 
 /** The "Tomas de hoy" panel of the child detail: today's doses, markable in place. */
-export function TodayDosesPanel({ childId, doses, status, className = '' }: TodayDosesPanelProps) {
+export function TodayDosesPanel({ doses, status, className = '' }: TodayDosesPanelProps) {
   return (
     <section
       aria-labelledby="today-doses-title"
@@ -86,7 +73,7 @@ export function TodayDosesPanel({ childId, doses, status, className = '' }: Toda
       {status === 'ready' && doses.length > 0 && (
         <ul className="mt-3 flex flex-col">
           {doses.map((dose) => (
-            <DoseRow key={dose.id} childId={childId} dose={dose} />
+            <DoseRow key={dose.id} dose={dose} />
           ))}
         </ul>
       )}
