@@ -8,6 +8,15 @@ para no perder decisiones que ya se tomaron en conversación pero que aún no ti
 Cuando se decida trabajar en un ítem, se le corre `/speckit-specify` como a cualquier feature nueva
 y se elimina (o se marca) aquí.
 
+## Prioridad alta
+
+- **Homologar todas las pantallas a los mocks** (`specs/007-homologar-pantallas-a-mocks/`, rama
+  `feature/007-homologar-pantallas-a-mocks`) — las pantallas de la app no son iguales a los mocks
+  entregados. Regla del proyecto (`CLAUDE.md`): un mock se construye **tal cual** — estructura,
+  secciones, orden, textos, colores y tamaños — y se compara lado a lado. Cada pantalla se entrega solo
+  después de probar todos sus botones y campos de texto. Estado por pantalla y mocks que faltan por
+  entregar: ver la tabla de esa spec.
+
 ## Backend
 
 - **Consulta/listado del log de errores** — endpoint o interfaz para leer las entradas de

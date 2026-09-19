@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAccountSession } from './useAccountSession'
 import { fetchAccount, AccountApiError } from './api'
@@ -7,6 +7,7 @@ import { ChildCard } from './ChildCard'
 import { AddChildModal } from './AddChildModal'
 import { AppHeader } from '../../shared/ui/AppHeader'
 import { AppShell } from './AppShell'
+import { useSidebarSession } from './useSidebarSession'
 import { Logo } from '../../shared/ui/Logo'
 
 /**
@@ -19,6 +20,7 @@ export function HomePage() {
   const { getAccountId, clearAccountId } = useAccountSession()
   const [accountId] = useState<string | null>(() => getAccountId())
   const [showAddChild, setShowAddChild] = useState(false)
+  const { hasSidebar } = useSidebarSession()
 
   const query = useQuery({
     queryKey: ['account', accountId],
@@ -72,6 +74,13 @@ export function HomePage() {
   }
 
   const account = query.data
+
+  // Desktop mock 6, "Home con detalle": with the sidebar on screen the home *is*
+  // the active child's detail (the sidebar already lists everyone), so open the
+  // first child. An account with no children keeps the empty state below.
+  if (hasSidebar && account && account.children.length > 0) {
+    return <Navigate to={`/children/${account.children[0].id}`} replace />
+  }
 
   return (
     <AppShell>
