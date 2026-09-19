@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { AppHeader } from '../../shared/ui/AppHeader'
+import { formatDateShort } from '../../shared/date'
 import { AppShell } from '../home/AppShell'
 import { fetchConsultationDetail, ConsultationApiError } from './api'
 import { DoseCheckbox } from './DoseCheckbox'
@@ -127,7 +128,7 @@ export function ConsultationDetailPage() {
         }
         title={consultation.doctorName}
       >
-        <p className="text-base font-semibold text-white/80">{consultation.consultDate}</p>
+        <p className="text-base font-semibold opacity-80">{formatDateShort(consultation.consultDate)}</p>
       </AppHeader>
 
       <div className="mx-auto flex max-w-5xl flex-col gap-5 px-5 py-7 md:px-10 md:py-9">

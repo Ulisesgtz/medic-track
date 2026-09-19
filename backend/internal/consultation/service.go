@@ -12,6 +12,12 @@ import (
 // startTimeFormat matches a 24-hour "HH:MM" string (e.g. "08:00", "23:59").
 var startTimeFormat = regexp.MustCompile(`^([01][0-9]|2[0-3]):[0-5][0-9]$`)
 
+// UTC offsets that exist in the world run from -12:00 to +14:00.
+const (
+	minUTCOffsetMinutes = -12 * 60
+	maxUTCOffsetMinutes = 14 * 60
+)
+
 // maxPhotoBytes caps the decoded prescription photo size (research.md).
 const maxPhotoBytes = 8 * 1024 * 1024 // 8 MiB
 
@@ -33,6 +39,10 @@ type CreateConsultationInput struct {
 	Photo       []byte
 	Symptoms    string
 	Medications []CreateMedicationInput
+	// UTCOffsetMinutes is the parent's UTC offset (e.g. -360 for Mexico City
+	// standard time). Each medication's StartTime is read in that offset so
+	// the generated doses are real instants; 0 (the default) reads it as UTC.
+	UTCOffsetMinutes int
 }
 
 // Service implements the Consultation/Medication/Dose business rules: field
@@ -51,6 +61,23 @@ func (s *Service) ListConsultations(ctx context.Context, childID uuid.UUID) ([]C
 	return s.repo.GetByChild(ctx, childID)
 }
 
+// maxOverviewWindow caps the doses window: the overview is meant for "today"
+// (a local day is at most 25h around DST), not for arbitrary ranges.
+const maxOverviewWindow = 48 * time.Hour
+
+// GetChildOverview returns the child's doses inside [from, to) and the
+// treatment still running now. from/to must be a positive window of at most
+// maxOverviewWindow.
+func (s *Service) GetChildOverview(ctx context.Context, childID uuid.UUID, from, to time.Time) (*ChildOverview, error) {
+	if !to.After(from) {
+		return nil, ValidationErrors{{Field: "to", Message: "must be after from"}}
+	}
+	if to.Sub(from) > maxOverviewWindow {
+		return nil, ValidationErrors{{Field: "to", Message: "the window cannot exceed 48 hours"}}
+	}
+	return s.repo.GetOverview(ctx, childID, from, to, time.Now())
+}
+
 // CreateConsultation validates input and persists a new Consultation with
 // its Medications and generated Doses (FR-004 through FR-010).
 func (s *Service) CreateConsultation(ctx context.Context, childID uuid.UUID, input CreateConsultationInput) (*Consultation, error) {
@@ -59,10 +86,11 @@ func (s *Service) CreateConsultation(ctx context.Context, childID uuid.UUID, inp
 	}
 
 	c := &Consultation{
-		DoctorName:  input.DoctorName,
-		ConsultDate: input.ConsultDate,
-		Photo:       input.Photo,
-		Symptoms:    input.Symptoms,
+		DoctorName:       input.DoctorName,
+		ConsultDate:      input.ConsultDate,
+		Photo:            input.Photo,
+		Symptoms:         input.Symptoms,
+		ScheduleLocation: time.FixedZone("client", input.UTCOffsetMinutes*60),
 	}
 	for _, m := range input.Medications {
 		c.Medications = append(c.Medications, Medication{
@@ -107,6 +135,9 @@ func validateCreateConsultationInput(input CreateConsultationInput) ValidationEr
 		errs = append(errs, ValidationError{Field: "photoBase64", Message: "prescription photo is required"})
 	} else if len(input.Photo) > maxPhotoBytes {
 		errs = append(errs, ValidationError{Field: "photoBase64", Message: "photo exceeds the 8MB size limit"})
+	}
+	if input.UTCOffsetMinutes < minUTCOffsetMinutes || input.UTCOffsetMinutes > maxUTCOffsetMinutes {
+		errs = append(errs, ValidationError{Field: "utcOffsetMinutes", Message: "must be between -840 and 840"})
 	}
 	if len(input.Medications) == 0 {
 		// FR-015: a consultation with no medications is invalid.

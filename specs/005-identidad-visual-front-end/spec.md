@@ -62,8 +62,8 @@ Como padre/tutor que a veces entra desde la computadora, quiero una vista que ap
 
 **Escenarios de Aceptación**:
 
-1. **Dado** que abro la app en un viewport de ancho ≥ 1024 px, **Cuando** veo el home, **Entonces** la lista de hijos vive en una barra lateral persistente y el detalle ocupa el área principal.
-2. **Dado** que reduzco la ventana a menos de 1024 px, **Cuando** la interfaz refluye, **Entonces** vuelve al diseño de una columna móvil sin scroll horizontal.
+1. **Dado** que abro la app en un viewport de ancho ≥ 900 px, **Cuando** veo el home, **Entonces** la lista de hijos vive en una barra lateral persistente y el detalle ocupa el área principal.
+2. **Dado** que reduzco la ventana a menos de 900 px, **Cuando** la interfaz refluye, **Entonces** vuelve al diseño de una columna móvil sin scroll horizontal.
 
 ---
 
@@ -89,7 +89,7 @@ Como padre/tutor que a veces entra desde la computadora, quiero una vista que ap
 - **FR-009**: Todo control accionable en móvil DEBE medir al menos 44 px de alto.
 - **FR-010**: Los modales DEBEN seguir un patrón único: encabezado con título y cierre, cuerpo, y fila de acciones alineada a la derecha (secundaria de contorno + primaria sólida); el modal de límite freemium DEBE conservar su franja de encabezado ámbar como señal de contexto de plan.
 - **FR-011**: Los modales DEBEN conservar su comportamiento accesible actual (`aria-modal`, trampa de foco en `FreemiumLimitModal`, scroll interno del cuerpo en `ChildDetailPage`) — el rediseño NO DEBE alterarlo.
-- **FR-012**: En viewports ≥ 1024 px la app DEBE usar barra lateral de hijos + área de contenido; por debajo DEBE reflowar a una columna sin scroll horizontal.
+- **FR-012**: En viewports ≥ 900 px la app DEBE usar barra lateral de hijos + área de contenido; por debajo DEBE reflowar a una columna sin scroll horizontal.
 - **FR-013**: Esta funcionalidad NO DEBE cambiar rutas, contratos de API, tipos de datos ni reglas de negocio — únicamente marcado y clases de Tailwind.
 - **FR-014**: Las pruebas existentes DEBEN seguir pasando sin cambios de aserción salvo las que consultan texto o atributos que el rediseño renombra explícitamente; cualquier cambio de aserción DEBE quedar documentado en `tasks.md`.
 - **FR-015**: El color NO DEBE usarse para emitir juicios médicos (Principio I): ámbar indica "sin marcar por el padre", nunca "dosis atrasada" ni advertencia clínica.

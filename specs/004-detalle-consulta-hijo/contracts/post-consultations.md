@@ -11,6 +11,7 @@ Registra una consulta médica nueva para un hijo (FR-003, FR-004).
 {
   "doctorName": "string (requerido)",
   "consultDate": "string ISO-8601 date (requerido, no futura)",
+  "utcOffsetMinutes": "integer entre -840 y 840 (opcional, por omisión 0 = UTC; spec 006 — el `startTime` de cada medicamento se lee en ese desfase para que las tomas sean instantes reales)",
   "photoBase64": "string (requerido — foto codificada en base64, máx. 8 MB decodificada)",
   "symptoms": "string (opcional, default '')",
   "medications": [

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -49,7 +49,7 @@ describe('AppShell', () => {
     window.localStorage.clear()
   })
 
-  it('shows only the screen below 1024px (no sidebar)', () => {
+  it('shows only the screen below 900px (no sidebar)', () => {
     stubMatchMedia(false)
     renderShell()
 
@@ -72,12 +72,25 @@ describe('AppShell', () => {
 
     const nav = await screen.findByRole('navigation', { name: 'Tus hijos' })
     expect(screen.getByText('SCREEN CONTENT')).toBeInTheDocument()
-    const luis = await screen.findByRole('link', { name: /Luis Gómez/ })
-    const sofia = screen.getByRole('link', { name: /Sofía Gómez/ })
+    const luis = await screen.findByRole('link', { name: /^Luis/ })
+    const sofia = screen.getByRole('link', { name: /^Sofía/ })
     expect(nav).toContainElement(luis)
     expect(luis).toHaveAttribute('href', '/children/k1')
     expect(luis).not.toHaveAttribute('aria-current')
     expect(sofia).toHaveAttribute('aria-current', 'page')
+  })
+
+  it("shows each child's age and the tutor's initials", async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 8, 16, 12))
+    stubMatchMedia(true)
+    renderShell('k1')
+
+    const nav = await screen.findByRole('navigation', { name: 'Tus hijos' })
+    expect(await within(nav).findByText('5a 4m')).toBeInTheDocument()
+    expect(within(nav).getByText('3a 7m')).toBeInTheDocument()
+    expect(await screen.findByText('AG')).toBeInTheDocument()
+    vi.useRealTimers()
   })
 
   it('shows the account name and plan at the bottom of the sidebar', async () => {
@@ -86,6 +99,18 @@ describe('AppShell', () => {
 
     expect(await screen.findByText('Ana Gómez')).toBeInTheDocument()
     expect(screen.getByText('Plan gratuito')).toBeInTheDocument()
+  })
+
+  it('renders the add-child modal in <body>, not inside the sticky sidebar (it would paint under the page otherwise)', async () => {
+    stubMatchMedia(true)
+    const user = userEvent.setup()
+    renderShell()
+
+    await user.click(await screen.findByRole('button', { name: /Agregar hijo/ }))
+
+    const dialog = screen.getByRole('dialog', { name: 'Agregar hijo' })
+    expect(dialog.closest('aside')).toBeNull()
+    expect(document.body.contains(dialog)).toBe(true)
   })
 
   it('labels a paid account "Plan completo"', async () => {

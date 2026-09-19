@@ -243,7 +243,7 @@ const docTemplate = `{
         },
         "/children/{childId}/consultations": {
             "get": {
-                "description": "Lists a child's medical consultations (date + doctor), most recent first (FR-001).",
+                "description": "Lists a child's medical consultations (date, doctor, symptoms and medication count), most recent first (FR-001).",
                 "produces": [
                     "application/json"
                 ],
@@ -314,6 +314,63 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Missing/invalid field",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationValidationErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ChildNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/children/{childId}/overview": {
+            "get": {
+                "description": "Returns the doses scheduled in [from, to) (the parent's local \"today\"; the client\nsends the window because only it knows its timezone) and the treatment still\nrunning — the medication whose last scheduled dose is furthest ahead, derived only\nfrom the dose schedule. The window may not exceed 48 hours.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "A child's doses in a window and active treatment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "2026-01-15T00:00:00-06:00",
+                        "description": "Window start, RFC 3339",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "2026-01-16T00:00:00-06:00",
+                        "description": "Window end (exclusive), RFC 3339",
+                        "name": "to",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ChildOverviewResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing/invalid window",
                         "schema": {
                             "$ref": "#/definitions/ConsultationValidationErrorResponse"
                         }
@@ -431,6 +488,23 @@ const docTemplate = `{
                 }
             }
         },
+        "ActiveTreatmentResponse": {
+            "type": "object",
+            "properties": {
+                "endsAt": {
+                    "type": "string",
+                    "example": "2026-01-18T22:00:00Z"
+                },
+                "medicationName": {
+                    "type": "string",
+                    "example": "Amoxicilina"
+                },
+                "otherCount": {
+                    "type": "integer",
+                    "example": 0
+                }
+            }
+        },
         "ChildNotFoundResponse": {
             "type": "object",
             "properties": {
@@ -441,6 +515,24 @@ const docTemplate = `{
                 "message": {
                     "type": "string",
                     "example": "Child not found"
+                }
+            }
+        },
+        "ChildOverviewResponse": {
+            "type": "object",
+            "properties": {
+                "activeTreatment": {
+                    "$ref": "#/definitions/ActiveTreatmentResponse"
+                },
+                "childId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "doses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/OverviewDoseResponse"
+                    }
                 }
             }
         },
@@ -533,6 +625,14 @@ const docTemplate = `{
                 "id": {
                     "type": "string",
                     "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "medicationCount": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "symptoms": {
+                    "type": "string",
+                    "example": "Tos y fiebre leve"
                 }
             }
         },
@@ -686,6 +786,31 @@ const docTemplate = `{
                 "message": {
                     "type": "string",
                     "example": "Country not found in catalog"
+                }
+            }
+        },
+        "OverviewDoseResponse": {
+            "type": "object",
+            "properties": {
+                "consultationId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "medicationName": {
+                    "type": "string",
+                    "example": "Amoxicilina"
+                },
+                "scheduledAt": {
+                    "type": "string",
+                    "example": "2026-01-15T14:00:00Z"
+                },
+                "taken": {
+                    "type": "boolean",
+                    "example": false
                 }
             }
         },
@@ -881,6 +1006,11 @@ const docTemplate = `{
                 "symptoms": {
                     "type": "string",
                     "example": "Tos y fiebre leve"
+                },
+                "utcOffsetMinutes": {
+                    "description": "UTCOffsetMinutes is the parent's UTC offset, so \"startTime\" is read in\ntheir own time zone. Optional: 0 (default) means UTC.",
+                    "type": "integer",
+                    "example": -360
                 }
             }
         },

@@ -35,7 +35,7 @@ test('registrar consulta → ver detalle con tomas generadas → marcar una toma
   await expect(page).toHaveURL(/\/children\//)
   await expect(page.getByText(/todavía no hay consultas/i)).toBeVisible()
 
-  await page.getByRole('button', { name: 'Registrar consulta' }).click()
+  await page.getByRole('button', { name: 'Nueva consulta' }).click()
   await expect(page.getByRole('heading', { name: 'Registrar consulta' })).toBeVisible()
 
   await page.getByLabel('Doctor').fill('Dra. López')
@@ -67,4 +67,29 @@ test('registrar consulta → ver detalle con tomas generadas → marcar una toma
   // Back on the child's detail, the new consultation is now listed (FR-001).
   await page.goBack()
   await expect(page.getByText('Dra. López')).toBeVisible()
+  // The mock's "Tomas de hoy" panel and summary cards are part of that screen.
+  await expect(page.getByRole('heading', { name: 'Tomas de hoy' })).toBeVisible()
+  await expect(page.getByText('Tratamiento activo')).toBeVisible()
+
+  // A dialog opened from the desktop sidebar must sit above the page content
+  // (it used to paint under the consultation cards).
+  await page.locator('aside').getByRole('button', { name: 'Agregar hijo' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Agregar hijo' })
+  await expect(dialog).toBeVisible()
+  // Sample a grid of points across the dialog: every one must hit the dialog itself.
+  const box = (await dialog.boundingBox())!
+  const covered = await page.evaluate(({ x, y, width, height }) => {
+    const dlg = document.querySelector('[role=dialog]')!
+    const misses: string[] = []
+    for (let i = 1; i <= 5; i++) {
+      for (let k = 1; k <= 5; k++) {
+        const el = document.elementFromPoint(x + (width * i) / 6, y + (height * k) / 6)
+        if (!el || !dlg.contains(el)) misses.push(`${i},${k}`)
+      }
+    }
+    return misses
+  }, box)
+  expect(covered).toEqual([])
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
 })

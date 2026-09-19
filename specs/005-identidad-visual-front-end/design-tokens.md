@@ -44,17 +44,23 @@ Figtree (ya cargada en `index.css`), con pesos 400/500/700/800/900.
 | Etiqueta de campo | 13 px | 700 | normal |
 | Badge / overline | 12 px | 800 | `0.1em`, mayúsculas |
 
+Formatos: fechas como "15 sep 2026" (`shared/date.ts`, `formatDateShort`; no mostrar `2026-09-15` al usuario), edad larga "5 años 6 meses" y corta "5a 6m" (`shared/age.ts`, `formatAgeLong`/`formatAgeShort`).
+
 Mínimo absoluto de texto: 13 px. Los números de resumen (edad, conteos) van en 34 px peso 900 — la app se lee de un vistazo por tamaño, no por color de borde.
 
 ## Componentes base
 
-- **Header de pantalla**: fondo `--color-ink`, esquina inferior recta, contiene volver / logo / título. (El avatar de inicial del hijo en el header no se implementó; solo aparece en las tarjetas y en la barra lateral.) Se usa siempre `AppHeader`, no se rearma a mano.
+- **Header de pantalla**: fondo `--color-ink`, esquina inferior recta, contiene volver / logo / título. (El avatar de inicial del hijo en el header no se implementó; solo aparece en las tarjetas y en la barra lateral.) Se usa siempre `AppHeader`, no se rearma a mano. En la vista de un hijo: eyebrow = "Nombre Apellido · fecha de nacimiento", titular = su edad ("5 años 6 meses"), y con la barra lateral visible (escritorio) el encabezado es **claro** como en el mock — titular en tinta sobre el fondo, eyebrow en `--color-action`, sin fila del logo — y el botón "Nueva consulta" va siempre en la esquina superior derecha, de 151 × 48 px (texto 15 px/800, radio 16 px): a la derecha del titular con la barra lateral, y frente al logo sin ella (móvil y anchos menores a 900 px). Nunca a todo lo ancho. La barra lateral mide `clamp(240px, 28vw, 348px)` (348 px en el marco de 1240 px del mock), sin etiqueta "Tus hijos" visible.
 - **Tarjeta**: `--color-surface`, radio 20–22 px, sombra `0 8px 20px rgba(4,37,43,0.07)`, padding 20–22 px. Sin borde gris.
 - **Tarjeta de consulta**: la misma, con barra de acento izquierda de 5 px — `--color-bright` para la más reciente, `#cffafe` para las anteriores.
 - **Campo de formulario**: radio 14 px, borde 1.5 px `#cbd5e1`; enfocado o con valor confirmado, borde 2 px `--color-ink`; sugerido por OCR, borde 2 px `--color-bright`.
 - **Chip de toma**: radio 12 px, alto mínimo 44 px. Tomada: `--color-confirmed` + blanco. Pendiente: `--color-pending-soft` + borde ámbar. Futura: `#f1f5f9` + `#475569` (con `#64748b` el contraste es 4.34:1 y no llega a 4.5:1).
 - **Modal**: radio 24 px, padding 28 px, encabezado con título 24 px/900 y botón de cierre (X) con área táctil de 44 px, acciones alineadas a la derecha (contorno + sólido). El de límite freemium lleva franja superior ámbar con overline "Plan gratuito".
 - **Vacío / agregar**: contorno punteado 2 px `#67e8f9`, radio 22 px, texto 15 px/800 en `--color-action`.
+
+## Detalle del hijo (mock de escritorio)
+
+Tres tarjetas de resumen, columna de consultas y panel a la derecha: *Tomas de hoy* en ámbar (`--color-pending` con texto `--color-on-pending`; verde suave `--color-confirmed-soft` cuando todas están marcadas), *Consultas* en blanco ("desde AAAA") y *Tratamiento activo* en `--color-ink` (overline y nota en `--color-bright`, nombre en blanco 22 px/900). El panel *Tomas de hoy* es una tarjeta con filas de 44 px: hora + medicamento y un chip de 30 px ("Marcar": `--color-pending-soft` con borde ámbar y texto `--color-pending-strong`; "Tomada": `--color-confirmed` con texto blanco). Se implementa en `features/consultations/` (`SummaryCard`, `TodayDosesPanel`). Detalle funcional: `specs/006-resumen-detalle-hijo/`.
 
 ## Logo e iconos
 
@@ -84,7 +90,7 @@ Los tokens se usan como utilidades: `bg-ink`, `text-action`, `bg-confirmed`, `bg
 | Tarjeta de resumen | `SummaryCard` (`features/consultations/`): overline + número de 34 px/900 |
 | Vacío / agregar | `rounded-3xl border-2 border-dashed border-hint-border px-5 py-5 text-base font-extrabold text-action hover:bg-hint` |
 | Header | `<AppHeader eyebrow title action>` de `shared/ui/` |
-| Pantalla con sesión | envolver en `<AppShell activeChildId>` (agrega la barra lateral desde 1024 px) |
+| Pantalla con sesión | envolver en `<AppShell activeChildId>` (agrega la barra lateral desde 900 px) |
 
 Además de los colores: hover con `transition-colors duration-200`, `cursor-pointer` en todo lo clicable, foco visible, mínimo 44 px de alto en todo control (FR-009), contraste ≥ 4.5:1 (FR-008), sin scroll horizontal de 320 a 1920 px.
 

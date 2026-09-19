@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 
-const DESKTOP_QUERY = '(min-width: 1024px)'
+const DESKTOP_QUERY = '(min-width: 900px)'
 
 function subscribe(onChange: () => void) {
   if (typeof window.matchMedia !== 'function') return () => {}
@@ -14,7 +14,7 @@ function getSnapshot() {
 }
 
 /**
- * True at the `lg` breakpoint (≥ 1024px) and above — where the app swaps
+ * True from 900px up (a laptop window snapped or resized narrow still gets the desktop mock) — where the app swaps
  * the single mobile column for the children sidebar (FR-012). Used to
  * render the sidebar conditionally instead of hiding it with CSS, so it
  * never exists twice in the DOM / accessibility tree.

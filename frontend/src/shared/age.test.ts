@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeAge } from './age'
+import { computeAge, formatAgeLong, formatAgeShort } from './age'
 
 // Built from local components (no 'Z'/UTC parsing) so the test is
 // deterministic regardless of the machine's timezone — computeAge itself
@@ -41,5 +41,32 @@ describe('computeAge', () => {
 
   it('clamps to 0 meses for a defensively-invalid future birth date', () => {
     expect(computeAge('2026-09-20', NOW)).toEqual({ value: 0, unit: 'meses' })
+  })
+})
+
+describe('formatAgeLong / formatAgeShort', () => {
+  it('shows years and months past 2 years old', () => {
+    expect(formatAgeLong('2021-03-14', NOW)).toBe('5 años 6 meses')
+    expect(formatAgeShort('2021-03-14', NOW)).toBe('5a 6m')
+  })
+
+  it('drops the months when it is an exact birthday', () => {
+    expect(formatAgeLong('2024-09-16', NOW)).toBe('2 años')
+    expect(formatAgeShort('2024-09-16', NOW)).toBe('2a')
+  })
+
+  it('uses singular forms', () => {
+    expect(formatAgeLong('2025-09-16', NOW)).toBe('12 meses')
+    expect(formatAgeLong('2024-08-16', NOW)).toBe('2 años 1 mes')
+    expect(formatAgeLong('2026-08-16', NOW)).toBe('1 mes')
+  })
+
+  it('shows only months while under 2 years old', () => {
+    expect(formatAgeLong('2025-07-16', NOW)).toBe('14 meses')
+    expect(formatAgeShort('2025-07-16', NOW)).toBe('14m')
+  })
+
+  it('does not count a month that has not completed', () => {
+    expect(formatAgeLong('2026-08-20', NOW)).toBe('0 meses')
   })
 })

@@ -3,6 +3,8 @@ export interface ConsultationSummary {
   id: string
   doctorName: string
   consultDate: string
+  symptoms: string
+  medicationCount: number
 }
 
 // Mirrors contracts/get-consultation-detail.md's response shape.
@@ -29,4 +31,25 @@ export interface ConsultationDetail {
   photoBase64: string
   symptoms: string
   medications: Medication[]
+}
+
+// Mirrors specs/006-resumen-detalle-hijo/contracts/get-overview.md.
+export interface OverviewDose {
+  id: string
+  consultationId: string
+  medicationName: string
+  scheduledAt: string
+  taken: boolean
+}
+
+export interface ActiveTreatment {
+  medicationName: string
+  endsAt: string
+  otherCount: number
+}
+
+export interface ChildOverview {
+  childId: string
+  doses: OverviewDose[]
+  activeTreatment: ActiveTreatment | null
 }

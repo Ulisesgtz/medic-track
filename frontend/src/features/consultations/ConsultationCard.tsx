@@ -1,10 +1,18 @@
 import { Link } from 'react-router-dom'
+import { formatDateShort } from '../../shared/date'
 import type { ConsultationSummary } from './types'
 
 interface ConsultationCardProps {
   consultation: ConsultationSummary
   /** The most recent consultation gets the bright accent bar. */
   isLatest?: boolean
+}
+
+/** "Fiebre y tos · 2 medicamentos"; a visit with no medication reads "sin receta". */
+function subtitle({ symptoms, medicationCount }: ConsultationSummary): string {
+  const meds =
+    medicationCount === 0 ? 'sin receta' : `${medicationCount} ${medicationCount === 1 ? 'medicamento' : 'medicamentos'}`
+  return [symptoms.trim(), meds].filter(Boolean).join(' · ')
 }
 
 /** One consultation's card in the listing: date + doctor (FR-001). Clicking
@@ -19,8 +27,18 @@ export function ConsultationCard({ consultation, isLatest = false }: Consultatio
         aria-hidden="true"
         className={`absolute inset-y-0 left-0 w-[5px] ${isLatest ? 'bg-bright' : 'bg-cyan-100'}`}
       />
-      <p className="text-xl font-extrabold tracking-tight text-ink">{consultation.doctorName}</p>
-      <p className="mt-1 text-sm font-semibold text-action">{consultation.consultDate}</p>
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-[13px] font-bold text-action">{formatDateShort(consultation.consultDate)}</p>
+          <p className="mt-0.5 truncate text-xl font-extrabold tracking-tight text-ink">
+            {consultation.doctorName}
+          </p>
+          <p className="mt-1 truncate text-sm text-slate-600">{subtitle(consultation)}</p>
+        </div>
+        <span aria-hidden="true" className="shrink-0 text-base font-extrabold text-action">
+          Ver →
+        </span>
+      </div>
     </Link>
   )
 }

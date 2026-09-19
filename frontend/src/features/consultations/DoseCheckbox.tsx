@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { updateDoseStatus } from './api'
+import { useDoseToggle } from './useDoseToggle'
 import type { Dose } from './types'
 
 interface DoseCheckboxProps {
@@ -17,14 +16,7 @@ interface DoseCheckboxProps {
  * (FR-016) — there is no "active treatment" concept anywhere in this UI.
  */
 export function DoseCheckbox({ consultationId, dose }: DoseCheckboxProps) {
-  const queryClient = useQueryClient()
-
-  const mutation = useMutation({
-    mutationFn: (taken: boolean) => updateDoseStatus(consultationId, dose.id, taken),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['consultation', consultationId] })
-    },
-  })
+  const mutation = useDoseToggle(consultationId, dose.id)
 
   // Captured once at mount so render stays pure; "future" only tints the chip.
   const [mountedAt] = useState(() => Date.now())
