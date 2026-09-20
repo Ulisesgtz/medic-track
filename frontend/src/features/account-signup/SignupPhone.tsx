@@ -1,12 +1,15 @@
 import { FormField as Field } from '../../shared/ui/FormField'
 import { Logo } from '../../shared/ui/Logo'
+import { GoogleSignupButton } from './GoogleSignupButton'
 import {
   BIRTH_DATE_MESSAGE,
   CHILD_NAME_MESSAGE,
   EMAIL_MESSAGE,
+  PASSWORD_MESSAGE,
   emailValidation,
   nameError,
   nameValidation,
+  passwordValidation,
   positiveNumberValidation,
 } from './validation'
 import type { SignupForm } from './useSignupForm'
@@ -20,15 +23,23 @@ const childField =
 
 /**
  * The phone signup (mock 01): dark header with the value proposition, then
- * the form with the first child ("Hijo 1 · Gratis"). Not the web design —
- * that one is `SignupWeb`; they are never mixed.
+ * the form in the mock's order (Correo, Contraseña, the "Hijo 1 · Gratis"
+ * block, "Crear cuenta"). Not the web design — that one is `SignupWeb`; they
+ * are never mixed.
+ *
+ * Deviations from the mock, by decision: the account also asks for the tutor's
+ * first/last name and (optionally) país/estado, and the child block has
+ * separate Nombre/Apellido plus optional talla/peso (the account model stores
+ * them); "Contraseña" is only validated (min. 8), never sent or stored — the
+ * authentication (Clerk or AWS Cognito) is a later feature (BACKLOG.md); and
+ * "Registrarme con Google" is not in the mock (requested; says "pronto").
  */
 export function SignupPhone({ form }: { form: SignupForm }) {
   const { register, setValue, errors, onSubmit, countryCode, countries, states, isPending, serverError } = form
   const childErrors = errors.children?.[0]
 
   return (
-    <div className="min-h-screen bg-surface">
+    <main className="mx-auto min-h-screen w-full max-w-[430px] bg-surface">
       <header className="bg-ink px-6 pt-6 pb-8">
         <div className="flex items-center gap-3">
           <Logo size={44} />
@@ -45,6 +56,30 @@ export function SignupPhone({ form }: { form: SignupForm }) {
       </header>
 
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-6 px-6 pt-7 pb-9">
+        <Field id="email" text="Correo" error={errors.email ? EMAIL_MESSAGE : undefined}>
+          <input
+            id="email"
+            type="email"
+            size={1}
+            autoComplete="email"
+            placeholder="tu@correo.mx"
+            className={`${tutorField} ${border(!!errors.email, 'border-slate-300')}`}
+            {...register('email', emailValidation)}
+          />
+        </Field>
+
+        <Field id="password" text="Contraseña" error={errors.password ? PASSWORD_MESSAGE : undefined}>
+          <input
+            id="password"
+            type="password"
+            size={1}
+            autoComplete="new-password"
+            placeholder="Mínimo 8 caracteres"
+            className={`${tutorField} ${border(!!errors.password, 'border-slate-300')}`}
+            {...register('password', passwordValidation)}
+          />
+        </Field>
+
         <div className="flex flex-col gap-6">
           <Field id="firstName" text="Tu nombre" error={nameError(errors.firstName, 'El nombre')}>
             <input
@@ -65,18 +100,6 @@ export function SignupPhone({ form }: { form: SignupForm }) {
             />
           </Field>
         </div>
-
-        <Field id="email" text="Correo" error={errors.email ? EMAIL_MESSAGE : undefined}>
-          <input
-            id="email"
-            type="email"
-            size={1}
-            autoComplete="email"
-            placeholder="tu@correo.mx"
-            className={`${tutorField} ${border(!!errors.email, 'border-slate-300')}`}
-            {...register('email', emailValidation)}
-          />
-        </Field>
 
         <div className="flex flex-col gap-6">
           <Field id="countryCode" text="País (opcional)">
@@ -159,7 +182,7 @@ export function SignupPhone({ form }: { form: SignupForm }) {
             />
           </Field>
 
-          <div className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-4">
             <Field
               id="children.0.height"
               text="Talla (cm) (opcional)"
@@ -204,10 +227,13 @@ export function SignupPhone({ form }: { form: SignupForm }) {
         >
           {isPending ? 'Creando cuenta…' : 'Crear cuenta'}
         </button>
+
+        <GoogleSignupButton />
+
         <p className="text-center text-[13px] leading-relaxed text-slate-500">
           El plan gratuito incluye un hijo. Puedes agregar más después.
         </p>
       </form>
-    </div>
+    </main>
   )
 }

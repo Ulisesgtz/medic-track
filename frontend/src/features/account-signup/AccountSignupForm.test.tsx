@@ -47,9 +47,7 @@ async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('Tu nombre'), 'Ana')
   await user.type(screen.getByLabelText('Tu apellido'), 'Gómez')
   await user.type(screen.getByLabelText('Correo'), 'ana@example.com')
-  // Only the web design (mock 11) has a password field.
-  const password = screen.queryByLabelText('Contraseña')
-  if (password) await user.type(password, 'secreto123')
+  await user.type(screen.getByLabelText('Contraseña'), 'secreto123')
   await user.type(byId('children.0.firstName'), 'Luis')
   await user.type(byId('children.0.lastName'), 'Gómez')
   await user.type(byId('children.0.birthDate'), '2020-01-15')
@@ -83,11 +81,10 @@ describe('AccountSignupForm', () => {
       expect(screen.getByRole('button', { name: 'Crear cuenta' })).toBeInTheDocument()
     })
 
-    it('has no password field and no Google button (those belong to the web design for now)', () => {
+    it('is a centered column of at most 430px, as the mock', () => {
       renderForm()
 
-      expect(screen.queryByLabelText('Contraseña')).not.toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: /Google/ })).not.toBeInTheDocument()
+      expect(screen.getByRole('main')).toHaveClass('max-w-[430px]', 'mx-auto')
     })
 
     it('does not use the web split screen: no checklist, no "Crear cuenta" heading', () => {
@@ -125,6 +122,13 @@ describe('AccountSignupForm', () => {
       expect(screen.queryByText('Registra, nunca interpreta. Tu pediatra sigue siendo la única autoridad médica.')).not.toBeInTheDocument()
       expect(screen.queryByText('El plan gratuito incluye un hijo. Puedes agregar más después.')).not.toBeInTheDocument()
     })
+  })
+
+  describe.each([
+    { design: 'phone', web: false },
+    { design: 'web', web: true },
+  ])('form — $design design', ({ web }) => {
+    beforeEach(() => stubMatchMedia(web))
 
     it("follows the mock's order: Correo, Contraseña, then the Hijo 1 block, then Crear cuenta", () => {
       renderForm()
@@ -206,9 +210,7 @@ describe('AccountSignupForm', () => {
       expect(postCalls()).toHaveLength(0)
       expect(screen.queryByText('HOME PAGE')).not.toBeInTheDocument()
     })
-  })
 
-  describe('form (both designs)', () => {
     it('has no way to add or remove children (more are added from the home)', () => {
       renderForm()
 
@@ -283,6 +285,7 @@ describe('AccountSignupForm', () => {
       await user.type(screen.getByLabelText('Tu nombre'), 'María José')
       await user.type(screen.getByLabelText('Tu apellido'), "Núñez-O'Higgins")
       await user.type(screen.getByLabelText('Correo'), 'maria@example.com')
+      await user.type(screen.getByLabelText('Contraseña'), 'secreto123')
       await user.type(byId('children.0.firstName'), 'Iñaki')
       await user.type(byId('children.0.lastName'), 'Núñez')
       await user.type(byId('children.0.birthDate'), '2020-01-15')

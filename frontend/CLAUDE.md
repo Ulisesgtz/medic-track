@@ -68,8 +68,9 @@ Tokens de color y tipografía viven en el bloque `@theme` de `src/index.css`; la
 |---|---|
 | `AccountSignupForm.tsx` | Picks the design with `useIsDesktop`: `SignupPhone` (mock 01: dark header + form) or `SignupWeb` (mock 11: split screen with the checklist), both fed by `useSignupForm` |
 | `useSignupForm.ts` | The form state, validation, catalog, submit and post-signup flow shared by both designs. `serverError` is the only feedback path for server-side rules with no client-side equivalent — don't remove it |
-| `SignupWeb.tsx` | Mock 11 in the mock's order: Correo, Contraseña (validated, **never sent or stored** — auth will be Clerk/AWS Cognito), Tu nombre/apellido, País/Estado, the "Hijo 1 · Gratis" block, "Crear cuenta", and a "Registrarme con Google" button that only says it's coming soon (not in the mock; requested) |
-| `SignupPhone.tsx` | Mock 01. No password or Google button yet (added when that screen is done) |
+| `SignupWeb.tsx` | Mock 11 in the mock's order: Correo, Contraseña (validated, **never sent or stored** — auth will be Clerk/AWS Cognito), Tu nombre/apellido, País/Estado, the "Hijo 1 · Gratis" block, "Crear cuenta", and the Google button |
+| `SignupPhone.tsx` | Mock 01, same order and same password/Google decisions as the web one, in a centered column of at most 430px |
+| `GoogleSignupButton.tsx` | The "o" separator and "Registrarme con Google" shared by both signups |
 | `validation.ts` | `nameValidation`, `emailValidation`, `passwordValidation`, `positiveNumberValidation`, `nameError()` and the mocks' own messages (`EMAIL_MESSAGE`…) — shared by the signup and the "Agregar hijo" modal |
 | `FreemiumLimitModal.tsx` | The plan-limit pop-up (mocks 05/15). Opened by `AddChildDialogs` as soon as the parent taps "Agregar hijo" on the free plan with a child, and by `AddChildModal` if the server answers 422. Focus starts on "Ver planes"; "Entendido"/Escape/backdrop close it |
 | `types.ts` | Form value types + `NAME_PATTERN`/`NAME_MAX_LENGTH` (mirrors backend's `validateNameFormat` — see backend/CLAUDE.md for the sync caveat) |

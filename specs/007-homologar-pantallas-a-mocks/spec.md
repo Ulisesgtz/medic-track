@@ -35,10 +35,10 @@ otro; no hay clases responsivas `lg:` que combinen ambos.
 
 Decididas por el usuario:
 
-- **Contraseña solo validada**: el campo del mock 11 está en el registro web (mínimo 8 caracteres) pero **no se envía ni se guarda**: la autenticación será con Clerk o AWS Cognito (BACKLOG). El registro móvil (mock 01) todavía no lo tiene; se agrega cuando se haga esa pantalla.
-- **Botón "Registrarme con Google"** (no está en el mock; lo pidió el usuario) en el registro web, tras un separador "o". Sin proveedor de autenticación no puede funcionar aún: al tocarlo avisa "El registro con Google estará disponible pronto."
+- **Contraseña solo validada**: el campo del mock 11 está en el registro (móvil 01 y web 11; mínimo 8 caracteres) pero **no se envía ni se guarda**: la autenticación será con Clerk o AWS Cognito (BACKLOG).
+- **Botón "Registrarme con Google"** (no está en el mock; lo pidió el usuario) en ambos registros, tras un separador "o". Sin proveedor de autenticación no puede funcionar aún: al tocarlo avisa "El registro con Google estará disponible pronto."
 - Se **conservan los campos actuales**: tutor y hijo con nombre y apellido separados, país/estado (opcionales),
-  talla/peso (opcionales) — el mock 01/11 tiene "Correo, Contraseña, Nombre y apellido, Fecha". En el registro web quedan dentro del orden del mock: Correo, Contraseña, luego Tu nombre/Tu apellido y País/Estado, y el bloque "Hijo 1 · Gratis". Igual en el modal
+  talla/peso (opcionales) — el mock 01/11 tiene "Correo, Contraseña, Nombre y apellido, Fecha". En ambos registros quedan dentro del orden del mock: Correo, Contraseña, luego Tu nombre/Tu apellido y País/Estado, y el bloque "Hijo 1 · Gratis" (en móvil, columna de máx. 430 px como el mock; Talla y Peso en dos columnas). Igual en el modal
   "Agregar hijo" (el mock tiene "Nombre completo").
 - **"Desde (opcional)"** (hora de inicio) en cada medicamento de "Nueva consulta".
 
@@ -56,8 +56,8 @@ Por límites de datos o del producto:
 - Barra lateral de **280 px** (mocks 13/14/15 finales). El tablero declara 300 px pero, al no tener
   `box-sizing: border-box`, se dibuja de 348 px: es un artefacto del tablero.
 - Punto de corte web/móvil en **900 px** (el mock usa `lg` = 1024 px).
-- La pantalla web de registro es más alta que el mock (994 vs 900 px a 1440 px de ancho) por los campos
-  conservados; el formulario no queda centrado en vertical en ventanas bajas.
+- Los registros son más altos que sus mocks por los campos conservados y el botón de Google: web 1219 vs 900 px
+  (a 1440 px de ancho; el formulario no queda centrado en vertical en ventanas bajas) y móvil ~1600 vs 921 px.
 
 Por accesibilidad (mínimo 4.5:1, prevalece sobre el mock; se marca, no se rompe en silencio):
 
