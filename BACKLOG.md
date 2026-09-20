@@ -10,12 +10,14 @@ y se elimina (o se marca) aquí.
 
 ## Prioridad alta
 
-- **Homologar todas las pantallas a los mocks** (`specs/007-homologar-pantallas-a-mocks/`, rama
-  `feature/007-homologar-pantallas-a-mocks`) — las pantallas de la app no son iguales a los mocks
-  entregados. Regla del proyecto (`CLAUDE.md`): un mock se construye **tal cual** — estructura,
-  secciones, orden, textos, colores y tamaños — y se compara lado a lado. Cada pantalla se entrega solo
-  después de probar todos sus botones y campos de texto. Estado por pantalla y mocks que faltan por
-  entregar: ver la tabla de esa spec.
+- **Autenticación real (login con correo y contraseña)** — siguiente feature. Hoy el registro no pide
+  contraseña (los mocks 01/11 sí traen el campo "Contraseña · Mínimo 8 caracteres"; se omitió a propósito
+  mientras no exista login) y la "sesión" es solo el `account_id` en `localStorage`. Al construirla: agregar el
+  campo al registro tal cual el mock, pantalla de inicio de sesión, y revisar `GET /accounts/{accountId}` y
+  `POST /accounts/{accountId}/children` (hoy sin autenticación).
+- **Homologar todas las pantallas a los mocks** — hecho en `specs/007-homologar-pantallas-a-mocks/`
+  (rama `feature/007-homologar-pantallas-a-mocks`); las desviaciones que quedan están listadas en su spec.
+  Pendiente de esa spec: las pantallas que aún no tienen mock (planes `/planes`, estados vacíos y de error).
 
 ## Backend
 

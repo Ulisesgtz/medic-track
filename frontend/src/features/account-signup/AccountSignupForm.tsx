@@ -1,27 +1,16 @@
-import { useEffect, useState } from 'react'
-import { useForm, useFieldArray, useWatch } from 'react-hook-form'
+import { useEffect } from 'react'
+import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { useCountries, useStates } from '../../shared/catalog/useCatalog'
+import { FormField as Field } from '../../shared/ui/FormField'
+import { Logo } from '../../shared/ui/Logo'
+import { useIsDesktop } from '../../shared/ui/useIsDesktop'
 import { useAccountSignup } from './useAccountSignup'
 import { useAccountSession } from '../home/useAccountSession'
-import { AppHeader } from '../../shared/ui/AppHeader'
-import { ChildFieldset } from './ChildFieldset'
-import { FreemiumLimitModal } from './FreemiumLimitModal'
 import { CreateAccountError, type CreateAccountPayload } from './api'
 import type { AccountSignupFormValues } from './types'
-import { emptyChild, NAME_MAX_LENGTH, NAME_PATTERN } from './types'
-import { errorClass, inputClass, labelClass, optionalClass, overlineClass } from '../../shared/ui/formStyles'
-
-
-// FR-007: the free plan allows at most this many children. There is no paid
-// plan implemented yet (see Supuestos in spec.md), so this is a hardcoded
-// constant for now rather than something read from account state.
-const FREE_PLAN_CHILD_LIMIT = 1
-
-// Letters (incl. accented characters and ñ), spaces, hyphens and
-// apostrophes only — mirrors backend/internal/account/service.go's
-// validateNameFormat, kept as the single source of truth for the rule.
-const nameValidation = { required: true, maxLength: NAME_MAX_LENGTH, pattern: NAME_PATTERN }
+import { emptyChild } from './types'
+import { nameError, nameValidation, positiveNumberValidation } from './validation'
 
 function toPayload(values: AccountSignupFormValues): CreateAccountPayload {
   return {
@@ -40,7 +29,23 @@ function toPayload(values: AccountSignupFormValues): CreateAccountPayload {
   }
 }
 
+const border = (invalid: boolean, normal: string) => (invalid ? 'border-red-600' : normal)
+
+/**
+ * "Crear cuenta". Two separate designs, chosen by the same rule as the rest
+ * of the app (a window of 900px or more is "web"): mockup 01 on the phone
+ * (dark header with the value proposition, then the form) and mockup 11 on
+ * the web (split screen: dark panel with the checklist on the left, the form
+ * on the right). They are never mixed. The first child is part of the form
+ * ("Hijo 1 · Gratis"), as in the mocks; more are added later from the home.
+ *
+ * Deviations from the mocks, by decision: no password field (the app has no
+ * authentication yet — it's the next feature in BACKLOG.md), and the tutor
+ * and child keep separate first/last name fields plus country/state and
+ * height/weight, which the backend model needs.
+ */
 export function AccountSignupForm() {
+  const desktop = useIsDesktop()
   const {
     register,
     control,
@@ -54,13 +59,11 @@ export function AccountSignupForm() {
       email: '',
       countryCode: '',
       stateCode: '',
-      children: [],
+      children: [emptyChild],
     },
   })
 
-  const { fields, append, remove } = useFieldArray({ control, name: 'children' })
   const countryCode = useWatch({ control, name: 'countryCode' })
-
   const { data: countries } = useCountries()
   const { data: states } = useStates(countryCode || undefined)
 
@@ -78,211 +81,280 @@ export function AccountSignupForm() {
     }
   }, [signup.isSuccess, signup.data, setAccountId, navigate])
 
-  // FR-007: attempting to add a child beyond the free-plan limit shows the
-  // pop-up modal immediately, but does NOT create/reveal that child's fieldset.
-  const [freemiumBlocked, setFreemiumBlocked] = useState(false)
-
-  const showFreemiumModal =
-    freemiumBlocked ||
-    (signup.isError &&
-      signup.error instanceof CreateAccountError &&
-      signup.error.kind === 'freemium_child_limit_exceeded')
-
-  function handleAddChild() {
-    if (fields.length >= FREE_PLAN_CHILD_LIMIT) {
-      setFreemiumBlocked(true)
-      return
-    }
-    append(emptyChild)
-  }
-
-  function handleStayFree() {
-    setFreemiumBlocked(false)
-    if (signup.isError) {
-      signup.reset()
-    }
-  }
-
   const onSubmit = handleSubmit((values) => {
     signup.mutate(toPayload(values))
   })
 
-  return (
+  const childErrors = errors.children?.[0]
+  const emailTaken =
+    signup.isError && signup.error instanceof CreateAccountError && signup.error.kind === 'email_already_exists'
+
+  // Mock 01: `rounded-2xl py-3.5` fields; mock 11: `rounded-xl py-3`.
+  const tutorField = `min-h-11 w-full min-w-0 border-[1.5px] px-4 text-base font-medium text-ink placeholder:text-slate-400 focus:border-2 focus:border-ink focus:outline-none ${
+    desktop ? 'rounded-xl py-3' : 'rounded-2xl py-3.5'
+  }`
+  const childField =
+    'min-h-11 w-full min-w-0 rounded-xl border-[1.5px] bg-surface px-4 py-3 text-base font-medium text-ink placeholder:text-slate-400 focus:border-2 focus:border-ink focus:outline-none'
+  // Two-column rows only on the web layout.
+  const pair = desktop ? 'grid grid-cols-2 gap-4' : 'flex flex-col gap-6'
+  const childPair = desktop ? 'grid grid-cols-2 gap-4' : 'flex flex-col gap-4'
+
+  const form = (
     <form
       onSubmit={onSubmit}
       noValidate
-      className="overflow-hidden bg-surface shadow-[0_8px_20px_rgba(4,37,43,0.07)] md:rounded-3xl"
+      className={
+        desktop ? 'flex w-full max-w-[520px] flex-col gap-6' : 'flex flex-col gap-6 px-6 pt-7 pb-9'
+      }
     >
-      <AppHeader title="Crear cuenta">
-        <p className="max-w-md text-base leading-relaxed text-white/80">
-          Registra tus datos y, si quieres, agrega a tus hijos para empezar a llevar su bitácora.
-        </p>
-      </AppHeader>
-
-      <div className="space-y-9 px-5 py-8 md:px-10 md:py-10">
-      <section className="space-y-5">
-        <h2 className={overlineClass}>Datos del tutor</h2>
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label className={labelClass} htmlFor="firstName">
-              Nombre
-            </label>
-            <input id="firstName" className={inputClass} {...register('firstName', nameValidation)} />
-            {errors.firstName?.type === 'required' && (
-              <span role="alert" className={errorClass}>El nombre es obligatorio</span>
-            )}
-            {errors.firstName?.type === 'maxLength' && (
-              <span role="alert" className={errorClass}>El nombre debe tener máximo 100 caracteres</span>
-            )}
-            {errors.firstName?.type === 'pattern' && (
-              <span role="alert" className={errorClass}>El nombre solo puede contener letras, espacios, guiones y apóstrofes</span>
-            )}
-          </div>
-
-          <div>
-            <label className={labelClass} htmlFor="lastName">
-              Apellido
-            </label>
-            <input id="lastName" className={inputClass} {...register('lastName', nameValidation)} />
-            {errors.lastName?.type === 'required' && (
-              <span role="alert" className={errorClass}>El apellido es obligatorio</span>
-            )}
-            {errors.lastName?.type === 'maxLength' && (
-              <span role="alert" className={errorClass}>El apellido debe tener máximo 100 caracteres</span>
-            )}
-            {errors.lastName?.type === 'pattern' && (
-              <span role="alert" className={errorClass}>El apellido solo puede contener letras, espacios, guiones y apóstrofes</span>
-            )}
-          </div>
-        </div>
-
+      {desktop && (
         <div>
-          <label className={labelClass} htmlFor="email">
-            Correo electrónico
-          </label>
-          <input
-            id="email"
-            type="email"
-            className={inputClass}
-            {...register('email', { required: true })}
-          />
-          {errors.email && <span role="alert" className={errorClass}>El correo es obligatorio</span>}
+          <h2 className="text-3xl font-black tracking-tight text-ink">Crear cuenta</h2>
+          <p className="mt-2 text-base text-slate-600">Empieza con el primer hijo; puedes agregar más después.</p>
         </div>
+      )}
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label className={labelClass} htmlFor="countryCode">
-              País <span className={optionalClass}>(opcional)</span>
-            </label>
-            <select
-              id="countryCode"
-              className={inputClass}
-              {...register('countryCode', {
-                // A previously-selected estado belongs to the previous país
-                // and must not be silently carried over/submitted (a stale
-                // country/state pair would otherwise be persisted as-is,
-                // since the backend only checks each code exists, not that
-                // they match each other).
-                onChange: () => setValue('stateCode', ''),
-              })}
-            >
-              <option value="">Selecciona un país</option>
-              {countries?.map((c) => (
-                <option key={c.code} value={c.code}>
-                  {c.name}
+      <div className={pair}>
+        <Field id="firstName" text="Tu nombre" error={nameError(errors.firstName, 'El nombre')}>
+          <input
+            id="firstName"
+            size={1}
+            autoComplete="given-name"
+            className={`${tutorField} ${border(!!errors.firstName, 'border-slate-300')}`}
+            {...register('firstName', nameValidation)}
+          />
+        </Field>
+        <Field id="lastName" text="Tu apellido" error={nameError(errors.lastName, 'El apellido')}>
+          <input
+            id="lastName"
+            size={1}
+            autoComplete="family-name"
+            className={`${tutorField} ${border(!!errors.lastName, 'border-slate-300')}`}
+            {...register('lastName', nameValidation)}
+          />
+        </Field>
+      </div>
+
+      <Field id="email" text="Correo" error={errors.email ? 'Escribe un correo válido.' : undefined}>
+        <input
+          id="email"
+          type="email"
+          size={1}
+          autoComplete="email"
+          placeholder="tu@correo.mx"
+          className={`${tutorField} ${border(!!errors.email, 'border-slate-300')}`}
+          {...register('email', { required: true })}
+        />
+      </Field>
+
+      <div className={pair}>
+        <Field id="countryCode" text="País (opcional)">
+          <select
+            id="countryCode"
+            className={`${tutorField} border-slate-300 bg-surface`}
+            {...register('countryCode', {
+              // A previously-selected estado belongs to the previous país
+              // and must not be silently carried over/submitted (a stale
+              // country/state pair would otherwise be persisted as-is,
+              // since the backend only checks each code exists, not that
+              // they match each other).
+              onChange: () => setValue('stateCode', ''),
+            })}
+          >
+            <option value="">Selecciona un país</option>
+            {countries?.map((c) => (
+              <option key={c.code} value={c.code}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        {countryCode && states && states.length > 0 && (
+          <Field id="stateCode" text="Estado (opcional)">
+            <select id="stateCode" className={`${tutorField} border-slate-300 bg-surface`} {...register('stateCode')}>
+              <option value="">Selecciona un estado</option>
+              {states.map((s) => (
+                <option key={s.code} value={s.code}>
+                  {s.name}
                 </option>
               ))}
             </select>
-          </div>
+          </Field>
+        )}
+      </div>
 
-          {countryCode && states && states.length > 0 && (
-            <div>
-              <label className={labelClass} htmlFor="stateCode">
-                Estado <span className={optionalClass}>(opcional)</span>
-              </label>
-              <select id="stateCode" className={inputClass} {...register('stateCode')}>
-                <option value="">Selecciona un estado</option>
-                {states.map((s) => (
-                  <option key={s.code} value={s.code}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section className="space-y-5">
-        <div>
-          <h2 className={overlineClass}>Hijos</h2>
-          <p className="mt-2 text-base text-slate-600">
-            El plan gratuito incluye un hijo. Puedes agregar más y decidir después.
-          </p>
+      <fieldset
+        aria-label="Hijo 1"
+        data-testid="child-fieldset-0"
+        className={`flex min-w-0 flex-col gap-4 rounded-3xl border-[1.5px] border-hint-border bg-hint ${desktop ? 'p-6' : 'p-5'}`}
+      >
+        <div className="flex items-center justify-between">
+          <legend className="rounded-full bg-action px-3 py-1.5 text-xs font-extrabold tracking-wider text-white uppercase">
+            Hijo 1
+          </legend>
+          <span className="text-[13px] font-semibold text-action">Gratis</span>
         </div>
 
-        <div className="space-y-4">
-          {fields.map((field, index) => (
-            <ChildFieldset
-              key={field.id}
-              index={index}
-              register={register}
-              errors={errors}
-              onRemove={() => remove(index)}
+        <div className={childPair}>
+          <Field id="children.0.firstName" text="Nombre" error={nameError(childErrors?.firstName, 'El nombre del hijo')}>
+            <input
+              id="children.0.firstName"
+              size={1}
+              placeholder="Nombre"
+              className={`${childField} ${border(!!childErrors?.firstName, 'border-[#67e8f9]')}`}
+              {...register('children.0.firstName', nameValidation)}
             />
-          ))}
+          </Field>
+          <Field id="children.0.lastName" text="Apellido" error={nameError(childErrors?.lastName, 'El apellido del hijo')}>
+            <input
+              id="children.0.lastName"
+              size={1}
+              placeholder="Apellido"
+              className={`${childField} ${border(!!childErrors?.lastName, 'border-[#67e8f9]')}`}
+              {...register('children.0.lastName', nameValidation)}
+            />
+          </Field>
         </div>
 
-        <button
-          type="button"
-          onClick={handleAddChild}
-          className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-2xl border-2 border-action px-5 py-2.5 text-base font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+        <Field
+          id="children.0.birthDate"
+          text="Fecha de nacimiento"
+          error={childErrors?.birthDate ? 'Elige la fecha de nacimiento.' : undefined}
         >
-          <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m-7-7h14" />
-          </svg>
-          Agregar hijo
-        </button>
-      </section>
+          <input
+            id="children.0.birthDate"
+            type="date"
+            size={1}
+            className={`${childField} ${border(!!childErrors?.birthDate, 'border-[#67e8f9]')}`}
+            {...register('children.0.birthDate', { required: true })}
+          />
+        </Field>
 
-      {showFreemiumModal && (
-        <FreemiumLimitModal
-          onViewPlans={() => window.location.assign('/planes')}
-          onStayFree={handleStayFree}
-        />
+        <div className={childPair}>
+          <Field
+            id="children.0.height"
+            text="Talla (cm) (opcional)"
+            error={childErrors?.height?.type === 'min' ? 'La talla debe ser un número positivo' : undefined}
+          >
+            <input
+              id="children.0.height"
+              type="number"
+              step="0.1"
+              size={1}
+              className={`${childField} ${border(!!childErrors?.height, 'border-[#67e8f9]')}`}
+              {...register('children.0.height', positiveNumberValidation)}
+            />
+          </Field>
+          <Field
+            id="children.0.weight"
+            text="Peso (kg) (opcional)"
+            error={childErrors?.weight?.type === 'min' ? 'El peso debe ser un número positivo' : undefined}
+          >
+            <input
+              id="children.0.weight"
+              type="number"
+              step="0.1"
+              size={1}
+              className={`${childField} ${border(!!childErrors?.weight, 'border-[#67e8f9]')}`}
+              {...register('children.0.weight', positiveNumberValidation)}
+            />
+          </Field>
+        </div>
+      </fieldset>
+
+      {emailTaken && (
+        <p role="alert" className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-800">
+          Este correo ya está en uso.
+        </p>
       )}
 
-      {signup.isError &&
-        signup.error instanceof CreateAccountError &&
-        signup.error.kind === 'email_already_exists' && (
-          <p role="alert" className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-800">
-            Este correo ya está en uso.
-          </p>
-        )}
-
       {/* Fallback for any other server rejection (e.g. a field the client
-          didn't validate, like a negative height/weight, or an unexpected
-          network/response error) — without this, those errors previously
-          failed silently with the Guardar button just stopping. */}
-      {signup.isError &&
-        !showFreemiumModal &&
-        !(signup.error instanceof CreateAccountError && signup.error.kind === 'email_already_exists') && (
-          <p role="alert" className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-800">
-            {signup.error instanceof CreateAccountError
-              ? (signup.error.message ?? 'Ocurrió un error al guardar la cuenta. Intenta de nuevo.')
-              : 'Ocurrió un error al guardar la cuenta. Intenta de nuevo.'}
-          </p>
-        )}
+          didn't validate, or an unexpected network/response error) — the
+          only feedback path for server-side rules with no client-side equivalent. */}
+      {signup.isError && !emailTaken && (
+        <p role="alert" className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-800">
+          {signup.error instanceof CreateAccountError
+            ? (signup.error.message ?? 'Ocurrió un error al guardar la cuenta. Intenta de nuevo.')
+            : 'Ocurrió un error al guardar la cuenta. Intenta de nuevo.'}
+        </p>
+      )}
 
       <button
         type="submit"
         disabled={signup.isPending}
-        className="min-h-11 w-full cursor-pointer rounded-2xl bg-confirmed px-8 py-3.5 text-base font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-confirmed focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:w-auto"
+        className="min-h-11 cursor-pointer rounded-2xl bg-confirmed py-4 text-base font-extrabold text-white transition-colors hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {signup.isPending ? 'Guardando…' : 'Guardar'}
+        {signup.isPending ? 'Creando cuenta…' : 'Crear cuenta'}
       </button>
-      </div>
+      {desktop ? (
+        <p className="text-[13px] leading-relaxed text-slate-500">
+          Al crear la cuenta aceptas que los datos se guardan para tu uso personal. No se comparten con terceros.
+        </p>
+      ) : (
+        <p className="text-center text-[13px] leading-relaxed text-slate-500">
+          El plan gratuito incluye un hijo. Puedes agregar más después.
+        </p>
+      )}
     </form>
+  )
+
+  // ---- Web (mock 11): split screen.
+  if (desktop) {
+    return (
+      <div className="flex min-h-screen">
+        <section className="flex w-[46%] flex-col justify-between gap-10 bg-ink px-16 py-16">
+          <div className="flex items-center gap-3">
+            <Logo size={44} />
+            <span className="text-2xl font-black tracking-tight text-white">
+              Pedi<span className="text-[#67e8f9]">Track</span>
+            </span>
+          </div>
+          <div className="max-w-md">
+            <h1 className="text-5xl leading-[1.05] font-black tracking-tight text-white">
+              La bitácora médica de tus hijos, en un solo lugar.
+            </h1>
+            <p className="mt-6 text-lg leading-relaxed text-[#a5f3fc]">
+              Registra consultas, recetas y tomas de medicamento. La app registra datos, nunca los interpreta.
+            </p>
+          </div>
+          <ul className="flex flex-col gap-3.5">
+            {[
+              'El OCR de la receta corre en tu dispositivo.',
+              'Tu pediatra sigue siendo la única autoridad médica.',
+              'El plan gratuito incluye un hijo.',
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-3 text-[15px] leading-relaxed text-[#cffafe]">
+                <span className="mt-0.5 text-bright" aria-hidden="true">
+                  ✓
+                </span>
+                {item}
+              </li>
+            ))}
+          </ul>
+        </section>
+        <section className="flex flex-1 items-center justify-center bg-surface px-16 py-12">{form}</section>
+      </div>
+    )
+  }
+
+  // ---- Phone (mock 01): dark header, then the form.
+  return (
+    <div className="min-h-screen bg-surface">
+      <header className="bg-ink px-6 pt-6 pb-8">
+        <div className="flex items-center gap-3">
+          <Logo size={44} />
+          <span className="text-2xl font-black tracking-tight text-white">
+            Pedi<span className="text-[#67e8f9]">Track</span>
+          </span>
+        </div>
+        <h1 className="mt-6 text-3xl leading-tight font-black tracking-tight text-white">
+          La bitácora médica de tus hijos, en un solo lugar.
+        </h1>
+        <p className="mt-4 text-[15px] leading-relaxed text-[#a5f3fc]">
+          Registra, nunca interpreta. Tu pediatra sigue siendo la única autoridad médica.
+        </p>
+      </header>
+      {form}
+    </div>
   )
 }

@@ -18,7 +18,7 @@ function DoseRow({ dose }: DoseRowProps) {
 
   return (
     <li className="flex min-h-11 items-center justify-between gap-3">
-      <span className="min-w-0 truncate text-[15px] font-semibold text-ink">
+      <span className="min-w-0 truncate text-[15px] font-bold text-ink">
         {time} {dose.medicationName}
       </span>
       <button
@@ -33,10 +33,10 @@ function DoseRow({ dose }: DoseRowProps) {
       >
         <span
           aria-hidden="true"
-          className={`inline-flex h-[30px] min-w-[68px] items-center justify-center rounded-[10px] border px-3 text-[13px] font-extrabold transition-colors duration-200 ${
+          className={`inline-flex items-center justify-center rounded-[10px] px-3 py-2 text-[13px] font-extrabold transition-colors duration-200 ${
             dose.taken
-              ? 'border-confirmed bg-confirmed text-white'
-              : 'border-pending bg-pending-soft text-pending-strong'
+              ? 'bg-confirmed text-white'
+              : 'border-[1.5px] border-pending bg-pending-soft text-[#92400e]'
           }`}
         >
           {dose.taken ? 'Tomada' : 'Marcar'}
@@ -53,14 +53,14 @@ interface TodayDosesPanelProps {
   className?: string
 }
 
-/** The "Tomas de hoy" panel of the child detail: today's doses, markable in place. */
+/** The "Tomas de hoy" panel of the desktop child detail (board screen 6): today's doses, markable in place. */
 export function TodayDosesPanel({ doses, status, className = '' }: TodayDosesPanelProps) {
   return (
     <section
       aria-labelledby="today-doses-title"
-      className={`rounded-3xl bg-surface p-6 shadow-[0_8px_20px_rgba(4,37,43,0.07)] ${className}`}
+      className={`rounded-[20px] bg-surface p-6 shadow-[0_8px_20px_rgba(4,37,43,0.07)] ${className}`}
     >
-      <h2 id="today-doses-title" className="text-lg font-black tracking-tight text-ink">
+      <h2 id="today-doses-title" className="text-lg font-black tracking-[-0.02em] text-ink">
         Tomas de hoy
       </h2>
       {status === 'loading' && <p className="mt-4 text-[15px] text-slate-600">Cargando…</p>}

@@ -4,15 +4,30 @@ import userEvent from '@testing-library/user-event'
 import { FreemiumLimitModal } from './FreemiumLimitModal'
 
 describe('FreemiumLimitModal', () => {
-  it('shows the freemium limit message as a dialog', () => {
+  it('shows the plan-limit message from the mockups as a dialog', () => {
     render(<FreemiumLimitModal onViewPlans={() => {}} onStayFree={() => {}} />)
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
-    expect(screen.getByText('El plan gratuito incluye solo un hijo por cuenta')).toBeInTheDocument()
-    expect(screen.getByText(/contrata el plan completo/i)).toBeInTheDocument()
+    const dialog = screen.getByRole('dialog', { name: 'Llegaste a un hijo registrado' })
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(screen.getByText('Plan gratuito')).toBeInTheDocument()
+    expect(screen.getByText(/Para dar de alta a otro hijo necesitas ampliar tu plan/)).toBeInTheDocument()
+    expect(screen.getByText(/Tus datos actuales se mantienen intactos\./)).toBeInTheDocument()
   })
 
-  it('calls onViewPlans when "Ver planes" is clicked', async () => {
+  it('names the existing child in the message on wide layouts', () => {
+    render(<FreemiumLimitModal onViewPlans={() => {}} onStayFree={() => {}} childName="Mateo" />)
+
+    expect(screen.getByText(/Mateo sigue disponible sin cambios/)).toBeInTheDocument()
+  })
+
+  it('renders into <body>, outside whatever opened it', () => {
+    const { container } = render(<FreemiumLimitModal onViewPlans={() => {}} onStayFree={() => {}} />)
+
+    expect(container).toBeEmptyDOMElement()
+    expect(document.body.contains(screen.getByRole('dialog'))).toBe(true)
+  })
+
+  it('calls onViewPlans when "Ver planes" is clicked, and the button reads "Abriendo planes…"', async () => {
     const user = userEvent.setup()
     const onViewPlans = vi.fn()
     render(<FreemiumLimitModal onViewPlans={onViewPlans} onStayFree={() => {}} />)
@@ -20,14 +35,15 @@ describe('FreemiumLimitModal', () => {
     await user.click(screen.getByRole('button', { name: 'Ver planes' }))
 
     expect(onViewPlans).toHaveBeenCalledOnce()
+    expect(screen.getByRole('button', { name: 'Abriendo planes…' })).toBeInTheDocument()
   })
 
-  it('calls onStayFree when "Quedarme con el plan gratuito" is clicked', async () => {
+  it('calls onStayFree when "Entendido" is clicked', async () => {
     const user = userEvent.setup()
     const onStayFree = vi.fn()
     render(<FreemiumLimitModal onViewPlans={() => {}} onStayFree={onStayFree} />)
 
-    await user.click(screen.getByRole('button', { name: 'Quedarme con el plan gratuito' }))
+    await user.click(screen.getByRole('button', { name: 'Entendido' }))
 
     expect(onStayFree).toHaveBeenCalledOnce()
   })
@@ -35,9 +51,9 @@ describe('FreemiumLimitModal', () => {
   it('calls onStayFree when clicking the overlay outside the dialog', async () => {
     const user = userEvent.setup()
     const onStayFree = vi.fn()
-    const { container } = render(<FreemiumLimitModal onViewPlans={() => {}} onStayFree={onStayFree} />)
+    render(<FreemiumLimitModal onViewPlans={() => {}} onStayFree={onStayFree} />)
 
-    await user.click(container.firstChild as Element)
+    await user.click(screen.getByRole('dialog').parentElement as Element)
 
     expect(onStayFree).toHaveBeenCalledOnce()
   })
@@ -62,26 +78,25 @@ describe('FreemiumLimitModal', () => {
     expect(onStayFree).toHaveBeenCalledOnce()
   })
 
-  it('traps Tab focus between the two buttons instead of letting it escape the dialog', async () => {
+  it('starts on "Ver planes", traps Tab between the two buttons, and gives focus back to the opener', async () => {
     const user = userEvent.setup()
-    render(<FreemiumLimitModal onViewPlans={() => {}} onStayFree={() => {}} />)
+    const opener = document.createElement('button')
+    document.body.append(opener)
+    opener.focus()
+    const { unmount } = render(<FreemiumLimitModal onViewPlans={() => {}} onStayFree={() => {}} />)
 
-    const stayButton = screen.getByRole('button', { name: 'Quedarme con el plan gratuito' })
+    const stayButton = screen.getByRole('button', { name: 'Entendido' })
     const viewPlansButton = screen.getByRole('button', { name: 'Ver planes' })
-    expect(stayButton).toHaveFocus()
-
-    await user.tab()
     expect(viewPlansButton).toHaveFocus()
 
-    await user.tab()
+    await user.tab() // last -> wraps to the first
     expect(stayButton).toHaveFocus()
 
-    await user.tab({ shift: true })
+    await user.tab({ shift: true }) // first -> wraps to the last
     expect(viewPlansButton).toHaveFocus()
 
-    // Shift+Tab from viewPlansButton (not the trap's wrap-point) falls
-    // through to the browser's normal backward-tab behavior.
-    await user.tab({ shift: true })
-    expect(stayButton).toHaveFocus()
+    unmount()
+    expect(opener).toHaveFocus()
+    opener.remove()
   })
 })

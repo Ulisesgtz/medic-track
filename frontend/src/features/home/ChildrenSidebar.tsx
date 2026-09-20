@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { formatAgeShort } from '../../shared/age'
 import { Logo } from '../../shared/ui/Logo'
 import { fetchAccount } from './api'
-import { AddChildModal } from './AddChildModal'
+import { AddChildDialogs } from './AddChildDialogs'
 
 interface ChildrenSidebarProps {
   accountId: string
@@ -13,9 +13,11 @@ interface ChildrenSidebarProps {
 }
 
 /**
- * Persistent children list for desktop (≥ 900px, FR-012): switch between
- * children without going back to the home. Reads the same ['account', id]
- * query the home page uses, so it costs no extra request.
+ * Persistent children list for desktop (≥ 900px, FR-012), built from the
+ * delivered desktop mockups (12–15): 280px ink column with the logo, one row
+ * per child (first name + short age, the open one in --color-action), a dashed
+ * "+ Agregar hijo" and the tutor with the plan at the bottom. Reads the same
+ * ['account', id] query the home uses, so it costs no extra request.
  */
 export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarProps) {
   const [showAddChild, setShowAddChild] = useState(false)
@@ -27,15 +29,15 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
   const account = query.data
 
   return (
-    <aside className="sticky top-0 flex h-screen flex-col gap-6 overflow-y-auto bg-ink p-6">
-      <Link to="/home" className="flex min-h-11 items-center gap-2.5" aria-label="PediTrack — ir a mi home">
+    <aside className="sticky top-0 flex h-screen w-[280px] shrink-0 flex-col gap-8 overflow-y-auto bg-ink px-6 py-7">
+      <Link to="/home" className="-my-[5px] flex min-h-11 items-center gap-2.5" aria-label="PediTrack — ir a mi home">
         <Logo size={34} />
-        <span className="text-[19px] font-black tracking-tight text-white">
-          Pedi<span className="text-bright">Track</span>
+        <span className="text-lg font-black tracking-tight text-white">
+          Pedi<span className="text-[#67e8f9]">Track</span>
         </span>
       </Link>
 
-      <nav aria-label="Tus hijos" className="flex flex-1 flex-col gap-2">
+      <nav aria-label="Tus hijos" className="flex flex-col gap-2.5">
         {account?.children.map((child) => {
           const isActive = child.id === activeChildId
           return (
@@ -43,20 +45,17 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
               key={child.id}
               to={`/children/${child.id}`}
               aria-current={isActive ? 'page' : undefined}
-              className={`flex min-h-12 items-center justify-between gap-3 rounded-2xl px-4 py-2 transition-colors duration-200 ${
+              className={`flex items-center justify-between gap-3 rounded-2xl px-4 py-3.5 transition-colors duration-200 ${
                 isActive ? 'bg-action' : 'hover:bg-ink-soft'
               }`}
             >
               <span
-                className={`min-w-0 truncate text-base font-extrabold tracking-tight ${
-                  isActive ? 'text-white' : 'text-[#bff6fd]'
-                }`}
+                className={`min-w-0 truncate text-base ${isActive ? 'font-extrabold text-white' : 'font-bold text-[#a5f3fc]'}`}
               >
                 {child.firstName}
               </span>
-              <span
-                className={`shrink-0 text-[13px] font-bold ${isActive ? 'text-[#c3ffff]' : 'text-[#62909d]'}`}
-              >
+              {/* Inactive age: #62909d (the mock's #5b8b94 is 4.3:1 on ink, under the 4.5:1 minimum). */}
+              <span className={`shrink-0 text-[13px] font-semibold ${isActive ? 'text-[#cffafe]' : 'text-[#62909d]'}`}>
                 {formatAgeShort(child.birthDate)}
               </span>
             </Link>
@@ -66,36 +65,39 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
         <button
           type="button"
           onClick={() => setShowAddChild(true)}
-          className="mt-2 flex min-h-11 w-full cursor-pointer items-center justify-center gap-1.5 rounded-2xl border border-dashed border-[#244c54] px-4 py-2 text-sm font-bold text-[#76e4ff] transition-colors duration-200 hover:bg-ink-soft"
+          className="cursor-pointer rounded-2xl border-[1.5px] border-dashed border-[#0b5763] px-4 py-3.5 text-center text-sm font-bold text-[#67e8f9] transition-colors duration-200 hover:bg-ink-soft"
         >
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 5v14m-7-7h14" />
-          </svg>
-          Agregar hijo
+          + Agregar hijo
         </button>
       </nav>
 
       {account && (
-        <div className="flex items-center gap-3 border-t border-white/15 pt-4">
+        <div className="mt-auto flex items-center gap-3 border-t border-ink-soft pt-5">
           <span
             aria-hidden="true"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-action text-xs font-black text-white"
+            className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-action text-sm font-extrabold text-white"
           >
             {account.firstName.charAt(0)}
             {account.lastName.charAt(0)}
           </span>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-extrabold text-white">
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-bold text-white">
               {account.firstName} {account.lastName}
-            </p>
-            <p className="mt-0.5 text-xs font-semibold text-bright">
+            </span>
+            <span className="block text-xs text-[#67e8f9]">
               {account.plan === 'free' ? 'Plan gratuito' : 'Plan completo'}
-            </p>
-          </div>
+            </span>
+          </span>
         </div>
       )}
 
-      {showAddChild && <AddChildModal accountId={accountId} onClose={() => setShowAddChild(false)} />}
+      <AddChildDialogs
+        accountId={accountId}
+        account={account}
+        open={showAddChild}
+        onClose={() => setShowAddChild(false)}
+        showChildName
+      />
     </aside>
   )
 }

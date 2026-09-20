@@ -16,6 +16,26 @@ function renderHome() {
   )
 }
 
+/** Every request gets an answer shaped like the real API: the account, a child's consultations, or its overview. */
+function stubApi(account: unknown, { consultations = [], doses = [] }: { consultations?: unknown[]; doses?: unknown[] } = {}) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      const body = url.includes('/overview')
+        ? { childId: 'child-1', doses, activeTreatment: null }
+        : url.includes('/consultations')
+          ? { consultations }
+          : account
+      return { ok: true, json: async () => body } as Response
+    }),
+  )
+}
+
+const dose = (taken: boolean) => ({
+  id: `d-${Math.random()}`, consultationId: 'c1', medicationName: 'Amoxicilina', scheduledAt: '2026-01-15T14:00:00Z', taken,
+})
+
 describe('HomePage', () => {
   beforeEach(() => {
     window.localStorage.clear()
@@ -52,42 +72,47 @@ describe('HomePage', () => {
 
   it('lists a card per child with name and age (FR-001)', async () => {
     window.localStorage.setItem('peditrack.accountId', 'account-with-child')
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          id: 'account-with-child', firstName: 'Ana', lastName: 'Gómez', email: 'ana@example.com',
-          countryCode: null, stateCode: null, plan: 'free',
-          children: [{ id: 'child-1', firstName: 'Luis', lastName: 'Gómez', birthDate: '2020-01-15', height: null, weight: null }],
-        }),
-      }),
-    )
+    stubApi({
+        id: 'account-with-child', firstName: 'Ana', lastName: 'Gómez', email: 'ana@example.com',
+        countryCode: null, stateCode: null, plan: 'free',
+        children: [{ id: 'child-1', firstName: 'Luis', lastName: 'Gómez', birthDate: '2020-01-15', height: null, weight: null }],
+      })
     renderHome()
 
     expect(await screen.findByText('Luis Gómez')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Luis Gómez/ })).toHaveAttribute('href', '/children/child-1')
   })
 
-  it('opens the AddChildModal when "Agregar hijo" is clicked (FR-004)', async () => {
+  it('opens the AddChildModal when "Agregar hijo" is clicked and the plan has room (FR-004)', async () => {
     const user = userEvent.setup()
     window.localStorage.setItem('peditrack.accountId', 'account-with-child')
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          id: 'account-with-child', firstName: 'Ana', lastName: 'Gómez', email: 'ana@example.com',
-          countryCode: null, stateCode: null, plan: 'free',
-          children: [{ id: 'child-1', firstName: 'Luis', lastName: 'Gómez', birthDate: '2020-01-15', height: null, weight: null }],
-        }),
-      }),
-    )
+    stubApi({
+        id: 'account-with-child', firstName: 'Ana', lastName: 'Gómez', email: 'ana@example.com',
+        countryCode: null, stateCode: null, plan: 'paid',
+        children: [{ id: 'child-1', firstName: 'Luis', lastName: 'Gómez', birthDate: '2020-01-15', height: null, weight: null }],
+      })
     renderHome()
 
-    await user.click(await screen.findByRole('button', { name: 'Agregar hijo' }))
+    await user.click(await screen.findByRole('button', { name: /Agregar hijo/ }))
 
-    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'Agregar hijo' })).toBeInTheDocument()
+  })
+
+  it('shows the plan-limit pop-up right away, without a form, on the free plan with a child (mockups 05/15)', async () => {
+    const user = userEvent.setup()
+    window.localStorage.setItem('peditrack.accountId', 'account-free')
+    stubApi({
+        id: 'account-free', firstName: 'Ana', lastName: 'Gómez', email: 'ana@example.com',
+        countryCode: null, stateCode: null, plan: 'free',
+        children: [{ id: 'child-1', firstName: 'Luis', lastName: 'Gómez', birthDate: '2020-01-15', height: null, weight: null }],
+      })
+    renderHome()
+
+    await user.click(await screen.findByRole('button', { name: /Agregar hijo/ }))
+
+    expect(await screen.findByRole('dialog', { name: 'Llegaste a un hijo registrado' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Nombre')).not.toBeInTheDocument()
+    expect(screen.getByText('El plan gratuito incluye un hijo.')).toBeInTheDocument()
   })
 
   it('clears the saved account id and shows the invitation when the account no longer exists (Caso Límite)', async () => {
@@ -104,6 +129,77 @@ describe('HomePage', () => {
 
     expect(await screen.findByText('Bienvenido a PediTrack')).toBeInTheDocument()
     expect(window.localStorage.getItem('peditrack.accountId')).toBeNull()
+  })
+
+  describe('child card chips on the phone (board screen 2)', () => {
+    const account = {
+      id: 'account-chips', firstName: 'Ana', lastName: 'Morales', email: 'ana@example.com',
+      countryCode: null, stateCode: null, plan: 'free',
+      children: [{ id: 'child-1', firstName: 'Mateo', lastName: 'Morales', birthDate: '2021-03-14', height: null, weight: null }],
+    }
+    const consultation = (id: string) => ({ id, doctorName: 'Dra. López', consultDate: '2026-01-15', symptoms: '', medicationCount: 1 })
+
+    beforeEach(() => window.localStorage.setItem('peditrack.accountId', 'account-chips'))
+
+    it('greets the tutor and shows their initials in the header', async () => {
+      stubApi(account)
+      renderHome()
+
+      expect(await screen.findByText('Hola, Ana')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { level: 1, name: 'Tus hijos' })).toBeInTheDocument()
+      expect(screen.getByText('AM')).toBeInTheDocument()
+    })
+
+    it('shows how many consultations the child has, and the doses still unmarked today', async () => {
+      stubApi(account, { consultations: [consultation('c1'), consultation('c2')], doses: [dose(false), dose(false), dose(true)] })
+      renderHome()
+
+      expect(await screen.findByText('2 consultas')).toBeInTheDocument()
+      expect(await screen.findByText('2 tomas hoy')).toBeInTheDocument()
+    })
+
+    it('uses the singular for one consultation and one dose', async () => {
+      stubApi(account, { consultations: [consultation('c1')], doses: [dose(false)] })
+      renderHome()
+
+      expect(await screen.findByText('1 consulta')).toBeInTheDocument()
+      expect(await screen.findByText('1 toma hoy')).toBeInTheDocument()
+    })
+
+    it('reads "Sin tomas pendientes" when nothing is left to mark (all taken, or none today)', async () => {
+      stubApi(account, { consultations: [consultation('c1')], doses: [dose(true)] })
+      renderHome()
+
+      expect(await screen.findByText('Sin tomas pendientes')).toBeInTheDocument()
+    })
+
+    it('keeps the card without chips when the counts fail to load', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockImplementation(async (input: RequestInfo | URL) =>
+          String(input).includes('/children/')
+            ? ({ ok: false, status: 500, json: async () => ({ error: 'x', message: 'boom' }) } as Response)
+            : ({ ok: true, json: async () => account } as Response),
+        ),
+      )
+      renderHome()
+
+      expect(await screen.findByText('Mateo Morales')).toBeInTheDocument()
+      expect(screen.queryByText(/consulta/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/tomas/)).not.toBeInTheDocument()
+    })
+
+    it('alternates the avatar colour between children (cyan, then mint)', async () => {
+      stubApi({
+        ...account, plan: 'paid',
+        children: [...account.children, { id: 'child-2', firstName: 'Sofía', lastName: 'Morales', birthDate: '2025-07-01', height: null, weight: null }],
+      })
+      renderHome()
+
+      const links = await screen.findAllByRole('link', { name: /Morales/ })
+      expect(links[0].querySelector('[aria-hidden]')).toHaveClass('bg-bright')
+      expect(links[1].querySelector('[aria-hidden]')).toHaveClass('bg-[#a7f3d0]')
+    })
   })
 
   describe('on desktop (sidebar on screen)', () => {
@@ -137,20 +233,34 @@ describe('HomePage', () => {
       )
     }
 
-    it("opens the first child's detail instead of the list (mock 6, 'Home con detalle')", async () => {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => account([kid('k1', 'Luis'), kid('k2', 'Sofía')]) }))
+    it('shows "Hola, Ana / Tus hijos", the solid "Agregar hijo" button, the cards and the plan tile (mock 15)', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => account([kid('k1', 'Luis')]) }))
       renderDesktopHome()
 
-      expect(await screen.findByText('DETALLE DEL HIJO')).toBeInTheDocument()
-      expect(screen.queryByRole('heading', { name: 'Tus hijos' })).not.toBeInTheDocument()
+      expect(await screen.findByText('Hola, Ana')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { level: 1, name: 'Tus hijos' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Agregar hijo' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /Luis Gómez/ })).toHaveAttribute('href', '/children/k1')
+      expect(screen.getByText('Tu plan incluye un hijo')).toBeInTheDocument()
+      expect(screen.getByRole('navigation', { name: 'Tus hijos' })).toBeInTheDocument()
     })
 
-    it('keeps the empty state (with the sidebar) when there are no children yet', async () => {
+    it('opens the plan-limit pop-up from the button, naming the child', async () => {
+      const user = userEvent.setup()
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => account([kid('k1', 'Luis')]) }))
+      renderDesktopHome()
+
+      await user.click(await screen.findByRole('button', { name: 'Agregar hijo' }))
+
+      expect(await screen.findByText(/Luis sigue disponible sin cambios/)).toBeInTheDocument()
+    })
+
+    it('shows the empty state (with the sidebar) when there are no children yet', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => account([]) }))
       renderDesktopHome()
 
       expect(await screen.findByText('Todavía no tienes hijos dados de alta')).toBeInTheDocument()
-      expect(screen.queryByText('DETALLE DEL HIJO')).not.toBeInTheDocument()
+      expect(screen.queryByText('Tu plan incluye un hijo')).not.toBeInTheDocument()
     })
   })
 })

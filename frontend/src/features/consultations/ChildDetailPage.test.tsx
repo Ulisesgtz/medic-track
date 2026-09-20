@@ -5,10 +5,6 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ChildDetailPage } from './ChildDetailPage'
 
-vi.mock('tesseract.js', () => ({
-  default: { recognize: vi.fn().mockResolvedValue({ data: { text: '' } }) },
-}))
-
 function renderPage(childId = 'child-1') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
@@ -16,126 +12,212 @@ function renderPage(childId = 'child-1') {
       <MemoryRouter initialEntries={[`/children/${childId}`]}>
         <Routes>
           <Route path="/children/:childId" element={<ChildDetailPage />} />
-          <Route path="/consultations/:consultationId" element={<div>CONSULTATION DETAIL</div>} />
+          <Route path="/home" element={<div>HOME</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   )
 }
 
+const account = {
+  id: 'a1', firstName: 'Ana', lastName: 'Morales', email: 'ana@example.com',
+  countryCode: null, stateCode: null, plan: 'free',
+  children: [{ id: 'child-1', firstName: 'Mateo', lastName: 'Morales', birthDate: '2021-03-14', height: null, weight: null }],
+}
+
+const consultations = [
+  { id: 'c2', doctorName: 'Dra. Laura Cázares', consultDate: '2026-09-12', symptoms: 'Fiebre y tos', medicationCount: 2 },
+  { id: 'c0', doctorName: 'Dr. Iván Robles', consultDate: '2024-08-02', symptoms: 'Control de peso', medicationCount: 0 },
+]
+
+const dose = (id: string, hour: number, name: string, taken: boolean, consultationId = 'c2') => ({
+  id, consultationId, medicationName: name, scheduledAt: new Date(2026, 8, 16, hour).toISOString(), taken,
+})
+
+const emptyOverview = { childId: 'child-1', doses: [], activeTreatment: null }
+
+/** Routes every fetch of the page by URL. */
+function stubApi({
+  list = consultations,
+  overview = emptyOverview as unknown,
+  overviewOk = true,
+  listStatus = 200,
+}: { list?: unknown[]; overview?: unknown; overviewOk?: boolean; listStatus?: number } = {}) {
+  const fetchMock = vi.fn().mockImplementation(async (input: string, init?: RequestInit) => {
+    const url = String(input)
+    if (init?.method === 'PATCH') return { ok: true, json: async () => ({ id: 'd', scheduledAt: '', taken: true }) }
+    if (url.includes('/overview')) return { ok: overviewOk, status: overviewOk ? 200 : 500, json: async () => overview }
+    if (url.includes('/accounts/')) return { ok: true, json: async () => account }
+    if (listStatus !== 200) return { ok: false, status: listStatus, json: async () => ({ message: 'nope' }) }
+    return { ok: true, json: async () => ({ childId: 'child-1', consultations: list }) }
+  })
+  vi.stubGlobal('fetch', fetchMock)
+  return fetchMock
+}
+
+function useSession() {
+  window.localStorage.setItem('peditrack.accountId', 'a1')
+}
+function useWeb() {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn().mockImplementation(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })),
+  )
+}
+
 describe('ChildDetailPage', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 8, 16, 12)) // 16 sep 2026: Mateo is 5 años 6 meses
+  })
+
   afterEach(() => {
     vi.unstubAllGlobals()
     vi.useRealTimers()
     window.localStorage.clear()
   })
 
-  describe('with a saved account', () => {
-    const account = {
-      id: 'a1', firstName: 'Ana', lastName: 'Morales', email: 'ana@example.com',
-      countryCode: null, stateCode: null, plan: 'free',
-      children: [
-        { id: 'child-1', firstName: 'Mateo', lastName: 'Morales', birthDate: '2021-03-14', height: null, weight: null },
-      ],
-    }
+  it('shows "no encontrado" with a way home when the child does not exist', async () => {
+    stubApi({ listStatus: 404 })
+    renderPage('missing')
 
-    beforeEach(() => {
-      vi.useFakeTimers({ toFake: ['Date'] })
-      vi.setSystemTime(new Date(2026, 8, 16, 12))
-      window.localStorage.setItem('peditrack.accountId', 'a1')
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockImplementation(async (input: string) => ({
-          ok: true,
-          json: async () =>
-            String(input).includes('/accounts/')
-              ? account
-              : { childId: 'child-1', consultations: [{ id: 'c1', doctorName: 'Dra. López', consultDate: '2026-09-15', symptoms: '', medicationCount: 1 }] },
-        })),
+    expect(await screen.findByText('No se encontró este hijo.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Volver a mi home' })).toHaveAttribute('href', '/home')
+  })
+
+  it('shows a generic error when the consultations fail to load', async () => {
+    stubApi({ listStatus: 500 })
+    renderPage()
+
+    expect(await screen.findByText('Ocurrió un error al cargar sus consultas.')).toBeInTheDocument()
+  })
+
+  describe('on the phone (mock 02)', () => {
+    it("shows the child's avatar, name, age and birth date, with a way back to their list", async () => {
+      useSession()
+      stubApi()
+      renderPage()
+
+      expect(await screen.findByRole('heading', { level: 1, name: 'Mateo Morales' })).toBeInTheDocument()
+      expect(screen.getByText('5 años 6 meses · 14 mar 2021')).toBeInTheDocument()
+      expect(screen.getByText('M')).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: '← Tus hijos' })).toHaveAttribute('href', '/home')
+    })
+
+    it('falls back to a generic title when no account is saved', async () => {
+      stubApi()
+      renderPage()
+
+      expect(await screen.findByRole('heading', { level: 1, name: 'Consultas médicas' })).toBeInTheDocument()
+    })
+
+    it('lists the consultations with date, doctor and "síntomas · N medicamentos", and no "Ver →"', async () => {
+      stubApi()
+      renderPage()
+
+      const card = await screen.findByRole('link', { name: /Dra. Laura Cázares/ })
+      expect(card).toHaveAttribute('href', '/consultations/c2')
+      expect(within(card).getByText('12 sep 2026')).toBeInTheDocument()
+      expect(within(card).getByText('Fiebre y tos · 2 medicamentos')).toBeInTheDocument()
+      expect(within(card).queryByText('Ver →')).not.toBeInTheDocument()
+      expect(screen.getByText('Control de peso · sin receta')).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: '+ Nueva' })).toHaveAttribute('href', '/children/child-1/consultations/new')
+    })
+
+    it('shows the empty state when there are no consultations yet (FR-002)', async () => {
+      stubApi({ list: [] })
+      renderPage()
+
+      expect(await screen.findByText(/todavía no hay consultas/i)).toBeInTheDocument()
+    })
+
+    it('shows the amber "Tomas de hoy" block: how many are unmarked and which medication', async () => {
+      stubApi({ overview: { childId: 'child-1', doses: [dose('d1', 8, 'Amoxicilina', true), dose('d2', 16, 'Amoxicilina', false), dose('d3', 21, 'Amoxicilina', false)], activeTreatment: null } })
+      renderPage()
+
+      const block = (await screen.findByText('2 sin marcar · Amoxicilina')).closest('div')!
+      expect(block).toHaveClass('bg-pending')
+      expect(within(block).getByText('Tomas de hoy')).toBeInTheDocument()
+      expect(within(block).getByRole('button', { name: 'Marcar tomas' })).toBeInTheDocument()
+    })
+
+    it('lists every unmarked medication in the block', async () => {
+      stubApi({ overview: { childId: 'child-1', doses: [dose('d2', 16, 'Amoxicilina', false), dose('d3', 21, 'Paracetamol', false)], activeTreatment: null } })
+      renderPage()
+
+      expect(await screen.findByText('2 sin marcar · Amoxicilina, Paracetamol')).toBeInTheDocument()
+    })
+
+    it('"Marcar tomas" marks all of today\'s unmarked doses at once', async () => {
+      const user = userEvent.setup()
+      const fetchMock = stubApi({ overview: { childId: 'child-1', doses: [dose('d1', 8, 'Amoxicilina', true), dose('d2', 16, 'Amoxicilina', false), dose('d3', 21, 'Paracetamol', false, 'c3')], activeTreatment: null } })
+      renderPage()
+
+      await user.click(await screen.findByRole('button', { name: 'Marcar tomas' }))
+
+      await waitFor(() => {
+        const patches = fetchMock.mock.calls.filter(([, init]) => init?.method === 'PATCH')
+        expect(patches.map(([url]) => String(url))).toEqual([
+          expect.stringContaining('/consultations/c2/doses/d2'),
+          expect.stringContaining('/consultations/c3/doses/d3'),
+        ])
+        for (const [, init] of patches) expect(JSON.parse(init.body)).toEqual({ taken: true })
+      })
+      await waitFor(() =>
+        expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/overview')).length).toBeGreaterThan(1),
       )
     })
 
-    it("titles the screen with the child's age and shows their name and birth date", async () => {
+    it('turns soft green with no button once every dose is marked', async () => {
+      stubApi({ overview: { childId: 'child-1', doses: [dose('d1', 8, 'Amoxicilina', true)], activeTreatment: null } })
+      renderPage()
+
+      const summary = await screen.findByText('0 sin marcar · Amoxicilina')
+      expect(summary.closest('div')).toHaveClass('bg-confirmed-soft')
+      expect(screen.queryByRole('button', { name: 'Marcar tomas' })).not.toBeInTheDocument()
+    })
+
+    it('says "Sin tomas hoy" when nothing is scheduled today', async () => {
+      stubApi()
+      renderPage()
+
+      expect(await screen.findByText('Sin tomas hoy')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Marcar tomas' })).not.toBeInTheDocument()
+    })
+
+    it('says so, without breaking the list, when the overview fails', async () => {
+      stubApi({ overviewOk: false })
+      renderPage()
+
+      expect(await screen.findByText('No se pudieron cargar las tomas de hoy.')).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: /Dra. Laura Cázares/ })).toBeInTheDocument()
+    })
+  })
+
+  describe('on the web (board screen 6, with the sidebar)', () => {
+    beforeEach(() => {
+      useSession()
+      useWeb()
+    })
+
+    it('shows the header row: name and birth date, the age as the title, and "Nueva consulta"', async () => {
+      stubApi()
       renderPage()
 
       expect(await screen.findByRole('heading', { level: 1, name: '5 años 6 meses' })).toBeInTheDocument()
       expect(screen.getByText('Mateo Morales · 14 mar 2021')).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: /Volver a mi home/ })).toBeInTheDocument()
-      expect(screen.getByRole('heading', { level: 2, name: 'Consultas' })).toBeInTheDocument()
-    })
-
-    it('drops the back link and moves the register button beside the title when the sidebar is on screen', async () => {
-      vi.stubGlobal(
-        'matchMedia',
-        vi.fn().mockImplementation(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })),
-      )
-      renderPage()
-
-      await screen.findByRole('heading', { level: 1, name: '5 años 6 meses' })
-      expect(screen.queryByRole('link', { name: /Volver a mi home/ })).not.toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Nueva consulta' })).toBeInTheDocument()
+      expect(screen.getByRole('link', { name: 'Nueva consulta' })).toHaveAttribute('href', '/children/child-1/consultations/new')
+      expect(screen.queryByRole('link', { name: '← Tus hijos' })).not.toBeInTheDocument()
       expect(screen.getByRole('navigation', { name: 'Tus hijos' })).toBeInTheDocument()
     })
-  })
-
-  it('shows an empty state when the child has no consultations (FR-002)', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ childId: 'child-1', consultations: [] }) }),
-    )
-    renderPage()
-
-    expect(await screen.findByText(/todavía no hay consultas/i)).toBeInTheDocument()
-  })
-
-  it('lists a card per consultation with doctor and date (FR-001)', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: true,
-        json: async () => ({
-          childId: 'child-1',
-          consultations: [{ id: 'c1', doctorName: 'Dra. López', consultDate: '2026-01-15', symptoms: '', medicationCount: 1 }],
-        }),
-      }),
-    )
-    renderPage()
-
-    expect(await screen.findByText('Dra. López')).toBeInTheDocument()
-    const card = screen.getByRole('link', { name: /Dra. López/ })
-    expect(card).toHaveAttribute('href', '/consultations/c1')
-    expect(within(card).getByText('15 ene 2026')).toBeInTheDocument()
-  })
-
-  describe('summary row and today panel', () => {
-    const consultations = [
-      { id: 'c2', doctorName: 'Dra. López', consultDate: '2026-03-01', symptoms: 'Fiebre y tos', medicationCount: 2 },
-      { id: 'c0', doctorName: 'Dra. López', consultDate: '2024-11-02', symptoms: '', medicationCount: 1 },
-    ]
-    const dose = (id: string, at: string, name: string, taken: boolean) => ({
-      id, consultationId: 'c2', medicationName: name, scheduledAt: at, taken,
-    })
-
-    function stubApi(overview: unknown, overviewOk = true) {
-      const fetchMock = vi.fn().mockImplementation(async (input: string, init?: RequestInit) => {
-        const url = String(input)
-        if (init?.method === 'PATCH') return { ok: true, json: async () => ({ id: 'd2', scheduledAt: '', taken: true }) }
-        if (url.includes('/overview')) return { ok: overviewOk, status: overviewOk ? 200 : 500, json: async () => overview }
-        return { ok: true, json: async () => ({ childId: 'child-1', consultations }) }
-      })
-      vi.stubGlobal('fetch', fetchMock)
-      return fetchMock
-    }
 
     it("shows today's unmarked doses, the consultation count since the first one, and the running treatment", async () => {
       stubApi({
-        childId: 'child-1',
-        doses: [
-          dose('d1', new Date(2026, 8, 18, 8).toISOString(), 'Amoxicilina', true),
-          dose('d2', new Date(2026, 8, 18, 16).toISOString(), 'Amoxicilina', false),
-          dose('d3', new Date(2026, 8, 18, 21).toISOString(), 'Paracetamol', false),
-        ],
-        activeTreatment: { medicationName: 'Amoxicilina', endsAt: new Date(2026, 8, 19, 8).toISOString(), otherCount: 0 },
+        overview: {
+          childId: 'child-1',
+          doses: [dose('d1', 8, 'Amoxicilina', true), dose('d2', 16, 'Amoxicilina', false), dose('d3', 21, 'Paracetamol', false)],
+          activeTreatment: { medicationName: 'Amoxicilina', endsAt: new Date(2026, 8, 19, 8).toISOString(), otherCount: 0 },
+        },
       })
       renderPage()
 
@@ -150,28 +232,16 @@ describe('ChildDetailPage', () => {
       expect(within(tratamiento).getByText('termina el 19 sep')).toBeInTheDocument()
     })
 
-    it('lists the consultations with their symptoms and medication count', async () => {
-      stubApi({ childId: 'child-1', doses: [], activeTreatment: null })
+    it('lists the consultations with the "Ver →" affordance next to the "Tomas de hoy" panel', async () => {
+      stubApi({ overview: { childId: 'child-1', doses: [dose('d1', 8, 'Amoxicilina', true), dose('d2', 16, 'Amoxicilina', false)], activeTreatment: null } })
       renderPage()
 
-      expect(await screen.findByText('Fiebre y tos · 2 medicamentos')).toBeInTheDocument()
-      expect(screen.getByText('1 medicamento')).toBeInTheDocument()
-    })
+      const card = await screen.findByRole('link', { name: /Dra. Laura Cázares/ })
+      expect(within(card).getByText('Ver →')).toBeInTheDocument()
+      expect(screen.getByText('Fiebre y tos · 2 medicamentos')).toBeInTheDocument()
 
-    it('lists today\'s doses with a chip each: "Tomada" or "Marcar"', async () => {
-      stubApi({
-        childId: 'child-1',
-        doses: [
-          dose('d1', new Date(2026, 8, 18, 8).toISOString(), 'Amoxicilina', true),
-          dose('d2', new Date(2026, 8, 18, 16).toISOString(), 'Amoxicilina', false),
-        ],
-        activeTreatment: null,
-      })
-      renderPage()
-
-      const panel = (await screen.findByRole('heading', { name: 'Tomas de hoy' })).closest('section')!
+      const panel = screen.getByRole('heading', { name: 'Tomas de hoy' }).closest('section')!
       expect(within(panel).getByText('08:00 Amoxicilina')).toBeInTheDocument()
-      expect(within(panel).getByText('16:00 Amoxicilina')).toBeInTheDocument()
       // A toggle: the name is fixed and only aria-pressed carries the state.
       expect(within(panel).getByRole('button', { name: 'Toma de 08:00 Amoxicilina' })).toHaveAttribute('aria-pressed', 'true')
       expect(within(panel).getByRole('button', { name: 'Toma de 16:00 Amoxicilina' })).toHaveAttribute('aria-pressed', 'false')
@@ -179,46 +249,28 @@ describe('ChildDetailPage', () => {
       expect(within(panel).getByText('Marcar')).toBeInTheDocument()
     })
 
-    it('marks a dose from the panel and reloads the overview', async () => {
+    it('marks a dose from the panel and reloads the overview, and unmarks one that is already taken', async () => {
       const user = userEvent.setup()
-      const fetchMock = stubApi({
-        childId: 'child-1',
-        doses: [dose('d2', new Date(2026, 8, 18, 16).toISOString(), 'Amoxicilina', false)],
-        activeTreatment: null,
-      })
+      const fetchMock = stubApi({ overview: { childId: 'child-1', doses: [dose('d1', 8, 'Amoxicilina', true), dose('d2', 16, 'Amoxicilina', false)], activeTreatment: null } })
       renderPage()
 
       await user.click(await screen.findByRole('button', { name: 'Toma de 16:00 Amoxicilina' }))
+      await user.click(screen.getByRole('button', { name: 'Toma de 08:00 Amoxicilina' }))
 
       await waitFor(() => {
-        const patch = fetchMock.mock.calls.find(([, init]) => init?.method === 'PATCH')
-        expect(patch![0]).toContain('/consultations/c2/doses/d2')
-        expect(JSON.parse(patch![1].body)).toEqual({ taken: true })
+        const patches = fetchMock.mock.calls.filter(([, init]) => init?.method === 'PATCH')
+        expect(patches).toHaveLength(2)
+        expect(patches[0][0]).toContain('/consultations/c2/doses/d2')
+        expect(JSON.parse(patches[0][1].body)).toEqual({ taken: true })
+        expect(JSON.parse(patches[1][1].body)).toEqual({ taken: false })
       })
       await waitFor(() =>
         expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/overview')).length).toBeGreaterThan(1),
       )
     })
 
-    it('unmarks a dose that is already taken', async () => {
-      const user = userEvent.setup()
-      const fetchMock = stubApi({
-        childId: 'child-1',
-        doses: [dose('d1', new Date(2026, 8, 18, 8).toISOString(), 'Amoxicilina', true)],
-        activeTreatment: null,
-      })
-      renderPage()
-
-      await user.click(await screen.findByRole('button', { name: 'Toma de 08:00 Amoxicilina' }))
-
-      await waitFor(() => {
-        const patch = fetchMock.mock.calls.find(([, init]) => init?.method === 'PATCH')
-        expect(JSON.parse(patch![1].body)).toEqual({ taken: false })
-      })
-    })
-
-    it('sends the parent\'s local day as the overview window', async () => {
-      const fetchMock = stubApi({ childId: 'child-1', doses: [], activeTreatment: null })
+    it("sends the parent's local day as the overview window", async () => {
+      const fetchMock = stubApi()
       renderPage()
 
       await screen.findByText('No hay tomas programadas para hoy.')
@@ -230,7 +282,7 @@ describe('ChildDetailPage', () => {
     })
 
     it('says so when there are no doses today, and when every dose is already marked', async () => {
-      stubApi({ childId: 'child-1', doses: [], activeTreatment: null })
+      stubApi()
       const first = renderPage()
 
       expect(await screen.findByText('sin tomas hoy')).toBeInTheDocument()
@@ -238,217 +290,40 @@ describe('ChildDetailPage', () => {
       expect(screen.getByText('sin tomas pendientes')).toBeInTheDocument()
       first.unmount()
 
-      stubApi({
-        childId: 'child-1',
-        doses: [dose('d1', new Date(2026, 8, 18, 8).toISOString(), 'Amoxicilina', true)],
-        activeTreatment: null,
-      })
+      stubApi({ overview: { childId: 'child-1', doses: [dose('d1', 8, 'Amoxicilina', true)], activeTreatment: null } })
       renderPage()
       expect(await screen.findByText('todas marcadas')).toBeInTheDocument()
     })
 
     it('adds "+N" to the running treatment when more medications still have doses ahead', async () => {
-      stubApi({
-        childId: 'child-1',
-        doses: [],
-        activeTreatment: { medicationName: 'Amoxicilina', endsAt: new Date(2026, 8, 23, 8).toISOString(), otherCount: 2 },
-      })
+      stubApi({ overview: { childId: 'child-1', doses: [], activeTreatment: { medicationName: 'Amoxicilina', endsAt: new Date(2026, 8, 23, 8).toISOString(), otherCount: 2 } } })
       renderPage()
 
       expect(await screen.findByText('Amoxicilina +2')).toBeInTheDocument()
     })
 
     it('shows placeholders, without breaking the page, when the overview fails to load', async () => {
-      stubApi({ message: 'boom' }, false)
+      stubApi({ overviewOk: false })
       renderPage()
 
       expect(await screen.findByText('No se pudieron cargar las tomas de hoy.')).toBeInTheDocument()
       expect(screen.getAllByText('no disponible')).toHaveLength(2)
-      expect(screen.getAllByText('Dra. López', { selector: 'p' })).toHaveLength(2)
-    })
-  })
-
-  it('shows the empty state and "sin consultas" when there are no consultations yet', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockImplementation(async (input: string) => ({
-        ok: true,
-        json: async () =>
-          String(input).includes('/overview')
-            ? { childId: 'child-1', doses: [], activeTreatment: null }
-            : { childId: 'child-1', consultations: [] },
-      })),
-    )
-    renderPage()
-
-    await screen.findByText(/todavía no hay consultas/i)
-    expect(screen.getByText('sin consultas')).toBeInTheDocument()
-  })
-
-  it('shows the registration form as a real dialog: Escape closes it and focus goes back to the button', async () => {
-    const user = userEvent.setup()
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockImplementation(async (input: string) => ({
-        ok: true,
-        json: async () =>
-          String(input).includes('/overview')
-            ? { childId: 'child-1', doses: [], activeTreatment: null }
-            : { childId: 'child-1', consultations: [] },
-      })),
-    )
-    renderPage()
-
-    const opener = await screen.findByRole('button', { name: 'Nueva consulta' })
-    await user.click(opener)
-    const dialog = screen.getByRole('dialog', { name: 'Registrar consulta' })
-    expect(dialog).toHaveAttribute('aria-modal', 'true')
-    expect(dialog).toHaveFocus()
-
-    await user.keyboard('{Escape}')
-
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(opener).toHaveFocus()
-  })
-
-  describe('discarding the registration form', () => {
-    function stubEmptyChild() {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockImplementation(async (input: string) => ({
-          ok: true,
-          json: async () =>
-            String(input).includes('/overview')
-              ? { childId: 'child-1', doses: [], activeTreatment: null }
-              : { childId: 'child-1', consultations: [] },
-        })),
-      )
-    }
-
-    afterEach(() => {
-      vi.restoreAllMocks()
+      expect(screen.getByRole('link', { name: /Dra. Laura Cázares/ })).toBeInTheDocument()
     })
 
-    it('closes right away (no question) while the form is still empty', async () => {
-      const user = userEvent.setup()
-      stubEmptyChild()
-      const confirm = vi.spyOn(window, 'confirm')
+    it('shows the empty state and "sin consultas" when there are no consultations yet', async () => {
+      stubApi({ list: [] })
       renderPage()
 
-      await user.click(await screen.findByRole('button', { name: 'Nueva consulta' }))
-      await user.keyboard('{Escape}')
-
-      expect(confirm).not.toHaveBeenCalled()
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      await screen.findByText(/todavía no hay consultas/i)
+      expect(screen.getByText('sin consultas')).toBeInTheDocument()
     })
 
-    it('asks before throwing away a form the parent already started, on every way of closing', async () => {
-      const user = userEvent.setup()
-      stubEmptyChild()
-      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
-      renderPage()
+    it('falls back to a generic title when the child is not in the saved account', async () => {
+      stubApi()
+      renderPage('someone-else')
 
-      await user.click(await screen.findByRole('button', { name: 'Nueva consulta' }))
-      await user.type(screen.getByLabelText('Doctor'), 'Dra. López')
-
-      // Declined: the form stays, whatever the way of closing.
-      await user.keyboard('{Escape}')
-      await user.click(screen.getByRole('button', { name: 'Cerrar' }))
-      await user.click(screen.getByRole('button', { name: 'Cancelar' }))
-      expect(confirm).toHaveBeenCalledTimes(3)
-      expect(screen.getByRole('dialog')).toBeInTheDocument()
-      expect(screen.getByLabelText('Doctor')).toHaveValue('Dra. López')
-
-      // Accepted: it closes.
-      confirm.mockReturnValue(true)
-      await user.keyboard('{Escape}')
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(await screen.findAllByText('Consultas médicas')).toHaveLength(2)
     })
-
-    it('also counts a chosen photo as something worth confirming', async () => {
-      const user = userEvent.setup()
-      stubEmptyChild()
-      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
-      renderPage()
-
-      await user.click(await screen.findByRole('button', { name: 'Nueva consulta' }))
-      await user.upload(screen.getByLabelText('Foto de la receta'), new File(['x'], 'receta.jpg', { type: 'image/jpeg' }))
-      await user.keyboard('{Escape}')
-
-      expect(confirm).toHaveBeenCalled()
-      expect(screen.getByRole('dialog')).toBeInTheDocument()
-    })
-
-    it('starts clean again after a form was discarded', async () => {
-      const user = userEvent.setup()
-      stubEmptyChild()
-      const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
-      renderPage()
-
-      await user.click(await screen.findByRole('button', { name: 'Nueva consulta' }))
-      await user.type(screen.getByLabelText('Doctor'), 'Dra. López')
-      await user.keyboard('{Escape}')
-      confirm.mockClear()
-
-      await user.click(screen.getByRole('button', { name: 'Nueva consulta' }))
-      await user.keyboard('{Escape}')
-
-      expect(confirm).not.toHaveBeenCalled()
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    })
-  })
-
-  it('opens the registration modal, submits, and navigates to the new consultation detail', async () => {
-    const user = userEvent.setup()
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockImplementation(async (_input, init) => {
-        if (init?.method === 'POST') {
-          return {
-            ok: true,
-            json: async () => ({
-              id: 'new-consultation', childId: 'child-1', doctorName: 'Dra. López', consultDate: '2026-01-15',
-              photoBase64: 'Zm9v', symptoms: '', medications: [],
-            }),
-          } as Response
-        }
-        return { ok: true, json: async () => ({ childId: 'child-1', consultations: [] }) } as Response
-      }),
-    )
-    renderPage()
-
-    await user.click(await screen.findByRole('button', { name: 'Nueva consulta' }))
-    expect(await screen.findByRole('heading', { name: 'Registrar consulta' })).toBeInTheDocument()
-
-    await user.type(screen.getByLabelText('Doctor'), 'Dra. López')
-    await user.type(screen.getByLabelText('Fecha de la consulta'), '2026-01-15')
-    await user.upload(screen.getByLabelText('Foto de la receta'), new File(['x'], 'r.jpg', { type: 'image/jpeg' }))
-    await user.type(document.getElementById('medications.0.name')!, 'Amoxicilina')
-    await user.type(document.getElementById('medications.0.frequencyHours')!, '8')
-    await user.type(document.getElementById('medications.0.durationDays')!, '3')
-    await user.click(screen.getByRole('button', { name: 'Guardar' }))
-
-    expect(await screen.findByText('CONSULTATION DETAIL')).toBeInTheDocument()
-  })
-
-  it('closes the modal when clicking Cancelar', async () => {
-    const user = userEvent.setup()
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ childId: 'child-1', consultations: [] }) }))
-    renderPage()
-
-    await user.click(await screen.findByRole('button', { name: 'Nueva consulta' }))
-    await user.click(screen.getByRole('button', { name: 'Cancelar' }))
-
-    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Registrar consulta' })).not.toBeInTheDocument())
-  })
-
-  it('shows a not-found message when the child does not exist', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({ ok: false, status: 404, json: async () => ({ message: 'Child not found' }) }),
-    )
-    renderPage('missing-child')
-
-    expect(await screen.findByText(/no se encontró este hijo/i)).toBeInTheDocument()
   })
 })

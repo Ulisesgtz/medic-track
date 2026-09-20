@@ -7,31 +7,39 @@ const consultation = {
   id: 'c1', doctorName: 'Dra. López', consultDate: '2026-01-15', symptoms: 'Fiebre y tos', medicationCount: 2,
 }
 
-function renderCard(isLatest?: boolean, overrides: Partial<typeof consultation> = {}) {
+function renderCard(isLatest?: boolean, overrides: Partial<typeof consultation> = {}, variant?: 'phone' | 'desktop') {
   render(
     <MemoryRouter>
-      <ConsultationCard consultation={{ ...consultation, ...overrides }} isLatest={isLatest} />
+      <ConsultationCard consultation={{ ...consultation, ...overrides }} isLatest={isLatest} variant={variant} />
     </MemoryRouter>,
   )
+  return screen.getByRole('link', { name: /Dra. López/ })
 }
 
 describe('ConsultationCard', () => {
   it('links to the consultation detail with doctor and date', () => {
-    renderCard()
+    const link = renderCard()
 
-    const link = screen.getByRole('link', { name: /Dra. López/ })
     expect(link).toHaveAttribute('href', '/consultations/c1')
     expect(screen.getByText('15 ene 2026')).toBeInTheDocument()
   })
 
   it('uses the bright accent bar only for the most recent consultation', () => {
-    renderCard(true)
-    expect(document.querySelector('span[aria-hidden="true"]')).toHaveClass('bg-bright')
+    expect(renderCard(true)).toHaveClass('border-bright')
   })
 
   it('uses the soft accent bar for earlier consultations', () => {
-    renderCard(false)
-    expect(document.querySelector('span[aria-hidden="true"]')).toHaveClass('bg-cyan-100')
+    expect(renderCard(false)).toHaveClass('border-[#cffafe]')
+  })
+
+  it('shows "Ver →" on the web design only', () => {
+    renderCard(false, {}, 'desktop')
+    expect(screen.getByText('Ver →')).toBeInTheDocument()
+  })
+
+  it('has no "Ver →" on the phone design', () => {
+    renderCard(false, {}, 'phone')
+    expect(screen.queryByText('Ver →')).not.toBeInTheDocument()
   })
 })
 

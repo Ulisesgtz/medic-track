@@ -1,169 +1,161 @@
-import { useEffect, useState } from 'react'
-import { useWatch, type Control, type UseFormRegister, type FieldErrors } from 'react-hook-form'
+import type { FieldErrors, UseFormRegister } from 'react-hook-form'
 import type { ConsultationFormValues } from './ConsultationForm'
-import { errorClass, inputClass, labelClass, optionalClass, suggestedInputClass } from '../../shared/ui/formStyles'
+import { parsePositiveInt } from './parsePositiveInt'
+
+const validPositive = (value: string) => parsePositiveInt(value) !== null
+
+const field =
+  'min-h-11 w-full min-w-0 rounded-xl px-4 py-3 text-base text-ink placeholder:text-slate-400 focus:border-2 focus:border-ink focus:outline-none'
+const plain = `${field} border-[1.5px] border-slate-300`
+const suggestedBorder = `${field} border-2 border-bright`
+const label = 'text-[13px] font-bold text-ink-soft'
+const error = 'text-[13px] font-semibold text-red-700'
 
 interface MedicationFieldsetProps {
   index: number
-  control: Control<ConsultationFormValues>
   register: UseFormRegister<ConsultationFormValues>
   errors: FieldErrors<ConsultationFormValues>
   onRemove: () => void
+  /** "Quitar" only shows when there is more than one medication (mocks 04/14). */
+  canRemove: boolean
   removeDisabled?: boolean
   /** Field paths the OCR filled in — rendered with the bright "to review" border. */
   suggested?: ReadonlySet<string>
-}
-
-
-const positiveIntegerValidation = {
-  required: true,
-  min: { value: 1, message: 'must be a positive integer' },
-}
-
-function ChevronIcon({ collapsed }: { collapsed: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 20 20"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={`h-4 w-4 shrink-0 transition-transform duration-200 ${collapsed ? '-rotate-90' : ''}`}
-      aria-hidden="true"
-    >
-      <path d="M5 7.5 10 12.5 15 7.5" />
-    </svg>
-  )
+  variant: 'phone' | 'desktop'
 }
 
 /**
- * One repeatable medication block: name, frequency (every N hours),
- * treatment duration in days (FR-008), and an optional start time — a
- * medication without a start time never generates individual doses
- * (FR-010). Fades/slides in on mount (respects prefers-reduced-motion) so a
- * prescription with many medications reveals itself progressively instead
- * of appearing as a single wall of inputs. Collapsible to a one-line
- * summary for scanning a long list — never collapsed by default, since the
- * parent must be able to see and correct every OCR-derived value (Principio I).
+ * One repeatable medication, built from mockups 04 (phone) and 14 (desktop):
+ * a white card with the "Medicamento N" badge, "Quitar", and the fields
+ * "Nombre y dosis", frequency ("c/8 h"), duration ("7 días") and — an addition
+ * to the mock, because doses can't be scheduled without it — an optional
+ * start time "Desde". Frequency and duration accept free text; the first
+ * number in them is what's sent.
  */
 export function MedicationFieldset({
   index,
-  control,
   register,
   errors,
   onRemove,
+  canRemove,
   removeDisabled = false,
   suggested,
+  variant,
 }: MedicationFieldsetProps) {
   const medErrors = errors.medications?.[index]
-  const [mounted, setMounted] = useState(false)
-  const [collapsed, setCollapsed] = useState(false)
-  const watched = useWatch({ control, name: `medications.${index}` })
-  const fieldClass = (name: string) =>
-    suggested?.has(`medications.${index}.${name}`) ? suggestedInputClass : inputClass
-
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setMounted(true))
-    return () => cancelAnimationFrame(frame)
-  }, [])
-
-  const summary = [
-    watched?.name || 'Sin nombre',
-    watched?.frequencyHours ? `cada ${watched.frequencyHours}h` : null,
-    watched?.durationDays ? `${watched.durationDays} días` : null,
-  ]
-    .filter(Boolean)
-    .join(' — ')
+  const cls = (name: string) => (suggested?.has(`medications.${index}.${name}`) ? suggestedBorder : plain)
+  const id = (name: string) => `medications.${index}.${name}`
+  const desktop = variant === 'desktop'
 
   return (
     <fieldset
-      className={`rounded-2xl border border-hint-border bg-hint p-5 transition-all duration-300 ease-out motion-reduce:transition-none motion-reduce:transform-none ${
-        mounted ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
-      }`}
       data-testid={`medication-fieldset-${index}`}
+      aria-labelledby={`medication-title-${index}`}
+      className={`flex min-w-0 flex-col rounded-3xl bg-surface shadow-[0_8px_20px_rgba(4,37,43,0.07)] ${
+        desktop ? 'gap-4 p-6' : 'gap-3.5 p-5'
+      }`}
     >
-      {/* A real <legend> (not the visual badge below, which is nested inside
-          a button and can't serve as the fieldset's accessible name) so
-          screen readers announce which medication group is focused. */}
-      <legend className="sr-only">Medicamento {index + 1}</legend>
-      <div className="mb-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setCollapsed((c) => !c)}
-          aria-expanded={!collapsed}
-          className="grid min-h-11 min-w-0 cursor-pointer grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded-md py-1 text-left text-action outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 focus-visible:ring-offset-hint"
+      <div className="flex items-center justify-between">
+        <span
+          id={`medication-title-${index}`}
+          className="rounded-full bg-action px-3 py-1.5 text-xs font-extrabold tracking-wider text-white uppercase"
         >
-          <span className="inline-flex items-center justify-self-start rounded-full bg-action px-3 py-1 text-xs font-extrabold tracking-[0.1em] whitespace-nowrap text-white uppercase">
-            Medicamento {index + 1}
-          </span>
-          {collapsed && <span className="min-w-0 truncate text-sm font-semibold text-slate-600">{summary}</span>}
-          <ChevronIcon collapsed={collapsed} />
-        </button>
-        <button
-          type="button"
-          onClick={onRemove}
-          aria-label="Quitar medicamento"
-          disabled={removeDisabled}
-          className="inline-flex min-h-11 cursor-pointer items-center justify-self-end text-sm font-bold text-red-700 transition-colors duration-200 hover:text-red-800 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <span>
-            Quitar<span className="hidden sm:inline"> medicamento</span>
-          </span>
-        </button>
+          Medicamento {index + 1}
+        </span>
+        {canRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label="Quitar medicamento"
+            disabled={removeDisabled}
+            className="min-h-11 cursor-pointer px-1 text-[13px] font-bold text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Quitar
+          </button>
+        )}
       </div>
 
-      <div className={`grid grid-cols-2 gap-4 ${collapsed ? 'hidden' : ''}`}>
-        <div className="col-span-2">
-          <label className={labelClass} htmlFor={`medications.${index}.name`}>
-            Nombre
+      <div
+        className={
+          desktop
+            ? 'grid min-w-0 gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]'
+            : 'flex min-w-0 flex-col gap-3.5'
+        }
+      >
+        <div className="flex min-w-0 flex-col gap-2">
+          <label htmlFor={id('name')} className={desktop ? label : 'sr-only'}>
+            Nombre y dosis
           </label>
           <input
-            id={`medications.${index}.name`}
-            className={fieldClass('name')}
+            id={id('name')}
+            placeholder={desktop ? 'Amoxicilina 250 mg' : 'Nombre y dosis'}
+            size={1}
+            className={`${cls('name')} font-semibold`}
             {...register(`medications.${index}.name`, { required: true })}
           />
-          {medErrors?.name && <span className={errorClass}>El nombre del medicamento es obligatorio</span>}
+          {medErrors?.name && <p className={error}>Escribe el nombre del medicamento.</p>}
         </div>
 
-        <div>
-          <label className={`${labelClass} flex min-h-10 items-end`} htmlFor={`medications.${index}.frequencyHours`}>
-            Cada cuántas horas
-          </label>
-          <input
-            id={`medications.${index}.frequencyHours`}
-            type="number"
-            className={fieldClass('frequencyHours')}
-            {...register(`medications.${index}.frequencyHours`, positiveIntegerValidation)}
-          />
-          {medErrors?.frequencyHours && <span className={errorClass}>Debe ser un número positivo</span>}
+        <div className={desktop ? 'contents' : 'flex gap-2.5'}>
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <label htmlFor={id('frequencyHours')} className={desktop ? label : 'sr-only'}>
+              Frecuencia
+            </label>
+            <input
+              id={id('frequencyHours')}
+              placeholder="c/8 h"
+              size={1}
+              inputMode="numeric"
+              className={`${cls('frequencyHours')} text-[15px]`}
+              {...register(`medications.${index}.frequencyHours`, { validate: validPositive })}
+            />
+            {medErrors?.frequencyHours && <p className={error}>Escribe cada cuántas horas (ej. 8).</p>}
+          </div>
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
+            <label htmlFor={id('durationDays')} className={desktop ? label : 'sr-only'}>
+              Duración
+            </label>
+            <input
+              id={id('durationDays')}
+              placeholder="7 días"
+              size={1}
+              inputMode="numeric"
+              className={`${cls('durationDays')} text-[15px]`}
+              {...register(`medications.${index}.durationDays`, { validate: validPositive })}
+            />
+            {medErrors?.durationDays && <p className={error}>Escribe cuántos días (ej. 7).</p>}
+          </div>
+          {desktop && (
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <label htmlFor={id('startTime')} className={label}>
+                Desde (opcional)
+              </label>
+              <input
+                id={id('startTime')}
+                type="time"
+                size={1}
+                className={`${plain} text-[15px]`}
+                {...register(`medications.${index}.startTime`)}
+              />
+            </div>
+          )}
         </div>
+      </div>
 
-        <div>
-          <label className={`${labelClass} flex min-h-10 items-end`} htmlFor={`medications.${index}.durationDays`}>
-            Duración (días)
+      {!desktop && (
+        <div className="flex min-w-0 items-center gap-3">
+          <label htmlFor={id('startTime')} className="shrink-0 text-[13px] font-bold whitespace-nowrap text-ink-soft">
+            Desde (opcional)
           </label>
           <input
-            id={`medications.${index}.durationDays`}
-            type="number"
-            className={fieldClass('durationDays')}
-            {...register(`medications.${index}.durationDays`, positiveIntegerValidation)}
-          />
-          {medErrors?.durationDays && <span className={errorClass}>Debe ser un número positivo</span>}
-        </div>
-
-        <div className="col-span-2">
-          <label className={labelClass} htmlFor={`medications.${index}.startTime`}>
-            Horario de inicio <span className={optionalClass}>(opcional)</span>
-          </label>
-          <input
-            id={`medications.${index}.startTime`}
+            id={id('startTime')}
             type="time"
-            className={inputClass}
+            size={1}
+            className={`${plain} flex-1 text-[15px]`}
             {...register(`medications.${index}.startTime`)}
           />
         </div>
-      </div>
+      )}
     </fieldset>
   )
 }
