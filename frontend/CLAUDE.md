@@ -11,7 +11,7 @@ Vite + React 18 + TypeScript. Forms: React Hook Form. Server state: TanStack Que
 | `src/features/home/` | The home page: children listing, "Agregar hijo" dialogs, the desktop sidebar, the `account_id`-in-`localStorage` session (see below) |
 | `src/features/consultations/` | Child detail page, "Nueva consulta" page (with client-side OCR), consultation detail, dose marking (see below) |
 | `src/shared/catalog/` | Country/state catalog fetch hooks (`useCountries`, `useStates`) shared across features |
-| `src/shared/ui/` | Presentational pieces used by more than one feature: `Logo`, `AppHeader` (phone dark header: eyebrow, title, action), `FormField` (label + control + inline error), `MessagePage`, `formStyles.ts` (Tailwind recipes for fields/labels/errors), `useIsDesktop` (true from 900px, `matchMedia`-based — **the one rule that picks the web or the phone design**) |
+| `src/shared/ui/` | Presentational pieces used by more than one feature: `Logo`, `AppHeader` (phone dark header: eyebrow, title, action), `FormField` (label + control + inline error), `MessagePage`, `useIsDesktop` (true from 900px, `matchMedia`-based — **the one rule that picks the web or the phone design**) |
 | `src/shared/age.ts` | `computeAge(birthDate)` — months under 2 years old, whole years after. `formatAgeLong`/`formatAgeShort` give "5 años 6 meses" / "5a 6m" for the cards, headers and sidebar |
 | `src/shared/useLocalDay.ts` | The parent's local "today" `{from, to}`, rolled over at local midnight and re-checked when the app returns to the foreground. Use it, never a `useState(() => localDayRange())` that freezes at mount |
 | `src/shared/date.ts` | `formatDateShort('2026-09-15')` → `15 sep 2026`, `formatDateLong` → `12 septiembre 2026`, `formatDayMonth`, `formatTime` — every date shown to the user goes through them (fixed month names, no `Intl`, no timezone shift) |
@@ -66,14 +66,16 @@ Tokens de color y tipografía viven en el bloque `@theme` de `src/index.css`; la
 
 | File | Role |
 |---|---|
-| `AccountSignupForm.tsx` | The signup form, two designs by `useIsDesktop`: phone mock 01 (dark header + form) and web mock 11 (split screen with the checklist). The first child is part of the form (`Hijo 1 · Gratis`); no password field yet, no add/remove child (more children are added from the home) |
-| `validation.ts` | `nameValidation`, `positiveNumberValidation`, `nameError()` — shared by the signup and the "Agregar hijo" modal |
+| `AccountSignupForm.tsx` | Picks the design with `useIsDesktop`: `SignupPhone` (mock 01: dark header + form) or `SignupWeb` (mock 11: split screen with the checklist), both fed by `useSignupForm` |
+| `useSignupForm.ts` | The form state, validation, catalog, submit and post-signup flow shared by both designs. `serverError` is the only feedback path for server-side rules with no client-side equivalent — don't remove it |
+| `SignupWeb.tsx` | Mock 11 in the mock's order: Correo, Contraseña (validated, **never sent or stored** — auth will be Clerk/AWS Cognito), Tu nombre/apellido, País/Estado, the "Hijo 1 · Gratis" block, "Crear cuenta", and a "Registrarme con Google" button that only says it's coming soon (not in the mock; requested) |
+| `SignupPhone.tsx` | Mock 01. No password or Google button yet (added when that screen is done) |
+| `validation.ts` | `nameValidation`, `emailValidation`, `passwordValidation`, `positiveNumberValidation`, `nameError()` and the mocks' own messages (`EMAIL_MESSAGE`…) — shared by the signup and the "Agregar hijo" modal |
 | `FreemiumLimitModal.tsx` | The plan-limit pop-up (mocks 05/15). Opened by `AddChildDialogs` as soon as the parent taps "Agregar hijo" on the free plan with a child, and by `AddChildModal` if the server answers 422. Focus starts on "Ver planes"; "Entendido"/Escape/backdrop close it |
 | `types.ts` | Form value types + `NAME_PATTERN`/`NAME_MAX_LENGTH` (mirrors backend's `validateNameFormat` — see backend/CLAUDE.md for the sync caveat) |
 | `api.ts` | `createAccount()`, `CreateAccountError extends ApiError<...>` (`validation_error` \| `email_already_exists` \| `freemium_child_limit_exceeded` \| `unknown`) |
 | `useAccountSignup.ts` | `useMutation` wrapper around `createAccount` |
 
-- `AccountSignupForm.tsx` renders a generic fallback banner for any server rejection that isn't `email_already_exists` (e.g. a `validation_error` the client didn't catch) — don't remove it, it's the only feedback path for server-side rules with no client-side equivalent.
 - On success it saves the new account id via `useAccountSession` (from `features/home/`) and navigates to `/home`.
 - Changing the país `<select>` clears `stateCode` via `register('countryCode', { onChange })` — don't drop it, or a stale estado from a previous país can be submitted silently.
 - Name validation (`NAME_PATTERN`/`NAME_MAX_LENGTH`) must stay in sync with `backend/internal/account/service.go`'s `namePattern`.

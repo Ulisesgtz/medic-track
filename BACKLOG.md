@@ -10,11 +10,13 @@ y se elimina (o se marca) aquí.
 
 ## Prioridad alta
 
-- **Autenticación real (login con correo y contraseña)** — siguiente feature. Hoy el registro no pide
-  contraseña (los mocks 01/11 sí traen el campo "Contraseña · Mínimo 8 caracteres"; se omitió a propósito
-  mientras no exista login) y la "sesión" es solo el `account_id` en `localStorage`. Al construirla: agregar el
-  campo al registro tal cual el mock, pantalla de inicio de sesión, y revisar `GET /accounts/{accountId}` y
-  `POST /accounts/{accountId}/children` (hoy sin autenticación).
+- **Autenticación real con Clerk o AWS Cognito** — siguiente feature (proveedor por decidir entre esos dos).
+  Hoy la "sesión" es solo el `account_id` en `localStorage`. El registro web ya tiene el campo "Contraseña"
+  del mock 11 (mínimo 8 caracteres) pero **no se envía ni se guarda**, y el botón "Registrarme con Google" solo
+  avisa que estará disponible pronto. Al construirla: conectar ambos al proveedor (el registro con Google y la
+  contraseña pasan a ser del proveedor, no de nuestro backend), agregar el campo al registro móvil (mock 01),
+  la pantalla de inicio de sesión, y revisar `GET /accounts/{accountId}` y `POST /accounts/{accountId}/children`
+  (hoy sin autenticación) y `useAccountSession`.
 - **Homologar todas las pantallas a los mocks** — hecho en `specs/007-homologar-pantallas-a-mocks/`
   (rama `feature/007-homologar-pantallas-a-mocks`); las desviaciones que quedan están listadas en su spec.
   Pendiente de esa spec: las pantallas que aún no tienen mock (planes `/planes`, estados vacíos y de error).

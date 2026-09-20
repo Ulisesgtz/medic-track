@@ -47,6 +47,9 @@ async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('Tu nombre'), 'Ana')
   await user.type(screen.getByLabelText('Tu apellido'), 'Gómez')
   await user.type(screen.getByLabelText('Correo'), 'ana@example.com')
+  // Only the web design (mock 11) has a password field.
+  const password = screen.queryByLabelText('Contraseña')
+  if (password) await user.type(password, 'secreto123')
   await user.type(byId('children.0.firstName'), 'Luis')
   await user.type(byId('children.0.lastName'), 'Gómez')
   await user.type(byId('children.0.birthDate'), '2020-01-15')
@@ -78,6 +81,13 @@ describe('AccountSignupForm', () => {
       expect(screen.getByTestId('child-fieldset-0')).toHaveAccessibleName('Hijo 1')
       expect(screen.getByText('Gratis')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Crear cuenta' })).toBeInTheDocument()
+    })
+
+    it('has no password field and no Google button (those belong to the web design for now)', () => {
+      renderForm()
+
+      expect(screen.queryByLabelText('Contraseña')).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Google/ })).not.toBeInTheDocument()
     })
 
     it('does not use the web split screen: no checklist, no "Crear cuenta" heading', () => {
@@ -116,7 +126,61 @@ describe('AccountSignupForm', () => {
       expect(screen.queryByText('El plan gratuito incluye un hijo. Puedes agregar más después.')).not.toBeInTheDocument()
     })
 
-    it('validates and submits exactly like the phone form', async () => {
+    it("follows the mock's order: Correo, Contraseña, then the Hijo 1 block, then Crear cuenta", () => {
+      renderForm()
+
+      const email = screen.getByLabelText('Correo')
+      const password = screen.getByLabelText('Contraseña')
+      const child = screen.getByTestId('child-fieldset-0')
+      const submit = screen.getByRole('button', { name: 'Crear cuenta' })
+      const before = (x: Node, y: Node) => Boolean(x.compareDocumentPosition(y) & Node.DOCUMENT_POSITION_FOLLOWING)
+      expect(before(email, password)).toBe(true)
+      expect(before(password, child)).toBe(true)
+      expect(before(child, submit)).toBe(true)
+      expect(password).toHaveAttribute('type', 'password')
+      expect(password).toHaveAttribute('placeholder', 'Mínimo 8 caracteres')
+      expect(email).toHaveAttribute('placeholder', 'tu@correo.mx')
+    })
+
+    it("shows the mock's messages under the account and child fields when they are empty", async () => {
+      const user = userEvent.setup()
+      renderForm()
+
+      await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+
+      expect(await screen.findByText('Escribe un correo válido.')).toBeInTheDocument()
+      expect(screen.getByText('La contraseña necesita al menos 8 caracteres.')).toBeInTheDocument()
+      expect(screen.getByText('Escribe el nombre de tu hijo.')).toBeInTheDocument()
+      expect(screen.getByText('Elige la fecha de nacimiento.')).toBeInTheDocument()
+      expect(postCalls()).toHaveLength(0)
+    })
+
+    it('rejects a password shorter than 8 characters and an email that is not an email', async () => {
+      const user = userEvent.setup()
+      renderForm()
+
+      await fillRequired(user)
+      await user.clear(screen.getByLabelText('Contraseña'))
+      await user.type(screen.getByLabelText('Contraseña'), '1234567')
+      await user.clear(screen.getByLabelText('Correo'))
+      await user.type(screen.getByLabelText('Correo'), 'no-es-correo')
+      await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+
+      expect(await screen.findByText('La contraseña necesita al menos 8 caracteres.')).toBeInTheDocument()
+      expect(screen.getByText('Escribe un correo válido.')).toBeInTheDocument()
+      expect(postCalls()).toHaveLength(0)
+    })
+
+    it('puts the first invalid field in focus, as the mock does', async () => {
+      const user = userEvent.setup()
+      renderForm()
+
+      await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+
+      expect(await screen.findByLabelText('Correo')).toHaveFocus()
+    })
+
+    it('validates and submits, and the password never leaves the browser', async () => {
       const user = userEvent.setup()
       mockApi(() => ({ ok: true, json: async () => createdAccount }))
       renderForm()
@@ -125,14 +189,29 @@ describe('AccountSignupForm', () => {
       await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
       expect(await screen.findByText('HOME PAGE')).toBeInTheDocument()
+      const [, init] = postCalls()[0]
+      const body = (init as RequestInit).body as string
+      expect(body).not.toContain('secreto123')
+      expect(JSON.parse(body)).not.toHaveProperty('password')
+    })
+
+    it('"Registrarme con Google" says it is coming soon, without sending anything', async () => {
+      const user = userEvent.setup()
+      renderForm()
+      expect(screen.queryByRole('status')).not.toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: 'Registrarme con Google' }))
+
+      expect(screen.getByRole('status')).toHaveTextContent('El registro con Google estará disponible pronto.')
+      expect(postCalls()).toHaveLength(0)
+      expect(screen.queryByText('HOME PAGE')).not.toBeInTheDocument()
     })
   })
 
   describe('form (both designs)', () => {
-    it('has no password field and no way to add or remove children (deliberate deviations from the mocks)', () => {
+    it('has no way to add or remove children (more are added from the home)', () => {
       renderForm()
 
-      expect(screen.queryByLabelText(/contraseña/i)).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /agregar hijo/i })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /quitar hijo/i })).not.toBeInTheDocument()
     })
@@ -146,7 +225,7 @@ describe('AccountSignupForm', () => {
       expect(await screen.findByText('El nombre es obligatorio')).toBeInTheDocument()
       expect(screen.getByText('El apellido es obligatorio')).toBeInTheDocument()
       expect(screen.getByText('Escribe un correo válido.')).toBeInTheDocument()
-      expect(screen.getByText('El nombre del hijo es obligatorio')).toBeInTheDocument()
+      expect(screen.getByText('Escribe el nombre de tu hijo.')).toBeInTheDocument()
       expect(screen.getByText('El apellido del hijo es obligatorio')).toBeInTheDocument()
       expect(screen.getByText('Elige la fecha de nacimiento.')).toBeInTheDocument()
       expect(postCalls()).toHaveLength(0)

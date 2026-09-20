@@ -10,10 +10,22 @@ export const nameValidation = { required: true, maxLength: NAME_MAX_LENGTH, patt
 // backend's `> 0` check so the common case never reaches the server.
 export const positiveNumberValidation = { min: { value: 0.01, message: 'must be positive' } }
 
-/** The Spanish message for a failed name rule; `subject` is e.g. "El nombre del hijo". */
-export function nameError(error: FieldError | undefined, subject: string): string | undefined {
+// The mocks' own validation messages (mocks 01/11).
+export const EMAIL_MESSAGE = 'Escribe un correo válido.'
+export const PASSWORD_MESSAGE = 'La contraseña necesita al menos 8 caracteres.'
+export const CHILD_NAME_MESSAGE = 'Escribe el nombre de tu hijo.'
+export const BIRTH_DATE_MESSAGE = 'Elige la fecha de nacimiento.'
+
+export const emailValidation = { required: true, pattern: /^\S+@\S+\.\S+$/ }
+export const passwordValidation = { required: true, minLength: 8 }
+
+/**
+ * The Spanish message for a failed name rule; `subject` is e.g. "El nombre del
+ * hijo". `requiredMessage` replaces the default "<subject> es obligatorio".
+ */
+export function nameError(error: FieldError | undefined, subject: string, requiredMessage?: string): string | undefined {
   if (!error) return undefined
-  if (error.type === 'required') return `${subject} es obligatorio`
+  if (error.type === 'required') return requiredMessage ?? `${subject} es obligatorio`
   if (error.type === 'maxLength') return `${subject} debe tener máximo ${NAME_MAX_LENGTH} caracteres`
   return `${subject} solo puede contener letras, espacios, guiones y apóstrofes`
 }

@@ -3,7 +3,8 @@ import { designs, fillSignup, uniqueEmail } from './helpers'
 
 // Covers specs/001-registro-cuenta-usuario in both designs: the phone mock
 // (01) and the web mock (11). The first child is part of the form (as in the
-// mocks); there is no password field yet. Requires the backend running
+// mocks); the web one also has a password (validated, never stored) and a
+// Google button ("coming soon"). Requires the backend running
 // locally — this suite is a separate CI gate from the unit-test coverage gate
 // (constitution, Principio VI).
 
@@ -22,8 +23,9 @@ for (const design of designs) {
       await expect(webOnly).toHaveCount(design.isWeb ? 1 : 0)
       await expect(phoneOnly).toHaveCount(design.isWeb ? 0 : 1)
       await expect(page.getByRole('heading', { level: 2, name: 'Crear cuenta' })).toHaveCount(design.isWeb ? 1 : 0)
-      // No password (deliberate deviation until real authentication exists).
-      await expect(page.getByLabel(/contraseña/i)).toHaveCount(0)
+      // Web mock 11 only: the password field and the Google button. Phone mock 01 has neither for now.
+      await expect(page.getByLabel('Contraseña')).toHaveCount(design.isWeb ? 1 : 0)
+      await expect(page.getByRole('button', { name: 'Registrarme con Google' })).toHaveCount(design.isWeb ? 1 : 0)
     })
 
     test('crear cuenta con su primer hijo lleva al home', async ({ page }) => {
@@ -57,10 +59,21 @@ for (const design of designs) {
       await expect(page.getByText('El nombre es obligatorio')).toBeVisible()
       await expect(page.getByText('El apellido es obligatorio')).toBeVisible()
       await expect(page.getByText('Escribe un correo válido.')).toBeVisible()
-      await expect(page.getByText('El nombre del hijo es obligatorio')).toBeVisible()
+      if (design.isWeb) await expect(page.getByText('La contraseña necesita al menos 8 caracteres.')).toBeVisible()
+      await expect(page.getByText('Escribe el nombre de tu hijo.')).toBeVisible()
       await expect(page.getByText('El apellido del hijo es obligatorio')).toBeVisible()
       await expect(page.getByText('Elige la fecha de nacimiento.')).toBeVisible()
       expect(postCalled).toBe(false)
+    })
+
+    test('el primer campo inválido queda con el foco y el borde rojo', async ({ page }) => {
+      await page.goto('/signup')
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+
+      // The first field in the form's order: "Tu nombre" on the phone, "Correo" on the web (mock 11).
+      const first = design.isWeb ? page.getByLabel('Correo') : page.getByLabel('Tu nombre')
+      await expect(first).toBeFocused()
+      await expect(first).toHaveClass(/border-red-600/)
     })
 
     test('la fecha de nacimiento futura es rechazada por el servidor (FR-005)', async ({ page }) => {
@@ -124,6 +137,21 @@ for (const design of designs) {
       await expect(page).toHaveURL(/\/signup/)
     })
 
+    test('un correo sin formato de correo es rechazado antes de enviar', async ({ page }) => {
+      let postCalled = false
+      await page.route('**/accounts', async (route) => {
+        postCalled = true
+        await route.continue()
+      })
+      await page.goto('/signup')
+      await fillSignup(page, { email: 'no-es-correo' })
+
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+
+      await expect(page.getByText('Escribe un correo válido.')).toBeVisible()
+      expect(postCalled).toBe(false)
+    })
+
     test('elegir un país con estados muestra el selector de estado', async ({ page }) => {
       await page.goto('/signup')
 
@@ -134,3 +162,43 @@ for (const design of designs) {
     })
   })
 }
+
+test.describe('Registro web (mock 11): contraseña y Google', () => {
+  test.use({ viewport: { width: 1280, height: 800 } })
+
+  test('la contraseña de menos de 8 caracteres se rechaza y nunca se envía al servidor', async ({ page }) => {
+    let body = ''
+    await page.route('**/accounts', async (route) => {
+      body = route.request().postData() ?? ''
+      await route.continue()
+    })
+    await page.goto('/signup')
+    await fillSignup(page)
+    await page.getByLabel('Contraseña').fill('1234567')
+
+    await page.getByRole('button', { name: 'Crear cuenta' }).click()
+    await expect(page.getByText('La contraseña necesita al menos 8 caracteres.')).toBeVisible()
+    expect(body).toBe('')
+
+    await page.getByLabel('Contraseña').fill('secreto123')
+    await page.getByRole('button', { name: 'Crear cuenta' }).click()
+    await expect(page).toHaveURL(/\/home/)
+    expect(body).not.toContain('secreto123')
+    expect(body).not.toContain('password')
+  })
+
+  test('"Registrarme con Google" avisa que estará disponible pronto y no envía nada', async ({ page }) => {
+    let posted = false
+    await page.route('**/accounts', async (route) => {
+      posted = true
+      await route.continue()
+    })
+    await page.goto('/signup')
+
+    await page.getByRole('button', { name: 'Registrarme con Google' }).click()
+
+    await expect(page.getByRole('status')).toHaveText('El registro con Google estará disponible pronto.')
+    await expect(page).toHaveURL(/\/signup/)
+    expect(posted).toBe(false)
+  })
+})

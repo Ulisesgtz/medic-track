@@ -35,9 +35,10 @@ otro; no hay clases responsivas `lg:` que combinen ambos.
 
 Decididas por el usuario:
 
-- **Sin contraseña** en el registro (no hay autenticación todavía; es la siguiente feature, ver BACKLOG).
+- **Contraseña solo validada**: el campo del mock 11 está en el registro web (mínimo 8 caracteres) pero **no se envía ni se guarda**: la autenticación será con Clerk o AWS Cognito (BACKLOG). El registro móvil (mock 01) todavía no lo tiene; se agrega cuando se haga esa pantalla.
+- **Botón "Registrarme con Google"** (no está en el mock; lo pidió el usuario) en el registro web, tras un separador "o". Sin proveedor de autenticación no puede funcionar aún: al tocarlo avisa "El registro con Google estará disponible pronto."
 - Se **conservan los campos actuales**: tutor y hijo con nombre y apellido separados, país/estado (opcionales),
-  talla/peso (opcionales) — el mock 01/11 tiene "Correo, Contraseña, Nombre y apellido, Fecha". Igual en el modal
+  talla/peso (opcionales) — el mock 01/11 tiene "Correo, Contraseña, Nombre y apellido, Fecha". En el registro web quedan dentro del orden del mock: Correo, Contraseña, luego Tu nombre/Tu apellido y País/Estado, y el bloque "Hijo 1 · Gratis". Igual en el modal
   "Agregar hijo" (el mock tiene "Nombre completo").
 - **"Desde (opcional)"** (hora de inicio) en cada medicamento de "Nueva consulta".
 
