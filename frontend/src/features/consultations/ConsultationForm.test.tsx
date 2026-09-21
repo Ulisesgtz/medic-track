@@ -294,15 +294,41 @@ describe('ConsultationForm', () => {
       expect(clickSpy).toHaveBeenCalled()
     })
 
-    it('web keeps the chooser row and the file name after choosing a photo', async () => {
+    it("web: once a photo is chosen the panel is the mock's (no chooser row, no file name) and Cambiar foto sits at the header's right end", async () => {
       const user = userEvent.setup()
       renderForm('desktop')
+      expect(screen.getByRole('button', { name: 'Seleccionar archivo' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Cambiar foto' })).not.toBeInTheDocument()
 
       await user.upload(screen.getByLabelText('Foto de la receta'), samplePhoto())
 
-      expect(screen.getByRole('button', { name: 'Seleccionar archivo' })).toBeInTheDocument()
-      expect(screen.getByText('receta.jpg')).toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: 'Cambiar foto' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Seleccionar archivo' })).not.toBeInTheDocument()
+      expect(screen.queryByText('receta.jpg')).not.toBeInTheDocument()
+      const change = screen.getByRole('button', { name: 'Cambiar foto' })
+      // The header row of mock 14: the "← Cancelar / title" block on the left, "Cambiar foto" free on the right.
+      expect(change.parentElement).toContainElement(screen.getByRole('heading', { level: 1, name: 'Nueva consulta' }))
+      expect(change.parentElement).toHaveClass('justify-between')
+    })
+
+    it('web: "Cambiar foto" opens the file picker', async () => {
+      const user = userEvent.setup()
+      renderForm('desktop')
+      const input = screen.getByLabelText('Foto de la receta') as HTMLInputElement
+      await user.upload(input, samplePhoto())
+      await screen.findByText('Listo')
+      const clickSpy = vi.spyOn(input, 'click')
+
+      await user.click(screen.getByRole('button', { name: 'Cambiar foto' }))
+
+      expect(clickSpy).toHaveBeenCalled()
+    })
+
+    it("web: the medication row has the mock's three columns; \"Desde\" goes to a second row under Frecuencia", () => {
+      renderForm('desktop')
+
+      const grid = byId('medications.0.name').closest('.grid')!
+      expect(grid).toHaveClass('sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]')
+      expect(byId('medications.0.startTime').parentElement).toHaveClass('sm:col-start-2')
     })
 
     it('phone: the doctor and date fields are semibold as in the mock; the web keeps medium', () => {

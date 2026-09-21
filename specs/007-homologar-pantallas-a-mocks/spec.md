@@ -49,7 +49,7 @@ Por límites de datos o del producto:
 - El mock 04/14 muestra el panel de OCR ya leyendo ("Leyendo receta · Listo"); la app arranca con el botón
   **"Seleccionar archivo"** (hace falta un modo de elegir la foto) y pasa al progreso al elegirla. En móvil, ya
   elegida la foto, el panel es exactamente el del mock (sin fila del selector ni nombre del archivo) y **"Cambiar
-  foto"** va en la fila superior, a la derecha de "← Cancelar"; en web se conserva la fila del selector.
+  foto"** va en la fila superior, a la derecha de "← Cancelar" (en web, al extremo derecho del encabezado, igual sin costo de espacio).
 - El mock 04 no tiene "Síntomas" en móvil; se conserva el campo (el modelo lo guarda): en móvil va como campo propio
   bajo el grupo "Sugerido por OCR" (que queda idéntico al mock, solo Doctor y Fecha); en web (mock 14) va dentro del grupo.
 - El detalle de consulta muestra **una fila de chips por día**, con "← Día anterior / Día siguiente →" cuando
@@ -73,6 +73,13 @@ Por límites de datos o del producto:
   "← Mateo Morales" y "Ver completa" (misma posición visual), la foto real en vez del dibujo, y "Tratamiento activo"
   muestra el nombre completo del medicamento ("Amoxicilina 250 mg"; el mock dice "Amoxicilina": el nombre y la
   dosis se guardan juntos).
+- **Nueva consulta web (14)**: medido elemento por elemento a 1440, 1280, 1024 y 1000 px: encabezado ("← Cancelar", título y
+  "Para Mateo Morales · 5 años 6 meses"), panel del OCR (137 px, separaciones de 16 px), grupo "Sugerido por OCR" (con
+  Síntomas, que en web sí está en el mock) y la fila de tres campos del medicamento (2fr/1fr/1fr) coinciden en posición,
+  tamaño, tipografía y color; bajo 1024 px, como el mock, sin barra lateral y con márgenes de 24 px. Diferencias: "Desde" (en una
+  segunda fila, debajo de "Frecuencia", para no encoger la fila del mock; los botones bajan ~92 px), "Cambiar foto", el
+  estado inicial del panel (sin foto, con "Seleccionar archivo"), el área táctil de 44 px de "← Cancelar" y que al guardar
+  se abre el detalle de la consulta (el mock muestra "Consulta guardada ✓").
 - **Detalle del hijo móvil (02)**: medido elemento por elemento contra el mock a 430 px (posiciones, tamaños,
   tipografía, colores, y el estado verde tras "Marcar tomas"): idéntico. Solo difiere el área táctil de
   "← Tus hijos" y "+ Nueva" (44 px con margen negativo, misma posición visual) y, por el dato del punto anterior,

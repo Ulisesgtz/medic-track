@@ -81,7 +81,7 @@ export function MedicationFieldset({
       <div
         className={
           desktop
-            ? 'grid min-w-0 gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]'
+            ? 'grid min-w-0 gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]'
             : 'flex min-w-0 flex-col gap-3.5'
         }
       >
@@ -129,7 +129,8 @@ export function MedicationFieldset({
             {medErrors?.durationDays && <p className={error}>Escribe cuántos días (ej. 7).</p>}
           </div>
           {desktop && (
-            <div className="flex min-w-0 flex-1 flex-col gap-2">
+            // Not in the mock's row of three: it goes to a second row, under "Frecuencia".
+            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:col-start-2">
               <label htmlFor={id('startTime')} className={label}>
                 Desde
               </label>

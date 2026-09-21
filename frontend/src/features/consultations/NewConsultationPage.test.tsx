@@ -99,6 +99,14 @@ describe('NewConsultationPage', () => {
     expect(byId('medications.0.name')).toHaveAttribute('placeholder', 'Amoxicilina 250 mg')
   })
 
+  it("web: keeps the mock's responsive margins (smaller below 1024px, where the sidebar is hidden)", async () => {
+    stubMatchMedia(true)
+    renderPage()
+
+    await screen.findByText(/^Para Mateo Morales/)
+    expect(screen.getByRole('main')).toHaveClass('px-6', 'py-8', 'lg:px-12', 'lg:py-11')
+  })
+
   it('leaves without asking when nothing was captured', async () => {
     const user = userEvent.setup()
     const confirm = vi.spyOn(window, 'confirm')

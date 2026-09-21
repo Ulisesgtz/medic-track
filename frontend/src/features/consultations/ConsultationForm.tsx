@@ -349,9 +349,10 @@ export function ConsultationForm({
       : 100
   // Mock 04 (phone): fields of the OCR group are semibold; the web mock 14 keeps medium.
   const ocrFieldClass = `${ocrField} ${desktop ? 'font-medium' : 'font-semibold'}`
-  // Phone: once a photo is chosen the panel is exactly the mock's (title + percent, bar, note) and
-  // "Cambiar foto" moves to the top row, next to "← Cancelar". The web keeps the chooser row.
-  const showChooser = desktop || !photoFile
+  // Once a photo is chosen the panel is exactly the mock's (title + percent, bar, note) and
+  // "Cambiar foto" moves to the top row, next to "← Cancelar" (phone) or the header's right end (web).
+  const showChooser = !photoFile
+  const gapTop = desktop ? 'mt-4' : 'mt-3.5'
   const panelBox = desktop ? 'rounded-3xl bg-ink p-6 lg:p-7' : 'mt-5 rounded-3xl bg-ink-soft p-5'
   const track = desktop ? 'bg-ink-soft' : 'bg-ink'
   const ocrPanel = (
@@ -376,7 +377,7 @@ export function ConsultationForm({
           aria-valuemin={0}
           aria-valuemax={100}
           aria-valuenow={percent}
-          className={`mt-3.5 h-2 overflow-hidden rounded-full ${track}`}
+          className={`${gapTop} h-2 overflow-hidden rounded-full ${track}`}
         >
           <div className="h-full bg-bright transition-[width] duration-300" style={{ width: `${percent}%` }} />
         </div>
@@ -392,38 +393,45 @@ export function ConsultationForm({
         onChange={handlePhotoChange}
       />
       {ocrProgress && (
-        <p className="mt-3.5 text-[13px] font-semibold text-[#67e8f9]" aria-live="polite">
+        <p className={`${gapTop} text-[13px] font-semibold text-[#67e8f9]`} aria-live="polite">
           Agregando medicamentos de la receta… {ocrProgress.current} de {ocrProgress.total}
         </p>
       )}
-      <p className="mt-3.5 text-[13px] leading-relaxed text-[#a5f3fc]">
+      <p className={`${gapTop} text-[13px] leading-relaxed text-[#a5f3fc]`}>
         {desktop
           ? 'El procesamiento ocurre en tu equipo. La foto no se envía a ningún servidor.'
           : 'El procesamiento ocurre en tu teléfono. La foto no sale del dispositivo.'}
       </p>
       {showChooser && (
-        <div className="mt-3.5 flex flex-wrap items-center gap-3">
+        <div className={gapTop}>
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            aria-describedby={photoFile ? 'photo-label photo-filename' : 'photo-label'}
-            className={`min-h-11 cursor-pointer rounded-2xl border-2 border-bright px-5 py-2.5 font-extrabold text-bright transition-colors duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-bright focus-visible:ring-offset-2 focus-visible:ring-offset-ink ${
-              photoFile ? 'text-sm' : 'text-base'
-            }`}
+            aria-describedby="photo-label"
+            className="min-h-11 cursor-pointer rounded-2xl border-2 border-bright px-5 py-2.5 text-base font-extrabold text-bright transition-colors duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-bright focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
           >
             Seleccionar archivo
           </button>
-          {photoFile && (
-            <span id="photo-filename" className="min-w-0 truncate text-[13px] font-semibold text-white/80">
-              {photoFile.name}
-            </span>
-          )}
         </div>
       )}
       {photoMissing && !photoFile && (
         <p className="mt-3 text-[13px] font-semibold text-red-200">La foto de la receta es obligatoria</p>
       )}
     </div>
+  )
+
+  const changePhoto = (
+    <button
+      type="button"
+      onClick={() => fileInputRef.current?.click()}
+      className={
+        desktop
+          ? '-my-3 inline-flex min-h-11 cursor-pointer items-center self-start text-sm font-bold text-action'
+          : '-my-3 inline-flex min-h-11 cursor-pointer items-center text-sm font-bold text-[#67e8f9] hover:text-white'
+      }
+    >
+      Cambiar foto
+    </button>
   )
 
   const cancelLink = (
@@ -560,10 +568,13 @@ export function ConsultationForm({
   if (desktop) {
     return (
       <div className="mx-auto flex max-w-4xl flex-col gap-7">
-        <div>
-          {cancelLink}
-          <h1 className="mt-3 text-4xl font-black tracking-tight text-ink">Nueva consulta</h1>
-          {childLabel && <p className="mt-2 text-base text-slate-600">Para {childLabel}</p>}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            {cancelLink}
+            <h1 className="mt-3 text-4xl font-black tracking-tight text-ink">Nueva consulta</h1>
+            {childLabel && <p className="mt-2 text-base text-slate-600">Para {childLabel}</p>}
+          </div>
+          {photoFile && changePhoto}
         </div>
         {ocrPanel}
         <form onSubmit={onSubmit} noValidate className="flex min-w-0 flex-col gap-5">
@@ -584,15 +595,7 @@ export function ConsultationForm({
       <header className="bg-ink px-6 pt-6 pb-7">
         <div className="flex min-h-6 items-center justify-between">
           {cancelLink}
-          {photoFile && (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="-my-3 inline-flex min-h-11 cursor-pointer items-center text-sm font-bold text-[#67e8f9] hover:text-white"
-            >
-              Cambiar foto
-            </button>
-          )}
+          {photoFile && changePhoto}
         </div>
         <h1 className="mt-5 text-2xl font-black tracking-tight text-white">Nueva consulta</h1>
         {ocrPanel}
