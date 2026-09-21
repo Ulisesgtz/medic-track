@@ -235,6 +235,19 @@ describe('ConsultationDetailPage', () => {
   })
 
   describe('with the desktop sidebar (mock 13)', () => {
+    it("keeps the mock's responsive rule: one column with smaller margins below 1024px, two columns from there", async () => {
+      useDesktop()
+      stubApi(consultation())
+      renderPage()
+
+      await screen.findByRole('heading', { level: 1, name: 'Dra. López' })
+      const main = screen.getByRole('main')
+      expect(main).toHaveClass('px-6', 'py-8', 'lg:px-12', 'lg:py-11')
+      const grid = screen.getByRole('heading', { name: 'Medicamentos' }).closest('.grid')!
+      expect(grid).toHaveClass('lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]', 'lg:items-start')
+      expect(grid).not.toHaveClass('grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]')
+    })
+
     it('shows the header row with "Nueva consulta", the photo card and the active treatment', async () => {
       useDesktop()
       stubApi(consultation(), {

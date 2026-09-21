@@ -111,7 +111,7 @@ export function ConsultationDetailPage() {
   if (isDesktop) {
     return (
       <AppShell activeChildId={consultation.childId}>
-        <main className="min-w-0 bg-canvas px-12 py-11">
+        <main className="min-w-0 bg-canvas px-6 py-8 lg:px-12 lg:py-11">
           <div className="mx-auto flex max-w-4xl flex-col gap-8">
             <div className="flex flex-wrap items-end justify-between gap-5">
               <div>
@@ -132,7 +132,7 @@ export function ConsultationDetailPage() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] items-start gap-6">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
               <div className="flex min-w-0 flex-col gap-4">
                 <h2 className={overline}>Medicamentos</h2>
                 {medications}
@@ -151,7 +151,7 @@ export function ConsultationDetailPage() {
                   <p className="mt-4 text-[13px] leading-relaxed text-slate-500">
                     Leída con OCR en el dispositivo. La imagen no salió de tu equipo.
                   </p>
-                  {seeFull('mt-1')}
+                  {seeFull('-mb-[11px] block w-fit')}
                 </div>
 
                 <div className="min-w-0 rounded-3xl bg-ink p-6">

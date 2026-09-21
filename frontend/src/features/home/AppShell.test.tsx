@@ -25,6 +25,18 @@ function stubMatchMedia(matches: boolean) {
   )
 }
 
+/** A window `width` px wide: every `(min-width: N)` query matches when N <= width. */
+function stubWidth(width: number) {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn().mockImplementation((query: string) => ({
+      matches: width >= Number(/min-width:\s*(\d+)px/.exec(query)?.[1] ?? Infinity),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  )
+}
+
 function renderShell(activeChildId?: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
@@ -132,5 +144,17 @@ describe('AppShell', () => {
 
     const dialog = screen.getByRole('dialog', { name: 'Agregar hijo' })
     expect(dialog.closest('aside')).toBeNull()
+  })
+
+  it('adds the sidebar from 1024px (`lg`, as the web mockups) and not between 900 and 1023px', async () => {
+    stubWidth(1023)
+    const { unmount } = renderShell()
+    expect(screen.getByText('SCREEN CONTENT')).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Tus hijos' })).not.toBeInTheDocument()
+    unmount()
+
+    stubWidth(1024)
+    renderShell()
+    expect(await screen.findByRole('navigation', { name: 'Tus hijos' })).toBeInTheDocument()
   })
 })

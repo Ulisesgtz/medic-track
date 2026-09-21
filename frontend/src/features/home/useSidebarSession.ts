@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useIsDesktop } from '../../shared/ui/useIsDesktop'
+import { useIsDesktop, useIsWide } from '../../shared/ui/useIsDesktop'
 import { useAccountSession } from './useAccountSession'
 
 /**
@@ -7,11 +7,13 @@ import { useAccountSession } from './useAccountSession'
  * The one place that decides it: `AppShell` renders the sidebar from it. `isDesktop`
  * is the rule that picks the *web* design over the *phone* one on every screen
  * (the delivered mockups are separate designs, never mixed); the sidebar is
- * added on top of the web design only when there is an account to list.
+ * added on top of the web design only from 1024px (the mockups hide it below
+ * `lg`, and stack the page in one column) and when there is an account to list.
  */
 export function useSidebarSession(): { accountId: string | null; hasSidebar: boolean; isDesktop: boolean } {
   const isDesktop = useIsDesktop()
+  const isWide = useIsWide()
   const { getAccountId } = useAccountSession()
   const [accountId] = useState<string | null>(() => getAccountId())
-  return { accountId, hasSidebar: isDesktop && accountId !== null, isDesktop }
+  return { accountId, hasSidebar: isDesktop && isWide && accountId !== null, isDesktop }
 }

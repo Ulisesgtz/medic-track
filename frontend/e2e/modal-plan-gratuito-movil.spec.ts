@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { seedChild, useAccount } from './helpers'
+import { seedChild, saveAccount } from './helpers'
 
 // The free-plan limit pop-up, phone design (mock 05): opened by "+ Agregar hijo"
 // when the free plan already has its child. Amber header, message, "Entendido" and
@@ -12,7 +12,7 @@ test.describe('Pop-up del plan gratuito — diseño móvil (mock 05)', () => {
 
   test.beforeEach(async ({ page, request }) => {
     const { accountId } = await seedChild(request, { withConsultation: false })
-    await useAccount(page, accountId)
+    await saveAccount(page, accountId)
     await page.goto('/home')
   })
 

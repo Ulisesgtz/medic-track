@@ -64,6 +64,13 @@ Por límites de datos o del producto:
   apila sobre el formulario, con título de 36 px y márgenes menores; antes se apretaba la pantalla partida desde
   900). El `select` de País mide igual que los campos (50 px). Diferencias: los campos extra (formulario más alto,
   ver más arriba), el botón de Google y que al crear la cuenta se abre el home (el mock cambia el texto del botón).
+- **Detalle de consulta web (13)**: medido elemento por elemento a 1440, 1280, 1024 y 1000 px (barra lateral,
+  cabecera, columnas 1.5fr/1fr, tarjetas, foto, tratamiento activo): idéntico en posición, tamaño, tipografía y
+  color. Bajo 1024 px, como el mock, sin barra lateral, márgenes de 24 px y una sola columna. Diferencias: el
+  selector "← Día anterior / Día siguiente →" bajo los chips (+32 px por medicamento), el área táctil de 44 px de
+  "← Mateo Morales" y "Ver completa" (misma posición visual), la foto real en vez del dibujo, y "Tratamiento activo"
+  muestra el nombre completo del medicamento ("Amoxicilina 250 mg"; el mock dice "Amoxicilina": el nombre y la
+  dosis se guardan juntos).
 - **Detalle del hijo móvil (02)**: medido elemento por elemento contra el mock a 430 px (posiciones, tamaños,
   tipografía, colores, y el estado verde tras "Marcar tomas"): idéntico. Solo difiere el área táctil de
   "← Tus hijos" y "+ Nueva" (44 px con margen negativo, misma posición visual) y, por el dato del punto anterior,
@@ -87,7 +94,9 @@ Por límites de datos o del producto:
   mock. Diferencia: el fondo del mock 05 es un home sin tarjeta de hijo y con encabezado sin saludo ni avatar; el
   home real (con su hijo, que es lo que activa el límite) sigue la pantalla 2 del tablero (saludo, avatar, chips).
   Columna centrada de máx. 430 px. Al tocar "Ver planes" la app abre `/planes` (el mock solo cambia el texto).
-- Punto de corte web/móvil en **900 px** (el mock usa `lg` = 1024 px).
+- Punto de corte web/móvil en **900 px** (el mock usa `lg` = 1024 px para su diseño de tabla). Entre 900 y 1023 px se
+  sigue el diseño responsivo del propio mock web: sin barra lateral y en una columna (mocks 11 y 13 ya lo hacen así;
+  los demás web, al revisarlos); la barra lateral aparece desde 1024 px.
 - Los registros son más altos que sus mocks por los campos conservados y el botón de Google: web 1219 vs 900 px
   (a 1440 px de ancho; el formulario no queda centrado en vertical en ventanas bajas) y móvil ~1600 vs 921 px.
 

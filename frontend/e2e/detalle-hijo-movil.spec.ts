@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { seedChild, useAccount } from './helpers'
+import { seedChild, saveAccount } from './helpers'
 
 // Child detail, phone design (mock 02): dark header with the child, the amber
 // "Tomas de hoy" block, and the list of consultations. Requires the backend.
@@ -9,7 +9,7 @@ test.describe('Detalle del hijo — diseño móvil (mock 02)', () => {
 
   test('muestra el encabezado, el bloque de tomas de hoy y la lista de consultas', async ({ page, request }) => {
     const { accountId, childId } = await seedChild(request)
-    await useAccount(page, accountId)
+    await saveAccount(page, accountId)
     await page.goto(`/children/${childId}`)
 
     await expect(page.getByRole('link', { name: '← Tus hijos' })).toBeVisible()
@@ -30,7 +30,7 @@ test.describe('Detalle del hijo — diseño móvil (mock 02)', () => {
 
   test('"Marcar tomas" marca todas las de hoy, el bloque pasa a verde y se conserva al recargar', async ({ page, request }) => {
     const { accountId, childId } = await seedChild(request)
-    await useAccount(page, accountId)
+    await saveAccount(page, accountId)
     await page.goto(`/children/${childId}`)
     const block = page.getByRole('region', { name: 'Tomas de hoy' })
 
@@ -47,7 +47,7 @@ test.describe('Detalle del hijo — diseño móvil (mock 02)', () => {
 
   test('los enlaces llevan a donde dice el mock: home, nueva consulta y el detalle de cada consulta', async ({ page, request }) => {
     const { accountId, childId, consultationId } = await seedChild(request)
-    await useAccount(page, accountId)
+    await saveAccount(page, accountId)
     await page.goto(`/children/${childId}`)
 
     await page.getByRole('link', { name: '+ Nueva' }).click()
@@ -64,7 +64,7 @@ test.describe('Detalle del hijo — diseño móvil (mock 02)', () => {
 
   test('sin consultas: estado vacío y "Sin tomas hoy"', async ({ page, request }) => {
     const { accountId, childId } = await seedChild(request, { withConsultation: false })
-    await useAccount(page, accountId)
+    await saveAccount(page, accountId)
     await page.goto(`/children/${childId}`)
 
     await expect(page.getByText('Todavía no hay consultas registradas.')).toBeVisible()
@@ -75,7 +75,7 @@ test.describe('Detalle del hijo — diseño móvil (mock 02)', () => {
   test('es una columna centrada de máximo 430 px, como el mock, sin desborde horizontal', async ({ page, request }) => {
     const { accountId, childId } = await seedChild(request)
     await page.setViewportSize({ width: 700, height: 900 })
-    await useAccount(page, accountId)
+    await saveAccount(page, accountId)
     await page.goto(`/children/${childId}`)
 
     const box = await page.getByRole('main').boundingBox()

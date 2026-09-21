@@ -48,9 +48,12 @@ const PNG_BASE64 =
  * Creates, straight through the API, an account with one child (Mateo, born 2021-03-14)
  * and, if asked, a consultation today with three doses of "Amoxicilina" (00:00, 08:00
  * and 16:00 in the browser's own time zone — the same one the app sends). Returns the
- * ids; the caller opens the app with `useAccount`.
+ * ids; the caller opens the app with `saveAccount`.
  */
-export async function seedChild(request: APIRequestContext, { withConsultation = true } = {}) {
+export async function seedChild(
+  request: APIRequestContext,
+  { withConsultation = true, durationDays = 1 }: { withConsultation?: boolean; durationDays?: number } = {},
+) {
   const res = await request.post('http://localhost:8080/accounts', {
     data: {
       firstName: 'Ana',
@@ -72,7 +75,7 @@ export async function seedChild(request: APIRequestContext, { withConsultation =
         photoBase64: PNG_BASE64,
         symptoms: 'Fiebre y tos',
         utcOffsetMinutes: -now.getTimezoneOffset() || 0,
-        medications: [{ name: 'Amoxicilina', frequencyHours: 8, durationDays: 1, startTime: '00:00' }],
+        medications: [{ name: 'Amoxicilina', frequencyHours: 8, durationDays, startTime: '00:00' }],
       },
     })
     consultationId = (await created.json()).id
@@ -81,6 +84,6 @@ export async function seedChild(request: APIRequestContext, { withConsultation =
 }
 
 /** Opens the app as that account (the saved `account_id` is the only "session"). */
-export async function useAccount(page: Page, accountId: string) {
+export async function saveAccount(page: Page, accountId: string) {
   await page.addInitScript((id) => localStorage.setItem('peditrack.accountId', id), accountId)
 }

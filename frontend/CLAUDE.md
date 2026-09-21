@@ -11,7 +11,7 @@ Vite + React 18 + TypeScript. Forms: React Hook Form. Server state: TanStack Que
 | `src/features/home/` | The home page: children listing, "Agregar hijo" dialogs, the desktop sidebar, the `account_id`-in-`localStorage` session (see below) |
 | `src/features/consultations/` | Child detail page, "Nueva consulta" page (with client-side OCR), consultation detail, dose marking (see below) |
 | `src/shared/catalog/` | Country/state catalog fetch hooks (`useCountries`, `useStates`) shared across features |
-| `src/shared/ui/` | Presentational pieces used by more than one feature: `Logo`, `AppHeader` (phone dark header: eyebrow, title, action), `FormField` (label + control + inline error), `MessagePage`, `useIsDesktop` (true from 900px, `matchMedia`-based — **the one rule that picks the web or the phone design**) |
+| `src/shared/ui/` | Presentational pieces used by more than one feature: `Logo`, `AppHeader` (phone dark header: eyebrow, title, action), `FormField` (label + control + inline error), `MessagePage`, `useIsDesktop` (true from 900px, `matchMedia`-based — **the one rule that picks the web or the phone design**) and `useIsWide` (true from 1024px, `lg`: where the web mocks show the sidebar) |
 | `src/shared/age.ts` | `computeAge(birthDate)` — months under 2 years old, whole years after. `formatAgeLong`/`formatAgeShort` give "5 años 6 meses" / "5a 6m" for the cards, headers and sidebar |
 | `src/shared/useLocalDay.ts` | The parent's local "today" `{from, to}`, rolled over at local midnight and re-checked when the app returns to the foreground. Use it, never a `useState(() => localDayRange())` that freezes at mount |
 | `src/shared/date.ts` | `formatDateShort('2026-09-15')` → `15 sep 2026`, `formatDateLong` → `12 septiembre 2026`, `formatDayMonth`, `formatTime` — every date shown to the user goes through them (fixed month names, no `Intl`, no timezone shift) |
@@ -44,8 +44,8 @@ Tokens de color y tipografía viven en el bloque `@theme` de `src/index.css`; la
 - Un área táctil de 44 px sobre un elemento que el mock dibuja más chico se resuelve con `min-h-11` y margen
   negativo (`-my-3`, `-my-[5px]`), para que la posición visual sea la del mock.
 - El logo solo va en header, pantalla de registro, barra lateral e icono/splash de la PWA.
-- Las pantallas con sesión van dentro de `features/home/AppShell.tsx`: en web (≥ 900 px) agrega `ChildrenSidebar`
-  (280 px: hijos, "+ Agregar hijo", tutor y plan); en móvil no hay barra. Se **renderiza condicionalmente**, no se
+- Las pantallas con sesión van dentro de `features/home/AppShell.tsx`: desde 1024 px (`lg`, como los mocks web 13/14/15) agrega `ChildrenSidebar`
+  (280 px: hijos, "+ Agregar hijo", tutor y plan); en móvil y entre 900 y 1023 px no hay barra (el mock apila la página en una columna, con `px-6 py-8` en vez de `px-12 py-11`). Se **renderiza condicionalmente**, no se
   oculta con CSS, así nunca hay dos copias de la lista de hijos en el árbol de accesibilidad. Toda pantalla nueva con
   sesión debe envolverse en `AppShell`. `AppHeader` es solo del diseño móvil (el web no tiene banda de encabezado).
 - En E2E web la barra lateral repite el nombre del hijo y "Agregar hijo": acotar selectores a `page.getByRole('main')`
@@ -90,7 +90,7 @@ Tokens de color y tipografía viven en el bloque `@theme` de `src/index.css`; la
 | `AppShell.tsx`, `ChildrenSidebar.tsx` | Session shell and the web sidebar (see "Sistema visual") |
 | `AddChildDialogs.tsx`, `plan.ts` | What "Agregar hijo" opens: the plan-limit pop-up when `atFreePlanLimit(account)`, otherwise `AddChildModal`. Shared by the home and the sidebar. Takes the opener button (`opener` ref) and gives it the focus back on close — Safari doesn't focus a button when it is clicked, so `document.activeElement` can't be trusted; its close callback is stable (the dialogs re-run their focus setup if `onClose` changes identity) |
 | `AddChildModal.tsx` | Board screen 7: title/subtitle + "×", Nombre, Apellido, Fecha de nacimiento, Talla/Peso (optional), "Cancelar" + "Guardar". Falls back to `FreemiumLimitModal` if the server still answers 422 |
-| `useSidebarSession.ts` | `{ accountId, hasSidebar, isDesktop }` — the single place that decides whether the sidebar is on screen |
+| `useSidebarSession.ts` | `{ accountId, hasSidebar, isDesktop }` — the single place that decides whether the sidebar is on screen (`isDesktop` && `useIsWide` (1024px) && there is an account) |
 | `useAccountSession.ts` | `getAccountId`/`setAccountId`/`clearAccountId` over `localStorage`, each in `try/catch` — the only "session" this app has (no real login yet; next feature, see BACKLOG) |
 | `api.ts`, `types.ts` | `fetchAccount()`, `addChild()`, `AccountApiError`; `Account`/`Child` shapes |
 

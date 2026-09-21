@@ -1,24 +1,33 @@
 import { useSyncExternalStore } from 'react'
 
 const DESKTOP_QUERY = '(min-width: 900px)'
+// The web mockups (13, 14, 15) show the children sidebar from Tailwind's `lg` (1024px).
+const SIDEBAR_QUERY = '(min-width: 1024px)'
 
-function subscribe(onChange: () => void) {
-  if (typeof window.matchMedia !== 'function') return () => {}
-  const mql = window.matchMedia(DESKTOP_QUERY)
-  mql.addEventListener('change', onChange)
-  return () => mql.removeEventListener('change', onChange)
-}
-
-function getSnapshot() {
-  return typeof window.matchMedia === 'function' && window.matchMedia(DESKTOP_QUERY).matches
+function useMediaQuery(query: string) {
+  return useSyncExternalStore(
+    (onChange) => {
+      if (typeof window.matchMedia !== 'function') return () => {}
+      const mql = window.matchMedia(query)
+      mql.addEventListener('change', onChange)
+      return () => mql.removeEventListener('change', onChange)
+    },
+    () => typeof window.matchMedia === 'function' && window.matchMedia(query).matches,
+    () => false,
+  )
 }
 
 /**
- * True from 900px up (a laptop window snapped or resized narrow still gets the desktop mock) — where the app swaps
- * the single mobile column for the children sidebar (FR-012). Used to
- * render the sidebar conditionally instead of hiding it with CSS, so it
- * never exists twice in the DOM / accessibility tree.
+ * True from 900px up (a laptop window snapped or resized narrow still gets the
+ * web design): the one rule that picks the web mockups over the phone ones on
+ * every screen. Read it, don't hide one design with CSS, so the other never
+ * exists in the DOM / accessibility tree.
  */
 export function useIsDesktop() {
-  return useSyncExternalStore(subscribe, getSnapshot, () => false)
+  return useMediaQuery(DESKTOP_QUERY)
+}
+
+/** True from 1024px (`lg`): wide enough for the children sidebar, as in the web mockups. */
+export function useIsWide() {
+  return useMediaQuery(SIDEBAR_QUERY)
 }
