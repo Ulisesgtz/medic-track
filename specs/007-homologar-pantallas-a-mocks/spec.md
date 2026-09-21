@@ -75,6 +75,12 @@ Por límites de datos o del producto:
   (extras decididos), etiquetas solo para lector de pantalla en los campos del medicamento, el estado inicial
   del panel (sin foto) y que al guardar se abre el detalle de la consulta (el mock muestra "Consulta guardada ✓").
   Columna centrada de máx. 430 px.
+- **Pop-up del plan gratuito móvil (05)**: medido a 430 px contra el mock abierto: diálogo, cabecera ámbar, texto,
+  botones, fondo, capa y foco inicial (en "Ver planes") idénticos; también el botón "+ Agregar hijo" y la nota del
+  fondo. El foco vuelve al botón que lo abrió aunque el navegador no lo enfoque al hacer clic (Safari), como en el
+  mock. Diferencia: el fondo del mock 05 es un home sin tarjeta de hijo y con encabezado sin saludo ni avatar; el
+  home real (con su hijo, que es lo que activa el límite) sigue la pantalla 2 del tablero (saludo, avatar, chips).
+  Columna centrada de máx. 430 px. Al tocar "Ver planes" la app abre `/planes` (el mock solo cambia el texto).
 - Punto de corte web/móvil en **900 px** (el mock usa `lg` = 1024 px).
 - Los registros son más altos que sus mocks por los campos conservados y el botón de Google: web 1219 vs 900 px
   (a 1440 px de ancho; el formulario no queda centrado en vertical en ventanas bajas) y móvil ~1600 vs 921 px.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useAccountSession } from './useAccountSession'
@@ -26,6 +26,7 @@ export function HomePage() {
   const { getAccountId, clearAccountId } = useAccountSession()
   const [accountId] = useState<string | null>(() => getAccountId())
   const [showAddChild, setShowAddChild] = useState(false)
+  const addChildButton = useRef<HTMLButtonElement>(null)
   const { isDesktop } = useSidebarSession()
 
   const query = useQuery({
@@ -90,6 +91,7 @@ export function HomePage() {
       open={showAddChild}
       onClose={() => setShowAddChild(false)}
       showChildName={isDesktop}
+      opener={addChildButton}
     />
   )
 
@@ -111,6 +113,7 @@ export function HomePage() {
                 <h1 className="mt-1 text-4xl font-black tracking-tight text-ink">Tus hijos</h1>
               </div>
               <button
+                ref={addChildButton}
                 type="button"
                 onClick={() => setShowAddChild(true)}
                 className="min-h-11 cursor-pointer rounded-2xl bg-confirmed px-6 py-3.5 text-[15px] font-extrabold text-white transition-colors hover:bg-emerald-800"
@@ -142,7 +145,7 @@ export function HomePage() {
 
   return (
     <AppShell>
-      <main className="min-h-screen bg-canvas pb-16">
+      <main className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas pb-16">
         <AppHeader
           eyebrow={account ? `Hola, ${account.firstName}` : undefined}
           title="Tus hijos"
@@ -171,6 +174,7 @@ export function HomePage() {
           )}
 
           <button
+            ref={addChildButton}
             type="button"
             onClick={() => setShowAddChild(true)}
             className="mt-4 min-h-11 w-full cursor-pointer rounded-3xl border-2 border-dashed border-[#67e8f9] py-5 text-base font-extrabold text-action transition-colors hover:bg-hint"

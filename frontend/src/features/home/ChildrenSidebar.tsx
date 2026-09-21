@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { formatAgeShort } from '../../shared/age'
@@ -21,6 +21,7 @@ interface ChildrenSidebarProps {
  */
 export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarProps) {
   const [showAddChild, setShowAddChild] = useState(false)
+  const addChildButton = useRef<HTMLButtonElement>(null)
   const query = useQuery({
     queryKey: ['account', accountId],
     queryFn: () => fetchAccount(accountId),
@@ -63,6 +64,7 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
         })}
 
         <button
+          ref={addChildButton}
           type="button"
           onClick={() => setShowAddChild(true)}
           className="cursor-pointer rounded-2xl border-[1.5px] border-dashed border-[#0b5763] px-4 py-3.5 text-center text-sm font-bold text-[#67e8f9] transition-colors duration-200 hover:bg-ink-soft"
@@ -97,6 +99,7 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
         open={showAddChild}
         onClose={() => setShowAddChild(false)}
         showChildName
+        opener={addChildButton}
       />
     </aside>
   )

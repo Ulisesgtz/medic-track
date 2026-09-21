@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -115,6 +115,28 @@ describe('HomePage', () => {
     expect(screen.getByText('El plan gratuito incluye un hijo.')).toBeInTheDocument()
   })
 
+  it('gives the focus back to "+ Agregar hijo" when the plan pop-up closes, even if the click never focused it (Safari)', async () => {
+    const user = userEvent.setup()
+    window.localStorage.setItem('peditrack.accountId', 'account-free')
+    stubApi({
+      id: 'account-free', firstName: 'Ana', lastName: 'Gómez', email: 'ana@example.com',
+      countryCode: null, stateCode: null, plan: 'free',
+      children: [{ id: 'child-1', firstName: 'Luis', lastName: 'Gómez', birthDate: '2020-01-15', height: null, weight: null }],
+    })
+    renderHome()
+    const opener = await screen.findByRole('button', { name: '+ Agregar hijo' })
+
+    // A click that leaves the button unfocused, as Safari does; the pop-up is the one that focuses "Ver planes".
+    fireEvent.click(opener)
+    expect(await screen.findByRole('button', { name: 'Ver planes' })).toHaveFocus()
+    expect(opener).not.toHaveFocus()
+
+    await user.keyboard('{Escape}')
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(opener).toHaveFocus()
+  })
+
   it('clears the saved account id and shows the invitation when the account no longer exists (Caso Límite)', async () => {
     window.localStorage.setItem('peditrack.accountId', 'stale-id')
     vi.stubGlobal(
@@ -140,6 +162,14 @@ describe('HomePage', () => {
     const consultation = (id: string) => ({ id, doctorName: 'Dra. López', consultDate: '2026-01-15', symptoms: '', medicationCount: 1 })
 
     beforeEach(() => window.localStorage.setItem('peditrack.accountId', 'account-chips'))
+
+    it('is a centered column of at most 430px, as the mock', async () => {
+      stubApi(account)
+      renderHome()
+
+      await screen.findByText('Hola, Ana')
+      expect(screen.getByRole('main')).toHaveClass('mx-auto', 'max-w-[430px]')
+    })
 
     it('greets the tutor and shows their initials in the header', async () => {
       stubApi(account)
