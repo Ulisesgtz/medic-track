@@ -40,7 +40,9 @@ Decididas por el usuario:
 - Se **conservan los campos actuales**: tutor y hijo con nombre y apellido separados, país/estado (opcionales),
   talla/peso (opcionales) — el mock 01/11 tiene "Correo, Contraseña, Nombre y apellido, Fecha". En ambos registros quedan dentro del orden del mock: Correo, Contraseña, luego Tu nombre/Tu apellido y País/Estado, y el bloque "Hijo 1 · Gratis" (en móvil, columna de máx. 430 px como el mock; Talla y Peso en dos columnas). Igual en el modal
   "Agregar hijo" (el mock tiene "Nombre completo").
-- **"Desde (opcional)"** (hora de inicio) en cada medicamento de "Nueva consulta".
+- **"Desde"** (hora de inicio) en cada medicamento de "Nueva consulta", **obligatorio** (2026-09-20: una consulta es inmutable,
+  así que una hora omitida no se podría completar después y sin ella no hay tomas ni tratamiento activo). El backend también
+  la exige; las consultas anteriores sin hora se quedan como están.
 
 Por límites de datos o del producto:
 
@@ -84,7 +86,7 @@ Por límites de datos o del producto:
   Columna centrada de máx. 430 px.
 - **Nueva consulta móvil (04)**: medido elemento por elemento a 430 px; cabecera (286 px), panel del OCR, grupo
   "Sugerido por OCR" y tarjeta de medicamento (nombre y dosis, c/8 h, 7 días) en la misma posición, con las mismas
-  medidas y `font-semibold` en Doctor y Fecha. Diferencias: "Cambiar foto", "Síntomas" y "Desde (opcional)"
+  medidas y `font-semibold` en Doctor y Fecha. Diferencias: "Cambiar foto", "Síntomas" y "Desde"
   (extras decididos), etiquetas solo para lector de pantalla en los campos del medicamento, el estado inicial
   del panel (sin foto) y que al guardar se abre el detalle de la consulta (el mock muestra "Consulta guardada ✓").
   Columna centrada de máx. 430 px.

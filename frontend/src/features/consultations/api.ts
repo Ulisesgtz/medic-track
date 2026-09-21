@@ -44,7 +44,7 @@ export interface CreateMedicationPayload {
   name: string
   frequencyHours: number
   durationDays: number
-  startTime?: string
+  startTime: string
 }
 
 export interface CreateConsultationPayload {

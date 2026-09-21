@@ -19,7 +19,7 @@ Registra una consulta médica nueva para un hijo (FR-003, FR-004).
       "name": "string (requerido)",
       "frequencyHours": "number (requerido, entero positivo)",
       "durationDays": "number (requerido, entero positivo)",
-      "startTime": "string HH:MM (opcional — si se omite, no se generan tomas)"
+      "startTime": "string HH:MM (obligatorio — de él se generan todas las tomas; sin él, 400 validation_error en medications[i].startTime)"
     }
   ]
 }

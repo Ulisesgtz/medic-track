@@ -60,6 +60,7 @@ async function fillValid(user: ReturnType<typeof userEvent.setup>) {
   await user.type(byId('medications.0.name'), 'Amoxicilina')
   await user.type(byId('medications.0.frequencyHours'), 'c/8 h')
   await user.type(byId('medications.0.durationDays'), '7 días')
+  await user.type(byId('medications.0.startTime'), '0800')
 }
 
 describe('NewConsultationPage', () => {

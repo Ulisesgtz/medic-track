@@ -231,7 +231,7 @@ export function ConsultationForm({
           name: m.name,
           frequencyHours: parsePositiveInt(m.frequencyHours) ?? 0,
           durationDays: parsePositiveInt(m.durationDays) ?? 0,
-          startTime: m.startTime || undefined,
+          startTime: m.startTime,
         })),
         // Start times are read in the parent's own time zone (their offset on the consult date).
         utcOffsetMinutes: -new Date(`${values.consultDate}T00:00:00`).getTimezoneOffset(),

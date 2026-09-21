@@ -123,6 +123,28 @@ func TestHandler_CreateConsultation_NoMedications(t *testing.T) {
 	require.Equal(t, "validation_error", resp["error"])
 }
 
+// A medication without a start time is rejected: no doses could be generated from it.
+func TestHandler_CreateConsultation_MissingStartTime(t *testing.T) {
+	pool := testPool(t)
+	childID := createTestChild(t, pool)
+	router, _ := routerWithPool(t)
+
+	rec := doPostPath(t, router, "/children/"+childID.String()+"/consultations", map[string]any{
+		"doctorName":  "Dra. López",
+		"consultDate": "2026-01-15",
+		"photoBase64": base64.StdEncoding.EncodeToString([]byte("x")),
+		"medications": []map[string]any{{"name": "Amoxicilina", "frequencyHours": 8, "durationDays": 3}},
+	})
+
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	require.Equal(t, "validation_error", resp["error"])
+	details, ok := resp["details"].([]any)
+	require.True(t, ok)
+	require.Equal(t, "medications[0].startTime", details[0].(map[string]any)["field"])
+}
+
 func TestHandler_CreateConsultation_ChildNotFound(t *testing.T) {
 	router := newTestRouter(t)
 

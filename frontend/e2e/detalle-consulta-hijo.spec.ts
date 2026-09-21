@@ -112,8 +112,33 @@ for (const design of designs) {
       await expect(page.getByText('El nombre del doctor es obligatorio')).toBeVisible()
       await expect(page.getByText('La fecha es obligatoria')).toBeVisible()
       await expect(page.getByText('La foto de la receta es obligatoria')).toBeVisible()
+      await expect(page.getByText('Elige la hora de la primera toma.')).toBeVisible()
       await expect(page.getByRole('status')).toContainText('Completa los campos faltantes.')
       await expect(page).toHaveURL(/\/consultations\/new/)
+    })
+
+    test('"Desde" es obligatorio: sin hora de inicio no se guarda (y ya no dice "opcional")', async ({ page }) => {
+      await signUp(page)
+      await page.getByRole('main').getByText('Luis Gómez').click()
+      await page.getByRole('link', { name: design.isWeb ? 'Nueva consulta' : '+ Nueva' }).click()
+      await expect(page.getByText(/opcional/i)).toHaveCount(0)
+
+      await page.getByLabel('Doctor').fill('Dra. López')
+      await page.getByLabel('Fecha', { exact: true }).fill('2026-01-15')
+      await page.getByLabel('Foto de la receta').setInputFiles(writeTempImage())
+      await page.locator('#medications\\.0\\.name').fill('Amoxicilina')
+      await page.locator('#medications\\.0\\.frequencyHours').fill('c/8 h')
+      await page.locator('#medications\\.0\\.durationDays').fill('3 días')
+      await page.getByRole('button', { name: 'Guardar consulta' }).click()
+
+      await expect(page.getByText('Elige la hora de la primera toma.')).toBeVisible()
+      await expect(page).toHaveURL(/\/consultations\/new$/)
+
+      await page.locator('#medications\\.0\\.startTime').fill('08:00')
+      await page.getByRole('button', { name: 'Guardar consulta' }).click()
+      await expect(page).toHaveURL(/\/consultations\/(?!new)/)
+      // With its start time, the doses exist: every chip of the schedule is there.
+      await expect(page.getByRole('button', { name: /^Toma de / }).first()).toBeVisible()
     })
 
     test('agregar y quitar medicamentos', async ({ page }) => {

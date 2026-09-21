@@ -10,6 +10,7 @@ const plain = `${field} border-[1.5px] border-slate-300`
 const suggestedBorder = `${field} border-2 border-bright`
 const label = 'text-[13px] font-bold text-ink-soft'
 const error = 'text-[13px] font-semibold text-red-700'
+const START_TIME_MESSAGE = 'Elige la hora de la primera toma.'
 
 interface MedicationFieldsetProps {
   index: number
@@ -28,9 +29,11 @@ interface MedicationFieldsetProps {
  * One repeatable medication, built from mockups 04 (phone) and 14 (desktop):
  * a white card with the "Medicamento N" badge, "Quitar", and the fields
  * "Nombre y dosis", frequency ("c/8 h"), duration ("7 días") and — an addition
- * to the mock, because doses can't be scheduled without it — an optional
- * start time "Desde". Frequency and duration accept free text; the first
- * number in them is what's sent.
+ * to the mock, because doses can't be scheduled without it — the start time
+ * "Desde", which is required: a consultation is immutable once saved, so a
+ * missing start time could never be filled in later (and without it no doses
+ * or active treatment exist). Frequency and duration accept free text; the
+ * first number in them is what's sent.
  */
 export function MedicationFieldset({
   index,
@@ -128,32 +131,36 @@ export function MedicationFieldset({
           {desktop && (
             <div className="flex min-w-0 flex-1 flex-col gap-2">
               <label htmlFor={id('startTime')} className={label}>
-                Desde (opcional)
+                Desde
               </label>
               <input
                 id={id('startTime')}
                 type="time"
                 size={1}
                 className={`${plain} text-[15px]`}
-                {...register(`medications.${index}.startTime`)}
+                {...register(`medications.${index}.startTime`, { required: true })}
               />
+              {medErrors?.startTime && <p className={error}>{START_TIME_MESSAGE}</p>}
             </div>
           )}
         </div>
       </div>
 
       {!desktop && (
-        <div className="flex min-w-0 items-center gap-3">
-          <label htmlFor={id('startTime')} className="shrink-0 text-[13px] font-bold whitespace-nowrap text-ink-soft">
-            Desde (opcional)
-          </label>
-          <input
-            id={id('startTime')}
-            type="time"
-            size={1}
-            className={`${plain} flex-1 text-[15px]`}
-            {...register(`medications.${index}.startTime`)}
-          />
+        <div className="flex min-w-0 flex-col gap-2">
+          <div className="flex min-w-0 items-center gap-3">
+            <label htmlFor={id('startTime')} className="shrink-0 text-[13px] font-bold whitespace-nowrap text-ink-soft">
+              Desde
+            </label>
+            <input
+              id={id('startTime')}
+              type="time"
+              size={1}
+              className={`${plain} flex-1 text-[15px]`}
+              {...register(`medications.${index}.startTime`, { required: true })}
+            />
+          </div>
+          {medErrors?.startTime && <p className={error}>{START_TIME_MESSAGE}</p>}
         </div>
       )}
     </fieldset>

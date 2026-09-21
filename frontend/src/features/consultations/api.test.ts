@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { fetchConsultations, createConsultation, fetchConsultationDetail, updateDoseStatus, ConsultationApiError } from './api'
 
-const medicationPayload = { name: 'Amoxicilina', frequencyHours: 8, durationDays: 3 }
+const medicationPayload = { name: 'Amoxicilina', frequencyHours: 8, durationDays: 3, startTime: '08:00' }
 
 describe('fetchConsultations', () => {
   beforeEach(() => {

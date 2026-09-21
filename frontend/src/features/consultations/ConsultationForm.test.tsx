@@ -56,6 +56,7 @@ async function fillValid(user: ReturnType<typeof userEvent.setup>) {
   await user.type(byId('medications.0.name'), 'Amoxicilina 250 mg')
   await user.type(byId('medications.0.frequencyHours'), 'c/8 h')
   await user.type(byId('medications.0.durationDays'), '7 días')
+  await user.type(byId('medications.0.startTime'), '0800')
 }
 
 describe('ConsultationForm', () => {
@@ -77,7 +78,7 @@ describe('ConsultationForm', () => {
       expect(byId('medications.0.durationDays')).toHaveAttribute('placeholder', '7 días')
       expect(screen.getByRole('button', { name: '+ Otro medicamento' })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Guardar consulta' })).toBeInTheDocument()
-      expect(screen.getByText('Desde (opcional)')).toBeInTheDocument()
+      expect(screen.getByText('Desde')).toBeInTheDocument()
       expect(screen.queryByText(/^Para /)).not.toBeInTheDocument()
     })
 
@@ -87,7 +88,7 @@ describe('ConsultationForm', () => {
       expect(screen.getByText('Para Mateo Morales · 5 años 6 meses')).toBeInTheDocument()
       expect(screen.getByText('El procesamiento ocurre en tu equipo. La foto no se envía a ningún servidor.')).toBeInTheDocument()
       expect(byId('medications.0.name')).toHaveAttribute('placeholder', 'Amoxicilina 250 mg')
-      for (const text of ['Nombre y dosis', 'Frecuencia', 'Duración', 'Desde (opcional)']) {
+      for (const text of ['Nombre y dosis', 'Frecuencia', 'Duración', 'Desde']) {
         expect(screen.getByText(text)).toBeInTheDocument()
       }
     })
@@ -105,6 +106,7 @@ describe('ConsultationForm', () => {
       expect(screen.getByText('Escribe el nombre del medicamento.')).toBeInTheDocument()
       expect(screen.getByText('Escribe cada cuántas horas (ej. 8).')).toBeInTheDocument()
       expect(screen.getByText('Escribe cuántos días (ej. 7).')).toBeInTheDocument()
+      expect(screen.getByText('Elige la hora de la primera toma.')).toBeInTheDocument()
       expect(screen.getByText('La foto de la receta es obligatoria')).toBeInTheDocument()
       expect(screen.getByRole('status')).toHaveTextContent('Completa los campos faltantes.')
     })
@@ -137,6 +139,39 @@ describe('ConsultationForm', () => {
       expect(screen.getByText('Escribe cuántos días (ej. 7).')).toBeInTheDocument()
     })
 
+    it.each(['phone', 'desktop'] as const)('%s: "Desde" is required — no "(opcional)", an error under it, and nothing is sent without it', async (variant) => {
+      const user = userEvent.setup()
+      vi.stubGlobal('fetch', vi.fn())
+      renderForm(variant)
+      expect(screen.queryByText(/opcional/i)).not.toBeInTheDocument()
+
+      await user.type(screen.getByLabelText('Doctor'), 'Dra. López')
+      await user.type(screen.getByLabelText('Fecha'), '2026-01-15')
+      await user.upload(screen.getByLabelText('Foto de la receta'), samplePhoto())
+      await user.type(byId('medications.0.name'), 'Amoxicilina')
+      await user.type(byId('medications.0.frequencyHours'), 'c/8 h')
+      await user.type(byId('medications.0.durationDays'), '7 días')
+      await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
+
+      expect(await screen.findByText('Elige la hora de la primera toma.')).toBeInTheDocument()
+      expect(fetch).not.toHaveBeenCalled()
+
+      await user.type(byId('medications.0.startTime'), '0800')
+      expect(byId('medications.0.startTime')).toHaveValue('08:00')
+    })
+
+    it('every medication needs its own start time', async () => {
+      const user = userEvent.setup()
+      renderForm()
+      await user.click(screen.getByRole('button', { name: '+ Otro medicamento' }))
+      await user.type(byId('medications.0.startTime'), '0800')
+
+      await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
+
+      // Only the second medication lacks it: exactly one message.
+      expect(await screen.findAllByText('Elige la hora de la primera toma.')).toHaveLength(1)
+    })
+
     it('submits the numbers found in the free text, the start time and the parent\'s UTC offset', async () => {
       const user = userEvent.setup()
       vi.stubGlobal(
@@ -152,7 +187,6 @@ describe('ConsultationForm', () => {
       const { onSuccess } = renderForm()
 
       await fillValid(user)
-      await user.type(byId('medications.0.startTime'), '0800')
       await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
 
       await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('consultation-1'))

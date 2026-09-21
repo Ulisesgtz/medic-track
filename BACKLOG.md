@@ -22,6 +22,12 @@ y se elimina (o se marca) aquí.
 
 ## Backend
 
+- **Consultas anteriores sin hora de inicio** — desde 2026-09-20 "Desde" es obligatorio, pero las consultas guardadas
+  antes (p. ej. la del Dr. Erick Rojas) tienen medicamentos sin `start_time`, sin tomas y sin tratamiento activo, y como
+  las consultas son inmutables no se pueden completar. Si hace falta, permitir agregar la hora solo cuando falte (excepción
+  a la inmutabilidad, endpoint nuevo, spec propia y un diseño que los mocks no tienen).
+
+
 - **Consulta/listado del log de errores** — endpoint o interfaz para leer las entradas de
   `error_logs` (creado por `specs/002-registro-log-errores/`). Esa funcionalidad excluyó
   explícitamente la lectura (FR-007) — solo implementa el registro (escritura).

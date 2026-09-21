@@ -94,6 +94,7 @@ test.describe('Nueva consulta — diseño móvil (mock 04)', () => {
     await page.locator('#medications\\.0\\.name').fill('Amoxicilina 250 mg')
     await page.locator('#medications\\.0\\.frequencyHours').fill('c/8 h')
     await page.locator('#medications\\.0\\.durationDays').fill('7 días')
+    await page.locator('#medications\\.0\\.startTime').fill('08:00')
     await page.getByLabel('Síntomas').fill('Fiebre y tos')
 
     await page.getByRole('button', { name: 'Guardar consulta' }).click()

@@ -36,10 +36,11 @@ Prerrequisito: backend corriendo (`cd backend && go run ./cmd/api`) con `DATABAS
 3. Repite marcando una toma cuya fecha ya pasó (o simula avanzar el reloj del sistema).
 4. **Esperado**: el marcado funciona igual, sin ningún bloqueo por "tratamiento terminado" (Aclaraciones de spec.md).
 
-## Escenario 7 — Medicamento sin horario de inicio no genera tomas (FR-010)
+## Escenario 7 — El horario de inicio es obligatorio (FR-010)
 
-1. Registra una consulta con un medicamento sin definir horario de inicio.
-2. **Esperado**: en el detalle de esa consulta, ese medicamento muestra su frecuencia y duración, pero `doses: []` — ningún registro marcable.
+1. Intenta registrar una consulta con un medicamento sin "Desde".
+2. **Esperado**: el formulario muestra "Elige la hora de la primera toma." y no envía nada; si la API recibe la consulta sin `startTime`, responde `400 validation_error` con el campo `medications[0].startTime`.
+3. Una consulta anterior a este cambio (sin horario) sigue mostrándose con su frecuencia y duración y `doses: []` — ningún registro marcable.
 
 ## Escenario 8 — Consulta e hijo inexistentes (Casos Límite)
 
