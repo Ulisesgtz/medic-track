@@ -45,8 +45,11 @@ Decididas por el usuario:
 Por límites de datos o del producto:
 
 - El mock 04/14 muestra el panel de OCR ya leyendo ("Leyendo receta · Listo"); la app arranca con el botón
-  **"Seleccionar archivo"** (hace falta un modo de elegir la foto) y pasa al progreso al elegirla.
-- El mock 04 no tiene "Síntomas" en móvil; se conserva el campo (el modelo lo guarda) en ambos diseños.
+  **"Seleccionar archivo"** (hace falta un modo de elegir la foto) y pasa al progreso al elegirla. En móvil, ya
+  elegida la foto, el panel es exactamente el del mock (sin fila del selector ni nombre del archivo) y **"Cambiar
+  foto"** va en la fila superior, a la derecha de "← Cancelar"; en web se conserva la fila del selector.
+- El mock 04 no tiene "Síntomas" en móvil; se conserva el campo (el modelo lo guarda): en móvil va como campo propio
+  bajo el grupo "Sugerido por OCR" (que queda idéntico al mock, solo Doctor y Fecha); en web (mock 14) va dentro del grupo.
 - El detalle de consulta muestra **una fila de chips por día**, con "← Día anterior / Día siguiente →" cuando
   el tratamiento dura varios días (el mock enseña una sola fila fija); así toda toma queda alcanzable.
 - El mock 02 muestra una consulta "sin receta"; el backend exige al menos un medicamento por consulta, así que
@@ -65,6 +68,12 @@ Por límites de datos o del producto:
   "Ver completa" (margen negativo, misma posición visual), el selector "← Día anterior / Día siguiente →" bajo
   los chips (+32 px por medicamento; el mock enseña una sola fila fija y sus tres chips no siguen una regla de
   horario, p. ej. Paracetamol cada 6 h con 3 tomas), y el texto de la toma futura en `slate-600` por contraste.
+  Columna centrada de máx. 430 px.
+- **Nueva consulta móvil (04)**: medido elemento por elemento a 430 px; cabecera (286 px), panel del OCR, grupo
+  "Sugerido por OCR" y tarjeta de medicamento (nombre y dosis, c/8 h, 7 días) en la misma posición, con las mismas
+  medidas y `font-semibold` en Doctor y Fecha. Diferencias: "Cambiar foto", "Síntomas" y "Desde (opcional)"
+  (extras decididos), etiquetas solo para lector de pantalla en los campos del medicamento, el estado inicial
+  del panel (sin foto) y que al guardar se abre el detalle de la consulta (el mock muestra "Consulta guardada ✓").
   Columna centrada de máx. 430 px.
 - Punto de corte web/móvil en **900 px** (el mock usa `lg` = 1024 px).
 - Los registros son más altos que sus mocks por los campos conservados y el botón de Google: web 1219 vs 900 px

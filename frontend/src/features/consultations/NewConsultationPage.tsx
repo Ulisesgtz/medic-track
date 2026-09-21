@@ -36,7 +36,7 @@ export function NewConsultationPage() {
 
   return (
     <AppShell activeChildId={childId}>
-      <main className={isDesktop ? 'min-w-0 bg-canvas px-12 py-11' : 'min-h-screen bg-canvas pb-10'}>
+      <main className={isDesktop ? 'min-w-0 bg-canvas px-12 py-11' : 'mx-auto min-h-screen w-full max-w-[430px] bg-canvas pb-10'}>
         <ConsultationForm
           childId={childId}
           variant={isDesktop ? 'desktop' : 'phone'}

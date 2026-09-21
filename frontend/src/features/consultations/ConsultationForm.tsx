@@ -160,7 +160,7 @@ const MEDICATION_STAGGER_MS = 180
 // Mocks 04/14: every field of the "Sugerido por OCR" group carries the bright
 // border ("proposed by the OCR, confirm it"); the symptoms box is a plain field.
 const ocrField =
-  'min-h-11 w-full min-w-0 rounded-xl border-2 border-bright bg-surface px-4 py-3 text-base font-medium text-ink focus:border-ink focus:outline-none'
+  'min-h-11 w-full min-w-0 rounded-xl border-2 border-bright bg-surface px-4 py-3 text-base text-ink focus:border-ink focus:outline-none'
 const plainField =
   'w-full min-w-0 rounded-xl border-[1.5px] border-slate-300 bg-surface px-4 py-3 text-base font-medium text-ink placeholder:text-slate-400 focus:border-2 focus:border-ink focus:outline-none'
 const label = 'text-[13px] font-bold text-ink-soft'
@@ -347,6 +347,11 @@ export function ConsultationForm({
     : ocrProgress
       ? Math.round((ocrProgress.current / ocrProgress.total) * 100)
       : 100
+  // Mock 04 (phone): fields of the OCR group are semibold; the web mock 14 keeps medium.
+  const ocrFieldClass = `${ocrField} ${desktop ? 'font-medium' : 'font-semibold'}`
+  // Phone: once a photo is chosen the panel is exactly the mock's (title + percent, bar, note) and
+  // "Cambiar foto" moves to the top row, next to "← Cancelar". The web keeps the chooser row.
+  const showChooser = desktop || !photoFile
   const panelBox = desktop ? 'rounded-3xl bg-ink p-6 lg:p-7' : 'mt-5 rounded-3xl bg-ink-soft p-5'
   const track = desktop ? 'bg-ink-soft' : 'bg-ink'
   const ocrPanel = (
@@ -396,23 +401,25 @@ export function ConsultationForm({
           ? 'El procesamiento ocurre en tu equipo. La foto no se envía a ningún servidor.'
           : 'El procesamiento ocurre en tu teléfono. La foto no sale del dispositivo.'}
       </p>
-      <div className="mt-3.5 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          aria-describedby={photoFile ? 'photo-label photo-filename' : 'photo-label'}
-          className={`min-h-11 cursor-pointer rounded-2xl border-2 border-bright px-5 py-2.5 font-extrabold text-bright transition-colors duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-bright focus-visible:ring-offset-2 focus-visible:ring-offset-ink ${
-            photoFile ? 'text-sm' : 'text-base'
-          }`}
-        >
-          Seleccionar archivo
-        </button>
-        {photoFile && (
-          <span id="photo-filename" className="min-w-0 truncate text-[13px] font-semibold text-white/80">
-            {photoFile.name}
-          </span>
-        )}
-      </div>
+      {showChooser && (
+        <div className="mt-3.5 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            aria-describedby={photoFile ? 'photo-label photo-filename' : 'photo-label'}
+            className={`min-h-11 cursor-pointer rounded-2xl border-2 border-bright px-5 py-2.5 font-extrabold text-bright transition-colors duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-bright focus-visible:ring-offset-2 focus-visible:ring-offset-ink ${
+              photoFile ? 'text-sm' : 'text-base'
+            }`}
+          >
+            Seleccionar archivo
+          </button>
+          {photoFile && (
+            <span id="photo-filename" className="min-w-0 truncate text-[13px] font-semibold text-white/80">
+              {photoFile.name}
+            </span>
+          )}
+        </div>
+      )}
       {photoMissing && !photoFile && (
         <p className="mt-3 text-[13px] font-semibold text-red-200">La foto de la receta es obligatoria</p>
       )}
@@ -444,6 +451,23 @@ export function ConsultationForm({
       ? 'Completa los campos faltantes.'
       : ''
 
+  // Not in the phone mock 04 (the web mock 14 has it inside the OCR group): kept because the model
+  // stores it, as its own field below the group on the phone so the group stays as the mock.
+  const symptomsField = (
+    <div className="flex min-w-0 flex-col gap-2">
+      <label htmlFor="symptoms" className={label}>
+        Síntomas
+      </label>
+      <textarea
+        id="symptoms"
+        rows={3}
+        placeholder="Lo que observaste antes de la consulta"
+        className={plainField}
+        {...register('symptoms')}
+      />
+    </div>
+  )
+
   const ocrGroup = (
     <fieldset
       className={`flex min-w-0 flex-col rounded-3xl border-[1.5px] border-hint-border bg-hint ${
@@ -458,7 +482,7 @@ export function ConsultationForm({
           <label htmlFor="doctorName" className={label}>
             Doctor
           </label>
-          <input id="doctorName" size={1} className={ocrField} {...register('doctorName', { required: true })} />
+          <input id="doctorName" size={1} className={ocrFieldClass} {...register('doctorName', { required: true })} />
           {errors.doctorName && <p className={errorText}>El nombre del doctor es obligatorio</p>}
         </div>
         <div className="flex min-w-0 flex-col gap-2">
@@ -469,24 +493,13 @@ export function ConsultationForm({
             id="consultDate"
             type="date"
             size={1}
-            className={ocrField}
+            className={ocrFieldClass}
             {...register('consultDate', { required: true })}
           />
           {errors.consultDate && <p className={errorText}>La fecha es obligatoria</p>}
         </div>
       </div>
-      <div className="flex min-w-0 flex-col gap-2">
-        <label htmlFor="symptoms" className={label}>
-          Síntomas
-        </label>
-        <textarea
-          id="symptoms"
-          rows={3}
-          placeholder="Lo que observaste antes de la consulta"
-          className={plainField}
-          {...register('symptoms')}
-        />
-      </div>
+      {desktop && symptomsField}
     </fieldset>
   )
 
@@ -569,12 +582,24 @@ export function ConsultationForm({
   return (
     <>
       <header className="bg-ink px-6 pt-6 pb-7">
-        {cancelLink}
+        <div className="flex min-h-6 items-center justify-between">
+          {cancelLink}
+          {photoFile && (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="-my-3 inline-flex min-h-11 cursor-pointer items-center text-sm font-bold text-[#67e8f9] hover:text-white"
+            >
+              Cambiar foto
+            </button>
+          )}
+        </div>
         <h1 className="mt-5 text-2xl font-black tracking-tight text-white">Nueva consulta</h1>
         {ocrPanel}
       </header>
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5 px-6 pt-6">
         {ocrGroup}
+        {symptomsField}
         {medications}
         {addButton}
         {saveButton}

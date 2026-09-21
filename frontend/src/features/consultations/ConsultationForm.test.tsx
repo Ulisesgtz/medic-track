@@ -228,10 +228,57 @@ describe('ConsultationForm', () => {
       await user.upload(screen.getByLabelText('Foto de la receta'), samplePhoto())
 
       expect(screen.getByText('Leyendo receta')).toBeInTheDocument()
-      expect(screen.getByText('receta.jpg')).toBeInTheDocument()
       expect(screen.getByRole('progressbar', { name: 'Progreso de lectura de la receta' })).toBeInTheDocument()
       expect(await screen.findByText('Listo')).toBeInTheDocument()
       expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100')
+    })
+
+    it("phone: once a photo is chosen the panel is the mock's (no chooser row, no file name) and Cambiar foto sits next to Cancelar", async () => {
+      const user = userEvent.setup()
+      renderForm('phone')
+      expect(screen.queryByRole('button', { name: 'Cambiar foto' })).not.toBeInTheDocument()
+
+      await user.upload(screen.getByLabelText('Foto de la receta'), samplePhoto())
+
+      expect(screen.queryByRole('button', { name: 'Seleccionar archivo' })).not.toBeInTheDocument()
+      expect(screen.queryByText('receta.jpg')).not.toBeInTheDocument()
+      const change = screen.getByRole('button', { name: 'Cambiar foto' })
+      expect(change.parentElement).toContainElement(screen.getByRole('link', { name: '← Cancelar' }))
+    })
+
+    it('phone: "Cambiar foto" opens the file picker, and a second photo is read in its place', async () => {
+      await recognizeAs('Dra. Maria Lopez')
+      const user = userEvent.setup()
+      renderForm('phone')
+      const input = screen.getByLabelText('Foto de la receta') as HTMLInputElement
+      await user.upload(input, samplePhoto())
+      await screen.findByText('Listo')
+      const clickSpy = vi.spyOn(input, 'click')
+
+      await user.click(screen.getByRole('button', { name: 'Cambiar foto' }))
+
+      expect(clickSpy).toHaveBeenCalled()
+    })
+
+    it('web keeps the chooser row and the file name after choosing a photo', async () => {
+      const user = userEvent.setup()
+      renderForm('desktop')
+
+      await user.upload(screen.getByLabelText('Foto de la receta'), samplePhoto())
+
+      expect(screen.getByRole('button', { name: 'Seleccionar archivo' })).toBeInTheDocument()
+      expect(screen.getByText('receta.jpg')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Cambiar foto' })).not.toBeInTheDocument()
+    })
+
+    it('phone: the doctor and date fields are semibold as in the mock; the web keeps medium', () => {
+      renderForm('phone')
+      expect(screen.getByLabelText('Doctor')).toHaveClass('font-semibold')
+    })
+
+    it('web: the doctor field is medium (mock 14)', () => {
+      renderForm('desktop')
+      expect(screen.getByLabelText('Doctor')).toHaveClass('font-medium')
     })
 
     it('autofills empty fields from OCR text as an editable suggestion (FR-006)', async () => {
@@ -477,6 +524,16 @@ describe('ConsultationForm', () => {
 
       expect(onDirtyChange).toHaveBeenLastCalledWith(true)
     })
+  })
+
+  it('phone: the OCR group has only Doctor and Fecha (mock 04); Síntomas is its own field below it', () => {
+    renderForm('phone')
+
+    const group = screen.getByText('Sugerido por OCR · revisa y confirma').closest('fieldset')!
+    expect(within(group).getByLabelText('Doctor')).toBeInTheDocument()
+    expect(within(group).getByLabelText('Fecha')).toBeInTheDocument()
+    expect(within(group).queryByLabelText('Síntomas')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Síntomas')).toBeInTheDocument()
   })
 
   it('exposes the symptoms box inside the OCR-suggestion group', () => {
