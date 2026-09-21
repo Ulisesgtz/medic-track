@@ -16,3 +16,4 @@
 - [x] **T012** Comparación lado a lado por pantalla (mock vs app al mismo ancho) y lista de desviaciones (spec).
 - [x] **T013** Pruebas unitarias (>90 %) y E2E en ambos diseños (móvil 390 y web 1280) de cada flujo: botones,
   campos, validaciones, foco, Escape, pop-ups.
+- [x] **T014** Revisión página por página (2026-09-20): registro web (11) y móvil (01), detalle del hijo móvil (02); E2E propio del detalle móvil (`detalle-hijo-movil.spec.ts`).

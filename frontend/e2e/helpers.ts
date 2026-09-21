@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, type APIRequestContext, type Page } from '@playwright/test'
 
 /**
  * The app has two separate designs (see frontend/CLAUDE.md, "Web y móvil"):
@@ -39,4 +39,48 @@ export async function signUp(page: Page, data: SignupData = {}) {
   await fillSignup(page, data)
   await page.getByRole('button', { name: 'Crear cuenta' }).click()
   await expect(page).toHaveURL(/\/home/)
+}
+
+const PNG_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+
+/**
+ * Creates, straight through the API, an account with one child (Mateo, born 2021-03-14)
+ * and, if asked, a consultation today with three doses of "Amoxicilina" (00:00, 08:00
+ * and 16:00 in the browser's own time zone — the same one the app sends). Returns the
+ * ids; the caller opens the app with `useAccount`.
+ */
+export async function seedChild(request: APIRequestContext, { withConsultation = true } = {}) {
+  const res = await request.post('http://localhost:8080/accounts', {
+    data: {
+      firstName: 'Ana',
+      lastName: 'Morales',
+      email: uniqueEmail('seed'),
+      children: [{ firstName: 'Mateo', lastName: 'Morales', birthDate: '2021-03-14' }],
+    },
+  })
+  const account = await res.json()
+  const childId: string = account.children[0].id
+  let consultationId: string | undefined
+  if (withConsultation) {
+    const now = new Date()
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+    const created = await request.post(`http://localhost:8080/children/${childId}/consultations`, {
+      data: {
+        doctorName: 'Dra. Laura Cázares',
+        consultDate: today,
+        photoBase64: PNG_BASE64,
+        symptoms: 'Fiebre y tos',
+        utcOffsetMinutes: -now.getTimezoneOffset() || 0,
+        medications: [{ name: 'Amoxicilina', frequencyHours: 8, durationDays: 1, startTime: '00:00' }],
+      },
+    })
+    consultationId = (await created.json()).id
+  }
+  return { accountId: account.id as string, childId, consultationId }
+}
+
+/** Opens the app as that account (the saved `account_id` is the only "session"). */
+export async function useAccount(page: Page, accountId: string) {
+  await page.addInitScript((id) => localStorage.setItem('peditrack.accountId', id), accountId)
 }

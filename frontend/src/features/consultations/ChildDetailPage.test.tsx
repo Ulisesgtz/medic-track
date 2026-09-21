@@ -104,6 +104,15 @@ describe('ChildDetailPage', () => {
       expect(screen.getByRole('link', { name: '← Tus hijos' })).toHaveAttribute('href', '/home')
     })
 
+    it('is a centered column of at most 430px, as the mock', async () => {
+      useSession()
+      stubApi()
+      renderPage()
+
+      await screen.findByRole('heading', { level: 1, name: 'Mateo Morales' })
+      expect(screen.getByRole('main')).toHaveClass('mx-auto', 'max-w-[430px]')
+    })
+
     it('falls back to a generic title when no account is saved', async () => {
       stubApi()
       renderPage()

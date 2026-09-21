@@ -174,7 +174,7 @@ export function ChildDetailPage() {
   // ---- Phone (mock 02).
   return (
     <AppShell activeChildId={childId}>
-      <main className="min-h-screen bg-canvas pb-10">
+      <main className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas pb-10">
         <header className="bg-ink px-6 pt-6 pb-7">
           <Link
             to="/home"

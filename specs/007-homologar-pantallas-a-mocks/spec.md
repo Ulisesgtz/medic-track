@@ -55,6 +55,10 @@ Por límites de datos o del producto:
   hijo; la app muestra los hijos reales.
 - Barra lateral de **280 px** (mocks 13/14/15 finales). El tablero declara 300 px pero, al no tener
   `box-sizing: border-box`, se dibuja de 348 px: es un artefacto del tablero.
+- **Detalle del hijo móvil (02)**: medido elemento por elemento contra el mock a 430 px (posiciones, tamaños,
+  tipografía, colores, y el estado verde tras "Marcar tomas"): idéntico. Solo difiere el área táctil de
+  "← Tus hijos" y "+ Nueva" (44 px con margen negativo, misma posición visual) y, por el dato del punto anterior,
+  "sin receta". Columna centrada de máx. 430 px, como el mock.
 - Punto de corte web/móvil en **900 px** (el mock usa `lg` = 1024 px).
 - Los registros son más altos que sus mocks por los campos conservados y el botón de Google: web 1219 vs 900 px
   (a 1440 px de ancho; el formulario no queda centrado en vertical en ventanas bajas) y móvil ~1600 vs 921 px.
