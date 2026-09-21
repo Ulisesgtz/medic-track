@@ -105,7 +105,7 @@ export function HomePage() {
   if (isDesktop) {
     return (
       <AppShell>
-        <main className="min-h-screen min-w-0 bg-canvas px-12 py-11">
+        <main className="min-h-screen min-w-0 bg-canvas px-6 py-8 lg:px-12 lg:py-11">
           <div className="mx-auto flex max-w-4xl flex-col gap-8">
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>

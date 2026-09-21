@@ -263,6 +263,24 @@ describe('HomePage', () => {
       )
     }
 
+    it("keeps the mock's responsive margins: smaller below 1024px, where the sidebar is hidden", async () => {
+      // 1000px: the web design (from 900px) but no sidebar (from 1024px).
+      vi.stubGlobal(
+        'matchMedia',
+        vi.fn().mockImplementation((query: string) => ({
+          matches: 1000 >= Number(/min-width:\s*(\d+)px/.exec(query)?.[1] ?? Infinity),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        })),
+      )
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => account([kid('k1', 'Luis')]) }))
+      renderDesktopHome()
+
+      await screen.findByText('Hola, Ana')
+      expect(screen.getByRole('main')).toHaveClass('px-6', 'py-8', 'lg:px-12', 'lg:py-11')
+      expect(screen.queryByRole('navigation', { name: 'Tus hijos' })).not.toBeInTheDocument()
+    })
+
     it('shows "Hola, Ana / Tus hijos", the solid "Agregar hijo" button, the cards and the plan tile (mock 15)', async () => {
       vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => account([kid('k1', 'Luis')]) }))
       renderDesktopHome()

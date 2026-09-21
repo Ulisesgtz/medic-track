@@ -82,6 +82,14 @@ Por límites de datos o del producto:
   la fila es la del mock y "Desde" queda debajo de "Frecuencia"), "Cambiar foto", el
   estado inicial del panel (sin foto, con "Seleccionar archivo"), el área táctil de 44 px de "← Cancelar" y que al guardar
   se abre el detalle de la consulta (el mock muestra "Consulta guardada ✓").
+- **Home web y pop-up del plan gratuito (15)**: medido a 1440, 1280, 1024 y 1000 px, cerrado y con el pop-up abierto (barra
+  lateral, "Hola, Ana / Tus hijos", tarjeta, recuadro "Tu plan incluye un hijo", diálogo, cabecera ámbar, textos, botones,
+  capa, sombra y foco inicial en "Ver planes"): idéntico. Se corrigió el margen vertical bajo 1024 px (32 px como el mock, sin
+  barra lateral). El foco vuelve al botón que abrió el pop-up, sea el de la página o el de la barra lateral. Diferencias: el
+  mock muestra un segundo hijo ("Sofía") en la barra lateral, con el plan gratuito de un solo hijo; la app muestra los
+  hijos reales, la edad inactiva de la barra en `#62909d` (contraste 4.5:1) y, en el mock, "Mateo" inactivo va en 800 de
+  peso mientras "Sofía" va en 700 (inconsistencia del mock; la app usa 700 para los inactivos). Al tocar "Ver planes" la app
+  abre `/planes` (el mock solo cambia el texto del botón).
 - **Detalle del hijo móvil (02)**: medido elemento por elemento contra el mock a 430 px (posiciones, tamaños,
   tipografía, colores, y el estado verde tras "Marcar tomas"): idéntico. Solo difiere el área táctil de
   "← Tus hijos" y "+ Nueva" (44 px con margen negativo, misma posición visual) y, por el dato del punto anterior,
