@@ -6,7 +6,7 @@ import { seedChild, saveAccount } from './helpers'
 
 // "Nueva consulta", web design (mock 14): the children sidebar, a header ("← Cancelar", the
 // title and "Para Mateo Morales · 5 años 6 meses"), the dark OCR panel, the "Sugerido por
-// OCR" group, the medication cards with their row of three fields, "+ Otro medicamento"
+// OCR" group, the medication cards with their row of fields, "+ Otro medicamento"
 // and "Guardar consulta". The positions were measured on the mock at each width (Chromium;
 // other engines draw fonts with other metrics, so heights are only asserted there).
 // Requires the backend running locally.
@@ -35,12 +35,14 @@ async function open(page: Page, request: Parameters<typeof seedChild>[0], width:
 }
 
 test.describe('Nueva consulta — diseño web (mock 14)', () => {
-  for (const { width, titleX, panelW, nameW, freqX, freqW } of [
-    { width: 1440, titleX: 412, panelW: 896, nameW: 408, freqX: 860, freqW: 204 },
-    { width: 1280, titleX: 332, panelW: 896, nameW: 408, freqX: 780, freqW: 204 },
-    { width: 1024, titleX: 328, panelW: 648, nameW: 284, freqX: 652, freqW: 142 },
+  for (const { width, titleX, panelW, nameW, freqX, freqW, sinceInRow } of [
+    // With room (the card is 720px or wider) "Desde" is a fourth column and the fields are a bit shorter than the
+    // mock's row of three (408/204/204); at 1024 px with the sidebar the card is narrower and the row is the mock's.
+    { width: 1440, titleX: 412, panelW: 896, nameW: 320, freqX: 772, freqW: 160, sinceInRow: true },
+    { width: 1280, titleX: 332, panelW: 896, nameW: 320, freqX: 692, freqW: 160, sinceInRow: true },
+    { width: 1024, titleX: 328, panelW: 648, nameW: 284, freqX: 652, freqW: 142, sinceInRow: false },
   ]) {
-    test(`a ${width} px: barra lateral, título, panel del OCR y fila de tres campos como el mock`, async ({ page, request, browserName }) => {
+    test(`a ${width} px: barra lateral, título, panel del OCR y la fila del medicamento (Desde ${sinceInRow ? 'en el mismo renglón' : 'debajo, como el mock de tres campos'})`, async ({ page, request, browserName }) => {
       await open(page, request, width)
 
       expect(await box(page.locator('aside').first())).toMatchObject({ x: 0, w: 280 })
@@ -51,6 +53,15 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
       expect(await box(page.getByText('Nombre y dosis', { exact: true }))).toMatchObject({ x: titleX + 24, w: nameW })
       expect(await box(page.getByText('Frecuencia', { exact: true }))).toMatchObject({ x: freqX, w: freqW })
       expect(await box(page.getByText('Duración', { exact: true }))).toMatchObject({ w: freqW })
+      const freq = await box(page.getByText('Frecuencia', { exact: true }))
+      const since = await box(page.getByText('Desde', { exact: true }))
+      if (sinceInRow) {
+        expect(since.y).toBe(freq.y)
+        expect(since).toMatchObject({ x: freqX + 2 * (freqW + 16), w: freqW })
+      } else {
+        expect(since.x).toBe(freq.x)
+        expect(since.y).toBeGreaterThan(freq.y)
+      }
       if (browserName === 'chromium') {
         expect((await box(page.getByRole('button', { name: 'Guardar consulta' }))).h).toBe(52)
         expect((await box(page.getByRole('button', { name: '+ Otro medicamento' }))).h).toBe(51)
@@ -101,11 +112,11 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     await expect(page.locator('#medications\\.0\\.name')).toHaveAttribute('placeholder', 'Amoxicilina 250 mg')
     await expect(page.locator('#medications\\.0\\.frequencyHours')).toHaveAttribute('placeholder', 'c/8 h')
     await expect(page.locator('#medications\\.0\\.durationDays')).toHaveAttribute('placeholder', '7 días')
-    // "Desde" is not in the mock's row: it sits on a second row, under "Frecuencia".
+    // "Desde" is not in the mock's row: with room it is a fourth column of the same row.
     const freq = await box(page.getByText('Frecuencia', { exact: true }))
     const since = await box(page.getByText('Desde', { exact: true }))
-    expect(since.x).toBe(freq.x)
-    expect(since.y).toBeGreaterThan(freq.y)
+    expect(since.y).toBe(freq.y)
+    expect(since.x).toBeGreaterThan(freq.x)
   })
 
   test('medicamentos: el primero sin "Quitar"; se agregan, se numeran y se quitan', async ({ page, request }) => {

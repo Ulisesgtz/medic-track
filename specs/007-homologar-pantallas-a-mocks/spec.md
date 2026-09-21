@@ -76,8 +76,10 @@ Por límites de datos o del producto:
 - **Nueva consulta web (14)**: medido elemento por elemento a 1440, 1280, 1024 y 1000 px: encabezado ("← Cancelar", título y
   "Para Mateo Morales · 5 años 6 meses"), panel del OCR (137 px, separaciones de 16 px), grupo "Sugerido por OCR" (con
   Síntomas, que en web sí está en el mock) y la fila de tres campos del medicamento (2fr/1fr/1fr) coinciden en posición,
-  tamaño, tipografía y color; bajo 1024 px, como el mock, sin barra lateral y con márgenes de 24 px. Diferencias: "Desde" (en una
-  segunda fila, debajo de "Frecuencia", para no encoger la fila del mock; los botones bajan ~92 px), "Cambiar foto", el
+  tamaño, tipografía y color; bajo 1024 px, como el mock, sin barra lateral y con márgenes de 24 px. Diferencias: "Desde" (cuando la
+  tarjeta mide 720 px o más va como cuarta columna del mismo renglón y los campos son más cortos: Nombre y dosis 320 px y
+  Frecuencia/Duración/Desde 160 px, en vez de 408/204/204; con la tarjeta más angosta, p. ej. a 1024 px con la barra lateral,
+  la fila es la del mock y "Desde" queda debajo de "Frecuencia"), "Cambiar foto", el
   estado inicial del panel (sin foto, con "Seleccionar archivo"), el área táctil de 44 px de "← Cancelar" y que al guardar
   se abre el detalle de la consulta (el mock muestra "Consulta guardada ✓").
 - **Detalle del hijo móvil (02)**: medido elemento por elemento contra el mock a 430 px (posiciones, tamaños,

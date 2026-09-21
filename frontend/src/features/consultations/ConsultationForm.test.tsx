@@ -323,12 +323,15 @@ describe('ConsultationForm', () => {
       expect(clickSpy).toHaveBeenCalled()
     })
 
-    it("web: the medication row has the mock's three columns; \"Desde\" goes to a second row under Frecuencia", () => {
+    it('web: the medication row is the mock\'s three columns, and a fourth one for "Desde" when the card has room (720px+)', () => {
       renderForm('desktop')
 
       const grid = byId('medications.0.name').closest('.grid')!
       expect(grid).toHaveClass('sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]')
-      expect(byId('medications.0.startTime').parentElement).toHaveClass('sm:col-start-2')
+      expect(grid).toHaveClass('@min-[720px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]')
+      expect(byId('medications.0.name').closest('fieldset')).toHaveClass('@container')
+      // Narrow card: second row under "Frecuencia"; wide card: the fourth column.
+      expect(byId('medications.0.startTime').parentElement).toHaveClass('sm:col-start-2', '@min-[720px]:col-start-auto')
     })
 
     it('phone: the doctor and date fields are semibold as in the mock; the web keeps medium', () => {

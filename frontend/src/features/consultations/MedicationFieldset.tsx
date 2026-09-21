@@ -55,7 +55,7 @@ export function MedicationFieldset({
       data-testid={`medication-fieldset-${index}`}
       aria-labelledby={`medication-title-${index}`}
       className={`flex min-w-0 flex-col rounded-3xl bg-surface shadow-[0_8px_20px_rgba(4,37,43,0.07)] ${
-        desktop ? 'gap-4 p-6' : 'gap-3.5 p-5'
+        desktop ? '@container gap-4 p-6' : 'gap-3.5 p-5'
       }`}
     >
       <div className="flex items-center justify-between">
@@ -81,7 +81,7 @@ export function MedicationFieldset({
       <div
         className={
           desktop
-            ? 'grid min-w-0 gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]'
+            ? 'grid min-w-0 gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] @min-[720px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]'
             : 'flex min-w-0 flex-col gap-3.5'
         }
       >
@@ -129,8 +129,9 @@ export function MedicationFieldset({
             {medErrors?.durationDays && <p className={error}>Escribe cuántos días (ej. 7).</p>}
           </div>
           {desktop && (
-            // Not in the mock's row of three: it goes to a second row, under "Frecuencia".
-            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:col-start-2">
+            // Not in the mock's row of three. With room (the card is 720px wide or more) it is a fourth
+            // column of the same row, the fields a bit shorter; otherwise it goes to a second row, under "Frecuencia".
+            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:col-start-2 @min-[720px]:col-start-auto">
               <label htmlFor={id('startTime')} className={label}>
                 Desde
               </label>
