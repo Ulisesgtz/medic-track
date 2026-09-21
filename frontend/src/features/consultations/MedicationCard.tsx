@@ -94,7 +94,7 @@ export function MedicationCard({ consultationId, medication, variant }: Medicati
             type="button"
             disabled={index <= 0}
             onClick={() => setSelected(days[index - 1])}
-            className="min-h-11 cursor-pointer pr-3 disabled:cursor-default disabled:opacity-40"
+            className="-my-3 min-h-11 cursor-pointer pr-3 disabled:cursor-default disabled:opacity-40"
           >
             ← Día anterior
           </button>
@@ -103,7 +103,7 @@ export function MedicationCard({ consultationId, medication, variant }: Medicati
             type="button"
             disabled={index >= days.length - 1}
             onClick={() => setSelected(days[index + 1])}
-            className="min-h-11 cursor-pointer pl-3 disabled:cursor-default disabled:opacity-40"
+            className="-my-3 min-h-11 cursor-pointer pl-3 disabled:cursor-default disabled:opacity-40"
           >
             Día siguiente →
           </button>

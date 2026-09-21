@@ -177,7 +177,7 @@ export function ConsultationDetailPage() {
   // ---- Phone (mock 03).
   return (
     <AppShell activeChildId={consultation.childId}>
-      <main className="min-h-screen bg-canvas pb-10">
+      <main className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas pb-10">
         <header className="bg-ink px-6 pt-6 pb-7">
           <Link
             to={childPath}
@@ -195,7 +195,7 @@ export function ConsultationDetailPage() {
             <div>
               <p className="text-[15px] font-extrabold text-ink">Foto de la receta</p>
               <p className="mt-1 text-[13px] text-slate-500">Leída con OCR en el dispositivo</p>
-              {seeFull('mt-0.5 inline-block')}
+              {seeFull('-mt-1.5 -mb-3 inline-block')}
             </div>
           </div>
         </section>

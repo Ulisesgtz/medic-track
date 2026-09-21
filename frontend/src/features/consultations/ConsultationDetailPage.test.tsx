@@ -92,6 +92,14 @@ describe('ConsultationDetailPage', () => {
       expect(screen.getByText('Cada 8 horas · 3 días · desde 08:00')).toBeInTheDocument()
     })
 
+    it('is a centered column of at most 430px, as the mock', async () => {
+      stubApi(consultation())
+      renderPage()
+
+      await screen.findByRole('heading', { level: 1, name: 'Dra. López' })
+      expect(screen.getByRole('main')).toHaveClass('mx-auto', 'max-w-[430px]')
+    })
+
     it('names the child in the back link when the account is saved', async () => {
       window.localStorage.setItem('peditrack.accountId', 'a1')
       stubApi(consultation())

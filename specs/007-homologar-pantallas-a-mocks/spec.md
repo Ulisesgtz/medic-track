@@ -59,6 +59,13 @@ Por límites de datos o del producto:
   tipografía, colores, y el estado verde tras "Marcar tomas"): idéntico. Solo difiere el área táctil de
   "← Tus hijos" y "+ Nueva" (44 px con margen negativo, misma posición visual) y, por el dato del punto anterior,
   "sin receta". Columna centrada de máx. 430 px, como el mock.
+- **Detalle de consulta móvil (03)**: medido elemento por elemento a 430 px; encabezado, tarjeta de la foto
+  (110 px), síntomas y medicamentos quedan en la misma posición y con las mismas medidas que el mock. Diferencias:
+  la miniatura muestra la foto real (el mock dibuja un documento), el área táctil de 44 px de "← Mateo Morales" y
+  "Ver completa" (margen negativo, misma posición visual), el selector "← Día anterior / Día siguiente →" bajo
+  los chips (+32 px por medicamento; el mock enseña una sola fila fija y sus tres chips no siguen una regla de
+  horario, p. ej. Paracetamol cada 6 h con 3 tomas), y el texto de la toma futura en `slate-600` por contraste.
+  Columna centrada de máx. 430 px.
 - Punto de corte web/móvil en **900 px** (el mock usa `lg` = 1024 px).
 - Los registros son más altos que sus mocks por los campos conservados y el botón de Google: web 1219 vs 900 px
   (a 1440 px de ancho; el formulario no queda centrado en vertical en ventanas bajas) y móvil ~1600 vs 921 px.
