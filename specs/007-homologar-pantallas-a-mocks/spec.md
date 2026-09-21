@@ -58,6 +58,12 @@ Por límites de datos o del producto:
   hijo; la app muestra los hijos reales.
 - Barra lateral de **280 px** (mocks 13/14/15 finales). El tablero declara 300 px pero, al no tener
   `box-sizing: border-box`, se dibuja de 348 px: es un artefacto del tablero.
+- **Registro web (11)**: medido elemento por elemento contra el mock a 1440, 1280, 1024, 1000 y 900 px. Panel
+  oscuro, título, campos Correo y Contraseña, bloque "Hijo 1" (estilos), botón y texto legal: idénticos en
+  posición, tamaño, tipografía y color. Se adoptó la regla responsiva del propio mock (bajo 1024 px el panel se
+  apila sobre el formulario, con título de 36 px y márgenes menores; antes se apretaba la pantalla partida desde
+  900). El `select` de País mide igual que los campos (50 px). Diferencias: los campos extra (formulario más alto,
+  ver más arriba), el botón de Google y que al crear la cuenta se abre el home (el mock cambia el texto del botón).
 - **Detalle del hijo móvil (02)**: medido elemento por elemento contra el mock a 430 px (posiciones, tamaños,
   tipografía, colores, y el estado verde tras "Marcar tomas"): idéntico. Solo difiere el área táctil de
   "← Tus hijos" y "+ Nueva" (44 px con margen negativo, misma posición visual) y, por el dato del punto anterior,

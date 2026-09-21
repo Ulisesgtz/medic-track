@@ -105,7 +105,7 @@ export function SignupPhone({ form }: { form: SignupForm }) {
           <Field id="countryCode" text="País (opcional)">
             <select
               id="countryCode"
-              className={`${tutorField} border-slate-300 bg-surface`}
+              className={`${tutorField} h-[54px] border-slate-300 bg-surface`}
               {...register('countryCode', {
                 // A previously-selected estado belongs to the previous país
                 // and must not be silently carried over/submitted (the backend
@@ -123,7 +123,7 @@ export function SignupPhone({ form }: { form: SignupForm }) {
           </Field>
           {countryCode && states && states.length > 0 && (
             <Field id="stateCode" text="Estado (opcional)">
-              <select id="stateCode" className={`${tutorField} border-slate-300 bg-surface`} {...register('stateCode')}>
+              <select id="stateCode" className={`${tutorField} h-[54px] border-slate-300 bg-surface`} {...register('stateCode')}>
                 <option value="">Selecciona un estado</option>
                 {states.map((s) => (
                   <option key={s.code} value={s.code}>

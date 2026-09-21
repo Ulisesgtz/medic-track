@@ -32,7 +32,9 @@ const CHECKLIST = [
  * The web signup (mock 11): split screen — dark panel with the value
  * proposition and checklist on the left, the form on the right, in the mock's
  * order (Correo, Contraseña, the "Hijo 1 · Gratis" block, "Crear cuenta").
- * Not the phone design — that one is `SignupPhone`; they are never mixed.
+ * Not the phone design — that one is `SignupPhone`; they are never mixed. The
+ * mock's own responsive rule is kept: below 1024px (`lg`) the dark panel stacks
+ * above the form, with the mock's smaller title and margins.
  *
  * Deviations from the mock, by decision:
  * - The account also asks for the tutor's first/last name and (optionally)
@@ -48,8 +50,8 @@ export function SignupWeb({ form }: { form: SignupForm }) {
   const childErrors = errors.children?.[0]
 
   return (
-    <div className="flex min-h-screen">
-      <section className="flex w-[46%] flex-col justify-between gap-10 bg-ink px-16 py-16">
+    <div className="flex min-h-screen flex-col lg:flex-row">
+      <section className="flex flex-col justify-between gap-10 bg-ink px-8 py-10 lg:w-[46%] lg:px-16 lg:py-16">
         <div className="flex items-center gap-3">
           <Logo size={44} />
           <span className="text-2xl font-black tracking-tight text-white">
@@ -57,7 +59,7 @@ export function SignupWeb({ form }: { form: SignupForm }) {
           </span>
         </div>
         <div className="max-w-md">
-          <h1 className="text-5xl leading-[1.05] font-black tracking-tight text-white">
+          <h1 className="text-4xl leading-[1.05] font-black tracking-tight text-white lg:text-5xl">
             La bitácora médica de tus hijos, en un solo lugar.
           </h1>
           <p className="mt-6 text-lg leading-relaxed text-[#a5f3fc]">
@@ -76,7 +78,7 @@ export function SignupWeb({ form }: { form: SignupForm }) {
         </ul>
       </section>
 
-      <section className="flex flex-1 items-center justify-center bg-surface px-16 py-12">
+      <section className="flex flex-1 items-center justify-center bg-surface px-6 py-12 lg:px-16">
         <form onSubmit={onSubmit} noValidate className="flex w-full max-w-[520px] flex-col gap-6">
           <div>
             <h2 className="text-3xl font-black tracking-tight text-ink">Crear cuenta</h2>
@@ -132,7 +134,7 @@ export function SignupWeb({ form }: { form: SignupForm }) {
             <Field id="countryCode" text="País (opcional)">
               <select
                 id="countryCode"
-                className={`${accountField} border-slate-300 bg-surface`}
+                className={`${accountField} h-[50px] border-slate-300 bg-surface`}
                 {...register('countryCode', {
                   // A previously-selected estado belongs to the previous país
                   // and must not be silently carried over/submitted (the backend
@@ -150,7 +152,7 @@ export function SignupWeb({ form }: { form: SignupForm }) {
             </Field>
             {countryCode && states && states.length > 0 && (
               <Field id="stateCode" text="Estado (opcional)">
-                <select id="stateCode" className={`${accountField} border-slate-300 bg-surface`} {...register('stateCode')}>
+                <select id="stateCode" className={`${accountField} h-[50px] border-slate-300 bg-surface`} {...register('stateCode')}>
                   <option value="">Selecciona un estado</option>
                   {states.map((s) => (
                     <option key={s.code} value={s.code}>

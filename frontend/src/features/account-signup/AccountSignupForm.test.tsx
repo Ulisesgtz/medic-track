@@ -116,6 +116,18 @@ describe('AccountSignupForm', () => {
       expect(screen.getByTestId('child-fieldset-0')).toBeInTheDocument()
     })
 
+    it("keeps the mock's own responsive rule: stacked below 1024px, split from there", () => {
+      renderForm()
+
+      const dark = screen.getByRole('heading', { level: 1 }).closest('section')!
+      expect(dark.parentElement).toHaveClass('flex-col', 'lg:flex-row')
+      expect(dark).toHaveClass('px-8', 'py-10', 'lg:w-[46%]', 'lg:px-16', 'lg:py-16')
+      expect(screen.getByRole('heading', { level: 1 })).toHaveClass('text-4xl', 'lg:text-5xl')
+      expect(screen.getByRole('button', { name: 'Crear cuenta' }).closest('section')).toHaveClass('px-6', 'lg:px-16')
+      // The form is at most 520px wide, as in the mock.
+      expect(screen.getByRole('button', { name: 'Crear cuenta' }).closest('form')).toHaveClass('max-w-[520px]')
+    })
+
     it('has the phone-only copy nowhere', () => {
       renderForm()
 
