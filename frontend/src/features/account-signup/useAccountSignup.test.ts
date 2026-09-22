@@ -36,13 +36,15 @@ describe('useAccountSignup', () => {
 
     act(() => {
       result.current.mutate({
-        firstName: 'Carla',
-        lastName: 'Ruiz',
-        email: 'carla@example.com',
-        children: [
-          { firstName: 'H1', lastName: 'Ruiz', birthDate: '2018-01-01' },
-          { firstName: 'H2', lastName: 'Ruiz', birthDate: '2021-01-01' },
-        ],
+        payload: {
+          firstName: 'Carla',
+          lastName: 'Ruiz',
+          children: [
+            { firstName: 'H1', lastName: 'Ruiz', birthDate: '2018-01-01' },
+            { firstName: 'H2', lastName: 'Ruiz', birthDate: '2021-01-01' },
+          ],
+        },
+        token: 'test-token',
       })
     })
 
@@ -74,7 +76,10 @@ describe('useAccountSignup', () => {
     const { result } = renderHook(() => useAccountSignup(), { wrapper: createWrapper() })
 
     act(() => {
-      result.current.mutate({ firstName: 'Ana', lastName: 'Gómez', email: 'ana@example.com', children: [] })
+      result.current.mutate({
+        payload: { firstName: 'Ana', lastName: 'Gómez', children: [] },
+        token: 'test-token',
+      })
     })
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))

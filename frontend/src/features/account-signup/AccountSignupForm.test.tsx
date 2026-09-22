@@ -211,14 +211,14 @@ describe('AccountSignupForm', () => {
       expect(JSON.parse(body)).not.toHaveProperty('password')
     })
 
-    it('"Registrarme con Google" says it is coming soon, without sending anything', async () => {
+    it('"Registrarme con Google" starts the Clerk SSO redirect, without touching PediTrack\'s own signup endpoint', async () => {
       const user = userEvent.setup()
       renderForm()
-      expect(screen.queryByRole('status')).not.toBeInTheDocument()
 
       await user.click(screen.getByRole('button', { name: 'Registrarme con Google' }))
 
-      expect(screen.getByRole('status')).toHaveTextContent('El registro con Google estará disponible pronto.')
+      // The redirect itself happens inside Clerk (mocked as a no-op here) —
+      // this app never calls its own POST /accounts nor navigates on click.
       expect(postCalls()).toHaveLength(0)
       expect(screen.queryByText('HOME PAGE')).not.toBeInTheDocument()
     })
@@ -335,7 +335,6 @@ describe('AccountSignupForm', () => {
       expect(JSON.parse((init as RequestInit).body as string)).toEqual({
         firstName: 'Ana',
         lastName: 'Gómez',
-        email: 'ana@example.com',
         children: [{ firstName: 'Luis', lastName: 'Gómez', birthDate: '2020-01-15', height: 95.5, weight: 14.2 }],
       })
     })

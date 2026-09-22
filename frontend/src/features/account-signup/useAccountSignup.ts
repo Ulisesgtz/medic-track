@@ -9,6 +9,7 @@ import { createAccount, type CreateAccountPayload } from './api'
  */
 export function useAccountSignup() {
   return useMutation({
-    mutationFn: (payload: CreateAccountPayload) => createAccount(payload),
+    mutationFn: ({ payload, token }: { payload: CreateAccountPayload; token: string | null }) =>
+      createAccount(payload, token),
   })
 }

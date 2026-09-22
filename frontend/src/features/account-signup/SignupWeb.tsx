@@ -1,5 +1,6 @@
 import { FormField as Field } from '../../shared/ui/FormField'
 import { Logo } from '../../shared/ui/Logo'
+import { EmailCodeStep } from './EmailCodeStep'
 import { GoogleSignupButton } from './GoogleSignupButton'
 import {
   BIRTH_DATE_MESSAGE,
@@ -46,7 +47,7 @@ const CHECKLIST = [
  *   user asked for it; for now it only says it's coming soon.
  */
 export function SignupWeb({ form }: { form: SignupForm }) {
-  const { register, setValue, errors, onSubmit, countryCode, countries, states, isPending, serverError } = form
+  const { register, setValue, errors, onSubmit, countryCode, countries, states, isPending, serverError, step } = form
   const childErrors = errors.children?.[0]
 
   return (
@@ -79,6 +80,9 @@ export function SignupWeb({ form }: { form: SignupForm }) {
       </section>
 
       <section className="flex flex-1 items-center justify-center bg-surface px-6 py-12 lg:px-16">
+        {step === 'verify-email' ? (
+          <EmailCodeStep form={form} />
+        ) : (
         <form onSubmit={onSubmit} noValidate className="flex w-full max-w-[520px] flex-col gap-6">
           <div>
             <h2 className="text-3xl font-black tracking-tight text-ink">Crear cuenta</h2>
@@ -263,6 +267,7 @@ export function SignupWeb({ form }: { form: SignupForm }) {
             Al crear la cuenta aceptas que los datos se guardan para tu uso personal. No se comparten con terceros.
           </p>
         </form>
+        )}
       </section>
     </div>
   )

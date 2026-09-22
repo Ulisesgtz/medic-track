@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useSignIn } from '@clerk/react'
 
 function GoogleIcon() {
   return (
@@ -12,13 +13,29 @@ function GoogleIcon() {
 }
 
 /**
- * "o" separator and "Registrarme con Google" (both signups). Not in the mocks:
- * the user asked for it, but it can't work until the authentication provider
- * (Clerk or AWS Cognito, see BACKLOG.md) exists, so for now it only says it's
- * coming soon.
+ * "o" separator and "Registrarme con Google" (both signups). Not in the
+ * mocks: the user asked for it. Uses `signIn.sso()` (not a separate sign-up
+ * call) because Clerk decides whether this Google account is new or
+ * returning — SsoCallbackPage (`/sso-callback`) is where that gets sorted
+ * out (specs/008-autenticacion-cuenta, research.md punto 1).
  */
 export function GoogleSignupButton() {
-  const [note, setNote] = useState(false)
+  const { signIn } = useSignIn()
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleClick() {
+    if (!signIn) return
+    setError(null)
+    const { error: ssoError } = await signIn.sso({
+      strategy: 'oauth_google',
+      redirectCallbackUrl: '/sso-callback',
+      redirectUrl: '/home',
+    })
+    if (ssoError) {
+      setError(ssoError.message ?? 'No se pudo continuar con Google. Intenta de nuevo.')
+    }
+    // On success the browser is already navigating to Google — nothing else to do here.
+  }
 
   return (
     <>
@@ -28,15 +45,15 @@ export function GoogleSignupButton() {
       <div className="flex flex-col gap-3">
         <button
           type="button"
-          onClick={() => setNote(true)}
+          onClick={handleClick}
           className="flex min-h-11 cursor-pointer items-center justify-center gap-3 rounded-2xl border-2 border-slate-300 bg-surface py-3.5 text-base font-extrabold text-ink transition-colors duration-200 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
         >
           <GoogleIcon />
           Registrarme con Google
         </button>
-        {note && (
-          <p role="status" className="text-[13px] font-semibold text-action">
-            El registro con Google estará disponible pronto.
+        {error && (
+          <p role="alert" className="text-[13px] font-semibold text-red-700">
+            {error}
           </p>
         )}
       </div>

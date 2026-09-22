@@ -1,11 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AccountSignupPage } from './features/account-signup/AccountSignupPage'
+import { CompleteGoogleSignupPage } from './features/account-signup/CompleteGoogleSignupPage'
 import { HomePage } from './features/home/HomePage'
 import { ChildDetailPage } from './features/consultations/ChildDetailPage'
 import { ConsultationDetailPage } from './features/consultations/ConsultationDetailPage'
 import { NewConsultationPage } from './features/consultations/NewConsultationPage'
 import { RequireSession } from './features/auth/RequireSession'
+import { SsoCallbackPage } from './features/auth/SsoCallbackPage'
 import { MessagePage } from './shared/ui/MessagePage'
 
 const queryClient = new QueryClient()
@@ -16,8 +18,10 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/signup" element={<AccountSignupPage />} />
-          {/* Real login/Google-callback screens land in Historia 2 (specs/008) — placeholders keep the
-              routes wired (and testable) from the moment RequireSession starts redirecting to them. */}
+          <Route path="/registro/completar" element={<CompleteGoogleSignupPage />} />
+          <Route path="/sso-callback" element={<SsoCallbackPage />} />
+          {/* The real login screen lands in Historia 2 (specs/008) — this placeholder keeps the route
+              wired (and testable) from the moment RequireSession starts redirecting to it. */}
           <Route
             path="/login"
             element={
@@ -28,10 +32,6 @@ function App() {
                 linkLabel="Ir al registro"
               />
             }
-          />
-          <Route
-            path="/sso-callback"
-            element={<MessagePage title="Iniciando sesión…" message="Un momento." to="/signup" linkLabel="Ir al registro" />}
           />
           <Route
             path="/home"

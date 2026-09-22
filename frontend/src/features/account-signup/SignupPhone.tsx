@@ -1,5 +1,6 @@
 import { FormField as Field } from '../../shared/ui/FormField'
 import { Logo } from '../../shared/ui/Logo'
+import { EmailCodeStep } from './EmailCodeStep'
 import { GoogleSignupButton } from './GoogleSignupButton'
 import {
   BIRTH_DATE_MESSAGE,
@@ -35,7 +36,7 @@ const childField =
  * "Registrarme con Google" is not in the mock (requested; says "pronto").
  */
 export function SignupPhone({ form }: { form: SignupForm }) {
-  const { register, setValue, errors, onSubmit, countryCode, countries, states, isPending, serverError } = form
+  const { register, setValue, errors, onSubmit, countryCode, countries, states, isPending, serverError, step } = form
   const childErrors = errors.children?.[0]
 
   return (
@@ -55,6 +56,11 @@ export function SignupPhone({ form }: { form: SignupForm }) {
         </p>
       </header>
 
+      {step === 'verify-email' ? (
+        <div className="px-6 pt-7 pb-9">
+          <EmailCodeStep form={form} />
+        </div>
+      ) : (
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-6 px-6 pt-7 pb-9">
         <Field id="email" text="Correo" error={errors.email ? EMAIL_MESSAGE : undefined}>
           <input
@@ -234,6 +240,7 @@ export function SignupPhone({ form }: { form: SignupForm }) {
           El plan gratuito incluye un hijo. Puedes agregar más después.
         </p>
       </form>
+      )}
     </main>
   )
 }

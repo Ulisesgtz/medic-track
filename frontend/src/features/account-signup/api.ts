@@ -1,4 +1,5 @@
 import { ApiError, type ValidationErrorDetail } from '../../shared/apiError'
+import { withAuthHeader } from '../../shared/auth/withAuthHeader'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 
@@ -10,10 +11,12 @@ export interface CreateChildPayload {
   weight?: number
 }
 
+// `email` isn't sent here anymore: the backend takes it from the caller's
+// verified Clerk session, never from client input (specs/008-autenticacion-cuenta,
+// contracts/post-accounts.md).
 export interface CreateAccountPayload {
   firstName: string
   lastName: string
-  email: string
   countryCode?: string
   stateCode?: string
   children: CreateChildPayload[]
@@ -39,10 +42,11 @@ export class CreateAccountError extends ApiError<
 
 export async function createAccount(
   payload: CreateAccountPayload,
+  token: string | null,
 ): Promise<CreateAccountResponse> {
   const res = await fetch(`${API_BASE_URL}/accounts`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...withAuthHeader(token) },
     body: JSON.stringify(payload),
   })
 
@@ -52,6 +56,9 @@ export async function createAccount(
     return body as CreateAccountResponse
   }
 
+  if (res.status === 401) {
+    throw new CreateAccountError('unknown', body.message ?? 'A valid session is required')
+  }
   if (res.status === 400) {
     throw new CreateAccountError('validation_error', body.message ?? 'Validation error', body.details)
   }
