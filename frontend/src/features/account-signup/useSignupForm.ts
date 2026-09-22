@@ -2,7 +2,6 @@ import { useEffect } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { useCountries, useStates } from '../../shared/catalog/useCatalog'
-import { useAccountSession } from '../home/useAccountSession'
 import { CreateAccountError, type CreateAccountPayload } from './api'
 import { emptyChild, type AccountSignupFormValues } from './types'
 import { useAccountSignup } from './useAccountSignup'
@@ -57,14 +56,16 @@ export function useSignupForm() {
 
   const signup = useAccountSignup()
   const navigate = useNavigate()
-  const { setAccountId } = useAccountSession()
 
+  // TODO(specs/008, Historia 1): before calling signup.mutate, this must first
+  // complete a Clerk sign-up (signUp.password()/signUp.finalize() or Google)
+  // and send its token — the session itself is what "logs the tutor in" now,
+  // not a value saved from this response (see plan.md/tasks.md T026).
   useEffect(() => {
     if (signup.isSuccess) {
-      setAccountId(signup.data.id)
       navigate('/home')
     }
-  }, [signup.isSuccess, signup.data, setAccountId, navigate])
+  }, [signup.isSuccess, navigate])
 
   const onSubmit = handleSubmit((values) => {
     signup.mutate(toPayload(values))

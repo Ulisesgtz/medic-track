@@ -14,12 +14,14 @@ import (
 	"net/http"
 	"os"
 
+	clerk "github.com/clerk/clerk-sdk-go/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
+	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	_ "github.com/Ulisesgtz/medic-track/backend/internal/docs"
@@ -30,6 +32,12 @@ import (
 
 func main() {
 	ctx := context.Background()
+
+	clerkSecretKey := os.Getenv("CLERK_SECRET_KEY")
+	if clerkSecretKey == "" {
+		log.Fatal("CLERK_SECRET_KEY is not set")
+	}
+	clerk.SetKey(clerkSecretKey)
 
 	pool, err := platform.NewPostgresPool(ctx)
 	if err != nil {
@@ -62,13 +70,21 @@ func main() {
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{frontendOrigin},
 		AllowedMethods:   []string{"GET", "POST", "PATCH", "OPTIONS"},
-		AllowedHeaders:   []string{"Content-Type"},
+		AllowedHeaders:   []string{"Content-Type", "Authorization"},
 		AllowCredentials: false,
 		MaxAge:           300,
 	}))
 
 	r.Get("/catalog/countries", catalogHandler.ListCountries)
 	r.Get("/catalog/countries/{countryCode}/states", catalogHandler.ListStates)
+
+	// Routes behind a verified Clerk session (specs/008-autenticacion-cuenta).
+	// GET /accounts/me is registered before /accounts/{accountId} so chi
+	// matches "me" literally instead of it being captured as {accountId}.
+	r.Group(func(r chi.Router) {
+		r.Use(authmw.RequireSession(responder))
+		r.Get("/accounts/me", accountHandler.GetMe)
+	})
 
 	r.Post("/accounts", accountHandler.CreateAccount)
 	r.Get("/accounts/{accountId}", accountHandler.GetAccount)

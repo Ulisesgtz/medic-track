@@ -114,6 +114,18 @@ func (s *Service) GetAccount(ctx context.Context, id uuid.UUID) (*Account, error
 	return s.repo.GetByID(ctx, id)
 }
 
+// GetAccountByClerkUserID resolves the account linked to a Clerk session,
+// for GET /accounts/me (specs/008-autenticacion-cuenta,
+// contracts/get-accounts-me.md). This is the direct-link case only —
+// ErrAccountNotFound covers both "genuinely no account yet" (right after a
+// brand-new Clerk sign-up, before POST /accounts) and "an unlinked account
+// with a matching email exists"; the caller (GetMe handler) is responsible
+// for telling those apart until Historia 5 (specs/008) extends this method
+// with the email-based linking fallback.
+func (s *Service) GetAccountByClerkUserID(ctx context.Context, clerkUserID string) (*Account, error) {
+	return s.repo.GetByClerkUserID(ctx, clerkUserID)
+}
+
 // AddChild adds a single child to an already-existing account, reusing the
 // same field validation (validateChildFields) as CreateAccount
 // (specs/003-home-listado-hijos FR-004). The freemium 1-child limit check

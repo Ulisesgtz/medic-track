@@ -21,6 +21,24 @@ var (
 	// e.g. an accountId saved in the browser that no longer corresponds to
 	// any account server-side (specs/003-home-listado-hijos FR-002).
 	ErrAccountNotFound = errors.New("account not found")
+
+	// ErrAccountAccessDenied is returned when the authenticated session is
+	// valid but does not own the account (or the account's child/consultation)
+	// a request is trying to read or modify (specs/008-autenticacion-cuenta FR-005/FR-006).
+	ErrAccountAccessDenied = errors.New("account does not belong to the current session")
+
+	// ErrNoAccountForSession is returned by GetAccountByClerkUserID when the
+	// session's Clerk user has no linked Account and no unlinked Account
+	// matches its verified email either — the expected state right after a
+	// brand-new Clerk sign-up, before POST /accounts has run
+	// (specs/008-autenticacion-cuenta, contracts/get-accounts-me.md).
+	ErrNoAccountForSession = errors.New("no account is linked to this session")
+
+	// ErrAccountAlreadyLinked is returned by CreateAccount when the session
+	// already has an Account linked (e.g. a retried POST /accounts after a
+	// 201 that never reached the client) — the handler treats this as
+	// success, not failure (contracts/post-accounts.md, idempotencia).
+	ErrAccountAlreadyLinked = errors.New("session is already linked to an account")
 )
 
 // FreemiumLimitError wraps ErrFreemiumChildLimitExceeded with the actual

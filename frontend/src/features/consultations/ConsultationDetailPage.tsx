@@ -4,8 +4,8 @@ import { useQuery } from '@tanstack/react-query'
 import { formatDateLong, formatDayMonth } from '../../shared/date'
 import { useLocalDay } from '../../shared/useLocalDay'
 import { AppShell } from '../home/AppShell'
-import { fetchAccount } from '../home/api'
 import { useSidebarSession } from '../home/useSidebarSession'
+import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { fetchChildOverview, fetchConsultationDetail, ConsultationApiError } from './api'
 import { sniffImageMimeType } from './imageMime'
 import { MedicationCard } from './MedicationCard'
@@ -23,7 +23,7 @@ const overline = 'text-xs font-extrabold uppercase tracking-[0.1em] text-ink-sof
 export function ConsultationDetailPage() {
   const { consultationId } = useParams<{ consultationId: string }>()
   const [viewerOpen, setViewerOpen] = useState(false)
-  const { accountId, isDesktop } = useSidebarSession()
+  const { isDesktop } = useSidebarSession()
 
   const query = useQuery({
     queryKey: ['consultation', consultationId],
@@ -34,13 +34,9 @@ export function ConsultationDetailPage() {
   const childId = query.data?.childId
 
   // The back link names the child, and the desktop "Tratamiento activo" card
-  // comes from the overview — both share query keys with the other screens.
-  const accountQuery = useQuery({
-    queryKey: ['account', accountId],
-    queryFn: () => fetchAccount(accountId!),
-    enabled: accountId !== null,
-    retry: false,
-  })
+  // comes from the overview — both share the same account query as the
+  // sidebar (`useCurrentAccount`, `GET /accounts/me`).
+  const accountQuery = useCurrentAccount()
   const child = accountQuery.data?.children.find((c) => c.id === childId)
   const today = useLocalDay()
   const overviewQuery = useQuery({

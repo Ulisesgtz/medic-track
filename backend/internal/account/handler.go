@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 )
 
@@ -208,6 +209,52 @@ func (h *Handler) writeCreateAccountError(ctx context.Context, w http.ResponseWr
 	default:
 		h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", "Could not create account", nil)
 	}
+}
+
+// accountNotFoundForSessionResponseDoc documents the 404 body shape of
+// GET /accounts/me (contracts/get-accounts-me.md).
+type accountNotFoundForSessionResponseDoc struct {
+	Error   string `json:"error" example:"account_not_found_for_session"`
+	Message string `json:"message" example:"No PediTrack account is linked to this session yet"`
+} // @name AccountNotFoundForSessionResponse
+
+// GetMe handles GET /accounts/me (contracts/get-accounts-me.md).
+//
+//	@Summary		Get the authenticated tutor's own account
+//	@Description	Resolves the account linked to the caller's verified Clerk session — the
+//	@Description	replacement for a client-supplied accountId (specs/008-autenticacion-cuenta). A 404
+//	@Description	is the expected state right after a brand-new Clerk sign-up, before POST /accounts
+//	@Description	has run.
+//	@Tags			accounts
+//	@Produce		json
+//	@Security		ClerkSession
+//	@Success		200	{object}	accountResponse
+//	@Failure		404	{object}	accountNotFoundForSessionResponseDoc	"No account is linked to this session yet"
+//	@Router			/accounts/me [get]
+func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
+	clerkUserID, ok := authmw.ClerkUserIDFromContext(r.Context())
+	if !ok {
+		// RequireSession already rejects a request with no valid session
+		// before it reaches here — this only guards against this handler
+		// ever being wired without that middleware.
+		h.responder.WriteJSONError(r.Context(), w, http.StatusUnauthorized, "unauthorized", "A valid session is required", nil)
+		return
+	}
+
+	acc, err := h.service.GetAccountByClerkUserID(r.Context(), clerkUserID)
+	if err != nil {
+		if errors.Is(err, ErrAccountNotFound) {
+			h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, map[string]string{
+				"error":   "account_not_found_for_session",
+				"message": "No PediTrack account is linked to this session yet",
+			}, nil)
+			return
+		}
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not fetch account", nil)
+		return
+	}
+
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, toAccountResponse(acc), &acc.ID)
 }
 
 // GetAccount handles GET /accounts/{accountId}

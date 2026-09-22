@@ -320,7 +320,7 @@ describe('AccountSignupForm', () => {
       expect(postCalls()).toHaveLength(0)
     })
 
-    it('saves the account id, sends numeric height/weight and navigates to /home (FR-003)', async () => {
+    it('sends numeric height/weight and navigates to /home (FR-003)', async () => {
       const user = userEvent.setup()
       mockApi(() => ({ ok: true, json: async () => createdAccount }))
       renderForm()
@@ -331,7 +331,6 @@ describe('AccountSignupForm', () => {
       await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
       expect(await screen.findByText('HOME PAGE')).toBeInTheDocument()
-      expect(window.localStorage.getItem('peditrack.accountId')).toBe('account-123')
       const [, init] = postCalls()[0]
       expect(JSON.parse((init as RequestInit).body as string)).toEqual({
         firstName: 'Ana',

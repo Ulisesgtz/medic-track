@@ -46,11 +46,19 @@ describe('HomePage', () => {
     window.localStorage.clear()
   })
 
-  it('shows an invitation to create an account when no account id is saved (FR-002)', async () => {
+  it('invites the tutor to finish their registration when the session has no linked account yet (FR-006, specs/008)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: async () => ({ error: 'account_not_found_for_session', message: 'No account is linked to this session yet' }),
+      }),
+    )
     renderHome()
 
-    expect(await screen.findByText('Bienvenido a PediTrack')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Crear cuenta' })).toHaveAttribute('href', '/signup')
+    expect(await screen.findByText('Falta terminar tu registro')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Terminar registro' })).toHaveAttribute('href', '/signup')
   })
 
   it('shows an empty state when the account has no children yet (FR-006)', async () => {
@@ -135,22 +143,6 @@ describe('HomePage', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(opener).toHaveFocus()
-  })
-
-  it('clears the saved account id and shows the invitation when the account no longer exists (Caso Límite)', async () => {
-    window.localStorage.setItem('peditrack.accountId', 'stale-id')
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 404,
-        json: async () => ({ error: 'account_not_found', message: 'Account not found' }),
-      }),
-    )
-    renderHome()
-
-    expect(await screen.findByText('Bienvenido a PediTrack')).toBeInTheDocument()
-    expect(window.localStorage.getItem('peditrack.accountId')).toBeNull()
   })
 
   describe('child card chips on the phone (board screen 2)', () => {
