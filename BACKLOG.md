@@ -26,8 +26,6 @@ dejó pendientes (2026-09-21). No se construye nada de esto hasta que se respond
   fecha y síntomas; si se permite borrar una consulta o un medicamento; y el diseño (los mocks no tienen esa pantalla).
   Requiere endpoint nuevo y su spec. Recomendación que se dio: editar solo nombre, frecuencia, duración y hora de cada
   medicamento, regenerando sus tomas con un aviso de que se pierden las marcas.
-- **Abrir el PR de `feature/007-homologar-pantallas-a-mocks` a `develop` y hacer el code review** — se ofreció varias
-  veces y sigue sin respuesta; hay que hacerlo antes de mezclar la rama.
 
 ## Prioridad alta
 
