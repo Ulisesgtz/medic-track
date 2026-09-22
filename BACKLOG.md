@@ -107,6 +107,12 @@ dejó pendientes (2026-09-21). No se construye nada de esto hasta que se respond
   adelante conviene consolidar todo en Cloudflare.
 - Relacionado: **fotos de recetas en `bytea` dentro de Postgres** (ver "Backend" arriba) — el proveedor de
   hosting elegido debe soportar que la base de datos crezca con cada foto hasta que se migre a un object storage.
+- **Instancia de producción de Clerk** (`specs/008-autenticacion-cuenta/`) — el desarrollo usa la instancia de
+  Desarrollo de Clerk (`pk_test_`/`sk_test_`, sin configuración extra). Al desplegar a producción hay que: crear
+  la instancia de Producción de la misma app de Clerk (`pk_live_`/`sk_live_`), apuntarla al dominio real
+  (`pedi-track.com`), y **volver a configurar el login con Google ahí** — Clerk no copia la configuración de
+  SSO/Integrations de dev a prod, y en prod ya no se usan las credenciales de Google compartidas de Clerk, hay
+  que dar de alta credenciales propias en Google Cloud Console.
 
 ## Producto / Legal
 
