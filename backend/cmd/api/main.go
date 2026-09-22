@@ -84,9 +84,9 @@ func main() {
 	r.Group(func(r chi.Router) {
 		r.Use(authmw.RequireSession(responder))
 		r.Get("/accounts/me", accountHandler.GetMe)
+		r.Post("/accounts", accountHandler.CreateAccount)
 	})
 
-	r.Post("/accounts", accountHandler.CreateAccount)
 	r.Get("/accounts/{accountId}", accountHandler.GetAccount)
 	r.Post("/accounts/{accountId}/children", accountHandler.AddChild)
 

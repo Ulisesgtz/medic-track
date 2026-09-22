@@ -17,7 +17,12 @@ const docTemplate = `{
     "paths": {
         "/accounts": {
             "post": {
-                "description": "Creates a padre/tutor account, optionally with one or more children in the\nsame request. A brand-new account always starts on the free plan, which\nallows at most 1 child (FR-007) — enforced server-side regardless of what\nthe client already validated. No login/password is accepted here (FR-009).",
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Creates a padre/tutor account, optionally with one or more children in the\nsame request, for the tutor who already completed sign-up with Clerk (correo+\ncontraseña or Google) — the caller's verified Clerk session is required, and its\nemail is what gets stored, never a client-supplied one (specs/008-autenticacion-cuenta).\nA brand-new account always starts on the free plan, which allows at most 1 child\n(FR-007) — enforced server-side regardless of what the client already validated.\nIdempotent: if the session already has an account linked, returns it with 200\ninstead of creating a duplicate.",
                 "consumes": [
                     "application/json"
                 ],
@@ -40,6 +45,12 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
+                    "200": {
+                        "description": "The session already had an account linked",
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.accountResponse"
+                        }
+                    },
                     "201": {
                         "description": "Created",
                         "schema": {
@@ -47,9 +58,15 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Missing/invalid field, e.g. a malformed email or future birth date",
+                        "description": "Missing/invalid field, e.g. a future birth date",
                         "schema": {
                             "$ref": "#/definitions/ValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
                         }
                     },
                     "409": {
@@ -68,6 +85,37 @@ const docTemplate = `{
                         "description": "Unexpected server error",
                         "schema": {
                             "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/me": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Resolves the account linked to the caller's verified Clerk session — the\nreplacement for a client-supplied accountId (specs/008-autenticacion-cuenta). A 404\nis the expected state right after a brand-new Clerk sign-up, before POST /accounts\nhas run.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Get the authenticated tutor's own account",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.accountResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account is linked to this session yet",
+                        "schema": {
+                            "$ref": "#/definitions/AccountNotFoundForSessionResponse"
                         }
                     }
                 }
@@ -475,6 +523,19 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "AccountNotFoundForSessionResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "account_not_found_for_session"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "No PediTrack account is linked to this session yet"
+                }
+            }
+        },
         "AccountNotFoundResponse": {
             "type": "object",
             "properties": {
@@ -913,10 +974,6 @@ const docTemplate = `{
                 "countryCode": {
                     "type": "string",
                     "example": "MX"
-                },
-                "email": {
-                    "type": "string",
-                    "example": "ana@example.com"
                 },
                 "firstName": {
                     "type": "string",

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -32,10 +33,10 @@ func (r *Repository) Create(ctx context.Context, acc *Account) error {
 	defer tx.Rollback(ctx) //nolint:errcheck // rollback is a no-op after a successful commit
 
 	err = tx.QueryRow(ctx, `
-		INSERT INTO accounts (first_name, last_name, email, country_code, state_code, plan)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO accounts (first_name, last_name, email, country_code, state_code, plan, clerk_user_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, created_at
-	`, acc.FirstName, acc.LastName, acc.Email, acc.CountryCode, acc.StateCode, acc.Plan,
+	`, acc.FirstName, acc.LastName, acc.Email, acc.CountryCode, acc.StateCode, acc.Plan, acc.ClerkUserID,
 	).Scan(&acc.ID, &acc.CreatedAt)
 	if err != nil {
 		return mapInsertError(err, "inserting account")
@@ -70,7 +71,15 @@ func mapInsertError(err error, context string) error {
 	if errors.As(err, &pgErr) {
 		switch pgErr.Code {
 		case "23505": // unique_violation
-			return ErrEmailAlreadyExists
+			// Two different UNIQUE constraints can fire this code on `accounts`
+			// (email, clerk_user_id). A clerk_user_id collision here would mean
+			// two near-simultaneous requests for the same brand-new session both
+			// passed CreateAccount's own GetByClerkUserID check — a vanishingly
+			// rare race; falls through to the generic 500 below rather than
+			// being misreported as a duplicate email.
+			if !strings.Contains(pgErr.ConstraintName, "clerk_user_id") {
+				return ErrEmailAlreadyExists
+			}
 		case "23514": // check_violation — e.g. the name-format/length CHECK constraints
 			return ErrInvalidNameFormat
 		}

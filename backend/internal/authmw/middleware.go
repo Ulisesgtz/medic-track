@@ -20,13 +20,34 @@ import (
 // session token from the Authorization header. A missing or invalid token
 // is rejected with 401 through responder, so it is captured in error_logs
 // like any other 4xx/5xx response (specs/002-registro-log-errores) instead
-// of clerkhttp's default empty-body response.
-func RequireSession(responder *httpx.Responder) func(http.Handler) http.Handler {
-	return clerkhttp.RequireHeaderAuthorization(
-		clerkhttp.AuthorizationFailureHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			responder.WriteJSONError(r.Context(), w, http.StatusUnauthorized, "unauthorized", "A valid session is required", nil)
-		})),
-	)
+// of clerkhttp's default empty-body response. Extra opts are appended after
+// the failure handler below — production code passes none (verification
+// fetches Clerk's real JWKS over the network); tests pass
+// clerkhttp.JSONWebKey(...) to verify locally instead (see authmwtest).
+//
+// Built on WithHeaderAuthorization (not clerkhttp.RequireHeaderAuthorization):
+// that helper only routes an *invalid* token through AuthorizationFailureHandler
+// — a *missing* Authorization header instead falls through to its own
+// hardcoded 403 with an empty body, bypassing responder (and error_logs)
+// entirely. Checking the claims here too makes both cases behave the same.
+func RequireSession(responder *httpx.Responder, opts ...clerkhttp.AuthorizationOption) func(http.Handler) http.Handler {
+	unauthorized := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		responder.WriteJSONError(r.Context(), w, http.StatusUnauthorized, "unauthorized", "A valid session is required", nil)
+	})
+	allOpts := append([]clerkhttp.AuthorizationOption{
+		clerkhttp.AuthorizationFailureHandler(unauthorized),
+	}, opts...)
+	withAuth := clerkhttp.WithHeaderAuthorization(allOpts...)
+
+	return func(next http.Handler) http.Handler {
+		return withAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if claims, ok := clerk.SessionClaimsFromContext(r.Context()); !ok || claims == nil {
+				unauthorized.ServeHTTP(w, r)
+				return
+			}
+			next.ServeHTTP(w, r)
+		}))
+	}
 }
 
 // ClerkUserIDFromContext returns the verified Clerk user id (the session

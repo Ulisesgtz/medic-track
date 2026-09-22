@@ -1,5 +1,14 @@
 basePath: /
 definitions:
+  AccountNotFoundForSessionResponse:
+    properties:
+      error:
+        example: account_not_found_for_session
+        type: string
+      message:
+        example: No PediTrack account is linked to this session yet
+        type: string
+    type: object
   AccountNotFoundResponse:
     properties:
       error:
@@ -308,9 +317,6 @@ definitions:
       countryCode:
         example: MX
         type: string
-      email:
-        example: ana@example.com
-        type: string
       firstName:
         example: Ana
         type: string
@@ -417,9 +423,13 @@ paths:
       - application/json
       description: |-
         Creates a padre/tutor account, optionally with one or more children in the
-        same request. A brand-new account always starts on the free plan, which
-        allows at most 1 child (FR-007) — enforced server-side regardless of what
-        the client already validated. No login/password is accepted here (FR-009).
+        same request, for the tutor who already completed sign-up with Clerk (correo+
+        contraseña or Google) — the caller's verified Clerk session is required, and its
+        email is what gets stored, never a client-supplied one (specs/008-autenticacion-cuenta).
+        A brand-new account always starts on the free plan, which allows at most 1 child
+        (FR-007) — enforced server-side regardless of what the client already validated.
+        Idempotent: if the session already has an account linked, returns it with 200
+        instead of creating a duplicate.
       parameters:
       - description: Account (and optional children) to create
         in: body
@@ -430,15 +440,22 @@ paths:
       produces:
       - application/json
       responses:
+        "200":
+          description: The session already had an account linked
+          schema:
+            $ref: '#/definitions/internal_account.accountResponse'
         "201":
           description: Created
           schema:
             $ref: '#/definitions/internal_account.accountResponse'
         "400":
-          description: Missing/invalid field, e.g. a malformed email or future birth
-            date
+          description: Missing/invalid field, e.g. a future birth date
           schema:
             $ref: '#/definitions/ValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ErrorResponse'
         "409":
           description: Email already in use
           schema:
@@ -451,6 +468,8 @@ paths:
           description: Unexpected server error
           schema:
             $ref: '#/definitions/ErrorResponse'
+      security:
+      - ClerkSession: []
       summary: Create an account (tutor + optional children)
       tags:
       - accounts
@@ -521,6 +540,29 @@ paths:
           schema:
             $ref: '#/definitions/FreemiumLimitResponse'
       summary: Add a child to an existing account
+      tags:
+      - accounts
+  /accounts/me:
+    get:
+      description: |-
+        Resolves the account linked to the caller's verified Clerk session — the
+        replacement for a client-supplied accountId (specs/008-autenticacion-cuenta). A 404
+        is the expected state right after a brand-new Clerk sign-up, before POST /accounts
+        has run.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_account.accountResponse'
+        "404":
+          description: No account is linked to this session yet
+          schema:
+            $ref: '#/definitions/AccountNotFoundForSessionResponse'
+      security:
+      - ClerkSession: []
+      summary: Get the authenticated tutor's own account
       tags:
       - accounts
   /catalog/countries:

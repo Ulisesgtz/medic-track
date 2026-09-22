@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
+	clerkuser "github.com/clerk/clerk-sdk-go/v2/user"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
@@ -36,7 +38,6 @@ type createChildRequest struct {
 type createAccountRequest struct {
 	FirstName   string               `json:"firstName" example:"Ana"`
 	LastName    string               `json:"lastName" example:"Gómez"`
-	Email       string               `json:"email" example:"ana@example.com"`
 	CountryCode *string              `json:"countryCode" example:"MX"`
 	StateCode   *string              `json:"stateCode" example:"MX-JAL"`
 	Children    []createChildRequest `json:"children"`
@@ -111,20 +112,39 @@ const maxRequestBodyBytes = 1 << 20 // 1 MiB
 //
 //	@Summary		Create an account (tutor + optional children)
 //	@Description	Creates a padre/tutor account, optionally with one or more children in the
-//	@Description	same request. A brand-new account always starts on the free plan, which
-//	@Description	allows at most 1 child (FR-007) — enforced server-side regardless of what
-//	@Description	the client already validated. No login/password is accepted here (FR-009).
+//	@Description	same request, for the tutor who already completed sign-up with Clerk (correo+
+//	@Description	contraseña or Google) — the caller's verified Clerk session is required, and its
+//	@Description	email is what gets stored, never a client-supplied one (specs/008-autenticacion-cuenta).
+//	@Description	A brand-new account always starts on the free plan, which allows at most 1 child
+//	@Description	(FR-007) — enforced server-side regardless of what the client already validated.
+//	@Description	Idempotent: if the session already has an account linked, returns it with 200
+//	@Description	instead of creating a duplicate.
 //	@Tags			accounts
 //	@Accept			json
 //	@Produce		json
+//	@Security		ClerkSession
 //	@Param			payload	body		createAccountRequest	true	"Account (and optional children) to create"
+//	@Success		200		{object}	accountResponse	"The session already had an account linked"
 //	@Success		201		{object}	accountResponse
-//	@Failure		400		{object}	validationErrorResponseDoc	"Missing/invalid field, e.g. a malformed email or future birth date"
+//	@Failure		400		{object}	validationErrorResponseDoc	"Missing/invalid field, e.g. a future birth date"
+//	@Failure		401		{object}	errorResponseDoc	"No valid Clerk session"
 //	@Failure		409		{object}	emailConflictResponseDoc	"Email already in use"
 //	@Failure		422		{object}	freemiumLimitResponseDoc	"Free plan already has 1 child; upgrade required"
 //	@Failure		500		{object}	errorResponseDoc	"Unexpected server error"
 //	@Router			/accounts [post]
 func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
+	clerkUserID, ok := authmw.ClerkUserIDFromContext(r.Context())
+	if !ok {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusUnauthorized, "unauthorized", "A valid session is required", nil)
+		return
+	}
+
+	email, err := clerkPrimaryEmail(r.Context(), clerkUserID)
+	if err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not resolve the session's email", nil)
+		return
+	}
+
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 
 	var req createAccountRequest
@@ -136,7 +156,8 @@ func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 	input := CreateAccountInput{
 		FirstName:   req.FirstName,
 		LastName:    req.LastName,
-		Email:       req.Email,
+		Email:       email,
+		ClerkUserID: clerkUserID,
 		CountryCode: req.CountryCode,
 		StateCode:   req.StateCode,
 	}
@@ -170,11 +191,37 @@ func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 
 	acc, err := h.service.CreateAccount(r.Context(), input)
 	if err != nil {
+		if errors.Is(err, ErrAccountAlreadyLinked) {
+			// A retried request for a session that already created its account
+			// (e.g. a 201 that never reached the client) — idempotent success,
+			// not an error (contracts/post-accounts.md).
+			h.responder.WriteJSON(r.Context(), w, http.StatusOK, toAccountResponse(acc), &acc.ID)
+			return
+		}
 		h.writeCreateAccountError(r.Context(), w, err, len(input.Children))
 		return
 	}
 
 	h.responder.WriteJSON(r.Context(), w, http.StatusCreated, toAccountResponse(acc), &acc.ID)
+}
+
+// clerkPrimaryEmail resolves the verified primary email for a Clerk user id
+// via the Backend API — the session token's own claims don't expose a
+// typed email field in this SDK version, and this is otherwise the
+// documented way to read a user's verified profile (research.md, punto 2).
+func clerkPrimaryEmail(ctx context.Context, clerkUserID string) (string, error) {
+	clerkUser, err := clerkuser.Get(ctx, clerkUserID)
+	if err != nil {
+		return "", fmt.Errorf("fetching clerk user: %w", err)
+	}
+	if clerkUser.PrimaryEmailAddressID != nil {
+		for _, e := range clerkUser.EmailAddresses {
+			if e.ID == *clerkUser.PrimaryEmailAddressID {
+				return e.EmailAddress, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("clerk user %s has no primary email address", clerkUserID)
 }
 
 // writeCreateAccountError dispatches on the error kind and, for each kind,
