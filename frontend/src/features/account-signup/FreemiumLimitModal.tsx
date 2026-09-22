@@ -1,30 +1,49 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
+import { createPortal } from 'react-dom'
+import { useIsDesktop } from '../../shared/ui/useIsDesktop'
 
 interface FreemiumLimitModalProps {
   onViewPlans: () => void
   onStayFree: () => void
+  /** Wide layouts add "<name> sigue disponible sin cambios" to the message (mock 15). */
+  childName?: string
+  /**
+   * The button that opened this, if the caller already tracks one reliably (e.g.
+   * `AddChildDialogs`). When given, focus returns to it and this component skips its own
+   * `document.activeElement` capture — on Safari a click never focuses a button, so that
+   * capture is *not* the real opener and restoring to it would be wrong. Omit it only when
+   * nothing else restores focus on close (e.g. opened from inside `AddChildModal`'s own
+   * 422 fallback, where restoring to whatever had focus right before this modal replaced
+   * the form is still a reasonable default).
+   */
+  opener?: RefObject<HTMLElement | null>
 }
 
 /**
- * Shown immediately when the user tries to add a child beyond the free-plan
- * limit (FR-007) — not only when the server rejects the save. The plans
- * page itself is not implemented in this scope (see Supuestos in spec.md);
- * "Ver planes" targets a placeholder route. "Quedarme con el plan gratuito"
- * closes the modal without creating the extra child fieldset.
+ * The free-plan limit pop-up, shown as soon as the user tries to add a child
+ * beyond the limit (not after filling a form). Built from the delivered
+ * mockups 05 (phone) and 15 (desktop): amber header with the "Plan gratuito"
+ * overline and "Llegaste a un hijo registrado", the message, and "Entendido"
+ * (outline) + "Ver planes" (ink). Focus starts on "Ver planes", Tab cycles
+ * between the two buttons, Escape or a click on the backdrop closes it, and
+ * "Ver planes" turns into "Abriendo planes…" while it navigates.
  *
- * Visual pattern (specs/005, FR-010): amber header band with the "Plan
- * gratuito" overline as the plan-context cue, body, right-aligned actions.
+ * Rendered into <body> so it can be opened from the sticky sidebar without
+ * being painted under the page.
  */
-export function FreemiumLimitModal({ onViewPlans, onStayFree }: FreemiumLimitModalProps) {
+export function FreemiumLimitModal({ onViewPlans, onStayFree, childName, opener }: FreemiumLimitModalProps) {
   const stayButtonRef = useRef<HTMLButtonElement>(null)
   const viewPlansButtonRef = useRef<HTMLButtonElement>(null)
+  const [opening, setOpening] = useState(false)
+  const desktop = useIsDesktop()
 
   useEffect(() => {
-    stayButtonRef.current?.focus()
+    // Only capture document.activeElement as a fallback opener — a caller-supplied `opener`
+    // ref is always more reliable (see the prop doc: Safari never focuses a button on click).
+    // Read opener.current now (not in the cleanup) since a ref's mutable value could differ later.
+    const capturedOpener = opener ? opener.current : (document.activeElement as HTMLElement | null)
+    viewPlansButtonRef.current?.focus()
 
-    // Minimal focus trap: with only two focusable elements in the dialog,
-    // Tab/Shift+Tab just needs to cycle between them instead of letting
-    // focus escape to the page behind the (still-visible) overlay.
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         onStayFree()
@@ -32,6 +51,8 @@ export function FreemiumLimitModal({ onViewPlans, onStayFree }: FreemiumLimitMod
       }
       if (event.key !== 'Tab') return
 
+      // Two focusable elements: Tab/Shift+Tab cycle between them instead of
+      // letting focus reach the page behind the overlay.
       const active = document.activeElement
       if (event.shiftKey) {
         if (active === stayButtonRef.current) {
@@ -44,59 +65,65 @@ export function FreemiumLimitModal({ onViewPlans, onStayFree }: FreemiumLimitMod
       }
     }
     document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [onStayFree])
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      capturedOpener?.focus()
+    }
+  }, [onStayFree, opener])
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4"
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-ink/70 ${desktop ? 'p-6' : 'p-4'}`}
       onClick={onStayFree}
     >
       <div
         role="dialog"
         aria-modal="true"
         aria-labelledby="freemium-limit-title"
-        className="max-h-[85vh] w-full max-w-md overflow-y-auto rounded-3xl bg-surface shadow-2xl"
+        aria-describedby="freemium-limit-body"
+        className={`max-h-[90vh] w-full overflow-y-auto rounded-3xl bg-surface shadow-2xl ${desktop ? 'max-w-xl' : 'max-w-lg'}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="bg-pending px-7 py-3.5">
-          <p className="text-xs font-extrabold tracking-[0.1em] text-on-pending uppercase">
-            Plan gratuito
-          </p>
-        </div>
-
-        <div className="p-7">
+        <div className={`bg-pending ${desktop ? 'px-8 py-7' : 'px-7 py-6'}`}>
+          <p className="text-xs font-extrabold tracking-[0.1em] text-[#451a03] uppercase">Plan gratuito</p>
           <h2
             id="freemium-limit-title"
-            className="text-2xl font-black tracking-tight text-ink"
+            className={`font-black tracking-tight text-[#451a03] ${desktop ? 'mt-2 text-3xl' : 'mt-1.5 text-2xl'}`}
           >
-            El plan gratuito incluye solo un hijo por cuenta
+            Llegaste a un hijo registrado
           </h2>
-          <p className="mt-3 text-base leading-relaxed text-slate-600">
-            Si deseas dar de alta a 2 o más niños, contrata el plan completo. Puedes seguir
-            usando PediTrack con un hijo sin costo.
+        </div>
+
+        <div className={desktop ? 'px-8 pt-7 pb-8' : 'px-7 pt-6 pb-7'}>
+          <p id="freemium-limit-body" className={`leading-relaxed text-[#1f3d44] ${desktop ? 'text-[17px]' : 'text-base'}`}>
+            Para dar de alta a otro hijo necesitas ampliar tu plan. Tus datos actuales se mantienen intactos
+            {childName ? ` y ${childName} sigue disponible sin cambios` : ''}.
           </p>
 
-          <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <div className={`flex flex-wrap justify-end gap-3 ${desktop ? 'mt-7' : 'mt-6'}`}>
             <button
               ref={stayButtonRef}
               type="button"
               onClick={onStayFree}
-              className="min-h-11 cursor-pointer rounded-2xl border-2 border-action px-5 py-2.5 text-base font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+              className={`min-h-11 cursor-pointer rounded-2xl border-2 border-action py-3 text-[15px] ${desktop ? 'px-6' : 'px-5'} font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2`}
             >
-              Quedarme con el plan gratuito
+              Entendido
             </button>
             <button
               ref={viewPlansButtonRef}
               type="button"
-              onClick={onViewPlans}
-              className="min-h-11 cursor-pointer rounded-2xl bg-confirmed px-6 py-2.5 text-base font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-confirmed focus-visible:ring-offset-2"
+              onClick={() => {
+                setOpening(true)
+                onViewPlans()
+              }}
+              className={`min-h-11 cursor-pointer rounded-2xl bg-ink py-3 text-[15px] ${desktop ? 'px-7' : 'px-6'} font-extrabold text-white transition-opacity duration-200 hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2`}
             >
-              Ver planes
+              {opening ? 'Abriendo planes…' : 'Ver planes'}
             </button>
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

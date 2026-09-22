@@ -255,8 +255,8 @@ type createConsultationRequest struct {
 //
 //	@Summary		Register a new medical consultation
 //	@Description	Registers a consultation with its prescription photo, medications and symptoms
-//	@Description	(FR-003, FR-004). At least one medication is required (FR-015). Doses for any
-//	@Description	medication with a startTime are generated all at once (research.md).
+//	@Description	(FR-003, FR-004). At least one medication is required (FR-015), and each one needs
+//	@Description	its startTime ("HH:MM"): all of its doses are generated at once from it (research.md).
 //	@Tags			consultations
 //	@Accept			json
 //	@Produce		json

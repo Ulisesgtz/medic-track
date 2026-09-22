@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useForm, useFieldArray, type Path } from 'react-hook-form'
 import { useMutation } from '@tanstack/react-query'
 import { MedicationFieldset } from './MedicationFieldset'
+import { parsePositiveInt } from './parsePositiveInt'
 import { useOcrSuggestion } from './useOcrSuggestion'
 import { createConsultation, ConsultationApiError, type CreateConsultationPayload } from './api'
-import { errorClass, inputClass, labelClass, overlineClass, suggestedInputClass } from '../../shared/ui/formStyles'
 
 export interface MedicationFormValues {
   name: string
@@ -141,21 +142,59 @@ function fileToBase64(file: File): Promise<string> {
 
 interface ConsultationFormProps {
   childId: string
+  /** 'phone' = mock 04 (dark header with the OCR panel); 'desktop' = mock 14. */
+  variant: 'phone' | 'desktop'
+  /** "Para Mateo Morales · 5 años 6 meses" under the desktop title, when the child is known. */
+  childLabel?: string
+  /** Where "← Cancelar" goes (the child's detail). */
+  cancelTo: string
   onSuccess: (consultationId: string) => void
-  onCancel: () => void
+  /** Called when "← Cancelar" is followed: return false to stay (e.g. the parent refused to discard). */
+  confirmLeave?: () => boolean
   /** Tells the parent whether the form holds anything the user would lose. */
   onDirtyChange?: (dirty: boolean) => void
 }
 
-/** Form to register a new medical consultation (FR-003, FR-004). */
 const MEDICATION_STAGGER_MS = 180
 
-export function ConsultationForm({ childId, onSuccess, onCancel, onDirtyChange }: ConsultationFormProps) {
+// Mocks 04/14: every field of the "Sugerido por OCR" group carries the bright
+// border ("proposed by the OCR, confirm it"); the symptoms box is a plain field.
+const ocrField =
+  'min-h-11 w-full min-w-0 rounded-xl border-2 border-bright bg-surface px-4 py-3 text-base text-ink focus:border-ink focus:outline-none'
+const plainField =
+  'w-full min-w-0 rounded-xl border-[1.5px] border-slate-300 bg-surface px-4 py-3 text-base font-medium text-ink placeholder:text-slate-400 focus:border-2 focus:border-ink focus:outline-none'
+const label = 'text-[13px] font-bold text-ink-soft'
+const errorText = 'text-[13px] font-semibold text-red-700'
+
+/**
+ * The "Nueva consulta" screen (FR-003, FR-004), built from mockups 04 (phone)
+ * and 14 (desktop): "← Cancelar", the dark "Leyendo receta" panel, the
+ * "Sugerido por OCR · revisa y confirma" group (doctor, date, symptoms), the
+ * medication cards, "+ Otro medicamento" and "Guardar consulta".
+ *
+ * The mocks assume the photo was already taken; the form still needs a way to
+ * choose it, so the OCR panel shows a "Seleccionar archivo" button until a
+ * photo is chosen and then turns into the reading progress. OCR runs in the
+ * browser and only ever *suggests*: hints fill empty fields (marked with the
+ * bright border) and stay fully editable (Principio I).
+ */
+export function ConsultationForm({
+  childId,
+  variant,
+  childLabel,
+  cancelTo,
+  onSuccess,
+  confirmLeave,
+  onDirtyChange,
+}: ConsultationFormProps) {
   const [photoFile, setPhotoFile] = useState<File | null>(null)
-  const { suggestion, isRunning, runOcr } = useOcrSuggestion()
+  // Set when the parent tries to save without a photo; it shows with the other missing-field errors.
+  const [photoMissing, setPhotoMissing] = useState(false)
+  const { suggestion, isRunning, progress, runOcr } = useOcrSuggestion()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [ocrProgress, setOcrProgress] = useState<{ current: number; total: number } | null>(null)
   const [suggested, setSuggested] = useState<ReadonlySet<string>>(new Set())
+  const desktop = variant === 'desktop'
 
   const {
     register,
@@ -163,7 +202,7 @@ export function ConsultationForm({ childId, onSuccess, onCancel, onDirtyChange }
     handleSubmit,
     setValue,
     getValues,
-    formState: { errors, isDirty },
+    formState: { errors, isDirty, submitCount },
   } = useForm<ConsultationFormValues>({
     defaultValues: {
       doctorName: '',
@@ -181,11 +220,8 @@ export function ConsultationForm({ childId, onSuccess, onCancel, onDirtyChange }
   }, [dirty, onDirtyChange])
 
   const mutation = useMutation({
-    mutationFn: async (values: ConsultationFormValues) => {
-      if (!photoFile) {
-        throw new ConsultationApiError('validation_error', 'La foto de la receta es obligatoria')
-      }
-      const photoBase64 = await fileToBase64(photoFile)
+    mutationFn: async ({ values, photo }: { values: ConsultationFormValues; photo: File }) => {
+      const photoBase64 = await fileToBase64(photo)
       const payload: CreateConsultationPayload = {
         doctorName: values.doctorName,
         consultDate: values.consultDate,
@@ -193,9 +229,9 @@ export function ConsultationForm({ childId, onSuccess, onCancel, onDirtyChange }
         symptoms: values.symptoms,
         medications: values.medications.map((m) => ({
           name: m.name,
-          frequencyHours: Number(m.frequencyHours),
-          durationDays: Number(m.durationDays),
-          startTime: m.startTime || undefined,
+          frequencyHours: parsePositiveInt(m.frequencyHours) ?? 0,
+          durationDays: parsePositiveInt(m.durationDays) ?? 0,
+          startTime: m.startTime,
         })),
         // Start times are read in the parent's own time zone (their offset on the consult date).
         utcOffsetMinutes: -new Date(`${values.consultDate}T00:00:00`).getTimezoneOffset(),
@@ -252,8 +288,8 @@ export function ConsultationForm({ childId, onSuccess, onCancel, onDirtyChange }
         }
         const med = meds[index]
         fill(`medications.${index}.name`, med.name)
-        fill(`medications.${index}.frequencyHours`, med.frequencyHours)
-        fill(`medications.${index}.durationDays`, med.durationDays)
+        fill(`medications.${index}.frequencyHours`, med.frequencyHours ? `c/${med.frequencyHours} h` : undefined)
+        fill(`medications.${index}.durationDays`, med.durationDays ? `${med.durationDays} días` : undefined)
         setOcrProgress({ current: index + 1, total: meds.length })
       }
       if (!cancelled) setOcrProgress(null)
@@ -293,167 +329,285 @@ export function ConsultationForm({ childId, onSuccess, onCancel, onDirtyChange }
     })
   }
 
-  const onSubmit = handleSubmit((values) => {
-    mutation.mutate(values)
-  })
+  const onSubmit = handleSubmit(
+    (values) => {
+      if (!photoFile) {
+        setPhotoMissing(true)
+        return
+      }
+      mutation.mutate({ values, photo: photoFile })
+    },
+    () => setPhotoMissing(!photoFile),
+  )
 
-  return (
-    <form onSubmit={onSubmit} noValidate className="space-y-7">
-      <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-        <div>
-          <label className={labelClass} htmlFor="doctorName">
+  // ---- "Leyendo receta" panel: chooser -> progress -> "Listo".
+  const reading = isRunning || ocrProgress !== null
+  const percent = isRunning
+    ? Math.round(progress * 100)
+    : ocrProgress
+      ? Math.round((ocrProgress.current / ocrProgress.total) * 100)
+      : 100
+  // Mock 04 (phone): fields of the OCR group are semibold; the web mock 14 keeps medium.
+  const ocrFieldClass = `${ocrField} ${desktop ? 'font-medium' : 'font-semibold'}`
+  // Once a photo is chosen the panel is exactly the mock's (title + percent, bar, note) and
+  // "Cambiar foto" moves to the top row, next to "← Cancelar" (phone) or the header's right end (web).
+  const showChooser = !photoFile
+  const gapTop = desktop ? 'mt-4' : 'mt-3.5'
+  const panelBox = desktop ? 'rounded-3xl bg-ink p-6 lg:p-7' : 'mt-5 rounded-3xl bg-ink-soft p-5'
+  const track = desktop ? 'bg-ink-soft' : 'bg-ink'
+  const ocrPanel = (
+    <div className={`min-w-0 ${panelBox}`}>
+      {/* Not a real <label htmlFor>: the file input is `hidden` (display:none),
+          which removes it from the accessibility tree. The button carries its
+          own accessible name and is described by this text instead. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p id="photo-label" className="text-[13px] font-extrabold tracking-[0.08em] text-[#67e8f9] uppercase">
+          {photoFile ? 'Leyendo receta' : 'Foto de la receta'}
+        </p>
+        {photoFile && (
+          <p className="text-[13px] font-bold text-white" aria-live="polite">
+            {reading ? `${percent} %` : 'Listo'}
+          </p>
+        )}
+      </div>
+      {photoFile && (
+        <div
+          role="progressbar"
+          aria-label="Progreso de lectura de la receta"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={percent}
+          className={`${gapTop} h-2 overflow-hidden rounded-full ${track}`}
+        >
+          <div className="h-full bg-bright transition-[width] duration-300" style={{ width: `${percent}%` }} />
+        </div>
+      )}
+      <input
+        id="photo"
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        aria-labelledby="photo-label"
+        onChange={handlePhotoChange}
+      />
+      {ocrProgress && (
+        <p className={`${gapTop} text-[13px] font-semibold text-[#67e8f9]`} aria-live="polite">
+          Agregando medicamentos de la receta… {ocrProgress.current} de {ocrProgress.total}
+        </p>
+      )}
+      <p className={`${gapTop} text-[13px] leading-relaxed text-[#a5f3fc]`}>
+        {desktop
+          ? 'El procesamiento ocurre en tu equipo. La foto no se envía a ningún servidor.'
+          : 'El procesamiento ocurre en tu teléfono. La foto no sale del dispositivo.'}
+      </p>
+      {showChooser && (
+        <div className={gapTop}>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            aria-describedby="photo-label"
+            className="min-h-11 cursor-pointer rounded-2xl border-2 border-bright px-5 py-2.5 text-base font-extrabold text-bright transition-colors duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-bright focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
+          >
+            Seleccionar archivo
+          </button>
+        </div>
+      )}
+      {photoMissing && !photoFile && (
+        <p className="mt-3 text-[13px] font-semibold text-red-200">La foto de la receta es obligatoria</p>
+      )}
+    </div>
+  )
+
+  const changePhoto = (
+    <button
+      type="button"
+      onClick={() => fileInputRef.current?.click()}
+      className={
+        desktop
+          ? '-my-3 inline-flex min-h-11 cursor-pointer items-center self-start text-sm font-bold text-action'
+          : '-my-3 inline-flex min-h-11 cursor-pointer items-center text-sm font-bold text-[#67e8f9] hover:text-white'
+      }
+    >
+      Cambiar foto
+    </button>
+  )
+
+  const cancelLink = (
+    <Link
+      to={cancelTo}
+      onClick={(event) => {
+        if (confirmLeave && !confirmLeave()) event.preventDefault()
+      }}
+      className={
+        desktop
+          ? '-my-3 inline-flex min-h-11 items-center text-sm font-bold text-action'
+          : '-my-3 inline-flex min-h-11 items-center text-sm font-bold text-[#67e8f9] hover:text-white'
+      }
+    >
+      ← Cancelar
+    </Link>
+  )
+
+  const missing = submitCount > 0 && (Object.keys(errors).length > 0 || (photoMissing && !photoFile))
+  const statusText = mutation.isError
+    ? mutation.error instanceof ConsultationApiError
+      ? mutation.error.message
+      : 'Ocurrió un error al guardar la consulta. Intenta de nuevo.'
+    : missing
+      ? 'Completa los campos faltantes.'
+      : ''
+
+  // Not in the phone mock 04 (the web mock 14 has it inside the OCR group): kept because the model
+  // stores it, as its own field below the group on the phone so the group stays as the mock.
+  const symptomsField = (
+    <div className="flex min-w-0 flex-col gap-2">
+      <label htmlFor="symptoms" className={label}>
+        Síntomas
+      </label>
+      <textarea
+        id="symptoms"
+        rows={3}
+        placeholder="Lo que observaste antes de la consulta"
+        className={plainField}
+        {...register('symptoms')}
+      />
+    </div>
+  )
+
+  const ocrGroup = (
+    <fieldset
+      className={`flex min-w-0 flex-col rounded-3xl border-[1.5px] border-hint-border bg-hint ${
+        desktop ? 'gap-4 p-6' : 'gap-3.5 p-5'
+      }`}
+    >
+      <legend className="text-xs font-extrabold tracking-[0.1em] text-action uppercase">
+        Sugerido por OCR · revisa y confirma
+      </legend>
+      <div className={desktop ? 'grid gap-4 sm:grid-cols-2' : 'flex flex-col gap-3.5'}>
+        <div className="flex min-w-0 flex-col gap-2">
+          <label htmlFor="doctorName" className={label}>
             Doctor
           </label>
-          <input
-            id="doctorName"
-            className={suggested.has('doctorName') ? suggestedInputClass : inputClass}
-            {...register('doctorName', { required: true })}
-          />
-          {errors.doctorName && <span className={errorClass}>El nombre del doctor es obligatorio</span>}
+          <input id="doctorName" size={1} className={ocrFieldClass} {...register('doctorName', { required: true })} />
+          {errors.doctorName && <p className={errorText}>El nombre del doctor es obligatorio</p>}
         </div>
-
-        <div>
-          <label className={labelClass} htmlFor="consultDate">
-            Fecha de la consulta
+        <div className="flex min-w-0 flex-col gap-2">
+          <label htmlFor="consultDate" className={label}>
+            Fecha
           </label>
           <input
             id="consultDate"
             type="date"
-            className={suggested.has('consultDate') ? suggestedInputClass : inputClass}
+            size={1}
+            className={ocrFieldClass}
             {...register('consultDate', { required: true })}
           />
-          {errors.consultDate && <span className={errorClass}>La fecha es obligatoria</span>}
+          {errors.consultDate && <p className={errorText}>La fecha es obligatoria</p>}
         </div>
       </div>
+      {desktop && symptomsField}
+    </fieldset>
+  )
 
-      <div className="rounded-2xl bg-ink-soft p-5 text-white">
-        {/* Not a real <label htmlFor>: the file input is `hidden` (display:none),
-            which removes it from the accessibility tree, so a htmlFor association
-            would point at a node assistive tech never reaches. The button below
-            carries its own accessible name and is described by this text instead. */}
-        <p id="photo-label" className="text-[13px] font-bold text-white">
-          Foto de la receta
-        </p>
-        <p className="mt-1 text-sm text-white/70">
-          La receta se lee en tu dispositivo y no se comparte con terceros. Revisa lo que se
-          autocompleta antes de guardar.
-        </p>
-        <input
-          id="photo"
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          aria-labelledby="photo-label"
-          onChange={handlePhotoChange}
+  const medications = (
+    <div className={`flex min-w-0 flex-col ${desktop ? 'gap-4' : 'gap-3.5'}`}>
+      {fields.map((field, index) => (
+        <MedicationFieldset
+          key={field.id}
+          index={index}
+          register={register}
+          errors={errors}
+          onRemove={() => removeMedication(index)}
+          canRemove={fields.length > 1}
+          removeDisabled={ocrProgress !== null}
+          suggested={suggested}
+          variant={variant}
         />
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            aria-describedby={photoFile ? 'photo-label photo-filename' : 'photo-label'}
-            className="min-h-11 cursor-pointer rounded-2xl border-2 border-bright px-5 py-2.5 text-base font-extrabold text-bright transition-colors duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-bright focus-visible:ring-offset-2 focus-visible:ring-offset-ink-soft"
-          >
-            Seleccionar archivo
-          </button>
-          {photoFile && (
-            <span id="photo-filename" className="min-w-0 truncate text-sm font-semibold text-white/80">
-              {photoFile.name}
-            </span>
-          )}
-        </div>
-        {isRunning && (
-          <p className="mt-3 text-sm font-semibold text-bright" aria-live="polite">
-            Analizando la foto…
-          </p>
-        )}
-        {ocrProgress && (
-          <div className="mt-3">
-            <p className="text-sm font-semibold text-bright" aria-live="polite">
-              Agregando medicamentos de la receta… {ocrProgress.current} de {ocrProgress.total}
-            </p>
-            <div
-              role="progressbar"
-              aria-label="Progreso de lectura de la receta"
-              aria-valuemin={0}
-              aria-valuemax={ocrProgress.total}
-              aria-valuenow={ocrProgress.current}
-              className="mt-2 h-2 overflow-hidden rounded-full bg-white/15"
-            >
-              <div
-                className="h-full rounded-full bg-bright transition-[width] duration-200 ease-out"
-                style={{ width: `${(ocrProgress.current / ocrProgress.total) * 100}%` }}
-              />
-            </div>
+      ))}
+    </div>
+  )
+
+  const addButton = (
+    <button
+      type="button"
+      onClick={() => append(emptyMedication)}
+      disabled={ocrProgress !== null}
+      className={
+        desktop
+          ? 'min-h-11 cursor-pointer rounded-2xl border-2 border-action px-6 py-3 text-[15px] font-extrabold text-action transition-colors hover:bg-hint disabled:cursor-not-allowed disabled:opacity-50'
+          : 'min-h-11 cursor-pointer rounded-3xl border-2 border-dashed border-[#67e8f9] py-4 text-[15px] font-extrabold text-action transition-colors hover:bg-hint disabled:cursor-not-allowed disabled:opacity-50'
+      }
+    >
+      + Otro medicamento
+    </button>
+  )
+  const saveButton = (
+    <button
+      type="submit"
+      disabled={mutation.isPending}
+      className={`min-h-11 cursor-pointer rounded-2xl bg-confirmed text-base font-extrabold text-white transition-colors hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 ${
+        desktop ? 'px-8 py-3.5' : 'py-4'
+      }`}
+    >
+      {mutation.isPending ? 'Guardando…' : 'Guardar consulta'}
+    </button>
+  )
+  const status = (
+    <p
+      role="status"
+      className={`text-[13px] font-semibold ${statusText ? 'text-red-700' : 'text-action'} ${
+        desktop ? '' : 'pb-2 text-center'
+      }`}
+    >
+      {statusText}
+    </p>
+  )
+
+  if (desktop) {
+    return (
+      <div className="mx-auto flex max-w-4xl flex-col gap-7">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            {cancelLink}
+            <h1 className="mt-3 text-4xl font-black tracking-tight text-ink">Nueva consulta</h1>
+            {childLabel && <p className="mt-2 text-base text-slate-600">Para {childLabel}</p>}
           </div>
-        )}
-        {mutation.isError &&
-          mutation.error instanceof ConsultationApiError &&
-          mutation.error.kind === 'validation_error' &&
-          !photoFile && (
-            <span className="mt-3 block text-sm font-semibold text-red-200">{mutation.error.message}</span>
-          )}
-      </div>
-
-      <section className="space-y-5">
-        <h2 className={overlineClass}>Medicamentos</h2>
-        <div className="space-y-4">
-          {fields.map((field, index) => (
-            <MedicationFieldset
-              key={field.id}
-              index={index}
-              register={register}
-              errors={errors}
-              control={control}
-              onRemove={() => removeMedication(index)}
-              removeDisabled={ocrProgress !== null}
-              suggested={suggested}
-            />
-          ))}
+          {photoFile && changePhoto}
         </div>
-        <button
-          type="button"
-          onClick={() => append(emptyMedication)}
-          disabled={ocrProgress !== null}
-          className="min-h-11 cursor-pointer rounded-2xl border-2 border-action px-5 py-2.5 text-base font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          Agregar medicamento
-        </button>
-      </section>
-
-      <div>
-        <label className={labelClass} htmlFor="symptoms">
-          Síntomas
-        </label>
-        <textarea id="symptoms" className={inputClass} rows={3} {...register('symptoms')} />
+        {ocrPanel}
+        <form onSubmit={onSubmit} noValidate className="flex min-w-0 flex-col gap-5">
+          {ocrGroup}
+          {medications}
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            {addButton}
+            {saveButton}
+          </div>
+          {status}
+        </form>
       </div>
+    )
+  }
 
-      {mutation.isError &&
-        !(mutation.error instanceof ConsultationApiError && mutation.error.kind === 'validation_error' && !photoFile) && (
-          <p role="alert" className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-800">
-            {mutation.error instanceof ConsultationApiError
-              ? mutation.error.message
-              : 'Ocurrió un error al guardar la consulta. Intenta de nuevo.'}
-          </p>
-        )}
-
-      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="min-h-11 cursor-pointer rounded-2xl border-2 border-action px-6 py-2.5 text-base font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
-        >
-          Cancelar
-        </button>
-        <button
-          type="submit"
-          disabled={mutation.isPending}
-          className="min-h-11 cursor-pointer rounded-2xl bg-confirmed px-8 py-3 text-base font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-confirmed focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {mutation.isPending ? 'Guardando…' : 'Guardar'}
-        </button>
-      </div>
-    </form>
+  return (
+    <>
+      <header className="bg-ink px-6 pt-6 pb-7">
+        <div className="flex min-h-6 items-center justify-between">
+          {cancelLink}
+          {photoFile && changePhoto}
+        </div>
+        <h1 className="mt-5 text-2xl font-black tracking-tight text-white">Nueva consulta</h1>
+        {ocrPanel}
+      </header>
+      <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5 px-6 pt-6">
+        {ocrGroup}
+        {symptomsField}
+        {medications}
+        {addButton}
+        {saveButton}
+        {status}
+      </form>
+    </>
   )
 }

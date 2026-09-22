@@ -63,4 +63,23 @@ describe('useOcrSuggestion', () => {
   // own logic. The fix in useOcrSuggestion.ts (requestIdRef comparison
   // before each state update) is still applied and covered by manual
   // review; see PR #4's code-review finding for the rationale.
+
+  it('reports the reading progress from the recognizer, and 1 once it is done', async () => {
+    const tesseract = await import('tesseract.js')
+    vi.mocked(tesseract.default.recognize).mockImplementation((async (_file: unknown, _lang: unknown, options: { logger: (m: { status: string; progress: number }) => void }) => {
+      options.logger({ status: 'loading language traineddata', progress: 0.9 })
+      options.logger({ status: 'recognizing text', progress: 0.4 })
+      return { data: { text: 'Receta' } }
+    }) as never)
+
+    const { result } = renderHook(() => useOcrSuggestion())
+    expect(result.current.progress).toBe(0)
+    await act(async () => {
+      await result.current.runOcr(new File(['x'], 'receta.jpg'))
+    })
+
+    await waitFor(() => expect(result.current.suggestion).toBe('Receta'))
+    expect(result.current.progress).toBe(1)
+    expect(result.current.isRunning).toBe(false)
+  })
 })

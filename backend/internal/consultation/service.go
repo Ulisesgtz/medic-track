@@ -27,7 +27,7 @@ type CreateMedicationInput struct {
 	Name           string
 	FrequencyHours int
 	DurationDays   int
-	StartTime      *string // "HH:MM", nil means no doses are generated (FR-010)
+	StartTime      *string // "HH:MM", required when creating (FR-010); the repository still stores nil for legacy data
 }
 
 // CreateConsultationInput is the input to Service.CreateConsultation,
@@ -155,7 +155,11 @@ func validateCreateConsultationInput(input CreateConsultationInput) ValidationEr
 		if m.DurationDays <= 0 {
 			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "durationDays"), Message: "must be a positive integer"})
 		}
-		if m.StartTime != nil && !startTimeFormat.MatchString(*m.StartTime) {
+		// A start time is required: without it no doses would be generated (and the child would show no
+		// active treatment). Consultations saved before this rule keep a NULL start time (FR-010).
+		if m.StartTime == nil || *m.StartTime == "" {
+			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "startTime"), Message: "start time is required"})
+		} else if !startTimeFormat.MatchString(*m.StartTime) {
 			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "startTime"), Message: "must be a 24-hour HH:MM time"})
 		}
 	}

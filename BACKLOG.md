@@ -8,7 +8,46 @@ para no perder decisiones que ya se tomaron en conversación pero que aún no ti
 Cuando se decida trabajar en un ítem, se le corre `/speckit-specify` como a cualquier feature nueva
 y se elimina (o se marca) aquí.
 
+## Pendientes de decisión (preguntas abiertas al usuario)
+
+Preguntas que se hicieron durante la homologación a los mocks (`specs/007-homologar-pantallas-a-mocks/`) y que el usuario
+dejó pendientes (2026-09-21). No se construye nada de esto hasta que se responda.
+
+- **Mock 05 (pop-up del plan gratuito, móvil): ¿cómo debe ser el home de fondo?** El fondo del mock 05 es un home sin
+  tarjeta de hijo y con un encabezado que solo dice "Tus hijos" (logo + título). El home móvil de la app sigue la pantalla 2
+  del tablero: encabezado con "Hola, Ana" y avatar con iniciales, y en cada tarjeta de hijo los chips "N consultas" y
+  "N tomas hoy" / "Sin tomas pendientes". Con el plan gratuito lleno siempre hay un hijo, así que el fondo real nunca puede
+  ser exactamente el del mock. Decidir: (a) dejar el home como el tablero 2 (hoy), o (b) quitar saludo, avatar y chips
+  para que sea el del mock 05. El pop-up en sí ya coincide con el mock (ver la spec 007).
+- **Editar consultas y medicamentos** — hoy son inmutables (spec 004, FR-014); solo se marcan las tomas, y desde 2026-09-20
+  "Desde" es obligatorio al crear. Si se quiere poder corregir una consulta ya guardada hay que decidir: qué se edita
+  (solo nombre y dosis, o también frecuencia, duración y hora de inicio); qué pasa con las tomas ya marcadas si cambia el
+  horario (regenerarlas y perder las marcas, o que el cambio solo aplique a las tomas futuras); si también se edita doctor,
+  fecha y síntomas; si se permite borrar una consulta o un medicamento; y el diseño (los mocks no tienen esa pantalla).
+  Requiere endpoint nuevo y su spec. Recomendación que se dio: editar solo nombre, frecuencia, duración y hora de cada
+  medicamento, regenerando sus tomas con un aviso de que se pierden las marcas.
+- **Abrir el PR de `feature/007-homologar-pantallas-a-mocks` a `develop` y hacer el code review** — se ofreció varias
+  veces y sigue sin respuesta; hay que hacerlo antes de mezclar la rama.
+
+## Prioridad alta
+
+- **Autenticación real con Clerk o AWS Cognito** — siguiente feature (proveedor por decidir entre esos dos).
+  Hoy la "sesión" es solo el `account_id` en `localStorage`. Los registros (móvil y web) ya tienen el campo
+  "Contraseña" del mock (mínimo 8 caracteres) pero **no se envía ni se guarda**, y el botón "Registrarme con Google" solo
+  avisa que estará disponible pronto. Al construirla: conectar ambos al proveedor (el registro con Google y la
+  contraseña pasan a ser del proveedor, no de nuestro backend), la pantalla de inicio de sesión, y revisar `GET /accounts/{accountId}` y `POST /accounts/{accountId}/children`
+  (hoy sin autenticación) y `useAccountSession`.
+- **Homologar todas las pantallas a los mocks** — hecho en `specs/007-homologar-pantallas-a-mocks/`
+  (rama `feature/007-homologar-pantallas-a-mocks`); las desviaciones que quedan están listadas en su spec.
+  Pendiente de esa spec: las pantallas que aún no tienen mock (planes `/planes`, estados vacíos y de error).
+
 ## Backend
+
+- **Consultas anteriores sin hora de inicio** — desde 2026-09-20 "Desde" es obligatorio, pero las consultas guardadas
+  antes (p. ej. la del Dr. Erick Rojas) tienen medicamentos sin `start_time`, sin tomas y sin tratamiento activo, y como
+  las consultas son inmutables no se pueden completar. Si hace falta, permitir agregar la hora solo cuando falte (excepción
+  a la inmutabilidad, endpoint nuevo, spec propia y un diseño que los mocks no tienen).
+
 
 - **Consulta/listado del log de errores** — endpoint o interfaz para leer las entradas de
   `error_logs` (creado por `specs/002-registro-log-errores/`). Esa funcionalidad excluyó
@@ -64,6 +103,25 @@ y se elimina (o se marca) aquí.
 - **Pantalla de planes de pago** — hoy `/planes` muestra un aviso "Estamos preparando los planes" (`MessagePage`) para que "Ver planes" no caiga en una pantalla en blanco. El modal de límite freemium (franja ámbar) es el punto de entrada
   visual ya establecido; la pantalla de planes debe continuarlo. Ver `specs/005-identidad-visual-front-end/spec.md`,
   "Adiciones Futuras Previstas".
+
+## Despliegue
+
+- **Dónde correr el backend y la base de datos** — decisión inclinada hacia **Railway** (Go + Postgres juntos,
+  ~5–20 USD/mes; conecta el repo de GitHub y despliega solo), conversado 2026-09-22 pero **no decidido en firme
+  todavía** — queda en pausa hasta terminar la homologación de pantallas (spec 007). Comparado contra:
+  Render (~13 USD/mes, cobra disco de Postgres por GB — relevante porque las fotos de receta se guardan como
+  `bytea` directo en Postgres, ver más abajo), Fly.io (desde ~2 USD, sin región en México), un VPS propio
+  (Hetzner/DigitalOcean, ~5–12 USD pero con mantenimiento manual), y AWS (App Runner/ECS + RDS — tendría sentido
+  solo si se termina usando Cognito para el login, para quedar todo en una cuenta).
+- **Frontend (el PWA)**: **Cloudflare Pages** — gratis, sirve el PWA con su service worker, dominio
+  `pedi-track.com` ya comprado (ver memoria `peditrack-dominio.md`) solo hay que apuntar el DNS. Alternativas
+  equivalentes: Vercel, Netlify.
+- **Cloudflare Containers para el backend** — evaluado y descartado por ahora: corre cualquier imagen Docker
+  (serviría para el binario de Go), pero Cloudflare no tiene Postgres propio (Hyperdrive solo acelera la conexión
+  a un Postgres externo, no lo hospeda) y el producto sigue siendo relativamente nuevo. Revisar de nuevo si más
+  adelante conviene consolidar todo en Cloudflare.
+- Relacionado: **fotos de recetas en `bytea` dentro de Postgres** (ver "Backend" arriba) — el proveedor de
+  hosting elegido debe soportar que la base de datos crezca con cada foto hasta que se migre a un object storage.
 
 ## Producto / Legal
 

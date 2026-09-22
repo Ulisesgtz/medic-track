@@ -36,3 +36,17 @@ export function localDayRange(now: Date = new Date()): { from: Date; to: Date } 
     to: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1),
   }
 }
+
+const LONG_MONTHS = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+]
+
+/** A plain YYYY-MM-DD date as "12 septiembre 2026" (consultation detail header). */
+export function formatDateLong(isoDate: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(isoDate)
+  if (!match) return isoDate
+  const month = LONG_MONTHS[Number(match[2]) - 1]
+  if (!month) return isoDate
+  return `${Number(match[3])} ${month} ${match[1]}`
+}

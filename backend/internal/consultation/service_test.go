@@ -85,6 +85,22 @@ func TestService_CreateConsultation_Validation(t *testing.T) {
 			wantFieldErrs: []string{"medications[0].durationDays"},
 		},
 		{
+			name: "missing start time",
+			input: consultation.CreateConsultationInput{
+				DoctorName: "Dra. López", ConsultDate: time.Now(), Photo: samplePhoto(),
+				Medications: []consultation.CreateMedicationInput{{Name: "X", FrequencyHours: 8, DurationDays: 1}},
+			},
+			wantFieldErrs: []string{"medications[0].startTime"},
+		},
+		{
+			name: "empty start time",
+			input: consultation.CreateConsultationInput{
+				DoctorName: "Dra. López", ConsultDate: time.Now(), Photo: samplePhoto(),
+				Medications: []consultation.CreateMedicationInput{{Name: "X", FrequencyHours: 8, DurationDays: 1, StartTime: strPtr("")}},
+			},
+			wantFieldErrs: []string{"medications[0].startTime"},
+		},
+		{
 			name: "malformed start time",
 			input: consultation.CreateConsultationInput{
 				DoctorName: "Dra. López", ConsultDate: time.Now(), Photo: samplePhoto(),
@@ -142,7 +158,6 @@ func TestService_DoseGeneration(t *testing.T) {
 		{name: "every 8h for 3 days", frequency: 8, duration: 3, startTime: strPtr("08:00"), expectedDoses: 9},
 		{name: "every 24h for 1 day", frequency: 24, duration: 1, startTime: strPtr("08:00"), expectedDoses: 1},
 		{name: "every 5h for 1 day (non-divisor)", frequency: 5, duration: 1, startTime: strPtr("08:00"), expectedDoses: 4},
-		{name: "no start time", frequency: 8, duration: 3, startTime: nil, expectedDoses: 0},
 	}
 
 	for _, tt := range tests {

@@ -25,6 +25,18 @@ function stubMatchMedia(matches: boolean) {
   )
 }
 
+/** A window `width` px wide: every `(min-width: N)` query matches when N <= width. */
+function stubWidth(width: number) {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn().mockImplementation((query: string) => ({
+      matches: width >= Number(/min-width:\s*(\d+)px/.exec(query)?.[1] ?? Infinity),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
+  )
+}
+
 function renderShell(activeChildId?: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
@@ -101,16 +113,17 @@ describe('AppShell', () => {
     expect(screen.getByText('Plan gratuito')).toBeInTheDocument()
   })
 
-  it('renders the add-child modal in <body>, not inside the sticky sidebar (it would paint under the page otherwise)', async () => {
+  it("opens the plan-limit pop-up (in <body>, not inside the sticky sidebar) when the free plan is full", async () => {
     stubMatchMedia(true)
     const user = userEvent.setup()
     renderShell()
 
     await user.click(await screen.findByRole('button', { name: /Agregar hijo/ }))
 
-    const dialog = screen.getByRole('dialog', { name: 'Agregar hijo' })
+    const dialog = screen.getByRole('dialog', { name: 'Llegaste a un hijo registrado' })
     expect(dialog.closest('aside')).toBeNull()
     expect(document.body.contains(dialog)).toBe(true)
+    expect(screen.getByText(/Luis sigue disponible sin cambios/)).toBeInTheDocument()
   })
 
   it('labels a paid account "Plan completo"', async () => {
@@ -121,34 +134,27 @@ describe('AppShell', () => {
     expect(await screen.findByText('Plan completo')).toBeInTheDocument()
   })
 
-  it('opens the add-child modal from the sidebar', async () => {
-    const user = userEvent.setup()
+  it('opens the add-child form from the sidebar when the plan still has room, rendered in <body>', async () => {
     stubMatchMedia(true)
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ...account, plan: 'paid' }) }))
+    const user = userEvent.setup()
     renderShell()
 
-    await user.click(await screen.findByRole('button', { name: 'Agregar hijo' }))
+    await user.click(await screen.findByRole('button', { name: /Agregar hijo/ }))
 
-    expect(screen.getByRole('dialog', { name: 'Agregar hijo' })).toBeInTheDocument()
+    const dialog = screen.getByRole('dialog', { name: 'Agregar hijo' })
+    expect(dialog.closest('aside')).toBeNull()
   })
 
-  it('does not render the header brand row while the sidebar (which has the logo) is on screen', async () => {
-    stubMatchMedia(true)
-    const { AppHeader } = await import('../../shared/ui/AppHeader')
-    const queryClient = new QueryClient()
-    render(
-      <QueryClientProvider client={queryClient}>
-        <MemoryRouter>
-          <AppShell>
-            <AppHeader title="Tus hijos" />
-          </AppShell>
-        </MemoryRouter>
-      </QueryClientProvider>,
-    )
+  it('adds the sidebar from 1024px (`lg`, as the web mockups) and not between 900 and 1023px', async () => {
+    stubWidth(1023)
+    const { unmount } = renderShell()
+    expect(screen.getByText('SCREEN CONTENT')).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Tus hijos' })).not.toBeInTheDocument()
+    unmount()
 
-    await screen.findByRole('navigation', { name: 'Tus hijos' })
-    // Not just hidden: the header's brand is not rendered at all, so the
-    // page holds a single logo (the sidebar's).
-    expect(document.querySelector('header span.text-lg')).toBeNull()
-    expect(screen.getAllByRole('img', { name: 'PediTrack' })).toHaveLength(1)
+    stubWidth(1024)
+    renderShell()
+    expect(await screen.findByRole('navigation', { name: 'Tus hijos' })).toBeInTheDocument()
   })
 })

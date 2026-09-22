@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { SidebarContext } from '../../shared/ui/SidebarContext'
 import { ChildrenSidebar } from './ChildrenSidebar'
 import { useSidebarSession } from './useSidebarSession'
 
@@ -20,11 +19,9 @@ export function AppShell({ activeChildId, children }: AppShellProps) {
   if (!hasSidebar || accountId === null) return <>{children}</>
 
   return (
-    <SidebarContext.Provider value={true}>
-      <div className="grid min-h-screen grid-cols-[clamp(240px,28vw,348px)_minmax(0,1fr)]">
+    <div className="flex min-h-screen">
         <ChildrenSidebar accountId={accountId} activeChildId={activeChildId} />
-        <div className="min-w-0">{children}</div>
-      </div>
-    </SidebarContext.Provider>
+        <div className="min-w-0 flex-1">{children}</div>
+    </div>
   )
 }

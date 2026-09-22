@@ -603,8 +603,8 @@ paths:
       - application/json
       description: |-
         Registers a consultation with its prescription photo, medications and symptoms
-        (FR-003, FR-004). At least one medication is required (FR-015). Doses for any
-        medication with a startTime are generated all at once (research.md).
+        (FR-003, FR-004). At least one medication is required (FR-015), and each one needs
+        its startTime ("HH:MM"): all of its doses are generated at once from it (research.md).
       parameters:
       - description: Child UUID
         in: path

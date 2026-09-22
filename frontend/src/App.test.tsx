@@ -14,7 +14,7 @@ describe('App', () => {
   it('redirects "/" to the account signup page', async () => {
     render(<App />)
 
-    expect(await screen.findByRole('heading', { name: 'Crear cuenta' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /La bitácora médica/ })).toBeInTheDocument()
   })
 
   it('shows a "Planes de pago" placeholder at /planes (where "Ver planes" points) instead of a blank screen', async () => {

@@ -6,94 +6,109 @@ Vite + React 18 + TypeScript. Forms: React Hook Form. Server state: TanStack Que
 
 | Path | What's there |
 |---|---|
-| `src/App.tsx` | Router + QueryClientProvider — routes `/signup` → `AccountSignupPage`, `/home` → `HomePage`, `/children/:childId` → `ChildDetailPage`, `/consultations/:consultationId` → `ConsultationDetailPage` |
-| `src/features/account-signup/` | The account + children signup feature (see below) |
-| `src/features/home/` | The home page feature: children listing, "Agregar hijo" modal, the `account_id`-in-`localStorage` session (see below) |
-| `src/features/consultations/` | Child detail page, consultation registration form (with client-side OCR) and detail, dose marking (see below) |
+| `src/App.tsx` | Router + QueryClientProvider — `/signup` → `AccountSignupPage`, `/home` → `HomePage`, `/children/:childId` → `ChildDetailPage`, `/children/:childId/consultations/new` → `NewConsultationPage`, `/consultations/:consultationId` → `ConsultationDetailPage`, `/planes` → placeholder (`MessagePage`) |
+| `src/features/account-signup/` | The account + first child signup feature, and the plan-limit pop-up (see below) |
+| `src/features/home/` | The home page: children listing, "Agregar hijo" dialogs, the desktop sidebar, the `account_id`-in-`localStorage` session (see below) |
+| `src/features/consultations/` | Child detail page, "Nueva consulta" page (with client-side OCR), consultation detail, dose marking (see below) |
 | `src/shared/catalog/` | Country/state catalog fetch hooks (`useCountries`, `useStates`) shared across features |
-| `src/shared/ui/` | Presentational pieces used by more than one feature: `Logo`, `AppHeader` (dark screen header), `formStyles.ts` (Tailwind class recipes for fields/labels/errors — import them, don't copy), `useIsDesktop` (true from 900px, `matchMedia`-based), `SidebarContext` (lets `AppHeader` drop its own logo row while the sidebar shows it) |
-| `src/shared/age.ts` | `computeAge(birthDate)` — pure function, months under 2 years old, whole years after (used by the home cards). `formatAgeLong`/`formatAgeShort` give "5 años 6 meses" / "5a 6m" for the child header and the sidebar |
-| `src/shared/useLocalDay.ts` | The parent's local "today" `{from, to}`, rolled over at local midnight and re-checked when the app returns to the foreground (an installed PWA can sit open overnight). Use it, never a `useState(() => localDayRange())` that freezes at mount |
-| `src/shared/date.ts` | `formatDateShort('2026-09-15')` → `15 sep 2026` — every date shown to the user goes through it (fixed month names, no `Intl`, no timezone shift) |
-| `src/shared/apiError.ts` | `ApiError<Kind>` base class (`kind`, `message`, optional `details`) — each feature's `api.ts` defines its own subclass (`CreateAccountError`, `AccountApiError`) with just the `Kind` union it needs, instead of duplicating the constructor |
-| `e2e/account-signup.spec.ts` | Playwright E2E specs for signup — requires backend running locally |
-| `e2e/home-listado-hijos.spec.ts` | Playwright E2E specs for the home page flow (specs/003-home-listado-hijos) |
-| `e2e/detalle-consulta-hijo.spec.ts` | Playwright E2E specs for registering a consultation and marking a dose (specs/004-detalle-consulta-hijo) |
+| `src/shared/ui/` | Presentational pieces used by more than one feature: `Logo`, `AppHeader` (phone dark header: eyebrow, title, action), `FormField` (label + control + inline error), `MessagePage`, `useIsDesktop` (true from 900px, `matchMedia`-based — **the one rule that picks the web or the phone design**) and `useIsWide` (true from 1024px, `lg`: where the web mocks show the sidebar) |
+| `src/shared/age.ts` | `computeAge(birthDate)` — months under 2 years old, whole years after. `formatAgeLong`/`formatAgeShort` give "5 años 6 meses" / "5a 6m" for the cards, headers and sidebar |
+| `src/shared/useLocalDay.ts` | The parent's local "today" `{from, to}`, rolled over at local midnight and re-checked when the app returns to the foreground. Use it, never a `useState(() => localDayRange())` that freezes at mount |
+| `src/shared/date.ts` | `formatDateShort('2026-09-15')` → `15 sep 2026`, `formatDateLong` → `12 septiembre 2026`, `formatDayMonth`, `formatTime` — every date shown to the user goes through them (fixed month names, no `Intl`, no timezone shift) |
+| `src/shared/apiError.ts` | `ApiError<Kind>` base class (`kind`, `message`, optional `details`) — each feature's `api.ts` defines its own subclass with just the `Kind` union it needs |
+| `e2e/*.spec.ts`, `e2e/helpers.ts` | Playwright E2E. **Every flow runs twice, at 390 px (phone) and 1280 px (web)** through `designs` in `helpers.ts`; `signUp`/`fillSignup` create the account. Requires the backend running locally |
 | `vite.config.ts` | Includes the Tailwind v4 Vite plugin — don't remove it, the whole UI silently loses styling if it's dropped |
 | `vitest.config.ts` | Coverage thresholds (>90%), `coverage.all: true` so untested files count |
+
+## Web y móvil: dos diseños, nunca mezclados
+
+Cada pantalla tiene un mock móvil y un mock web (`specs/007-homologar-pantallas-a-mocks/spec.md` tiene la tabla).
+**No se mezclan**: cada componente de pantalla llama `useIsDesktop()` (≥ 900 px) y devuelve **uno** de los dos
+árboles; nada de clases `lg:` que intenten servir a los dos. En pruebas unitarias jsdom no tiene `matchMedia`, así
+que por defecto se renderiza el móvil; para el web se stubea `matchMedia` (`stubMatchMedia(true)`, ver
+`AppShell.test.tsx`). En E2E se usa `designs` de `e2e/helpers.ts`.
 
 ## Sistema visual
 
 Tokens de color y tipografía viven en el bloque `@theme` de `src/index.css`; la referencia de uso es
-`specs/005-identidad-visual-front-end/design-tokens.md`. Incluye una tabla de recetas Tailwind (campo, botones, tarjeta, etc.) para copiar en pantallas nuevas. Reglas que rompen el diseño si se ignoran:
+`specs/005-identidad-visual-front-end/design-tokens.md`. Reglas que rompen el diseño si se ignoran:
 
 - Un solo botón sólido (`--color-confirmed`) por pantalla; las acciones secundarias van con contorno
-  `--color-action`. Dos botones sólidos en la misma vista es el error más común.
+  `--color-action`.
 - Texto blanco solo sobre `--color-ink`, `--color-action` y `--color-confirmed`. Sobre `--color-bright`
-  y `--color-pending` va tinta oscura — invertirlo baja el contraste por debajo de 4.5:1.
+  y `--color-pending` va tinta oscura.
 - Ámbar (`--color-pending`) significa "el padre no lo ha marcado", nunca una advertencia médica
   (Principio I). No hay rojo de alerta médica; `red-700` solo para errores de formulario y "Quitar".
-- La jerarquía la hace la escala tipográfica (900 en titulares, números de resumen en 34 px), no los
-  bordes grises — no reintroducir `border-slate-*` en las tarjetas.
-- El logo (`src/shared/ui/Logo.tsx`) solo va en header, pantalla de registro e icono/splash de la PWA.
-- Desde 900 px las pantallas con sesión (home, detalle del hijo, detalle de consulta) van dentro de `features/home/AppShell.tsx`, que agrega `ChildrenSidebar` (lista de hijos, "Agregar hijo", nombre y plan). La barra se **renderiza condicionalmente** con `useIsDesktop`, no se oculta con CSS: así nunca hay dos copias de la lista de hijos en el DOM/árbol de accesibilidad. Toda pantalla nueva con sesión debe envolverse en `AppShell`. Con la barra lateral, `AppHeader` se vuelve claro (así es el mock de escritorio): no pasar colores fijos de texto a sus hijos, que heredan el color del encabezado.
-- En E2E (Playwright corre a 1280 px) la barra lateral duplica el nombre del hijo y el botón "Agregar hijo": acotar los selectores a `page.getByRole('main')`.
-- **Todo overlay que se abra desde la barra lateral va con `createPortal(…, document.body)`** (`AddChildModal` ya lo hace): la barra es `sticky`, crea su propio stacking context, y un modal renderizado dentro se pintaba *debajo* de las tarjetas de la página. Los modales de la app son diálogos reales: `role="dialog"`, `aria-modal`, se cierran con Escape y el foco entra y vuelve al botón que los abrió.
-- `MessagePage` (`shared/ui/`) es la pantalla de aviso con una salida: la usan `/planes` (marcador hasta que exista la pantalla de planes, BACKLOG) y las rutas desconocidas — nunca dejar una ruta en blanco.
-- Cerrar el formulario "Registrar consulta" (Escape, fondo, X, Cancelar) pasa por `requestClose`: si el formulario tiene algo escrito o una foto, pide confirmación antes de descartarlo. Un botón de alternancia (p. ej. el chip de toma) lleva nombre accesible fijo y el estado solo en `aria-pressed`.
-- El visor de la receta (`ConsultationDetailPage`) es un modal dentro de la app: no enlazar la foto como URL `data:` con `target="_blank"` — los navegadores bloquean esa navegación y la pestaña sale en blanco.
+- El mock manda sobre `design-tokens.md`, salvo el mínimo de accesibilidad 4.5:1 (las desviaciones están en la
+  spec 007). Los valores de los mocks se copian con clases arbitrarias (`rounded-[14px]`, `text-[#67e8f9]`).
+- Un área táctil de 44 px sobre un elemento que el mock dibuja más chico se resuelve con `min-h-11` y margen
+  negativo (`-my-3`, `-my-[5px]`), para que la posición visual sea la del mock.
+- El logo solo va en header, pantalla de registro, barra lateral e icono/splash de la PWA.
+- Las pantallas con sesión van dentro de `features/home/AppShell.tsx`: desde 1024 px (`lg`, como los mocks web 13/14/15) agrega `ChildrenSidebar`
+  (280 px: hijos, "+ Agregar hijo", tutor y plan); en móvil y entre 900 y 1023 px no hay barra (el mock apila la página en una columna, con `px-6 py-8` en vez de `px-12 py-11`). Se **renderiza condicionalmente**, no se
+  oculta con CSS, así nunca hay dos copias de la lista de hijos en el árbol de accesibilidad. Toda pantalla nueva con
+  sesión debe envolverse en `AppShell`. `AppHeader` es solo del diseño móvil (el web no tiene banda de encabezado).
+- En E2E web la barra lateral repite el nombre del hijo y "Agregar hijo": acotar selectores a `page.getByRole('main')`
+  o `page.locator('aside')`.
+- **Todo overlay va con `createPortal(…, document.body)`** (`AddChildModal`, `FreemiumLimitModal`): la barra es
+  `sticky`, crea su propio stacking context, y un modal dentro se pintaba *debajo* de las tarjetas. Los modales son
+  diálogos reales: `role="dialog"`, `aria-modal`, Escape, el foco entra y vuelve al botón que los abrió, Tab no sale.
+- `MessagePage` (`shared/ui/`) es la pantalla de aviso con una salida: la usan `/planes` (marcador hasta que exista la
+  pantalla de planes, BACKLOG) y las rutas desconocidas — nunca dejar una ruta en blanco.
+- "Nueva consulta" es una **página**, no un modal. Salir (`← Cancelar`) pasa por `confirmLeave`: si hay algo escrito o
+  una foto, pide confirmación con `window.confirm`; al guardar, `navigate(..., { replace: true })` para que "atrás"
+  desde la consulta caiga en el hijo y no en un formulario ya enviado. Un botón de alternancia (chip de toma) lleva
+  nombre accesible fijo y el estado solo en `aria-pressed`.
+- El visor de la receta (`ConsultationDetailPage`) es un modal dentro de la app: no enlazar la foto como URL `data:`
+  con `target="_blank"` — los navegadores bloquean esa navegación y la pestaña sale en blanco.
 
-## `src/features/account-signup/` — signup form
+## `src/features/account-signup/` — signup and plan-limit pop-up
 
 | File | Role |
 |---|---|
-| `AccountSignupForm.tsx` | Main form: tutor fields, children field array, freemium-limit gating (`handleAddChild`), renders `FreemiumLimitModal` |
-| `ChildFieldset.tsx` | One repeatable child block: name/apellido/fecha nacimiento (required) + talla/peso (optional) |
-| `FreemiumLimitModal.tsx` | Pop-up shown when trying to add a 2nd child on the free plan — "Ver planes" / "Quedarme con el plan gratuito" |
+| `AccountSignupForm.tsx` | Picks the design with `useIsDesktop`: `SignupPhone` (mock 01: dark header + form) or `SignupWeb` (mock 11: split screen with the checklist), both fed by `useSignupForm` |
+| `useSignupForm.ts` | The form state, validation, catalog, submit and post-signup flow shared by both designs. `serverError` is the only feedback path for server-side rules with no client-side equivalent — don't remove it |
+| `SignupWeb.tsx` | Mock 11 in the mock's order: Correo, Contraseña (validated, **never sent or stored** — auth will be Clerk/AWS Cognito), Tu nombre/apellido, País/Estado, the "Hijo 1 · Gratis" block, "Crear cuenta", and the Google button |
+| `SignupPhone.tsx` | Mock 01, same order and same password/Google decisions as the web one, in a centered column of at most 430px |
+| `GoogleSignupButton.tsx` | The "o" separator and "Registrarme con Google" shared by both signups |
+| `validation.ts` | `nameValidation`, `emailValidation`, `passwordValidation`, `positiveNumberValidation`, `nameError()` and the mocks' own messages (`EMAIL_MESSAGE`…) — shared by the signup and the "Agregar hijo" modal |
+| `FreemiumLimitModal.tsx` | The plan-limit pop-up (mocks 05/15). Opened by `AddChildDialogs` as soon as the parent taps "Agregar hijo" on the free plan with a child, and by `AddChildModal` if the server answers 422. Focus starts on "Ver planes"; "Entendido"/Escape/backdrop close it |
 | `types.ts` | Form value types + `NAME_PATTERN`/`NAME_MAX_LENGTH` (mirrors backend's `validateNameFormat` — see backend/CLAUDE.md for the sync caveat) |
-| `api.ts` | `createAccount()`, `CreateAccountError extends ApiError<...>` (discriminated by `.kind`: `validation_error` | `email_already_exists` | `freemium_child_limit_exceeded` | `unknown`) |
+| `api.ts` | `createAccount()`, `CreateAccountError extends ApiError<...>` (`validation_error` \| `email_already_exists` \| `freemium_child_limit_exceeded` \| `unknown`) |
 | `useAccountSignup.ts` | `useMutation` wrapper around `createAccount` |
 
-## Notable behaviors when touching this feature
+- On success it saves the new account id via `useAccountSession` (from `features/home/`) and navigates to `/home`.
+- Changing the país `<select>` clears `stateCode` via `register('countryCode', { onChange })` — don't drop it, or a stale estado from a previous país can be submitted silently.
+- Name validation (`NAME_PATTERN`/`NAME_MAX_LENGTH`) must stay in sync with `backend/internal/account/service.go`'s `namePattern`.
 
-- `AccountSignupForm.tsx` renders a generic fallback error banner for any server rejection that isn't `email_already_exists` or the freemium modal (e.g. a `validation_error` the client didn't catch) — don't remove that branch, it's the only feedback path for server-side rules with no client-side equivalent.
-- On a successful save, `AccountSignupForm.tsx` saves the new account id via `useAccountSession` (from `features/home/`) and navigates to `/home` (FR-003 of specs/003-home-listado-hijos) — there is no more inline "Cuenta creada exitosamente" message; tests assert on the navigation instead.
-- `ChildFieldset.tsx` validates height/weight are positive client-side (`positiveNumberValidation`, mirrors the backend's `> 0` check) so the common case never reaches the server-error fallback above.
-- Changing the país `<select>` clears `stateCode` via `register('countryCode', { onChange: ... })` — don't drop that `onChange`, or a stale estado from a previous país can be submitted silently (react-hook-form keeps unregistered field values by default).
-- Name validation (`NAME_PATTERN`/`NAME_MAX_LENGTH` in `types.ts`) must stay in sync with `backend/internal/account/service.go`'s `namePattern` — see backend/CLAUDE.md for why the DB no longer duplicates the character-set rule.
-- `FreemiumLimitModal.tsx` traps Tab focus between its two buttons — it's a real modal overlay (`aria-modal="true"`), so don't let focus escape it.
-
-## `src/features/home/` — home page
+## `src/features/home/` — home page, sidebar, add-child
 
 | File | Role |
 |---|---|
-| `HomePage.tsx` | 3 states: no account saved / cuenta sin hijos / listado; clears the saved `account_id` and falls back to the "no account" state on a 404 from `fetchAccount` |
-| `ChildCard.tsx` | Name + `computeAge`; links to the child detail route (`ChildDetailPage`, in `features/consultations/` — specs/004-detalle-consulta-hijo) |
-| `AddChildModal.tsx` | Modal for "Agregar hijo"; reuses `ChildFieldset` and `FreemiumLimitModal` from `features/account-signup/` as-is, no duplication. `ChildFieldset`'s "Quitar hijo" button is the modal's only dismiss control (wired to `onClose`) — valid only while the child is still unsaved, since it can never be removed once persisted (FR-006a); there's no separate "Cancelar" button duplicating the same action |
-| `useSidebarSession.ts` | `{ accountId, hasSidebar }` — the single place that decides whether the desktop sidebar is on screen (`AppShell` and screens like the child detail both use it) |
-| `useAccountSession.ts` | `getAccountId`/`setAccountId`/`clearAccountId` over `localStorage`, each wrapped in `try/catch` — the only "session" this app has (no real login yet) |
-| `api.ts` | `fetchAccount()`, `addChild()`, `AccountApiError extends ApiError<...>` (discriminated by `.kind`: `not_found` | `validation_error` | `freemium_child_limit_exceeded` | `unknown`) |
-| `types.ts` | `Account`/`Child` shapes matching `GET /accounts/{accountId}`'s response |
-
-Because `AddChildModal.tsx` reuses `ChildFieldset` cross-feature, both `useAccountSession` and `AddChildModal` are imported from `features/home/` inside `features/account-signup/AccountSignupForm.tsx` too — a deliberate cross-feature import rather than moving shared pieces into `shared/` prematurely (see specs/003-home-listado-hijos/research.md).
+| `HomePage.tsx` | 3 states: no account saved / cuenta sin hijos / listado. Phone: dark header with "Hola, Ana" + tutor initials, one card per child, dashed "+ Agregar hijo", plan note (board screen 2). Web: "Hola, Ana / Tus hijos", solid "Agregar hijo", grid + dashed plan tile (mock 15). Clears the saved `account_id` on a 404 |
+| `ChildCard.tsx` | Initial, name, `formatAgeLong`; links to the child detail. Phone variant adds two chips read from the same queries as the child detail (`['consultations', id]`, `['overview', id, day]`): "N consultas" and amber "N tomas hoy" / mint "Sin tomas pendientes"; avatar colour alternates cyan/mint. Web variant is plain |
+| `AppShell.tsx`, `ChildrenSidebar.tsx` | Session shell and the web sidebar (see "Sistema visual") |
+| `AddChildDialogs.tsx`, `plan.ts` | What "Agregar hijo" opens: the plan-limit pop-up when `atFreePlanLimit(account)`, otherwise `AddChildModal`. Shared by the home and the sidebar. Takes the opener button (`opener` ref) and gives it the focus back on close — Safari doesn't focus a button when it is clicked, so `document.activeElement` can't be trusted; its close callback is stable (the dialogs re-run their focus setup if `onClose` changes identity) |
+| `AddChildModal.tsx` | Board screen 7: title/subtitle + "×", Nombre, Apellido, Fecha de nacimiento, Talla/Peso (optional), "Cancelar" + "Guardar". Falls back to `FreemiumLimitModal` if the server still answers 422 |
+| `useSidebarSession.ts` | `{ accountId, hasSidebar, isDesktop }` — the single place that decides whether the sidebar is on screen (`isDesktop` && `useIsWide` (1024px) && there is an account) |
+| `useAccountSession.ts` | `getAccountId`/`setAccountId`/`clearAccountId` over `localStorage`, each in `try/catch` — the only "session" this app has (no real login yet; next feature, see BACKLOG) |
+| `api.ts`, `types.ts` | `fetchAccount()`, `addChild()`, `AccountApiError`; `Account`/`Child` shapes |
 
 ## `src/features/consultations/` — child detail, consultations, doses
 
 | File | Role |
 |---|---|
-| `ChildDetailPage.tsx` | Lists a child's consultations (empty/listed states) and owns the "Registrar consulta" modal (renders `ConsultationForm`), opened by the "Nueva consulta" button in the header's top-right corner. The modal box itself scrolls internally (`max-h-[85vh] overflow-y-auto`) instead of the fixed backdrop — don't move that scroll back onto the backdrop, or a content-height change (e.g. collapsing a medication) can desync the scroll position enough that a click lands on the backdrop and closes the modal mid-edit |
-| `ConsultationCard.tsx` | Date, doctor and a `symptoms · N medicamentos` subtitle ("sin receta" when 0); links to the consultation's detail |
-| `useDoseToggle.ts` | The one mutation that marks/unmarks a dose and refreshes the consultation detail and the child overview — used by both `DoseCheckbox` and `TodayDosesPanel` |
-| `SummaryCard.tsx` / `TodayDosesPanel.tsx` | The child detail's summary row (tones `plain`/`pending`/`confirmed`/`ink`, surface-specific text inks per design-tokens) and the "Tomas de hoy" panel (chip "Marcar"/"Tomada", `aria-pressed`, marks and unmarks; invalidates `['overview', childId]` and the consultation). Data comes from `fetchChildOverview` with the parent's **local** day as `[from, to)` (`localDayRange`) — the server never guesses time zones. The consultation form sends `utcOffsetMinutes` so start times are read in the parent's zone |
-| `ConsultationForm.tsx` | Registration form: doctor, date, prescription photo (custom "Seleccionar archivo" button triggering a `hidden` `<input type="file" accept="image/*" capture>` via ref — never `sr-only` for this input, its native intrinsic width leaks into the modal's layout and causes horizontal overflow; never `getUserMedia`), medications field array, symptoms. Runs OCR on the photo via `useOcrSuggestion` purely as an editable autofill hint — the raw OCR text is never submitted directly, only whatever ends up in the form fields. `extractPrescriptionHints`/`extractMedications` parse the OCR text for doctor/date/medications (numbered-list prescriptions yield one medication per line via `extractNumberedMedications`, falling back to a single best-guess via `extractSingleMedication` otherwise); newly-needed fieldsets are `append`ed one at a time with a short stagger (`MEDICATION_STAGGER_MS`) and a visible "Agregando medicamentos… N de M" progress line, instead of dumping every fieldset at once — a hint only ever fills a field the parent left empty, never overwrites |
-| `MedicationFieldset.tsx` | One repeatable medication: name, frequency (hours), duration (days), optional start time. Collapsible to a one-line summary (name — frequency — duration) via a header toggle for scanning a prescription with many medications — never collapsed by default, the parent must see every OCR-derived value before trusting it (Principio I). The header row uses CSS Grid (`grid-cols-[minmax(0,1fr)_auto]`, nested for the badge/summary/chevron) rather than flexbox — nested flex-shrink didn't reliably truncate the summary text, letting it overflow the modal |
-| `useOcrSuggestion.ts` | Runs `tesseract.js` **in the browser** on the selected photo — the photo is never sent to any OCR service, only to this app's own backend (privacy: Principio II). A failed/empty OCR result never blocks the form. Cloud/AI vision OCR (which reads handwriting far better) was deliberately rejected for this project — see `specs/004-detalle-consulta-hijo/research.md` and the project's memory — don't propose it again |
-| `ConsultationDetailPage.tsx` | Full detail: photo, doctor, date, medications with their doses (if any), symptoms |
-| `DoseCheckbox.tsx` | Marks/unmarks a dose — always enabled, no "treatment still active" restriction (a dose can be toggled regardless of its date) |
-| `api.ts` | `fetchConsultations`, `createConsultation`, `fetchConsultationDetail`, `updateDoseStatus`, `ConsultationApiError extends ApiError<...>` |
-| `types.ts` | `ConsultationSummary`, `ConsultationDetail`, `Medication`, `Dose` |
+| `ChildDetailPage.tsx` | Phone (mock 02): dark header with the child, amber "Tomas de hoy" block (`TodayDosesBlock`, "Marcar tomas"), "Consultas" list with "+ Nueva". Web (board 6): header row with "Nueva consulta", three `SummaryCard`s, the list and the `TodayDosesPanel` |
+| `NewConsultationPage.tsx`, `ConsultationForm.tsx` | "Nueva consulta" page (mocks 04/14) and its form: doctor, date, prescription photo (custom "Seleccionar archivo" button triggering a `hidden` `<input type="file" accept="image/*" capture>` via ref — never `sr-only` for this input, never `getUserMedia`), symptoms, medications. The form takes `variant` `'phone'`/`'desktop'`. OCR via `useOcrSuggestion` is only an editable autofill hint (`c/8 h`, `7 días`); numbered prescriptions add one medication per line with a stagger and visible progress; a hint never overwrites a field the parent filled. Once a photo is chosen the OCR panel is exactly the mock's and "Cambiar foto" sits in the header's top row (phone: next to "← Cancelar"; web: header's right end). The web medication row is the mock's three columns; "Desde" is a fourth column of the same row when the card is 720px wide or more (container query `@min-[720px]`, fields a bit shorter) and goes to a second row otherwise. The missing-photo error shows together with the other missing fields |
+| `MedicationFieldset.tsx`, `parsePositiveInt.ts` | One medication card: name, frequency and duration as free text (`c/8 h`, `7 días` — the number is extracted on submit), required "Desde" time ("Elige la hora de la primera toma.": a consultation is immutable, so a missing start time could never be filled in later, and without it no doses or active treatment exist). "Quitar" only with more than one medication |
+| `ConsultationDetailPage.tsx`, `MedicationCard.tsx`, `PhotoViewer.tsx` | Consultation detail (mocks 03/13): photo card + viewer, symptoms, each medication with its chips of **one day** and "← Día anterior / Día siguiente →" when the treatment spans several days; web adds "Tratamiento activo" from the overview |
+| `ConsultationCard.tsx` | Date, doctor, `symptoms · N medicamentos` ("sin receta" when 0) |
+| `SummaryCard.tsx`, `TodayDosesPanel.tsx`, `TodayDosesBlock.tsx` | Summary cards, the web panel and the phone block for today's doses (chip "Marcar"/"Tomada", `aria-pressed`). Data from `fetchChildOverview` with the parent's **local** day as `[from, to)` — the server never guesses time zones (the form sends `utcOffsetMinutes`). The server computes "tratamiento activo" with its own clock |
+| `useDoseToggle.ts`, `useMarkAllDoses.ts` | Mutations that mark/unmark a dose (or all of today's) and refresh the consultation detail and the overview |
+| `useOcrSuggestion.ts` | Runs `tesseract.js` **in the browser** — the photo never goes to an OCR service, only to this app's own backend (Principio II). A failed/empty OCR never blocks the form. Cloud/AI vision OCR was deliberately rejected — see `specs/004-detalle-consulta-hijo/research.md` and the project's memory — don't propose it again |
+| `api.ts`, `types.ts` | `fetchConsultations`, `fetchChildOverview`, `createConsultation`, `fetchConsultationDetail`, `updateDoseStatus`, `ConsultationApiError` |
 
-Consultations, medications and their doses' schedule are immutable once created — there is no edit/delete UI anywhere in this feature, only `DoseCheckbox`'s taken/not-taken toggle.
+Consultations, medications and their doses' schedule are immutable once created — no edit/delete UI, only the taken/not-taken toggle.
 
 ## Running tests
 

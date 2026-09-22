@@ -276,7 +276,7 @@ const docTemplate = `{
                 }
             },
             "post": {
-                "description": "Registers a consultation with its prescription photo, medications and symptoms\n(FR-003, FR-004). At least one medication is required (FR-015). Doses for any\nmedication with a startTime are generated all at once (research.md).",
+                "description": "Registers a consultation with its prescription photo, medications and symptoms\n(FR-003, FR-004). At least one medication is required (FR-015), and each one needs\nits startTime (\"HH:MM\"): all of its doses are generated at once from it (research.md).",
                 "consumes": [
                     "application/json"
                 ],

@@ -23,6 +23,7 @@ describe('AccountSignupPage', () => {
       </QueryClientProvider>,
     )
 
-    expect(screen.getByRole('heading', { name: 'Crear cuenta' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('La bitácora médica de tus hijos')
+    expect(screen.getByRole('button', { name: 'Crear cuenta' })).toBeInTheDocument()
   })
 })
