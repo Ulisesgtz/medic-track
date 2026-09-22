@@ -186,8 +186,9 @@ debe seguir viendo a los mismos hijos que ya tenía.
   cliente).
 - **FR-011**: El sistema DEBE usar **Clerk** como proveedor de identidad para todo correo+contraseña y login
   con Google — decidido el 2026-09-22 sobre AWS Cognito por su integración más directa con el stack actual
-  (SDK de React, UI de login/registro lista, verificación de sesión vía JWT desde el backend Go) y su plan
-  gratuito hasta 10,000 usuarios activos mensuales, suficiente para el MVP.
+  (SDK de React, hooks para armar el login/registro con el diseño propio, verificación de sesión vía JWT desde
+  el backend Go) y su plan gratuito hasta 50,000 usuarios retenidos mensuales (MRU, ampliado en febrero 2026),
+  de sobra para el MVP.
 
 ### Entidades Clave
 
