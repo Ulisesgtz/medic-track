@@ -104,6 +104,25 @@ dejó pendientes (2026-09-21). No se construye nada de esto hasta que se respond
   visual ya establecido; la pantalla de planes debe continuarlo. Ver `specs/005-identidad-visual-front-end/spec.md`,
   "Adiciones Futuras Previstas".
 
+## Despliegue
+
+- **Dónde correr el backend y la base de datos** — decisión inclinada hacia **Railway** (Go + Postgres juntos,
+  ~5–20 USD/mes; conecta el repo de GitHub y despliega solo), conversado 2026-09-22 pero **no decidido en firme
+  todavía** — queda en pausa hasta terminar la homologación de pantallas (spec 007). Comparado contra:
+  Render (~13 USD/mes, cobra disco de Postgres por GB — relevante porque las fotos de receta se guardan como
+  `bytea` directo en Postgres, ver más abajo), Fly.io (desde ~2 USD, sin región en México), un VPS propio
+  (Hetzner/DigitalOcean, ~5–12 USD pero con mantenimiento manual), y AWS (App Runner/ECS + RDS — tendría sentido
+  solo si se termina usando Cognito para el login, para quedar todo en una cuenta).
+- **Frontend (el PWA)**: **Cloudflare Pages** — gratis, sirve el PWA con su service worker, dominio
+  `pedi-track.com` ya comprado (ver memoria `peditrack-dominio.md`) solo hay que apuntar el DNS. Alternativas
+  equivalentes: Vercel, Netlify.
+- **Cloudflare Containers para el backend** — evaluado y descartado por ahora: corre cualquier imagen Docker
+  (serviría para el binario de Go), pero Cloudflare no tiene Postgres propio (Hyperdrive solo acelera la conexión
+  a un Postgres externo, no lo hospeda) y el producto sigue siendo relativamente nuevo. Revisar de nuevo si más
+  adelante conviene consolidar todo en Cloudflare.
+- Relacionado: **fotos de recetas en `bytea` dentro de Postgres** (ver "Backend" arriba) — el proveedor de
+  hosting elegido debe soportar que la base de datos crezca con cada foto hasta que se migre a un object storage.
+
 ## Producto / Legal
 
 - Registro de marca ante el IMPI (clases 9+42) — ver memoria `peditrack-registro-marca-impi.md`.
