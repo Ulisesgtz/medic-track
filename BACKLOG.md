@@ -29,12 +29,6 @@ dejó pendientes (2026-09-21). No se construye nada de esto hasta que se respond
 
 ## Prioridad alta
 
-- **Autenticación real con Clerk o AWS Cognito** — siguiente feature (proveedor por decidir entre esos dos).
-  Hoy la "sesión" es solo el `account_id` en `localStorage`. Los registros (móvil y web) ya tienen el campo
-  "Contraseña" del mock (mínimo 8 caracteres) pero **no se envía ni se guarda**, y el botón "Registrarme con Google" solo
-  avisa que estará disponible pronto. Al construirla: conectar ambos al proveedor (el registro con Google y la
-  contraseña pasan a ser del proveedor, no de nuestro backend), la pantalla de inicio de sesión, y revisar `GET /accounts/{accountId}` y `POST /accounts/{accountId}/children`
-  (hoy sin autenticación) y `useAccountSession`.
 - **Homologar todas las pantallas a los mocks** — hecho en `specs/007-homologar-pantallas-a-mocks/`
   (rama `feature/007-homologar-pantallas-a-mocks`); las desviaciones que quedan están listadas en su spec.
   Pendiente de esa spec: las pantallas que aún no tienen mock (planes `/planes`, estados vacíos y de error).
@@ -61,13 +55,6 @@ dejó pendientes (2026-09-21). No se construye nada de esto hasta que se respond
 - **Excepción de `cmd/api` en el gate de cobertura de CI** — actualmente `cmd/api` (wiring de Go) no
   cuenta para el >90% exigido por el Principio VI. Pregunta abierta sin resolver con el usuario: si
   se acepta la excepción permanentemente o se agrega alguna prueba de wiring.
-- **Autenticación real (login/contraseña)** — `specs/003-home-listado-hijos/` introduce un
-  `account_id` guardado en `localStorage` como "sesión" de facto, sin ningún mecanismo real de
-  login, explícitamente aceptado como solución interina (ver plan.md, nota de Privacidad del
-  Principio II). Cuando se diseñe la autenticación real, revisar `GET /accounts/{accountId}` y
-  `POST /accounts/{accountId}/children` (hoy sin autenticación) y `useAccountSession` en el
-  frontend. Consecuencia visible hoy: si se abre la URL de un hijo en un navegador donde nunca se creó la
-  cuenta (sin `account_id` guardado), la pantalla carga pero sin la barra lateral de escritorio.
 - **Almacenamiento de fotos de recetas en object storage** — `specs/004-detalle-consulta-hijo/`
   guarda la foto de la receta como `bytea` directamente en Postgres (ver research.md), por
   simplicidad y porque no hay infraestructura de archivos decidida todavía. Revisar migrar a un
