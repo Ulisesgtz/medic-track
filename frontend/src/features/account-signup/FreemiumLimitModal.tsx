@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { useIsDesktop } from '../../shared/ui/useIsDesktop'
 
@@ -7,6 +7,16 @@ interface FreemiumLimitModalProps {
   onStayFree: () => void
   /** Wide layouts add "<name> sigue disponible sin cambios" to the message (mock 15). */
   childName?: string
+  /**
+   * The button that opened this, if the caller already tracks one reliably (e.g.
+   * `AddChildDialogs`). When given, focus returns to it and this component skips its own
+   * `document.activeElement` capture — on Safari a click never focuses a button, so that
+   * capture is *not* the real opener and restoring to it would be wrong. Omit it only when
+   * nothing else restores focus on close (e.g. opened from inside `AddChildModal`'s own
+   * 422 fallback, where restoring to whatever had focus right before this modal replaced
+   * the form is still a reasonable default).
+   */
+  opener?: RefObject<HTMLElement | null>
 }
 
 /**
@@ -21,14 +31,17 @@ interface FreemiumLimitModalProps {
  * Rendered into <body> so it can be opened from the sticky sidebar without
  * being painted under the page.
  */
-export function FreemiumLimitModal({ onViewPlans, onStayFree, childName }: FreemiumLimitModalProps) {
+export function FreemiumLimitModal({ onViewPlans, onStayFree, childName, opener }: FreemiumLimitModalProps) {
   const stayButtonRef = useRef<HTMLButtonElement>(null)
   const viewPlansButtonRef = useRef<HTMLButtonElement>(null)
   const [opening, setOpening] = useState(false)
   const desktop = useIsDesktop()
 
   useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null
+    // Only capture document.activeElement as a fallback opener — a caller-supplied `opener`
+    // ref is always more reliable (see the prop doc: Safari never focuses a button on click).
+    // Read opener.current now (not in the cleanup) since a ref's mutable value could differ later.
+    const capturedOpener = opener ? opener.current : (document.activeElement as HTMLElement | null)
     viewPlansButtonRef.current?.focus()
 
     function handleKeyDown(event: KeyboardEvent) {
@@ -54,9 +67,9 @@ export function FreemiumLimitModal({ onViewPlans, onStayFree, childName }: Freem
     document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
-      opener?.focus()
+      capturedOpener?.focus()
     }
-  }, [onStayFree])
+  }, [onStayFree, opener])
 
   return createPortal(
     <div

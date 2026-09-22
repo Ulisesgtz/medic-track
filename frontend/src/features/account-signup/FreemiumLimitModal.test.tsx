@@ -1,3 +1,4 @@
+import { createRef } from 'react'
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -98,5 +99,27 @@ describe('FreemiumLimitModal', () => {
     unmount()
     expect(opener).toHaveFocus()
     opener.remove()
+  })
+
+  it('returns focus to the given `opener` ref instead of document.activeElement, when provided', () => {
+    const realOpener = document.createElement('button')
+    document.body.append(realOpener)
+    const unrelatedFocusedElement = document.createElement('button')
+    document.body.append(unrelatedFocusedElement)
+    unrelatedFocusedElement.focus()
+
+    const openerRef = createRef<HTMLButtonElement>()
+    // @ts-expect-error test-only assignment to a ref created outside React
+    openerRef.current = realOpener
+
+    const { unmount } = render(
+      <FreemiumLimitModal onViewPlans={() => {}} onStayFree={() => {}} opener={openerRef} />,
+    )
+    unmount()
+
+    expect(realOpener).toHaveFocus()
+    expect(unrelatedFocusedElement).not.toHaveFocus()
+    realOpener.remove()
+    unrelatedFocusedElement.remove()
   })
 })

@@ -73,7 +73,6 @@ export function AddChildModal({ accountId, onClose }: AddChildModalProps) {
   })
 
   useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null
     dialogRef.current?.querySelector<HTMLInputElement>('#firstName')?.focus()
 
     function handleKeyDown(event: KeyboardEvent) {
@@ -98,10 +97,13 @@ export function AddChildModal({ accountId, onClose }: AddChildModalProps) {
       }
     }
     document.addEventListener('keydown', handleKeyDown)
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-      opener?.focus()
-    }
+    // No focus-restore here: `onClose` is always `AddChildDialogs`' `close`, which already
+    // restores focus to the real opener button via its `opener` ref (this component's only
+    // caller never renders it standalone). Restoring it here too raced with that: on Safari,
+    // a click never focuses a button, so `document.activeElement` at this effect's mount is
+    // NOT the "Agregar hijo" button — restoring to it on unmount silently dropped focus to
+    // whatever had it before, clobbering the correct restore that already ran in `close()`.
+    return () => document.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
 
   if (showFreemiumModal) {

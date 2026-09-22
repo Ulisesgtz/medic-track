@@ -44,6 +44,7 @@ export function AddChildDialogs({ accountId, account, open, onClose, showChildNa
         childName={showChildName ? account.children[0]?.firstName : undefined}
         onStayFree={close}
         onViewPlans={() => navigate('/planes')}
+        opener={opener}
       />
     )
   }

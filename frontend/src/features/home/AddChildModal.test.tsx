@@ -99,24 +99,6 @@ describe('AddChildModal', () => {
     expect(guardar).toHaveFocus()
   })
 
-  it('returns the focus to the button that opened it', () => {
-    const queryClient = new QueryClient()
-    const opener = document.createElement('button')
-    document.body.append(opener)
-    opener.focus()
-    const { unmount } = render(
-      <QueryClientProvider client={queryClient}>
-        <AddChildModal accountId="account-1" onClose={vi.fn()} />
-      </QueryClientProvider>,
-    )
-    expect(opener).not.toHaveFocus()
-
-    unmount()
-
-    expect(opener).toHaveFocus()
-    opener.remove()
-  })
-
   it('shows an error for every missing required field and does not send anything', async () => {
     const user = userEvent.setup()
     vi.stubGlobal('fetch', vi.fn())
