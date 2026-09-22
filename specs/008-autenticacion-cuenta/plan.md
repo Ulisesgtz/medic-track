@@ -21,7 +21,7 @@ mismo correo. El enfoque técnico completo está en research.md.
 
 **Dependencias Principales**: Backend: **`github.com/clerk/clerk-sdk-go/v2`** (dependencia nueva — verificación
 de sesión vía middleware `clerkhttp` y llamadas a la Backend API de Clerk para leer el perfil/correo del
-usuario). Frontend: **`@clerk/clerk-react`** (dependencia nueva — `<ClerkProvider>`, `useSignUp()`/`useSignIn()`
+usuario). Frontend: **`@clerk/react`** (dependencia nueva — `<ClerkProvider>`, `useSignUp()`/`useSignIn()`
 para flujos propios de correo+contraseña y Google, `useAuth()` para el token de sesión y `signOut()`), el resto
 del stack (React Router, TanStack Query, React Hook Form, Tailwind) ya en uso, sin cambios.
 
@@ -30,7 +30,7 @@ nuevas: Clerk es quien guarda contraseñas/identidad de Google, PediTrack solo g
 usuario de Clerk es esta cuenta" (ver research.md y data-model.md).
 
 **Pruebas**: `go test` + `testify` (backend, incl. mocks/fakes de la verificación de Clerk — research.md);
-Vitest + Testing Library (frontend, incl. mockear `@clerk/clerk-react`); Playwright E2E para **login**, que es
+Vitest + Testing Library (frontend, incl. mockear `@clerk/react`); Playwright E2E para **login**, que es
 uno de los 4 flujos críticos nombrados explícitamente en la constitución (Principio VI) — registro con
 contraseña, registro con Google, login con contraseña, login con Google, cerrar sesión, y que una cuenta no
 pueda ver los datos de otra, todos a 390px y 1280px por la convención de spec 007.

@@ -19,11 +19,15 @@ verificación y el estado de la sesión por detrás.
 - Login con correo+contraseña: `signIn.password({ identifier: email, password })` → `signIn.finalize({
   navigate })` (o el paso de segundo factor si `status === 'needs_second_factor'`, no usado en este MVP).
 - Google (login y registro son la misma llamada — Clerk decide si es alta o entrada según el correo de la
-  cuenta de Google): `signIn.sso({ strategy: 'oauth_google', redirectUrl: '/sso-callback', redirectUrlComplete
-  })`, que redirige a Google y vuelve a `/sso-callback`; ahí, según el resultado (`signIn.status === 'complete'`
-  → ya existía → `signIn.finalize()`; `signUp.isTransferable` → era alta nueva → `signUp.finalize()`) se decide
-  si el tutor va directo a `/home` (login) o a terminar su registro (alta nueva — Google solo da nombre/correo,
-  no los datos del hijo).
+  cuenta de Google): `signIn.sso({ strategy: 'oauth_google', redirectCallbackUrl: '/sso-callback', redirectUrl:
+  '/home' })` — `redirectCallbackUrl` es la ruta intermedia a la que Google devuelve el control (donde la app
+  decide qué pasó); `redirectUrl` es el destino final si todo se resuelve sin pasos adicionales. Ya en
+  `/sso-callback`, según el resultado (`signIn.status === 'complete'` → ya existía → `signIn.finalize()`;
+  `signUp.isTransferable` → era alta nueva, Clerk ya tiene los datos de Google listos para transferir a un
+  `SignUp` → `signUp.finalize()`) se decide si el tutor va directo a `/home` (login) o a terminar su registro
+  (alta nueva — Google solo da nombre/correo, no los datos del hijo). También hay que cubrir
+  `signIn.existingSession`/`signUp.existingSession` (ya había una sesión activa en el navegador) activándola
+  con `clerk.setActive()` en vez de `finalize()`.
 - Token para llamar al propio backend: `useAuth().getToken()` (Promise) — se manda como
   `Authorization: Bearer <token>` en cada fetch a la API de PediTrack.
 - Cerrar sesión: `useAuth().signOut()`.

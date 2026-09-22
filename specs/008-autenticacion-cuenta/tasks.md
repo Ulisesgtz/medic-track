@@ -26,9 +26,9 @@ Aplicación web existente: `backend/` (Go) y `frontend/` (React + Vite + TS). To
 
 ## Fase 1: Configuración
 
-- [ ] T001 Instalar `github.com/clerk/clerk-sdk-go/v2` en `backend/` (`go get github.com/clerk/clerk-sdk-go/v2`) — fijar la versión mayor exacta según research.md punto 2 (confirmar en `go.mod` si es `v2` o si conviene `v3`, y usar esa misma en toda la feature)
-- [ ] T002 Instalar `@clerk/clerk-react` en `frontend/` (`npm install @clerk/clerk-react@latest`)
-- [ ] T003 Verificar que `backend/` y `frontend/` compilan/buildean limpio antes de empezar (`cd backend && go build ./...`, `cd frontend && npm run build`), como línea base
+- [X] T001 Instalar `github.com/clerk/clerk-sdk-go/v2` en `backend/` (`go get github.com/clerk/clerk-sdk-go/v2`) — fijar la versión mayor exacta según research.md punto 2 (confirmar en `go.mod` si es `v2` o si conviene `v3`, y usar esa misma en toda la feature) — instalado `v2.7.0`, confirmado con `go doc` como la API descrita en research.md
+- [X] T002 Instalar `@clerk/react` en `frontend/` (`npm install @clerk/react@latest`) — el paquete correcto tras la renombración de Clerk Core 3 (marzo 2026) es `@clerk/react`, no `@clerk/clerk-react` (deprecado); instalado `v6.16.1`, confirmado con los `.d.mts` del paquete
+- [X] T003 Verificar que `backend/` y `frontend/` compilan/buildean limpio antes de empezar (`cd backend && go build ./...`, `cd frontend && npm run build`), como línea base
 
 **Nota**: crear la aplicación de Clerk (instancia de Desarrollo) y obtener `CLERK_SECRET_KEY`/`VITE_CLERK_PUBLISHABLE_KEY` es un paso manual del usuario en clerk.com — ver quickstart.md "Antes de empezar". No es una tarea de este repositorio.
 
@@ -56,7 +56,7 @@ Aplicación web existente: `backend/` (Go) y `frontend/` (React + Vite + TS). To
 - [ ] T012 [P] Envolver `<App />` con `<ClerkProvider publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}>` en `frontend/src/main.tsx`
 - [ ] T013 [P] Crear `frontend/src/shared/auth/withAuthHeader.ts`: helper `withAuthHeader(token: string | null): HeadersInit` que arma `{ Authorization: \`Bearer ${token}\` }` (vacío si `token` es `null`) — usado por los 3 `api.ts` existentes (T021, T033, T041)
 - [ ] T014 Crear `frontend/src/features/auth/api.ts`: `fetchMe(token: string | null): Promise<Account>` (`GET /accounts/me` con `withAuthHeader`), `AccountApiError` reutilizando `shared/apiError.ts`, mapeando `404` a un tipo `not_found_for_session` distinguible
-- [ ] T015 Crear `frontend/src/features/auth/useCurrentAccount.ts`: `useQuery(['accounts', 'me'], () => fetchMe(await getToken()))` usando `useAuth()` de `@clerk/clerk-react`, habilitado solo cuando `useAuth().isSignedIn` es verdadero; reemplaza a `useAccountSession` como la única fuente de "cuál es mi cuenta"
+- [ ] T015 Crear `frontend/src/features/auth/useCurrentAccount.ts`: `useQuery(['accounts', 'me'], () => fetchMe(await getToken()))` usando `useAuth()` de `@clerk/react`, habilitado solo cuando `useAuth().isSignedIn` es verdadero; reemplaza a `useAccountSession` como la única fuente de "cuál es mi cuenta"
 - [ ] T016 Eliminar `frontend/src/features/home/useAccountSession.ts` y su test — ya no queda ningún `accountId` guardado sin verificar (research.md, punto 4)
 - [ ] T017 Reescribir `frontend/src/features/home/useSidebarSession.ts` para leer `useCurrentAccount()` (T015) en vez de `useAccountSession().getAccountId()` — mismo shape de retorno (`{ accountId, hasSidebar, isDesktop }`), `accountId` ahora viene de `data?.id` de la query
 - [ ] T018 Crear `frontend/src/features/auth/RequireSession.tsx`: componente que envuelve una ruta — si `useAuth().isSignedIn` es falso, `<Navigate to="/login" replace />`; si es verdadero pero `useCurrentAccount()` todavía no resuelve, muestra un estado de carga
@@ -77,7 +77,7 @@ Aplicación web existente: `backend/` (Go) y `frontend/` (React + Vite + TS). To
 > Escribir estas pruebas PRIMERO, asegurarse de que FALLEN antes de implementar.
 
 - [ ] T020 [P] [US1] Prueba de handler para `POST /accounts` en `backend/internal/account/handler_test.go`: `401` sin token, `201` con token válido y sin `email` en el body (el correo viene del *fake* de Clerk usado en el test), `200` (no `201`) en un segundo `POST` con el mismo token/sesión ya vinculada (contracts/post-accounts.md, idempotencia)
-- [ ] T021 [P] [US1] Prueba unitaria de `useSignupForm` en `frontend/src/features/account-signup/useSignupForm.test.ts` (o el archivo de test ya existente que la cubre), mockeando `@clerk/clerk-react`: el envío llama primero a `signUp.password(...)`/`signUp.finalize()` y solo después a `createAccount` con el token resultante; un fallo de Clerk (p. ej. correo ya usado en Clerk) muestra su propio mensaje sin llamar a `createAccount`
+- [ ] T021 [P] [US1] Prueba unitaria de `useSignupForm` en `frontend/src/features/account-signup/useSignupForm.test.ts` (o el archivo de test ya existente que la cubre), mockeando `@clerk/react`: el envío llama primero a `signUp.password(...)`/`signUp.finalize()` y solo después a `createAccount` con el token resultante; un fallo de Clerk (p. ej. correo ya usado en Clerk) muestra su propio mensaje sin llamar a `createAccount`
 
 ### Implementación de la Historia de Usuario 1
 
@@ -88,8 +88,8 @@ Aplicación web existente: `backend/` (Go) y `frontend/` (React + Vite + TS). To
 - [ ] T026 [US1] Reescribir `frontend/src/features/account-signup/useSignupForm.ts`: en `onSubmit`, primero `signUp.password({ emailAddress: values.email, password: values.password })` → `signUp.verifications.sendEmailCode()` → (paso de código, ver T028 para la UI) → `signUp.verifications.verifyEmailCode({ code })` → `signUp.finalize({ navigate })`; al completarse, llama `signup.mutate(toPayload(values), await getToken())` (T025) y solo entonces navega a `/home` (ya no depende de `useAccountSession`, T016)
 - [ ] T027 [US1] Registrar `POST /accounts` en `backend/cmd/api/main.go` dentro del mismo `r.Group` con `authmw.RequireSession` que `GET /accounts/me` (T011)
 - [ ] T028 [US1] Agregar el paso de código de verificación de correo al formulario de registro (`SignupWeb.tsx`/`SignupPhone.tsx` o un componente compartido nuevo): un campo para el código que Clerk manda por correo, visible solo entre `sendEmailCode()` y `verifyEmailCode()` — sin mock que lo cubra (spec 007 no lo previó), seguir `design-tokens.md`
-- [ ] T029 [US1] Implementar `GoogleSignupButton.tsx`: quitar el aviso "disponible pronto"; el click llama `signIn.sso({ strategy: 'oauth_google', redirectUrl: '/sso-callback', redirectUrlComplete: '/registro/completar' })` (research.md, punto 1)
-- [ ] T030 [US1] Crear `frontend/src/features/auth/SsoCallbackPage.tsx` (ruta `/sso-callback`, reemplaza el placeholder de T019): si `signIn.status === 'complete'` (ya existía) → `signIn.finalize()` → navega a `/home`; si `signUp.isTransferable` (alta nueva) → `signUp.finalize()` → navega a `/registro/completar`
+- [ ] T029 [US1] Implementar `GoogleSignupButton.tsx`: quitar el aviso "disponible pronto"; el click llama `signIn.sso({ strategy: 'oauth_google', redirectCallbackUrl: '/sso-callback', redirectUrl: '/home' })` (research.md, punto 1 — `redirectCallbackUrl` es la ruta intermedia que procesa el resultado, `redirectUrl` el destino final si no hace falta ningún paso extra)
+- [ ] T030 [US1] Crear `frontend/src/features/auth/SsoCallbackPage.tsx` (ruta `/sso-callback`, reemplaza el placeholder de T019): si `signIn.status === 'complete'` (ya existía) → `signIn.finalize()` → navega a `/home`; si `signUp.isTransferable` (alta nueva) → `signUp.finalize()` → navega a `/registro/completar`; si `signIn.existingSession`/`signUp.existingSession` (ya había sesión activa) → `clerk.setActive()` en vez de `finalize()`
 - [ ] T031 [US1] Crear `/registro/completar` (`frontend/src/features/account-signup/CompleteGoogleSignupPage.tsx` + ruta en `App.tsx`): reutiliza los campos de tutor/hijo del registro normal (sin correo/contraseña, ya los dio Google) y llama al mismo `POST /accounts` (T022-T027) con el token de la sesión de Google ya activa
 
 **Punto de Control**: Un tutor nuevo puede registrarse con contraseña o con Google; su contraseña nunca llega al backend de PediTrack; `POST /accounts` exige sesión — MVP alcanzado.
@@ -105,7 +105,7 @@ Aplicación web existente: `backend/` (Go) y `frontend/` (React + Vite + TS). To
 ### Pruebas para la Historia de Usuario 2 ⚠️
 
 - [ ] T032 [P] [US2] Prueba de handler para `GET /accounts/me` en `backend/internal/account/handler_test.go`: `401` sin token, `200` con el cuerpo de la cuenta cuando `clerk_user_id` ya está vinculado, `404 account_not_found_for_session` con una sesión de Clerk válida sin ninguna cuenta vinculada ni por correo (contracts/get-accounts-me.md)
-- [ ] T033 [P] [US2] Prueba unitaria de `useLoginForm`/`LoginPage` en `frontend/src/features/auth/LoginPage.test.tsx`, mockeando `@clerk/clerk-react`: contraseña correcta navega a `/home`; contraseña incorrecta muestra un error genérico sin decir si el correo existe (FR-009); un tutor con `isSignedIn` ya verdadero al montar la pantalla es redirigido directo a `/home` (Escenario de Aceptación 4 de la Historia 2 de spec.md, a la inversa)
+- [ ] T033 [P] [US2] Prueba unitaria de `useLoginForm`/`LoginPage` en `frontend/src/features/auth/LoginPage.test.tsx`, mockeando `@clerk/react`: contraseña correcta navega a `/home`; contraseña incorrecta muestra un error genérico sin decir si el correo existe (FR-009); un tutor con `isSignedIn` ya verdadero al montar la pantalla es redirigido directo a `/home` (Escenario de Aceptación 4 de la Historia 2 de spec.md, a la inversa)
 
 ### Implementación de la Historia de Usuario 2
 
