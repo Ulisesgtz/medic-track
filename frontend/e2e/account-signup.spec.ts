@@ -46,6 +46,24 @@ for (const design of designs) {
       await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
     })
 
+    test('la cuenta nueva ve el aviso "informativa y de seguimiento" y "Entendido" lo quita para siempre', async ({ page }) => {
+      await page.goto('/signup')
+      await fillSignup(page)
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+      await finishEmailVerificationIfAsked(page)
+      await expect(page).toHaveURL(/\/home/)
+
+      const notice = page.getByRole('region', { name: 'Antes de empezar' })
+      await expect(notice).toContainText('no sustituye una consulta médica')
+      await expect(notice).toContainText('acude siempre a tu médico')
+
+      await page.getByRole('button', { name: 'Entendido' }).click()
+      await expect(notice).toHaveCount(0)
+      await page.reload()
+      await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
+      await expect(notice).toHaveCount(0)
+    })
+
     test('no hay forma de agregar un segundo hijo desde el registro (límite del plan gratuito)', async ({ page }) => {
       await page.goto('/signup')
 

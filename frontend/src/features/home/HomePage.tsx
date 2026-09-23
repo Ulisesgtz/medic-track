@@ -10,6 +10,7 @@ import { AppHeader } from '../../shared/ui/AppHeader'
 import { AppShell } from './AppShell'
 import { useSidebarSession } from './useSidebarSession'
 import { Logo } from '../../shared/ui/Logo'
+import { WelcomeDisclaimer } from './WelcomeDisclaimer'
 
 /**
  * The parent's home page: lists their children (FR-001), or an invitation to
@@ -157,6 +158,8 @@ export function HomePage() {
               </div>
             </div>
 
+            <WelcomeDisclaimer />
+
             {children.length === 0 ? (
               emptyState
             ) : (
@@ -207,6 +210,9 @@ export function HomePage() {
         />
 
         <div className="px-6 pt-6">
+          <div className="empty:hidden [&:not(:empty)]:mb-4">
+            <WelcomeDisclaimer />
+          </div>
           {children.length === 0 ? (
             emptyState
           ) : (

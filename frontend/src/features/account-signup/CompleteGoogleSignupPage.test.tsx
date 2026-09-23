@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { CompleteGoogleSignupPage } from './CompleteGoogleSignupPage'
+import { WelcomeDisclaimer } from '../home/WelcomeDisclaimer'
 
 function renderPage() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -12,7 +13,7 @@ function renderPage() {
       <MemoryRouter initialEntries={['/registro/completar']}>
         <Routes>
           <Route path="/registro/completar" element={<CompleteGoogleSignupPage />} />
-          <Route path="/home" element={<div>HOME PAGE</div>} />
+          <Route path="/home" element={<div>HOME PAGE<WelcomeDisclaimer /></div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -69,6 +70,8 @@ describe('CompleteGoogleSignupPage', () => {
     await user.click(screen.getByRole('button', { name: 'Terminar mi registro' }))
 
     expect(await screen.findByText('HOME PAGE')).toBeInTheDocument()
+    // A brand-new account lands on the home with the informative-only notice.
+    expect(screen.getByRole('region', { name: 'Antes de empezar' })).toBeInTheDocument()
     const [, init] = postCalls()[0]
     expect((init as RequestInit).headers).toMatchObject({ Authorization: 'Bearer test-token' })
     expect(JSON.parse((init as RequestInit).body as string)).toEqual({

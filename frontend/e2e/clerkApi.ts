@@ -57,6 +57,7 @@ async function clerkFetch(path: string, init: RequestInit = {}) {
 
 /** Creates a verified Clerk user, so a test can sign in as them without going through the signup form. */
 export async function createClerkUser(email: string) {
+  await pruneOldE2EUsers()
   return clerkFetch('/users', {
     method: 'POST',
     body: JSON.stringify({
@@ -69,16 +70,46 @@ export async function createClerkUser(email: string) {
   }) as Promise<{ id: string }>
 }
 
-/** Deletes every user this suite created (now or in an earlier, interrupted run). */
-export async function deleteE2EUsers() {
+interface ClerkUser {
+  id: string
+  created_at: number
+  email_addresses: { email_address: string }[]
+}
+
+/**
+ * Deletes the users this suite created (now or in an earlier, interrupted run) that are at least
+ * `olderThanMs` old. The development instance is capped at 100 users in total, so the suite can't
+ * just let them pile up until the end of the run.
+ */
+export async function deleteE2EUsers(olderThanMs = 0) {
   let deleted = 0
+  const cutoff = Date.now() - olderThanMs
   for (;;) {
-    const users = (await clerkFetch(`/users?query=${E2E_MARKER}&limit=100`)) as { id: string; email_addresses: { email_address: string }[] }[]
-    const mine = users.filter((u) => u.email_addresses.some((e) => e.email_address.includes(E2E_MARKER)))
+    const users = (await clerkFetch(`/users?query=${E2E_MARKER}&limit=100`)) as ClerkUser[]
+    const mine = users.filter(
+      (u) => u.created_at <= cutoff && u.email_addresses.some((e) => e.email_address.includes(E2E_MARKER)),
+    )
     if (mine.length === 0) return deleted
     for (const user of mine) {
       await clerkFetch(`/users/${user.id}`, { method: 'DELETE' })
       deleted += 1
     }
+  }
+}
+
+let lastPrune = 0
+
+/**
+ * Called from the tests themselves (each worker keeps its own clock): every so often it deletes the
+ * test users older than a few minutes — long finished, since a test lasts well under one — so the
+ * instance's 100-user cap is never reached however many tests run. A failure here never fails a test.
+ */
+export async function pruneOldE2EUsers() {
+  if (Date.now() - lastPrune < 30_000) return
+  lastPrune = Date.now()
+  try {
+    await deleteE2EUsers(3 * 60_000)
+  } catch {
+    // Best effort: the run's own global teardown still deletes everything at the end.
   }
 }

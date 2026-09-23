@@ -7,6 +7,7 @@ import { useCountries, useStates } from '../../shared/catalog/useCatalog'
 import { CreateAccountError, type CreateAccountPayload } from './api'
 import { emptyChild, type AccountSignupFormValues } from './types'
 import { useAccountSignup } from './useAccountSignup'
+import { WELCOME_STATE } from '../home/welcomeState'
 
 // The password never reaches PediTrack's own backend (FR-010) — Clerk is
 // the only one who ever sees it (signUp.password() below). `email` also
@@ -180,7 +181,7 @@ export function useSignupForm() {
 
   useEffect(() => {
     if (signup.isSuccess) {
-      navigate('/home')
+      navigate('/home', { state: WELCOME_STATE })
     }
   }, [signup.isSuccess, navigate])
 

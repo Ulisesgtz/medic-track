@@ -1,6 +1,6 @@
 import { clerk, setupClerkTestingToken } from '@clerk/testing/playwright'
 import { expect, type APIRequestContext, type Page } from '@playwright/test'
-import { createClerkUser, E2E_MARKER, E2E_PASSWORD, E2E_VERIFICATION_CODE } from './clerkApi'
+import { createClerkUser, E2E_MARKER, E2E_PASSWORD, E2E_VERIFICATION_CODE, pruneOldE2EUsers } from './clerkApi'
 
 export { E2E_PASSWORD }
 
@@ -47,6 +47,7 @@ export async function fillSignup(page: Page, data: SignupData = {}) {
  * automation). Every test that submits a Clerk form on the page needs it.
  */
 export async function allowClerkOn(page: Page) {
+  await pruneOldE2EUsers()
   await setupClerkTestingToken({ page })
 }
 

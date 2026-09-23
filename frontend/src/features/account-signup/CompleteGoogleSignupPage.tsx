@@ -8,6 +8,7 @@ import { Logo } from '../../shared/ui/Logo'
 import { Notice } from '../../shared/ui/Notice'
 import { CreateAccountError, type CreateAccountPayload } from './api'
 import { useAccountSignup } from './useAccountSignup'
+import { WELCOME_STATE } from '../home/welcomeState'
 import { emptyChild, type AccountSignupFormValues } from './types'
 import { BIRTH_DATE_MESSAGE, CHILD_NAME_MESSAGE, nameError, nameValidation, positiveNumberValidation } from './validation'
 
@@ -65,7 +66,7 @@ export function CompleteGoogleSignupPage() {
 
   useEffect(() => {
     if (signup.isSuccess) {
-      navigate('/home')
+      navigate('/home', { state: WELCOME_STATE })
     }
   }, [signup.isSuccess, navigate])
 
