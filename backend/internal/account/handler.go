@@ -308,15 +308,16 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 // (specs/003-home-listado-hijos/contracts/get-account.md).
 //
 //	@Summary		Get an account and its children
-//	@Description	Retrieves an account (tutor + children) by id, to populate the home page's
-//	@Description	children listing (FR-001). No authentication — the account id acts as a
-//	@Description	de facto access token, a deliberate continuation of the posture already
-//	@Description	accepted in specs/001/002 (see plan.md's privacy note).
+//	@Description	Retrieves an account (tutor + children) by id (FR-001). Requires a Clerk session
+//	@Description	that owns this account (specs/008-autenticacion-cuenta): 403 for any other.
 //	@Tags			accounts
 //	@Produce		json
 //	@Param			accountId	path		string	true	"Account UUID"
 //	@Success		200			{object}	accountResponse
 //	@Failure		404			{object}	accountNotFoundResponseDoc	"No account exists for this id"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	errorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	errorResponseDoc	"The session does not own this resource"
 //	@Router			/accounts/{accountId} [get]
 func (h *Handler) GetAccount(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "accountId"))
@@ -356,6 +357,9 @@ func (h *Handler) GetAccount(w http.ResponseWriter, r *http.Request) {
 //	@Failure		400			{object}	validationErrorResponseDoc	"Missing/invalid field"
 //	@Failure		404			{object}	accountNotFoundResponseDoc	"No account exists for this id"
 //	@Failure		422			{object}	freemiumLimitResponseDoc	"Free plan already has 1 child; upgrade required"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	errorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	errorResponseDoc	"The session does not own this resource"
 //	@Router			/accounts/{accountId}/children [post]
 func (h *Handler) AddChild(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)

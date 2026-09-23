@@ -123,7 +123,12 @@ const docTemplate = `{
         },
         "/accounts/{accountId}": {
             "get": {
-                "description": "Retrieves an account (tutor + children) by id, to populate the home page's\nchildren listing (FR-001). No authentication — the account id acts as a\nde facto access token, a deliberate continuation of the posture already\naccepted in specs/001/002 (see plan.md's privacy note).",
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Retrieves an account (tutor + children) by id (FR-001). Requires a Clerk session\nthat owns this account (specs/008-autenticacion-cuenta): 403 for any other.",
                 "produces": [
                     "application/json"
                 ],
@@ -147,6 +152,18 @@ const docTemplate = `{
                             "$ref": "#/definitions/internal_account.accountResponse"
                         }
                     },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
                     "404": {
                         "description": "No account exists for this id",
                         "schema": {
@@ -158,6 +175,11 @@ const docTemplate = `{
         },
         "/accounts/{accountId}/children": {
             "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
                 "description": "Adds a single child to an account already created, from the home page's\n\"Agregar hijo\" modal (FR-004). Applies the same field validation and\nfreemium 1-child limit as POST /accounts.",
                 "consumes": [
                     "application/json"
@@ -198,6 +220,18 @@ const docTemplate = `{
                         "description": "Missing/invalid field",
                         "schema": {
                             "$ref": "#/definitions/ValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
                         }
                     },
                     "404": {
@@ -291,6 +325,11 @@ const docTemplate = `{
         },
         "/children/{childId}/consultations": {
             "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
                 "description": "Lists a child's medical consultations (date, doctor, symptoms and medication count), most recent first (FR-001).",
                 "produces": [
                     "application/json"
@@ -315,6 +354,18 @@ const docTemplate = `{
                             "$ref": "#/definitions/ConsultationListResponse"
                         }
                     },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
                     "404": {
                         "description": "No child exists for this id",
                         "schema": {
@@ -324,6 +375,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
                 "description": "Registers a consultation with its prescription photo, medications and symptoms\n(FR-003, FR-004). At least one medication is required (FR-015), and each one needs\nits startTime (\"HH:MM\"): all of its doses are generated at once from it (research.md).",
                 "consumes": [
                     "application/json"
@@ -366,6 +422,18 @@ const docTemplate = `{
                             "$ref": "#/definitions/ConsultationValidationErrorResponse"
                         }
                     },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
                     "404": {
                         "description": "No child exists for this id",
                         "schema": {
@@ -377,6 +445,11 @@ const docTemplate = `{
         },
         "/children/{childId}/overview": {
             "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
                 "description": "Returns the doses scheduled in [from, to) (the parent's local \"today\"; the client\nsends the window because only it knows its timezone) and the treatment still\nrunning — the medication whose last scheduled dose is furthest ahead, derived only\nfrom the dose schedule. The window may not exceed 48 hours.",
                 "produces": [
                     "application/json"
@@ -423,6 +496,18 @@ const docTemplate = `{
                             "$ref": "#/definitions/ConsultationValidationErrorResponse"
                         }
                     },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
                     "404": {
                         "description": "No child exists for this id",
                         "schema": {
@@ -434,6 +519,11 @@ const docTemplate = `{
         },
         "/consultations/{consultationId}": {
             "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
                 "description": "Retrieves the prescription photo, doctor, date, medications (with their doses,\nif any), and symptoms of a consultation (FR-013).",
                 "produces": [
                     "application/json"
@@ -458,6 +548,18 @@ const docTemplate = `{
                             "$ref": "#/definitions/ConsultationDetailResponse"
                         }
                     },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
                     "404": {
                         "description": "No consultation exists for this id",
                         "schema": {
@@ -469,6 +571,11 @@ const docTemplate = `{
         },
         "/consultations/{consultationId}/doses/{doseId}": {
             "patch": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
                 "description": "Sets a dose's taken status. No validation of scheduled date or treatment\nstatus — a dose can be marked/unmarked at any time (FR-011, FR-016).",
                 "consumes": [
                     "application/json"
@@ -510,6 +617,18 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/DoseResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
                         }
                     },
                     "404": {
@@ -669,6 +788,19 @@ const docTemplate = `{
                 "message": {
                     "type": "string",
                     "example": "Consultation not found"
+                }
+            }
+        },
+        "ConsultationSessionErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "forbidden"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "This resource does not belong to the current session"
                 }
             }
         },
@@ -1101,6 +1233,14 @@ const docTemplate = `{
                 }
             }
         }
+    },
+    "securityDefinitions": {
+        "ClerkSession": {
+            "description": "Clerk session token, sent as \"Bearer \u003ctoken\u003e\".",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
     }
 }`
 
@@ -1108,7 +1248,7 @@ const docTemplate = `{
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "",
-	BasePath:         "/",
+	BasePath:         "",
 	Schemes:          []string{},
 	Title:            "PediTrack API",
 	Description:      "Backend API for account/children signup and the país/estado catalog.\nSee contracts/post-accounts.md and contracts/get-catalog.md under\nspecs/001-registro-cuenta-usuario/ for the source-of-truth prose contracts.",

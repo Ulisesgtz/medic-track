@@ -147,7 +147,8 @@ describe('AddChildModal', () => {
     expect(JSON.parse((init as RequestInit).body as string)).toEqual({
       firstName: 'Luis', lastName: 'Gómez', birthDate: '2020-01-15', height: 95.5, weight: 14.2,
     })
-    expect(queryClient.getQueryData(['account', 'account-1'])).toEqual(savedAccount)
+    expect(queryClient.getQueryData(['accounts', 'me'])).toEqual(savedAccount)
+    expect((init as RequestInit).headers).toMatchObject({ Authorization: 'Bearer test-token' })
   })
 
   it('turns "Guardar" into "Guardando…" and disables it while saving', async () => {

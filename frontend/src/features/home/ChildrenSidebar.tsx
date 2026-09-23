@@ -1,10 +1,9 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
 import { formatAgeShort } from '../../shared/age'
 import { Logo } from '../../shared/ui/Logo'
 import { useLogout } from '../auth/useLogout'
-import { fetchAccount } from './api'
+import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { AddChildDialogs } from './AddChildDialogs'
 
 interface ChildrenSidebarProps {
@@ -18,17 +17,13 @@ interface ChildrenSidebarProps {
  * delivered desktop mockups (12–15): 280px ink column with the logo, one row
  * per child (first name + short age, the open one in --color-action), a dashed
  * "+ Agregar hijo" and the tutor with the plan at the bottom. Reads the same
- * ['account', id] query the home uses, so it costs no extra request.
+ * ['accounts', 'me'] query the home uses, so it costs no extra request.
  */
 export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarProps) {
   const [showAddChild, setShowAddChild] = useState(false)
   const addChildButton = useRef<HTMLButtonElement>(null)
   const logout = useLogout()
-  const query = useQuery({
-    queryKey: ['account', accountId],
-    queryFn: () => fetchAccount(accountId),
-    retry: false,
-  })
+  const query = useCurrentAccount()
   const account = query.data
 
   return (

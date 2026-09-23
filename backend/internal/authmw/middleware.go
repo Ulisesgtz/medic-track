@@ -12,6 +12,8 @@ import (
 
 	clerk "github.com/clerk/clerk-sdk-go/v2"
 	clerkhttp "github.com/clerk/clerk-sdk-go/v2/http"
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 )
@@ -61,4 +63,43 @@ func ClerkUserIDFromContext(ctx context.Context) (string, bool) {
 		return "", false
 	}
 	return claims.Subject, true
+}
+
+// OwnerCheck reports whether the Clerk user owns the resource with the given
+// id (see internal/ownership).
+type OwnerCheck func(ctx context.Context, clerkUserID string, id uuid.UUID) (bool, error)
+
+// RequireOwner returns middleware, to be used after RequireSession, that
+// answers 403 unless the session owns the resource whose UUID is in the
+// route parameter param. The check runs before the handler, so no
+// validation, lookup or side effect of the handler is reachable for a
+// resource that isn't the session's. A resource that doesn't exist answers
+// 403 too — the same as one that belongs to someone else — so a caller
+// can't probe which ids are real. A malformed id is passed through: the
+// handler already answers it with its own 404.
+func RequireOwner(responder *httpx.Responder, param string, check OwnerCheck) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			clerkUserID, ok := ClerkUserIDFromContext(r.Context())
+			if !ok {
+				responder.WriteJSONError(r.Context(), w, http.StatusUnauthorized, "unauthorized", "A valid session is required", nil)
+				return
+			}
+			id, err := uuid.Parse(chi.URLParam(r, param))
+			if err != nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+			owns, err := check(r.Context(), clerkUserID, id)
+			if err != nil {
+				responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not verify access", nil)
+				return
+			}
+			if !owns {
+				responder.WriteJSONError(r.Context(), w, http.StatusForbidden, "forbidden", "This resource does not belong to the current session", nil)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }

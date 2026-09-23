@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useAuth } from '@clerk/react'
 import { useQuery } from '@tanstack/react-query'
 import { formatAgeLong } from '../../shared/age'
 import { useLocalDay } from '../../shared/useLocalDay'
@@ -24,14 +25,15 @@ const chip = 'rounded-[10px] px-3 py-2 text-[13px] font-bold'
  */
 function ChildStatusChips({ childId }: { childId: string }) {
   const today = useLocalDay()
+  const { getToken } = useAuth()
   const consultations = useQuery({
     queryKey: ['consultations', childId],
-    queryFn: () => fetchConsultations(childId),
+    queryFn: async () => fetchConsultations(childId, await getToken()),
     retry: false,
   })
   const overview = useQuery({
     queryKey: ['overview', childId, today.from.toISOString()],
-    queryFn: () => fetchChildOverview(childId, today.from, today.to),
+    queryFn: async () => fetchChildOverview(childId, today.from, today.to, await getToken()),
     retry: false,
   })
 

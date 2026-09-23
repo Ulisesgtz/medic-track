@@ -1,8 +1,12 @@
 package authmw_test
 
 import (
+	"errors"
+
 	"context"
 	"encoding/json"
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -89,4 +93,84 @@ func TestRequireSession_ValidToken(t *testing.T) {
 func TestClerkUserIDFromContext_NoClaims(t *testing.T) {
 	_, ok := authmw.ClerkUserIDFromContext(httptest.NewRequest(http.MethodGet, "/", nil).Context())
 	require.False(t, ok)
+}
+
+func newOwnerRouter(t *testing.T, check authmw.OwnerCheck, next http.HandlerFunc) (http.Handler, *authmwtest.Verifier) {
+	t.Helper()
+	responder := newTestResponder()
+	verifier := authmwtest.NewVerifier(t, responder)
+	r := chi.NewRouter()
+	r.With(verifier.Middleware, authmw.RequireOwner(responder, "id", check)).Get("/things/{id}", next)
+	// Same guarded route but without a session middleware in front.
+	r.With(authmw.RequireOwner(responder, "id", check)).Get("/no-session/{id}", next)
+	return r, verifier
+}
+
+func getThing(router http.Handler, path, token string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodGet, path, nil)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestRequireOwner_OwnerReachesTheHandler(t *testing.T) {
+	id := uuid.New()
+	var gotUser string
+	router, verifier := newOwnerRouter(t, func(_ context.Context, clerkUserID string, got uuid.UUID) (bool, error) {
+		gotUser = clerkUserID
+		return got == id, nil
+	}, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
+
+	rec := getThing(router, "/things/"+id.String(), verifier.Token(t, "user_owner"))
+
+	require.Equal(t, http.StatusNoContent, rec.Code)
+	require.Equal(t, "user_owner", gotUser)
+}
+
+func TestRequireOwner_NotTheOwnerIs403AndNeverReachesTheHandler(t *testing.T) {
+	router, verifier := newOwnerRouter(t, func(context.Context, string, uuid.UUID) (bool, error) { return false, nil },
+		func(http.ResponseWriter, *http.Request) {
+			t.Fatal("handler must not run for a resource the session doesn't own")
+		})
+
+	rec := getThing(router, "/things/"+uuid.NewString(), verifier.Token(t, "user_other"))
+
+	require.Equal(t, http.StatusForbidden, rec.Code)
+	var body map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, "forbidden", body["error"])
+}
+
+func TestRequireOwner_CheckFailureIs500(t *testing.T) {
+	router, verifier := newOwnerRouter(t, func(context.Context, string, uuid.UUID) (bool, error) { return false, errors.New("db down") },
+		func(http.ResponseWriter, *http.Request) {
+			t.Fatal("handler must not run when ownership can't be verified")
+		})
+
+	rec := getThing(router, "/things/"+uuid.NewString(), verifier.Token(t, "user_x"))
+
+	require.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestRequireOwner_MalformedIDFallsThroughToTheHandler(t *testing.T) {
+	router, verifier := newOwnerRouter(t, func(context.Context, string, uuid.UUID) (bool, error) {
+		t.Fatal("the check must not run for a malformed id")
+		return false, nil
+	}, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) })
+
+	rec := getThing(router, "/things/not-a-uuid", verifier.Token(t, "user_x"))
+
+	require.Equal(t, http.StatusNotFound, rec.Code)
+}
+
+func TestRequireOwner_WithoutASessionIs401(t *testing.T) {
+	router, _ := newOwnerRouter(t, func(context.Context, string, uuid.UUID) (bool, error) { return true, nil },
+		func(http.ResponseWriter, *http.Request) { t.Fatal("handler must not run without a session") })
+
+	rec := getThing(router, "/no-session/"+uuid.NewString(), "")
+
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
 }

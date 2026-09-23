@@ -68,6 +68,13 @@ type consultationDetailResponse struct {
 	Medications []medicationResponse `json:"medications"`
 } // @name ConsultationDetailResponse
 
+// sessionErrorResponseDoc documents the 401/403 bodies every endpoint here can
+// answer (missing/invalid session, or a resource the session doesn't own).
+type sessionErrorResponseDoc struct {
+	Error   string `json:"error" example:"forbidden"`
+	Message string `json:"message" example:"This resource does not belong to the current session"`
+} // @name ConsultationSessionErrorResponse
+
 type childNotFoundResponseDoc struct {
 	Error   string `json:"error" example:"child_not_found"`
 	Message string `json:"message" example:"Child not found"`
@@ -104,6 +111,9 @@ type fieldErrorDoc struct {
 //	@Param			childId	path		string	true	"Child UUID"
 //	@Success		200		{object}	consultationListResponse
 //	@Failure		404		{object}	childNotFoundResponseDoc	"No child exists for this id"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	sessionErrorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	sessionErrorResponseDoc	"The session does not own this resource"
 //	@Router			/children/{childId}/consultations [get]
 func (h *Handler) ListConsultations(w http.ResponseWriter, r *http.Request) {
 	childID, err := uuid.Parse(chi.URLParam(r, "childId"))
@@ -175,6 +185,9 @@ type childOverviewResponse struct {
 //	@Success		200		{object}	childOverviewResponse
 //	@Failure		400		{object}	validationErrorResponseDoc	"Missing/invalid window"
 //	@Failure		404		{object}	childNotFoundResponseDoc	"No child exists for this id"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	sessionErrorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	sessionErrorResponseDoc	"The session does not own this resource"
 //	@Router			/children/{childId}/overview [get]
 func (h *Handler) GetChildOverview(w http.ResponseWriter, r *http.Request) {
 	childID, err := uuid.Parse(chi.URLParam(r, "childId"))
@@ -265,6 +278,9 @@ type createConsultationRequest struct {
 //	@Success		201		{object}	consultationDetailResponse
 //	@Failure		400		{object}	validationErrorResponseDoc	"Missing/invalid field"
 //	@Failure		404		{object}	childNotFoundResponseDoc	"No child exists for this id"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	sessionErrorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	sessionErrorResponseDoc	"The session does not own this resource"
 //	@Router			/children/{childId}/consultations [post]
 func (h *Handler) CreateConsultation(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
@@ -356,6 +372,9 @@ func (h *Handler) writeCreateConsultationError(ctx context.Context, w http.Respo
 //	@Param			consultationId	path		string	true	"Consultation UUID"
 //	@Success		200				{object}	consultationDetailResponse
 //	@Failure		404				{object}	consultationNotFoundResponseDoc	"No consultation exists for this id"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	sessionErrorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	sessionErrorResponseDoc	"The session does not own this resource"
 //	@Router			/consultations/{consultationId} [get]
 func (h *Handler) GetConsultation(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "consultationId"))
@@ -395,6 +414,9 @@ type updateDoseRequest struct {
 //	@Param			payload			body		updateDoseRequest	true	"New taken status"
 //	@Success		200				{object}	doseResponse
 //	@Failure		404				{object}	doseNotFoundResponseDoc	"No dose exists for this id"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	sessionErrorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	sessionErrorResponseDoc	"The session does not own this resource"
 //	@Router			/consultations/{consultationId}/doses/{doseId} [patch]
 func (h *Handler) UpdateDose(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)

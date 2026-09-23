@@ -5,6 +5,10 @@
 //	@description	Backend API for account/children signup and the país/estado catalog.
 //	@description	See contracts/post-accounts.md and contracts/get-catalog.md under
 //	@description	specs/001-registro-cuenta-usuario/ for the source-of-truth prose contracts.
+//	@securityDefinitions.apikey	ClerkSession
+//	@in							header
+//	@name						Authorization
+//	@description				Clerk session token, sent as "Bearer <token>".
 //	@BasePath		/
 package main
 
@@ -15,9 +19,6 @@ import (
 	"os"
 
 	clerk "github.com/clerk/clerk-sdk-go/v2"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
@@ -27,7 +28,9 @@ import (
 	_ "github.com/Ulisesgtz/medic-track/backend/internal/docs"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
+	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
 	"github.com/Ulisesgtz/medic-track/backend/internal/platform"
+	"github.com/Ulisesgtz/medic-track/backend/internal/server"
 )
 
 func main() {
@@ -64,37 +67,15 @@ func main() {
 		frontendOrigin = "http://localhost:5173"
 	}
 
-	r := chi.NewRouter()
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{frontendOrigin},
-		AllowedMethods:   []string{"GET", "POST", "PATCH", "OPTIONS"},
-		AllowedHeaders:   []string{"Content-Type", "Authorization"},
-		AllowCredentials: false,
-		MaxAge:           300,
-	}))
-
-	r.Get("/catalog/countries", catalogHandler.ListCountries)
-	r.Get("/catalog/countries/{countryCode}/states", catalogHandler.ListStates)
-
-	// Routes behind a verified Clerk session (specs/008-autenticacion-cuenta).
-	// GET /accounts/me is registered before /accounts/{accountId} so chi
-	// matches "me" literally instead of it being captured as {accountId}.
-	r.Group(func(r chi.Router) {
-		r.Use(authmw.RequireSession(responder))
-		r.Get("/accounts/me", accountHandler.GetMe)
-		r.Post("/accounts", accountHandler.CreateAccount)
+	r := server.NewRouter(server.Deps{
+		Responder:      responder,
+		Catalog:        catalogHandler,
+		Account:        accountHandler,
+		Consultation:   consultationHandler,
+		Ownership:      ownership.NewRepository(pool),
+		FrontendOrigin: frontendOrigin,
+		RequireSession: authmw.RequireSession(responder),
 	})
-
-	r.Get("/accounts/{accountId}", accountHandler.GetAccount)
-	r.Post("/accounts/{accountId}/children", accountHandler.AddChild)
-
-	r.Get("/children/{childId}/consultations", consultationHandler.ListConsultations)
-	r.Get("/children/{childId}/overview", consultationHandler.GetChildOverview)
-	r.Post("/children/{childId}/consultations", consultationHandler.CreateConsultation)
-	r.Get("/consultations/{consultationId}", consultationHandler.GetConsultation)
-	r.Patch("/consultations/{consultationId}/doses/{doseId}", consultationHandler.UpdateDose)
 
 	// Swagger UI, generated from the @swag annotations on the handlers below
 	// (run `swag init` from backend/ after changing any of them — see

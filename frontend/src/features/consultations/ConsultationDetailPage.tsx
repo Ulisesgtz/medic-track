@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useAuth } from '@clerk/react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { formatDateLong, formatDayMonth } from '../../shared/date'
@@ -25,9 +26,10 @@ export function ConsultationDetailPage() {
   const [viewerOpen, setViewerOpen] = useState(false)
   const { isDesktop } = useSidebarSession()
 
+  const { getToken } = useAuth()
   const query = useQuery({
     queryKey: ['consultation', consultationId],
-    queryFn: () => fetchConsultationDetail(consultationId!),
+    queryFn: async () => fetchConsultationDetail(consultationId!, await getToken()),
     enabled: !!consultationId,
     retry: false,
   })
@@ -41,7 +43,7 @@ export function ConsultationDetailPage() {
   const today = useLocalDay()
   const overviewQuery = useQuery({
     queryKey: ['overview', childId, today.from.toISOString()],
-    queryFn: () => fetchChildOverview(childId!, today.from, today.to),
+    queryFn: async () => fetchChildOverview(childId!, today.from, today.to, await getToken()),
     enabled: !!childId && isDesktop,
     retry: false,
   })

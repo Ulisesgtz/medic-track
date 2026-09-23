@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router-dom'
+import { useAuth } from '@clerk/react'
 import { useQuery } from '@tanstack/react-query'
 import { formatAgeLong } from '../../shared/age'
 import { formatDateShort, formatDayMonth } from '../../shared/date'
@@ -35,16 +36,17 @@ export function ChildDetailPage() {
   // "Today" is the parent's local day (it rolls over at midnight, even with the
   // app left open); only the client knows its time zone, so it sends the window.
   const today = useLocalDay()
+  const { getToken } = useAuth()
   const overviewQuery = useQuery({
     queryKey: ['overview', childId, today.from.toISOString()],
-    queryFn: () => fetchChildOverview(childId!, today.from, today.to),
+    queryFn: async () => fetchChildOverview(childId!, today.from, today.to, await getToken()),
     enabled: !!childId,
     retry: false,
   })
 
   const query = useQuery({
     queryKey: ['consultations', childId],
-    queryFn: () => fetchConsultations(childId!),
+    queryFn: async () => fetchConsultations(childId!, await getToken()),
     enabled: !!childId,
     retry: false,
   })
