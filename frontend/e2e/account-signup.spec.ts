@@ -24,7 +24,7 @@ for (const design of designs) {
       await expect(phoneOnly).toHaveCount(design.isWeb ? 0 : 1)
       await expect(page.getByRole('heading', { level: 2, name: 'Crear cuenta' })).toHaveCount(design.isWeb ? 1 : 0)
       // Both mocks: the password field (validated, never stored) and the Google button ("pronto").
-      await expect(page.getByLabel('Contraseña')).toHaveCount(1)
+      await expect(page.getByLabel('Contraseña', { exact: true })).toHaveCount(1)
       await expect(page.getByRole('button', { name: 'Registrarme con Google' })).toHaveCount(1)
     })
 
@@ -59,7 +59,7 @@ for (const design of designs) {
       await expect(page.getByText('El nombre es obligatorio')).toBeVisible()
       await expect(page.getByText('El apellido es obligatorio')).toBeVisible()
       await expect(page.getByText('Escribe un correo válido.')).toBeVisible()
-      await expect(page.getByText('La contraseña necesita al menos 8 caracteres.')).toBeVisible()
+      await expect(page.getByText('La contraseña no cumple con las reglas.')).toBeVisible()
       await expect(page.getByText('Escribe el nombre de tu hijo.')).toBeVisible()
       await expect(page.getByText('El apellido del hijo es obligatorio')).toBeVisible()
       await expect(page.getByText('Elige la fecha de nacimiento.')).toBeVisible()
@@ -169,16 +169,16 @@ for (const design of designs) {
       })
       await page.goto('/signup')
       await fillSignup(page)
-      await page.getByLabel('Contraseña').fill('1234567')
+      await page.getByLabel('Contraseña', { exact: true }).fill('1234567')
 
       await page.getByRole('button', { name: 'Crear cuenta' }).click()
-      await expect(page.getByText('La contraseña necesita al menos 8 caracteres.')).toBeVisible()
+      await expect(page.getByText('La contraseña no cumple con las reglas.')).toBeVisible()
       expect(body).toBe('')
 
-      await page.getByLabel('Contraseña').fill('secreto123')
+      await page.getByLabel('Contraseña', { exact: true }).fill('Secreto123!')
       await page.getByRole('button', { name: 'Crear cuenta' }).click()
       await expect(page).toHaveURL(/\/home/)
-      expect(body).not.toContain('secreto123')
+      expect(body).not.toContain('Secreto123!')
       expect(body).not.toContain('password')
     })
 

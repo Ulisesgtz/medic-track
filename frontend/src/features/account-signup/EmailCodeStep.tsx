@@ -1,4 +1,5 @@
 import { FormField as Field } from '../../shared/ui/FormField'
+import { Notice } from '../../shared/ui/Notice'
 import type { SignupForm } from './useSignupForm'
 
 const codeField =
@@ -13,7 +14,7 @@ const codeField =
  * rest of the signup form (`design-tokens.md`) rather than invent a new look.
  */
 export function EmailCodeStep({ form }: { form: SignupForm }) {
-  const { code, setCode, onSubmitCode, isPending, serverError } = form
+  const { code, setCode, onSubmitCode, isPending, serverNotice } = form
 
   return (
     <form onSubmit={onSubmitCode} noValidate className="flex w-full max-w-[520px] flex-col gap-6">
@@ -37,10 +38,10 @@ export function EmailCodeStep({ form }: { form: SignupForm }) {
         />
       </Field>
 
-      {serverError && (
-        <p role="alert" className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-800">
-          {serverError}
-        </p>
+      {serverNotice && (
+        <Notice tone={serverNotice.tone} action={serverNotice.action}>
+          {serverNotice.message}
+        </Notice>
       )}
 
       <button

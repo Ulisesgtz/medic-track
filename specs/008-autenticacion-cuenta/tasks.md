@@ -154,12 +154,12 @@ Aplicación web existente: `backend/` (Go) y `frontend/` (React + Vite + TS). To
 
 ### Pruebas para la Historia de Usuario 4 ⚠️
 
-- [ ] T048 [P] [US4] Prueba unitaria de `HomePage` en `frontend/src/features/home/HomePage.test.tsx`: el botón "Cerrar sesión" llama `useAuth().signOut()`; tras cerrar sesión, `RequireSession` (T018) redirige `/home` a `/login`
+- [X] T048 [P] [US4] Prueba unitaria de `HomePage` en `frontend/src/features/home/HomePage.test.tsx`: el botón "Cerrar sesión" llama `useAuth().signOut()`; tras cerrar sesión, `RequireSession` (T018) redirige `/home` a `/login` — el redirect en sí ya lo cubre `RequireSession.test.tsx` (isSignedIn:false → `/login`); aquí se cubre que el botón llama `signOut()` y limpia la caché, en móvil y escritorio (con y sin sidebar)
 
 ### Implementación de la Historia de Usuario 4
 
-- [ ] T049 [US4] Agregar el botón/menú "Cerrar sesión" a `frontend/src/features/home/HomePage.tsx` (phone y desktop — sin mock, seguir `design-tokens.md`) que llama `useAuth().signOut()` y limpia la caché de TanStack Query (`queryClient.clear()` o invalidar `['accounts', 'me']`) para que ningún dato de la cuenta anterior sobreviva en memoria
-- [ ] T050 [US4] Repetir el botón de T049 en `frontend/src/features/home/ChildrenSidebar.tsx` (barra lateral de escritorio, junto a los datos del tutor)
+- [X] T049 [US4] Agregar el botón "Cerrar sesión" a `frontend/src/features/home/HomePage.tsx` (phone y desktop — sin mock, seguir `design-tokens.md`) mediante un hook compartido `frontend/src/features/auth/useLogout.ts` que llama `useAuth().signOut()` y `queryClient.clear()` (en vez de invalidar solo `['accounts','me']`, para no dejar tampoco datos de hijos/consultas de la cuenta anterior en memoria)
+- [X] T050 [US4] Repetir el botón de T049 (mismo `useLogout`) en `frontend/src/features/home/ChildrenSidebar.tsx` (barra lateral de escritorio, junto a los datos del tutor)
 
 **Punto de Control**: Cerrar sesión limpia de verdad el acceso — las 4 historias P1/P2 funcionan juntas.
 

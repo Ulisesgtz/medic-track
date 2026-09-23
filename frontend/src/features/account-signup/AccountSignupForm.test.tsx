@@ -47,7 +47,7 @@ async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('Tu nombre'), 'Ana')
   await user.type(screen.getByLabelText('Tu apellido'), 'Gómez')
   await user.type(screen.getByLabelText('Correo'), 'ana@example.com')
-  await user.type(screen.getByLabelText('Contraseña'), 'secreto123')
+  await user.type(screen.getByLabelText('Contraseña'), 'Secreto123!')
   await user.type(byId('children.0.firstName'), 'Luis')
   await user.type(byId('children.0.lastName'), 'Gómez')
   await user.type(byId('children.0.birthDate'), '2020-01-15')
@@ -165,7 +165,7 @@ describe('AccountSignupForm', () => {
       await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
       expect(await screen.findByText('Escribe un correo válido.')).toBeInTheDocument()
-      expect(screen.getByText('La contraseña necesita al menos 8 caracteres.')).toBeInTheDocument()
+      expect(screen.getByText('La contraseña no cumple con las reglas.')).toBeInTheDocument()
       expect(screen.getByText('Escribe el nombre de tu hijo.')).toBeInTheDocument()
       expect(screen.getByText('Elige la fecha de nacimiento.')).toBeInTheDocument()
       expect(postCalls()).toHaveLength(0)
@@ -182,7 +182,7 @@ describe('AccountSignupForm', () => {
       await user.type(screen.getByLabelText('Correo'), 'no-es-correo')
       await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
-      expect(await screen.findByText('La contraseña necesita al menos 8 caracteres.')).toBeInTheDocument()
+      expect(await screen.findByText('La contraseña no cumple con las reglas.')).toBeInTheDocument()
       expect(screen.getByText('Escribe un correo válido.')).toBeInTheDocument()
       expect(postCalls()).toHaveLength(0)
     })
@@ -207,7 +207,7 @@ describe('AccountSignupForm', () => {
       expect(await screen.findByText('HOME PAGE')).toBeInTheDocument()
       const [, init] = postCalls()[0]
       const body = (init as RequestInit).body as string
-      expect(body).not.toContain('secreto123')
+      expect(body).not.toContain('Secreto123!')
       expect(JSON.parse(body)).not.toHaveProperty('password')
     })
 
@@ -297,7 +297,7 @@ describe('AccountSignupForm', () => {
       await user.type(screen.getByLabelText('Tu nombre'), 'María José')
       await user.type(screen.getByLabelText('Tu apellido'), "Núñez-O'Higgins")
       await user.type(screen.getByLabelText('Correo'), 'maria@example.com')
-      await user.type(screen.getByLabelText('Contraseña'), 'secreto123')
+      await user.type(screen.getByLabelText('Contraseña'), 'Secreto123!')
       await user.type(byId('children.0.firstName'), 'Iñaki')
       await user.type(byId('children.0.lastName'), 'Núñez')
       await user.type(byId('children.0.birthDate'), '2020-01-15')

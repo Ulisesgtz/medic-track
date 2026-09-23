@@ -2,6 +2,8 @@ import { FormField as Field } from '../../shared/ui/FormField'
 import { Logo } from '../../shared/ui/Logo'
 import { EmailCodeStep } from './EmailCodeStep'
 import { GoogleSignupButton } from './GoogleSignupButton'
+import { PasswordField } from './PasswordField'
+import { Notice } from '../../shared/ui/Notice'
 import {
   BIRTH_DATE_MESSAGE,
   CHILD_NAME_MESSAGE,
@@ -36,7 +38,7 @@ const childField =
  * "Registrarme con Google" is not in the mock (requested; says "pronto").
  */
 export function SignupPhone({ form }: { form: SignupForm }) {
-  const { register, setValue, errors, onSubmit, countryCode, countries, states, isPending, serverError, step } = form
+  const { register, setValue, errors, onSubmit, countryCode, countries, states, isPending, serverNotice, step, password } = form
   const childErrors = errors.children?.[0]
 
   return (
@@ -74,17 +76,12 @@ export function SignupPhone({ form }: { form: SignupForm }) {
           />
         </Field>
 
-        <Field id="password" text="Contraseña" error={errors.password ? PASSWORD_MESSAGE : undefined}>
-          <input
-            id="password"
-            type="password"
-            size={1}
-            autoComplete="new-password"
-            placeholder="Mínimo 8 caracteres"
-            className={`${tutorField} ${border(!!errors.password, 'border-slate-300')}`}
-            {...register('password', passwordValidation)}
-          />
-        </Field>
+        <PasswordField
+          registration={register('password', passwordValidation)}
+          value={password ?? ''}
+          error={errors.password ? PASSWORD_MESSAGE : undefined}
+          inputClassName={`${tutorField} ${border(!!errors.password, 'border-slate-300')}`}
+        />
 
         <div className="flex flex-col gap-6">
           <Field id="firstName" text="Tu nombre" error={nameError(errors.firstName, 'El nombre')}>
@@ -220,10 +217,15 @@ export function SignupPhone({ form }: { form: SignupForm }) {
           </div>
         </fieldset>
 
-        {serverError && (
-          <p role="alert" className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-800">
-            {serverError}
-          </p>
+        {/* Required by Clerk for bot protection on custom sign-up flows — must exist in the
+            DOM before signUp.password() runs (Clerk docs: "Add bot protection"). Invisible by
+            default; Clerk mounts its own widget into it only when a challenge is needed. */}
+        <div id="clerk-captcha" />
+
+        {serverNotice && (
+          <Notice tone={serverNotice.tone} action={serverNotice.action}>
+            {serverNotice.message}
+          </Notice>
         )}
 
         <button

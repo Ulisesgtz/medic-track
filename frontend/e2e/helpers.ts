@@ -26,7 +26,7 @@ export async function fillSignup(page: Page, data: SignupData = {}) {
   await page.getByLabel('Tu apellido').fill(data.lastName ?? 'Gómez')
   await page.getByLabel('Correo').fill(data.email ?? uniqueEmail('ana'))
   // Both designs ask for a password (mocks 01/11); it is validated but never stored.
-  await page.getByLabel('Contraseña').fill('secreto123')
+  await page.getByLabel('Contraseña', { exact: true }).fill('Secreto123!')
   const child = data.child ?? { firstName: 'Luis', lastName: 'Gómez', birthDate: '2020-01-15' }
   await page.locator('#children\\.0\\.firstName').fill(child.firstName)
   await page.locator('#children\\.0\\.lastName').fill(child.lastName)

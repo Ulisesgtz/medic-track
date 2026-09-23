@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { useAuth, useSignUp } from '@clerk/react'
+import { clerkNotice, type ClerkNotice } from '../../shared/auth/clerkMessages'
 import { useCountries, useStates } from '../../shared/catalog/useCatalog'
 import { CreateAccountError, type CreateAccountPayload } from './api'
 import { emptyChild, type AccountSignupFormValues } from './types'
@@ -30,6 +31,7 @@ function toPayload(values: AccountSignupFormValues): CreateAccountPayload {
 
 const GENERIC_CLERK_ERROR = 'No se pudo crear tu cuenta. Intenta de nuevo.'
 const INVALID_CODE_ERROR = 'El código no es correcto. Revisa tu correo e intenta de nuevo.'
+const GENERIC_SAVE_ERROR = 'Ocurrió un error al guardar la cuenta. Intenta de nuevo.'
 
 /**
  * The signup form's state and submit flow, shared by the phone and the web
@@ -66,6 +68,7 @@ export function useSignupForm() {
   })
 
   const countryCode = useWatch({ control, name: 'countryCode' })
+  const password = useWatch({ control, name: 'password' })
   const { data: countries } = useCountries()
   const { data: states } = useStates(countryCode || undefined)
 
@@ -78,13 +81,13 @@ export function useSignupForm() {
   const [pendingValues, setPendingValues] = useState<AccountSignupFormValues | null>(null)
   const [code, setCode] = useState('')
   const [isClerkPending, setIsClerkPending] = useState(false)
-  const [clerkError, setClerkError] = useState<string | null>(null)
+  const [clerkError, setClerkError] = useState<ClerkNotice | null>(null)
 
   async function finishAccountCreation(values: AccountSignupFormValues) {
     if (!signUp) return
     const { error } = await signUp.finalize()
     if (error) {
-      setClerkError(error.message ?? GENERIC_CLERK_ERROR)
+      setClerkError(clerkNotice(error, GENERIC_CLERK_ERROR))
       setIsClerkPending(false)
       return
     }
@@ -100,7 +103,7 @@ export function useSignupForm() {
 
     const { error } = await signUp.password({ emailAddress: values.email, password: values.password })
     if (error) {
-      setClerkError(error.message ?? GENERIC_CLERK_ERROR)
+      setClerkError(clerkNotice(error, GENERIC_CLERK_ERROR))
       setIsClerkPending(false)
       return
     }
@@ -112,7 +115,7 @@ export function useSignupForm() {
 
     const sent = await signUp.verifications.sendEmailCode()
     if (sent.error) {
-      setClerkError(sent.error.message ?? GENERIC_CLERK_ERROR)
+      setClerkError(clerkNotice(sent.error, GENERIC_CLERK_ERROR))
       setIsClerkPending(false)
       return
     }
@@ -129,7 +132,7 @@ export function useSignupForm() {
 
     const { error } = await signUp.verifications.verifyEmailCode({ code })
     if (error) {
-      setClerkError(INVALID_CODE_ERROR)
+      setClerkError(clerkNotice(error, INVALID_CODE_ERROR))
       setIsClerkPending(false)
       return
     }
@@ -145,16 +148,15 @@ export function useSignupForm() {
   // The message under the button for a server rejection. The generic fallback
   // is the only feedback path for server-side rules with no client-side
   // equivalent — don't remove it.
-  let serverError: string | null = clerkError
-  if (!serverError && signup.isError) {
-    if (signup.error instanceof CreateAccountError) {
-      serverError =
-        signup.error.kind === 'email_already_exists'
+  let serverNotice: ClerkNotice | null = clerkError
+  if (!serverNotice && signup.isError) {
+    const message =
+      signup.error instanceof CreateAccountError
+        ? signup.error.kind === 'email_already_exists'
           ? 'Este correo ya está en uso.'
-          : (signup.error.message ?? 'Ocurrió un error al guardar la cuenta. Intenta de nuevo.')
-    } else {
-      serverError = 'Ocurrió un error al guardar la cuenta. Intenta de nuevo.'
-    }
+          : (signup.error.message ?? GENERIC_SAVE_ERROR)
+        : GENERIC_SAVE_ERROR
+    serverNotice = { tone: 'error', message }
   }
 
   return {
@@ -163,10 +165,11 @@ export function useSignupForm() {
     errors,
     onSubmit,
     countryCode,
+    password,
     countries,
     states,
     isPending: isClerkPending || signup.isPending,
-    serverError,
+    serverNotice,
     step,
     code,
     setCode,

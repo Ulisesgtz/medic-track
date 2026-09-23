@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useClerk, useSignIn, useSignUp } from '@clerk/react'
+import { clerkNotice } from '../../shared/auth/clerkMessages'
 import { MessagePage } from '../../shared/ui/MessagePage'
 
 /**
@@ -11,14 +12,20 @@ import { MessagePage } from '../../shared/ui/MessagePage'
  * (specs/008-autenticacion-cuenta, research.md punto 1):
  *
  * - `signIn.status === 'complete'` → a returning tutor → `/home`.
- * - `signUp.isTransferable` → a brand-new Google identity → `/registro/completar`
- *   (Google gives no tutor/child data, so the account still isn't created).
+ * - `signIn.isTransferable` → no Clerk user matched this Google identity →
+ *   transfer it to a new `signUp` (`signUp.create({ transfer: true })`) and,
+ *   once that completes, finalize it and go to `/registro/completar` (Google
+ *   gives no tutor/child data, so the PediTrack account still isn't created).
  * - an `existingSession` on either → the browser already had a session before
  *   this flow started → activate it directly instead of finalizing.
+ *
+ * `signUp.isTransferable` is the opposite case (a sign-*up* attempt whose
+ * identifier already matches an existing user, transferable to a sign-*in*)
+ * and never applies here since this flow only ever starts from `signIn.sso()`.
  */
 export function SsoCallbackPage() {
-  const { signIn } = useSignIn()
-  const { signUp } = useSignUp()
+  const { signIn, fetchStatus: signInFetchStatus } = useSignIn()
+  const { signUp, fetchStatus: signUpFetchStatus } = useSignUp()
   const clerk = useClerk()
   const navigate = useNavigate()
   const [error, setError] = useState<string | null>(null)
@@ -26,6 +33,13 @@ export function SsoCallbackPage() {
 
   useEffect(() => {
     if (ran.current || !signIn || !signUp) return
+    // Right after Clerk redirects back here, `signIn`/`signUp` can still be their
+    // blank pre-fetch defaults (status 'needs_identifier'/'missing_requirements',
+    // isTransferable false) while the real OAuth result is still being fetched from
+    // Clerk's API — resolving from that snapshot always misses it. Wait for both
+    // fetches to settle; the effect re-runs on its own once they do (signIn/signUp
+    // are signal-based and change reference on every update).
+    if (signInFetchStatus === 'fetching' || signUpFetchStatus === 'fetching') return
     ran.current = true
 
     async function resolve() {
@@ -42,26 +56,46 @@ export function SsoCallbackPage() {
       if (signIn.status === 'complete') {
         const { error: finalizeError } = await signIn.finalize()
         if (finalizeError) {
-          setError(finalizeError.message ?? 'No se pudo iniciar sesión con Google. Intenta de nuevo.')
+          setError(clerkNotice(finalizeError, 'No se pudo iniciar sesión con Google. Intenta de nuevo.').message)
           return
         }
         navigate('/home', { replace: true })
         return
       }
-      if (signUp.isTransferable) {
+      if (signIn.isTransferable) {
+        const { error: transferError } = await signUp.create({ transfer: true })
+        if (transferError) {
+          setError(clerkNotice(transferError, 'No se pudo continuar el registro con Google. Intenta de nuevo.').message)
+          return
+        }
+        // Don't trust this render's `signUp` snapshot for the post-create status: the
+        // hook only hands us a new object on the next render, so `signUp.status` here
+        // would still read whatever it was *before* create() ran. finalize() talks to
+        // the live resource regardless, and reports its own error if it truly isn't done.
         const { error: finalizeError } = await signUp.finalize()
         if (finalizeError) {
-          setError(finalizeError.message ?? 'No se pudo continuar el registro con Google. Intenta de nuevo.')
+          console.error('[SsoCallbackPage] signUp.finalize() after transfer failed', {
+            finalizeError,
+            signUpStatus: signUp.status,
+            signUpMissingFields: signUp.missingFields,
+          })
+          setError(clerkNotice(finalizeError, 'No se pudo continuar el registro con Google. Intenta de nuevo.').message)
           return
         }
         navigate('/registro/completar', { replace: true })
         return
       }
+      console.error('[SsoCallbackPage] no branch matched', {
+        signIn: { status: signIn.status, isTransferable: signIn.isTransferable, existingSession: signIn.existingSession },
+        signUp: { status: signUp.status, isTransferable: signUp.isTransferable, existingSession: signUp.existingSession },
+        signInFetchStatus,
+        signUpFetchStatus,
+      })
       setError('No se pudo completar el inicio de sesión con Google. Intenta de nuevo.')
     }
 
     resolve()
-  }, [signIn, signUp, clerk, navigate])
+  }, [signIn, signUp, signInFetchStatus, signUpFetchStatus, clerk, navigate])
 
   if (error) {
     return <MessagePage title="No se pudo continuar" message={error} to="/signup" linkLabel="Volver al registro" />

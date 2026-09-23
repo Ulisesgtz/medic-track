@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useSignIn } from '@clerk/react'
+import { clerkNotice, type ClerkNotice } from '../../shared/auth/clerkMessages'
+import { Notice } from '../../shared/ui/Notice'
 
 function GoogleIcon() {
   return (
@@ -21,18 +23,23 @@ function GoogleIcon() {
  */
 export function GoogleSignupButton() {
   const { signIn } = useSignIn()
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<ClerkNotice | null>(null)
 
   async function handleClick() {
     if (!signIn) return
     setError(null)
+    // A previous click that didn't finish (the tutor cancelled on Google's consent
+    // screen, or just came back) leaves a stale, unverified oauth_google attempt on
+    // signIn — Clerk then treats a new sso() call as a no-op instead of redirecting
+    // again. Always start from a clean attempt.
+    await signIn.reset()
     const { error: ssoError } = await signIn.sso({
       strategy: 'oauth_google',
       redirectCallbackUrl: '/sso-callback',
       redirectUrl: '/home',
     })
     if (ssoError) {
-      setError(ssoError.message ?? 'No se pudo continuar con Google. Intenta de nuevo.')
+      setError(clerkNotice(ssoError, 'No se pudo continuar con Google. Intenta de nuevo.'))
     }
     // On success the browser is already navigating to Google — nothing else to do here.
   }
@@ -52,9 +59,9 @@ export function GoogleSignupButton() {
           Registrarme con Google
         </button>
         {error && (
-          <p role="alert" className="text-[13px] font-semibold text-red-700">
-            {error}
-          </p>
+          <Notice tone={error.tone} action={error.action}>
+            {error.message}
+          </Notice>
         )}
       </div>
     </>

@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
+import { useLogout } from '../auth/useLogout'
 import { MeApiError } from '../auth/api'
 import { ChildCard } from './ChildCard'
 import { AddChildDialogs } from './AddChildDialogs'
@@ -27,6 +28,7 @@ export function HomePage() {
   const [showAddChild, setShowAddChild] = useState(false)
   const addChildButton = useRef<HTMLButtonElement>(null)
   const { isDesktop } = useSidebarSession()
+  const logout = useLogout()
 
   const query = useCurrentAccount()
 
@@ -47,11 +49,18 @@ export function HomePage() {
             Ya iniciaste sesión, pero todavía no completas los datos de tu cuenta en PediTrack.
           </p>
           <Link
-            to="/signup"
+            to="/registro/completar"
             className="mt-7 block cursor-pointer rounded-2xl bg-confirmed px-6 py-4 text-base font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800"
           >
             Terminar registro
           </Link>
+          <button
+            type="button"
+            onClick={logout}
+            className="mt-4 cursor-pointer text-sm font-bold text-action hover:underline"
+          >
+            Cerrar sesión
+          </button>
         </div>
       </main>
     )
@@ -99,14 +108,23 @@ export function HomePage() {
                 {account && <p className="text-sm font-bold text-action">Hola, {account.firstName}</p>}
                 <h1 className="mt-1 text-4xl font-black tracking-tight text-ink">Tus hijos</h1>
               </div>
-              <button
-                ref={addChildButton}
-                type="button"
-                onClick={() => setShowAddChild(true)}
-                className="min-h-11 cursor-pointer rounded-2xl bg-confirmed px-6 py-3.5 text-[15px] font-extrabold text-white transition-colors hover:bg-emerald-800"
-              >
-                Agregar hijo
-              </button>
+              <div className="flex items-center gap-5">
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="cursor-pointer text-sm font-bold text-action hover:underline"
+                >
+                  Cerrar sesión
+                </button>
+                <button
+                  ref={addChildButton}
+                  type="button"
+                  onClick={() => setShowAddChild(true)}
+                  className="min-h-11 cursor-pointer rounded-2xl bg-confirmed px-6 py-3.5 text-[15px] font-extrabold text-white transition-colors hover:bg-emerald-800"
+                >
+                  Agregar hijo
+                </button>
+              </div>
             </div>
 
             {children.length === 0 ? (
@@ -138,13 +156,22 @@ export function HomePage() {
           title="Tus hijos"
           action={
             account && (
-              <span
-                aria-hidden="true"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-action text-sm font-extrabold text-white"
-              >
-                {account.firstName.charAt(0)}
-                {account.lastName.charAt(0)}
-              </span>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="cursor-pointer text-[13px] font-bold text-[#67e8f9] hover:underline"
+                >
+                  Cerrar sesión
+                </button>
+                <span
+                  aria-hidden="true"
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-action text-sm font-extrabold text-white"
+                >
+                  {account.firstName.charAt(0)}
+                  {account.lastName.charAt(0)}
+                </span>
+              </div>
             )
           }
         />

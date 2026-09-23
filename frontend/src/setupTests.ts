@@ -39,7 +39,9 @@ vi.mock('@clerk/react', () => ({
   useSignIn: () => ({
     signIn: {
       status: 'missing_requirements',
+      isTransferable: false,
       existingSession: undefined,
+      reset: vi.fn().mockResolvedValue({ error: null }),
       sso: vi.fn().mockResolvedValue({ error: null }),
       finalize: vi.fn().mockResolvedValue({ error: null }),
     },

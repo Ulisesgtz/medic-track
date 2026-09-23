@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { formatAgeShort } from '../../shared/age'
 import { Logo } from '../../shared/ui/Logo'
+import { useLogout } from '../auth/useLogout'
 import { fetchAccount } from './api'
 import { AddChildDialogs } from './AddChildDialogs'
 
@@ -22,6 +23,7 @@ interface ChildrenSidebarProps {
 export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarProps) {
   const [showAddChild, setShowAddChild] = useState(false)
   const addChildButton = useRef<HTMLButtonElement>(null)
+  const logout = useLogout()
   const query = useQuery({
     queryKey: ['account', accountId],
     queryFn: () => fetchAccount(accountId),
@@ -74,22 +76,31 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
       </nav>
 
       {account && (
-        <div className="mt-auto flex items-center gap-3 border-t border-ink-soft pt-5">
-          <span
-            aria-hidden="true"
-            className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-action text-sm font-extrabold text-white"
+        <div className="mt-auto flex flex-col gap-3 border-t border-ink-soft pt-5">
+          <div className="flex items-center gap-3">
+            <span
+              aria-hidden="true"
+              className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-action text-sm font-extrabold text-white"
+            >
+              {account.firstName.charAt(0)}
+              {account.lastName.charAt(0)}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate text-sm font-bold text-white">
+                {account.firstName} {account.lastName}
+              </span>
+              <span className="block text-xs text-[#67e8f9]">
+                {account.plan === 'free' ? 'Plan gratuito' : 'Plan completo'}
+              </span>
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={logout}
+            className="cursor-pointer self-start text-xs font-bold text-[#67e8f9] hover:underline"
           >
-            {account.firstName.charAt(0)}
-            {account.lastName.charAt(0)}
-          </span>
-          <span className="min-w-0">
-            <span className="block truncate text-sm font-bold text-white">
-              {account.firstName} {account.lastName}
-            </span>
-            <span className="block text-xs text-[#67e8f9]">
-              {account.plan === 'free' ? 'Plan gratuito' : 'Plan completo'}
-            </span>
-          </span>
+            Cerrar sesión
+          </button>
         </div>
       )}
 

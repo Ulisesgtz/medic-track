@@ -18,7 +18,14 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/signup" element={<AccountSignupPage />} />
-          <Route path="/registro/completar" element={<CompleteGoogleSignupPage />} />
+          <Route
+            path="/registro/completar"
+            element={
+              <RequireSession>
+                <CompleteGoogleSignupPage />
+              </RequireSession>
+            }
+          />
           <Route path="/sso-callback" element={<SsoCallbackPage />} />
           {/* The real login screen lands in Historia 2 (specs/008) — this placeholder keeps the route
               wired (and testable) from the moment RequireSession starts redirecting to it. */}

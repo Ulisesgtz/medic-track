@@ -5,6 +5,7 @@ import { useAuth } from '@clerk/react'
 import { useCountries, useStates } from '../../shared/catalog/useCatalog'
 import { FormField as Field } from '../../shared/ui/FormField'
 import { Logo } from '../../shared/ui/Logo'
+import { Notice } from '../../shared/ui/Notice'
 import { CreateAccountError, type CreateAccountPayload } from './api'
 import { useAccountSignup } from './useAccountSignup'
 import { emptyChild, type AccountSignupFormValues } from './types'
@@ -220,11 +221,7 @@ export function CompleteGoogleSignupPage() {
             </div>
           </fieldset>
 
-          {serverError && (
-            <p role="alert" className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-800">
-              {serverError}
-            </p>
-          )}
+          {serverError && <Notice tone="error">{serverError}</Notice>}
 
           <button
             type="submit"

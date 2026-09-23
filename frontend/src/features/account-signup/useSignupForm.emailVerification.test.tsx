@@ -42,7 +42,7 @@ async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('Tu nombre'), 'Ana')
   await user.type(screen.getByLabelText('Tu apellido'), 'Gómez')
   await user.type(screen.getByLabelText('Correo'), 'ana@example.com')
-  await user.type(screen.getByLabelText('Contraseña'), 'secreto123')
+  await user.type(screen.getByLabelText('Contraseña'), 'Secreto123!')
   await user.type(byId('children.0.firstName'), 'Luis')
   await user.type(byId('children.0.lastName'), 'Gómez')
   await user.type(byId('children.0.birthDate'), '2020-01-15')
@@ -84,7 +84,7 @@ describe('useSignupForm — email verification step', () => {
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
     expect(await screen.findByLabelText('Código de verificación')).toBeInTheDocument()
-    expect(signUp.password).toHaveBeenCalledWith({ emailAddress: 'ana@example.com', password: 'secreto123' })
+    expect(signUp.password).toHaveBeenCalledWith({ emailAddress: 'ana@example.com', password: 'Secreto123!' })
     expect(signUp.verifications.sendEmailCode).toHaveBeenCalledOnce()
     expect(signUp.finalize).not.toHaveBeenCalled()
   })
@@ -136,15 +136,46 @@ describe('useSignupForm — email verification step', () => {
     expect(screen.getByLabelText('Código de verificación')).toBeInTheDocument()
   })
 
-  it('shows an error and does not send the code when signUp.password() fails', async () => {
+  it('shows a Spanish error and does not send the code when signUp.password() fails', async () => {
     const user = userEvent.setup()
-    mockSignUp({ password: vi.fn().mockResolvedValue({ error: { message: 'correo ya usado' } }) })
+    mockSignUp({
+      password: vi.fn().mockResolvedValue({ error: { code: 'form_identifier_exists', message: 'That email address is taken.' } }),
+    })
     renderForm()
 
     await fillRequired(user)
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('correo ya usado')
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Ya existe una cuenta con este correo')
+    expect(alert).not.toHaveTextContent('That email address is taken')
     expect(screen.queryByLabelText('Código de verificación')).not.toBeInTheDocument()
+  })
+
+  it('tells the tutor, as an info message with a way out, when a session is already open', async () => {
+    const user = userEvent.setup()
+    mockSignUp({
+      password: vi.fn().mockResolvedValue({ error: { code: 'session_exists', message: "You're already signed in." } }),
+    })
+    renderForm()
+
+    await fillRequired(user)
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+
+    const notice = await screen.findByRole('status')
+    expect(notice).toHaveTextContent('Ya tienes una sesión iniciada')
+    expect(screen.getByRole('link', { name: 'Ir a mi inicio' })).toHaveAttribute('href', '/home')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('falls back to a generic Spanish message for a Clerk error it does not know', async () => {
+    const user = userEvent.setup()
+    mockSignUp({ password: vi.fn().mockResolvedValue({ error: { code: 'something_new', message: 'Something odd happened.' } }) })
+    renderForm()
+
+    await fillRequired(user)
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo crear tu cuenta. Intenta de nuevo.')
   })
 })
