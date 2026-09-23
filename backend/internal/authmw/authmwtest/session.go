@@ -81,14 +81,41 @@ func (v *Verifier) Token(t *testing.T, clerkUserID string) string {
 // needs a different one.
 func MockUserProfile(t *testing.T, clerkUserID, email string) {
 	t.Helper()
+	MockUserProfileWithVerification(t, clerkUserID, email, "verified")
+}
+
+// MockUserProfileWithVerification is MockUserProfile with a chosen status for
+// the primary email's verification ("verified", "unverified", ...).
+func MockUserProfileWithVerification(t *testing.T, clerkUserID, email, verificationStatus string) {
+	t.Helper()
 
 	body := fmt.Sprintf(
-		`{"id":%q,"email_addresses":[{"id":"idn_test","email_address":%q}],"primary_email_address_id":"idn_test"}`,
-		clerkUserID, email,
+		`{"id":%q,"email_addresses":[{"id":"idn_test","email_address":%q,"verification":{"status":%q}}],"primary_email_address_id":"idn_test"}`,
+		clerkUserID, email, verificationStatus,
 	)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(body))
+	}))
+	t.Cleanup(server.Close)
+
+	clerk.SetKey("test-secret-key")
+	clerk.SetBackend(clerk.NewBackend(&clerk.BackendConfig{
+		HTTPClient: server.Client(),
+		URL:        &server.URL,
+	}))
+}
+
+// MockClerkDown points Clerk's Backend at a server that answers every call
+// with a 500, to prove a code path never depends on reaching Clerk. Same
+// global-state caveats as MockUserProfile.
+func MockClerkDown(t *testing.T) {
+	t.Helper()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"errors":[{"code":"internal_error","message":"boom"}]}`))
 	}))
 	t.Cleanup(server.Close)
 

@@ -1,12 +1,12 @@
 # Frontend Map — React PWA
 
-Vite + React 18 + TypeScript. Forms: React Hook Form. Server state: TanStack Query. Styling: Tailwind CSS v4. Tests: Vitest + Testing Library (unit), Playwright (E2E).
+Vite + React 19 + TypeScript. Auth: Clerk (`@clerk/react`). Forms: React Hook Form. Server state: TanStack Query. Styling: Tailwind CSS v4. Tests: Vitest + Testing Library (unit), Playwright (E2E).
 
 ## Layout
 
 | Path | What's there |
 |---|---|
-| `src/App.tsx` | Router + QueryClientProvider — `/signup` → `AccountSignupPage`, `/home` → `HomePage`, `/children/:childId` → `ChildDetailPage`, `/children/:childId/consultations/new` → `NewConsultationPage`, `/consultations/:consultationId` → `ConsultationDetailPage`, `/planes` → placeholder (`MessagePage`) |
+| `src/App.tsx` | Router + QueryClientProvider (+ `useClearCacheOnUserChange`) — public: `/signup` → `AccountSignupPage`, `/login` → `LoginPage`, `/recuperar-contrasena` → `ForgotPasswordPage`, `/sso-callback` → `SsoCallbackPage`; behind `RequireSession`: `/registro/completar` → `CompleteGoogleSignupPage`, `/home` → `HomePage`, `/children/:childId` → `ChildDetailPage`, `/children/:childId/consultations/new` → `NewConsultationPage`, `/consultations/:consultationId` → `ConsultationDetailPage`, `/planes` → placeholder (`MessagePage`) |
 | `src/features/account-signup/` | The account + first child signup feature, and the plan-limit pop-up (see below) |
 | `src/features/home/` | The home page: children listing, "Agregar hijo" dialogs, the desktop sidebar, the `account_id`-in-`localStorage` session (see below) |
 | `src/features/consultations/` | Child detail page, "Nueva consulta" page (with client-side OCR), consultation detail, dose marking (see below) |
@@ -70,7 +70,7 @@ Tokens de color y tipografía viven en el bloque `@theme` de `src/index.css`; la
 |---|---|
 | `AccountSignupForm.tsx` | Picks the design with `useIsDesktop`: `SignupPhone` (mock 01: dark header + form) or `SignupWeb` (mock 11: split screen with the checklist), both fed by `useSignupForm` |
 | `useSignupForm.ts` | The form state, validation, catalog, submit and post-signup flow shared by both designs. `serverNotice` (`{ message, tone, action? }`, drawn with `Notice`) is the only feedback path for Clerk/server-side rules with no client-side equivalent — don't remove it. Clerk errors go through `clerkNotice()` so the tutor never sees Clerk's English messages |
-| `SignupWeb.tsx` | Mock 11 in the mock's order: Correo, Contraseña (validated, **never sent or stored** — auth will be Clerk/AWS Cognito), Tu nombre/apellido, País/Estado, the "Hijo 1 · Gratis" block, "Crear cuenta", and the Google button |
+| `SignupWeb.tsx` | Mock 11 in the mock's order: Correo, Contraseña (`PasswordField`: live rules + eye button; sent **only to Clerk** via `signUp.password()`, never to PediTrack's backend), Tu nombre/apellido, País/Estado, the "Hijo 1 · Gratis" block, "Crear cuenta", and the Google button |
 | `SignupPhone.tsx` | Mock 01, same order and same password/Google decisions as the web one, in a centered column of at most 430px |
 | `PasswordField.tsx` | The "Contraseña" field of both designs plus the live checklist of the password rules (`PASSWORD_RULES` in `validation.ts`: min. 8, lowercase, uppercase, number, special — the same policy configured in Clerk's dashboard), shown from the moment the field is focused or has text |
 | `GoogleSignupButton.tsx` | The "o" separator and "Registrarme con Google" shared by both signups |
@@ -80,7 +80,7 @@ Tokens de color y tipografía viven en el bloque `@theme` de `src/index.css`; la
 | `api.ts` | `createAccount()`, `CreateAccountError extends ApiError<...>` (`validation_error` \| `email_already_exists` \| `freemium_child_limit_exceeded` \| `unknown`) |
 | `useAccountSignup.ts` | `useMutation` wrapper around `createAccount` |
 
-- On success it saves the new account id via `useAccountSession` (from `features/home/`) and navigates to `/home`.
+- On success `useAccountSignup` seeds the `['accounts','me']` cache with the new account and the form navigates to `/home`. If Clerk finished but `POST /accounts` failed, submitting again only repeats the POST (`sessionReady`); `HomePage`'s "Terminar registro" (→ `/registro/completar`) is the fallback after a reload.
 - Changing the país `<select>` clears `stateCode` via `register('countryCode', { onChange })` — don't drop it, or a stale estado from a previous país can be submitted silently.
 - Name validation (`NAME_PATTERN`/`NAME_MAX_LENGTH`) must stay in sync with `backend/internal/account/service.go`'s `namePattern`.
 
@@ -89,8 +89,9 @@ Tokens de color y tipografía viven en el bloque `@theme` de `src/index.css`; la
 | File | Role |
 |---|---|
 | `useCurrentAccount.ts`, `RequireSession.tsx`, `useLogout.ts` | The one source of "which account is mine" (`GET /accounts/me`, key `['accounts', 'me']`), the route guard (signed out → `/login`) and logout (Clerk `signOut` + `queryClient.clear()`) |
-| `LoginPage.tsx`, `useLoginForm.ts` | `/login`: correo + contraseña (eye button) or Google, link to recovery and to signup, already-signed-in → `/home`. Wrong password and unknown correo show the **same** message (FR-009). New-device confirmation (`needs_client_trust`/`needs_second_factor`) asks for the emailed code. The hook **reacts to `signIn.status` on each render** (`attempt` counter), it never reads the status right after an `await` (the snapshot can be stale) |
+| `LoginPage.tsx`, `useLoginForm.ts` | `/login`: correo + contraseña (eye button) or Google, link to recovery and to signup, already-signed-in → `/home`. Wrong password and unknown correo show the **same** message (FR-009). New-device confirmation (`needs_client_trust`/`needs_second_factor`) asks for the emailed code. The hook **reacts to `signIn.status` on each render** (`attempt` counter), it never reads the status right after an `await` (the snapshot can be stale) — `useSignupForm` follows the same rule |
 | `ForgotPasswordPage.tsx`, `useForgotPassword.ts` | `/recuperar-contrasena`: correo → code + new password (same rules as signup) → signed in. A correo with no account goes to the code step like any other (no account enumeration) |
+| `useClearCacheOnUserChange.ts` | Mounted once in `App`: clears the whole query cache when the Clerk user id changes (session expired, signed out in another tab, another tutor logging in) — our own logout already clears it, but the cache keys carry no user id |
 | `AuthLayout.tsx` | Frame of the sign-in screens: the signup's phone header or web split screen, chosen with `useIsDesktop` |
 | `SsoCallbackPage.tsx`, `api.ts` | Google return page (waits for `fetchStatus`, `signIn.isTransferable` → `signUp.create({ transfer })`) and `fetchMe` |
 
@@ -100,13 +101,12 @@ Clerk API errors carry the useful code in `error.errors[0].code` (the top-level 
 
 | File | Role |
 |---|---|
-| `HomePage.tsx` | 3 states: no account saved / cuenta sin hijos / listado. Phone: dark header with "Hola, Ana" + tutor initials, one card per child, dashed "+ Agregar hijo", plan note (board screen 2). Web: "Hola, Ana / Tus hijos", solid "Agregar hijo", grid + dashed plan tile (mock 15). Clears the saved `account_id` on a 404 |
+| `HomePage.tsx` | 4 states: `/accounts/me` 404 ("Falta terminar tu registro" → `/registro/completar`) / any other load error ("No pudimos cargar tu cuenta" + Reintentar) / cuenta sin hijos / listado. Phone: dark header with "Hola, Ana" + tutor initials, one card per child, dashed "+ Agregar hijo", plan note (board screen 2). Web: "Hola, Ana / Tus hijos", solid "Agregar hijo", grid + dashed plan tile (mock 15). |
 | `ChildCard.tsx` | Initial, name, `formatAgeLong`; links to the child detail. Phone variant adds two chips read from the same queries as the child detail (`['consultations', id]`, `['overview', id, day]`): "N consultas" and amber "N tomas hoy" / mint "Sin tomas pendientes"; avatar colour alternates cyan/mint. Web variant is plain |
 | `AppShell.tsx`, `ChildrenSidebar.tsx` | Session shell and the web sidebar (see "Sistema visual") |
 | `AddChildDialogs.tsx`, `plan.ts` | What "Agregar hijo" opens: the plan-limit pop-up when `atFreePlanLimit(account)`, otherwise `AddChildModal`. Shared by the home and the sidebar. Takes the opener button (`opener` ref) and gives it the focus back on close — Safari doesn't focus a button when it is clicked, so `document.activeElement` can't be trusted; its close callback is stable (the dialogs re-run their focus setup if `onClose` changes identity) |
 | `AddChildModal.tsx` | Board screen 7: title/subtitle + "×", Nombre, Apellido, Fecha de nacimiento, Talla/Peso (optional), "Cancelar" + "Guardar". Falls back to `FreemiumLimitModal` if the server still answers 422 |
 | `useSidebarSession.ts` | `{ accountId, hasSidebar, isDesktop }` — the single place that decides whether the sidebar is on screen (`isDesktop` && `useIsWide` (1024px) && there is an account) |
-| `useAccountSession.ts` | `getAccountId`/`setAccountId`/`clearAccountId` over `localStorage`, each in `try/catch` — the only "session" this app has (no real login yet; next feature, see BACKLOG) |
 | `api.ts`, `types.ts` | `fetchAccount()`, `addChild()`, `AccountApiError`; `Account`/`Child` shapes |
 
 ## `src/features/consultations/` — child detail, consultations, doses

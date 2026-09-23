@@ -66,6 +66,36 @@ export function HomePage() {
     )
   }
 
+  if (query.isError) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-ink px-5 py-10">
+        <div className="w-full max-w-md rounded-3xl bg-surface p-8 text-center shadow-xl">
+          <div className="flex justify-center">
+            <Logo size={56} variant="light" />
+          </div>
+          <h1 className="mt-6 text-3xl font-black tracking-tight text-ink">No pudimos cargar tu cuenta</h1>
+          <p className="mt-3 text-base leading-relaxed text-slate-600">
+            Puede ser un problema de conexión o que tu sesión haya caducado. Tus datos siguen guardados.
+          </p>
+          <button
+            type="button"
+            onClick={() => void query.refetch()}
+            className="mt-7 block min-h-11 w-full cursor-pointer rounded-2xl bg-confirmed px-6 py-4 text-base font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800"
+          >
+            Reintentar
+          </button>
+          <button
+            type="button"
+            onClick={logout}
+            className="mt-4 cursor-pointer text-sm font-bold text-action hover:underline"
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </main>
+    )
+  }
+
   const accountId = query.data?.id ?? null
 
   if (query.isPending) {

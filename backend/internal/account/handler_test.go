@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -602,4 +603,91 @@ func TestRouter_NoChildMutationRoutes(t *testing.T) {
 				"expected 404 or 405 for an unregistered child mutation route, got %d", rec.Code)
 		})
 	}
+}
+
+// A pre-authentication account (no Clerk user) whose email matches the
+// session's verified email is the tutor's own: POST /accounts links it (200)
+// instead of failing with "email already in use" (Historia 5).
+func TestHandler_CreateAccount_LinksALegacyAccountWithTheSameVerifiedEmail(t *testing.T) {
+	router, pool, verifier := newTestRouterWithPool(t)
+	email := uniqueEmail("Handler.Legacy")
+	legacy := newLegacyAccount(email)
+	require.NoError(t, account.NewRepository(pool).Create(context.Background(), legacy))
+	token := newAuthedRequestSetup(t, verifier, strings.ToLower(email))
+
+	rec := doPost(t, router, token, map[string]any{"firstName": "Ana", "lastName": "Gómez"})
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &resp))
+	require.Equal(t, legacy.ID.String(), resp["id"])
+}
+
+func TestHandler_GetMe_LinksALegacyAccountOnFirstAccess(t *testing.T) {
+	router, pool, verifier := newTestRouterWithPool(t)
+	email := uniqueEmail("handler.getme.legacy")
+	legacy := newLegacyAccount(email)
+	require.NoError(t, account.NewRepository(pool).Create(context.Background(), legacy))
+	token := newAuthedRequestSetup(t, verifier, email)
+
+	first := doGetAuthed(t, router, "/accounts/me", token)
+	second := doGetAuthed(t, router, "/accounts/me", token)
+
+	require.Equal(t, http.StatusOK, first.Code)
+	require.Equal(t, http.StatusOK, second.Code)
+	var resp map[string]any
+	require.NoError(t, json.Unmarshal(first.Body.Bytes(), &resp))
+	require.Equal(t, legacy.ID.String(), resp["id"])
+}
+
+// An email Clerk has not verified proves nothing about who controls it, so it
+// must neither link a legacy account nor create one.
+func TestHandler_UnverifiedEmailNeverLinksNorCreates(t *testing.T) {
+	router, pool, verifier := newTestRouterWithPool(t)
+	email := uniqueEmail("handler.unverified")
+	legacy := newLegacyAccount(email)
+	require.NoError(t, account.NewRepository(pool).Create(context.Background(), legacy))
+	clerkUserID := "user_" + uuid.NewString()
+	authmwtest.MockUserProfileWithVerification(t, clerkUserID, email, "unverified")
+	token := verifier.Token(t, clerkUserID)
+
+	me := doGetAuthed(t, router, "/accounts/me", token)
+	created := doPost(t, router, token, map[string]any{"firstName": "Ana", "lastName": "Gómez"})
+
+	require.Equal(t, http.StatusNotFound, me.Code, "GetMe reports 'no account yet', it does not link")
+	require.Equal(t, http.StatusForbidden, created.Code)
+}
+
+// A retried POST /accounts for a session that already has its account is
+// answered without asking Clerk anything: it works while Clerk is down.
+func TestHandler_CreateAccount_IdempotentRetryDoesNotNeedClerk(t *testing.T) {
+	router, verifier := newTestRouter(t)
+	token := newAuthedRequestSetup(t, verifier, uniqueEmail("handler.noclerk"))
+	body := map[string]any{"firstName": "Ana", "lastName": "Gómez"}
+	require.Equal(t, http.StatusCreated, doPost(t, router, token, body).Code)
+
+	authmwtest.MockClerkDown(t)
+	retry := doPost(t, router, token, body)
+
+	require.Equal(t, http.StatusOK, retry.Code)
+}
+
+func TestHandler_CreateAccount_ClerkDownForANewSessionIs500(t *testing.T) {
+	router, verifier := newTestRouter(t)
+	token := verifier.Token(t, "user_"+uuid.NewString())
+	authmwtest.MockClerkDown(t)
+
+	rec := doPost(t, router, token, map[string]any{"firstName": "Ana", "lastName": "Gómez"})
+
+	require.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestHandler_GetMe_ClerkDownForASessionWithoutAnAccountIs500(t *testing.T) {
+	router, verifier := newTestRouter(t)
+	token := verifier.Token(t, "user_"+uuid.NewString())
+	authmwtest.MockClerkDown(t)
+
+	rec := doGetAuthed(t, router, "/accounts/me", token)
+
+	require.Equal(t, http.StatusInternalServerError, rec.Code)
 }

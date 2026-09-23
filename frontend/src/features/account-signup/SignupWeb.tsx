@@ -44,10 +44,10 @@ const CHECKLIST = [
  * - The account also asks for the tutor's first/last name and (optionally)
  *   país/estado, and the child block has separate Nombre/Apellido plus
  *   optional talla/peso: the account model stores them.
- * - "Contraseña" is only validated (min. 8), never sent or stored: the
- *   authentication (Clerk or AWS Cognito) is a later feature (BACKLOG.md).
+ * - "Contraseña" (`PasswordField`: live rules, eye button) goes to Clerk only
+ *   (`signUp.password()`); PediTrack's own backend never receives it.
  * - "Registrarme con Google" (`GoogleSignupButton`) is not in the mock: the
- *   user asked for it; for now it only says it's coming soon.
+ *   user asked for it, and it starts the real Clerk OAuth flow.
  */
 export function SignupWeb({ form }: { form: SignupForm }) {
   const { register, setValue, errors, onSubmit, countryCode, countries, states, isPending, serverNotice, step, password } = form

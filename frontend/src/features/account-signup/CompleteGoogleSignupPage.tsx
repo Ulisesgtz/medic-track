@@ -50,7 +50,7 @@ export function CompleteGoogleSignupPage() {
     control,
     handleSubmit,
     setValue,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: { firstName: '', lastName: '', countryCode: '', stateCode: '', children: [emptyChild] },
   })
@@ -71,7 +71,12 @@ export function CompleteGoogleSignupPage() {
 
   const onSubmit = handleSubmit(async (values) => {
     const token = await getToken()
-    signup.mutate({ payload: toPayload(values), token })
+    try {
+      // Awaited, so `isSubmitting` covers the token fetch *and* the POST: a fast double click can't send twice.
+      await signup.mutateAsync({ payload: toPayload(values), token })
+    } catch {
+      // Shown through `signup.isError` below.
+    }
   })
 
   let serverError: string | null = null
@@ -225,10 +230,10 @@ export function CompleteGoogleSignupPage() {
 
           <button
             type="submit"
-            disabled={signup.isPending}
+            disabled={signup.isPending || isSubmitting}
             className="min-h-11 cursor-pointer rounded-2xl bg-confirmed py-4 text-base font-extrabold text-white transition-colors hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {signup.isPending ? 'Creando cuenta…' : 'Terminar mi registro'}
+            {signup.isPending || isSubmitting ? 'Creando cuenta…' : 'Terminar mi registro'}
           </button>
         </form>
       </div>

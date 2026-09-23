@@ -74,23 +74,12 @@ export function SsoCallbackPage() {
         // the live resource regardless, and reports its own error if it truly isn't done.
         const { error: finalizeError } = await signUp.finalize()
         if (finalizeError) {
-          console.error('[SsoCallbackPage] signUp.finalize() after transfer failed', {
-            finalizeError,
-            signUpStatus: signUp.status,
-            signUpMissingFields: signUp.missingFields,
-          })
           setError(clerkNotice(finalizeError, 'No se pudo continuar el registro con Google. Intenta de nuevo.').message)
           return
         }
         navigate('/registro/completar', { replace: true })
         return
       }
-      console.error('[SsoCallbackPage] no branch matched', {
-        signIn: { status: signIn.status, isTransferable: signIn.isTransferable, existingSession: signIn.existingSession },
-        signUp: { status: signUp.status, isTransferable: signUp.isTransferable, existingSession: signUp.existingSession },
-        signInFetchStatus,
-        signUpFetchStatus,
-      })
       setError('No se pudo completar el inicio de sesión con Google. Intenta de nuevo.')
     }
 

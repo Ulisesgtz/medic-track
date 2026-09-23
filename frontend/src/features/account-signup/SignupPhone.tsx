@@ -34,9 +34,9 @@ const childField =
  * Deviations from the mock, by decision: the account also asks for the tutor's
  * first/last name and (optionally) país/estado, and the child block has
  * separate Nombre/Apellido plus optional talla/peso (the account model stores
- * them); "Contraseña" is only validated (min. 8), never sent or stored — the
- * authentication (Clerk or AWS Cognito) is a later feature (BACKLOG.md); and
- * "Registrarme con Google" is not in the mock (requested; says "pronto").
+ * them); "Contraseña" goes to Clerk only (`signUp.password()`), PediTrack's own
+ * backend never receives it; and "Registrarme con Google" is not in the mock
+ * (requested; it starts the real Clerk OAuth flow).
  */
 export function SignupPhone({ form }: { form: SignupForm }) {
   const { register, setValue, errors, onSubmit, countryCode, countries, states, isPending, serverNotice, step, password } = form

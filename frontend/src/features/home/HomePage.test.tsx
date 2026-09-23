@@ -78,6 +78,27 @@ describe('HomePage', () => {
     expect(signOut).toHaveBeenCalledOnce()
   })
 
+  it.each([
+    ['a server error', 500],
+    ['an expired session', 401],
+  ])('shows an error screen with Reintentar for %s, never an empty home or a way to add a child', async (_name, status) => {
+    const user = userEvent.setup()
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status, json: async () => ({ error: 'x', message: 'boom' }) })
+    vi.stubGlobal('fetch', fetchMock)
+    renderHome()
+
+    expect(await screen.findByText('No pudimos cargar tu cuenta')).toBeInTheDocument()
+    expect(screen.queryByText(/todavía no tienes hijos/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Agregar hijo/ })).not.toBeInTheDocument()
+
+    const callsBefore = fetchMock.mock.calls.length
+    await user.click(screen.getByRole('button', { name: 'Reintentar' }))
+    await vi.waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(callsBefore))
+
+    await user.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
+    expect(signOut).toHaveBeenCalledOnce()
+  })
+
   it('shows an empty state when the account has no children yet (FR-006)', async () => {
     window.localStorage.setItem('peditrack.accountId', 'account-empty')
     vi.stubGlobal(

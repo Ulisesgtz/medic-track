@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -354,4 +355,52 @@ func TestService_AddChild_FieldValidation(t *testing.T) {
 	var validationErrs account.ValidationErrors
 	require.ErrorAs(t, err, &validationErrs)
 	require.Equal(t, "firstName", validationErrs[0].Field)
+}
+
+// Twin POST /accounts for a brand-new session: whichever loses the insert race
+// must answer with the account the winner created, never fail.
+func TestService_CreateAccount_ConcurrentTwinRequestsForOneSessionAllSucceed(t *testing.T) {
+	pool := testPool(t)
+	svc := account.NewService(account.NewRepository(pool))
+	clerkID := uniqueClerkUserID("race")
+	const twins = 12
+
+	var wg sync.WaitGroup
+	results := make([]error, twins)
+	ids := make([]uuid.UUID, twins)
+	for i := 0; i < twins; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			acc, err := svc.CreateAccount(context.Background(), account.CreateAccountInput{
+				FirstName: "Ana", LastName: "Gómez", Email: uniqueEmail(fmt.Sprintf("service.race%d", i)), ClerkUserID: clerkID,
+			})
+			results[i] = err
+			if acc != nil {
+				ids[i] = acc.ID
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	for i, err := range results {
+		if err != nil {
+			require.ErrorIs(t, err, account.ErrAccountAlreadyLinked, "twin %d", i)
+		}
+		require.Equal(t, ids[0], ids[i], "every twin gets the same account")
+	}
+}
+
+func TestService_LinkLegacyAccount(t *testing.T) {
+	pool := testPool(t)
+	svc := account.NewService(account.NewRepository(pool))
+	email := uniqueEmail("service.legacy")
+	require.NoError(t, account.NewRepository(pool).Create(context.Background(), newLegacyAccount(email)))
+
+	linked, err := svc.LinkLegacyAccount(context.Background(), uniqueClerkUserID("svc"), email)
+	require.NoError(t, err)
+	require.Equal(t, email, linked.Email)
+
+	_, err = svc.LinkLegacyAccount(context.Background(), uniqueClerkUserID("svc2"), uniqueEmail("service.nobody"))
+	require.ErrorIs(t, err, account.ErrAccountNotFound)
 }

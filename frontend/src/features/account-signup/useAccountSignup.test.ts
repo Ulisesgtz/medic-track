@@ -86,3 +86,24 @@ describe('useAccountSignup', () => {
     expect(result.current.data).toEqual(created)
   })
 })
+
+describe('useAccountSignup — account cache', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it("seeds the ['accounts','me'] cache with the created account, so /home never shows a cached 404", async () => {
+    const account = { id: 'a1', firstName: 'Ana', lastName: 'Gómez', email: 'ana@example.com', countryCode: null, stateCode: null, plan: 'free', children: [] }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => account }))
+    const queryClient = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) => QueryClientProvider({ client: queryClient, children })
+    const { result } = renderHook(() => useAccountSignup(), { wrapper })
+
+    act(() => {
+      result.current.mutate({ payload: { firstName: 'Ana', lastName: 'Gómez', children: [] }, token: 'tok' })
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(queryClient.getQueryData(['accounts', 'me'])).toEqual(account)
+  })
+})

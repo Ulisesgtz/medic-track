@@ -31,6 +31,8 @@ export function useForgotPassword() {
   const [isPending, setIsPending] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const [flow, setFlow] = useState(0)
+  // The code is single-use: once verified, a retry after a rejected password goes straight to submitPassword.
+  const [codeVerified, setCodeVerified] = useState(false)
   const finalizedFlow = useRef(0)
 
   const status = signIn?.status
@@ -81,11 +83,14 @@ export function useForgotPassword() {
     setIsPending(true)
     setFlow((n) => n + 1)
 
-    const verified = await signIn.resetPasswordEmailCode.verifyCode({ code })
-    if (verified.error) {
-      setNotice(clerkNotice(verified.error, INVALID_CODE_ERROR))
-      setIsPending(false)
-      return
+    if (!codeVerified) {
+      const verified = await signIn.resetPasswordEmailCode.verifyCode({ code })
+      if (verified.error) {
+        setNotice(clerkNotice(verified.error, INVALID_CODE_ERROR))
+        setIsPending(false)
+        return
+      }
+      setCodeVerified(true)
     }
     const submitted = await signIn.resetPasswordEmailCode.submitPassword({ password: newPassword })
     if (submitted.error) {

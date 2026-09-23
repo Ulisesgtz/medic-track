@@ -78,6 +78,28 @@ describe('CompleteGoogleSignupPage', () => {
     })
   })
 
+  it('sends a single POST /accounts even on a fast double click (isSubmitting covers the token fetch and the POST)', async () => {
+    const user = userEvent.setup()
+    let release: (r: Response) => void = () => {}
+    vi.mocked(fetch).mockImplementation((_input, init) =>
+      init?.method === 'POST'
+        ? new Promise<Response>((resolve) => {
+            release = resolve
+          })
+        : Promise.resolve({ ok: true, json: async () => [] } as Response),
+    )
+    renderPage()
+    await fillRequired(user)
+
+    const button = screen.getByRole('button', { name: 'Terminar mi registro' })
+    await user.dblClick(button)
+    expect(await screen.findByRole('button', { name: 'Creando cuenta…' })).toBeDisabled()
+    release({ ok: true, json: async () => ({ id: 'a1', firstName: 'Ana', lastName: 'Gómez', email: 'ana@gmail.com', countryCode: null, stateCode: null, plan: 'free', children: [] }) } as Response)
+
+    expect(await screen.findByText('HOME PAGE')).toBeInTheDocument()
+    expect(postCalls()).toHaveLength(1)
+  })
+
   it('shows a validation error and does not submit when required fields are empty', async () => {
     const user = userEvent.setup()
     renderPage()

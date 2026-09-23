@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { useAuth, useSignUp } from '@clerk/react'
@@ -46,7 +46,10 @@ const GENERIC_SAVE_ERROR = 'Ocurrió un error al guardar la cuenta. Intenta de n
  * the code Clerk emailed, submitted via `onSubmitCode`; once the sign-up is
  * `'complete'` (with or without that extra step), `signUp.finalize()`
  * activates the session and only then does `POST /accounts` run, with that
- * session's token.
+ * session's token. The status is *reacted to* on each render (the `attempt`
+ * counter), never read right after an `await` — the hook hands out a new
+ * snapshot on the next render. If `POST /accounts` fails after Clerk
+ * finished, submitting again only repeats the POST (`sessionReady`).
  */
 export function useSignupForm() {
   const {
@@ -82,46 +85,81 @@ export function useSignupForm() {
   const [code, setCode] = useState('')
   const [isClerkPending, setIsClerkPending] = useState(false)
   const [clerkError, setClerkError] = useState<ClerkNotice | null>(null)
+  // Clerk is done (session active) but POST /accounts may still have to be retried: a retry must
+  // skip Clerk, whose sign-up can't be run twice.
+  const [sessionReady, setSessionReady] = useState(false)
+  // Bumped every time a Clerk step succeeded, so the effect below re-reads `signUp.status`; 0 = idle.
+  const [attempt, setAttempt] = useState(0)
+  // Each submit starts a new flow; the refs remember which flow already sent its code / finalized.
+  const [flow, setFlow] = useState(0)
+  const codeRequestedFlow = useRef(0)
+  const finalizedFlow = useRef(0)
 
-  async function finishAccountCreation(values: AccountSignupFormValues) {
-    if (!signUp) return
-    const { error } = await signUp.finalize()
-    if (error) {
+  const status = signUp?.status
+  const { mutate: createAccountMutate } = signup
+
+  useEffect(() => {
+    if (!signUp || attempt === 0 || !pendingValues) return
+    const values = pendingValues
+
+    function fail(error: Parameters<typeof clerkNotice>[0]) {
       setClerkError(clerkNotice(error, GENERIC_CLERK_ERROR))
       setIsClerkPending(false)
-      return
+      setAttempt(0)
     }
-    const token = await getToken()
-    signup.mutate({ payload: toPayload(values), token })
-    setIsClerkPending(false)
-  }
+
+    async function react() {
+      if (!signUp) return
+      if (status === 'complete') {
+        if (finalizedFlow.current === flow) return
+        finalizedFlow.current = flow
+        const { error } = await signUp.finalize()
+        if (error) {
+          finalizedFlow.current = 0
+          fail(error)
+          return
+        }
+        setSessionReady(true)
+        createAccountMutate({ payload: toPayload(values), token: await getToken() })
+        setIsClerkPending(false)
+        return
+      }
+      // Not complete yet: Clerk wants the email verified first.
+      if (codeRequestedFlow.current === flow) return
+      codeRequestedFlow.current = flow
+      const sent = await signUp.verifications.sendEmailCode()
+      if (sent.error) {
+        codeRequestedFlow.current = 0
+        fail(sent.error)
+        return
+      }
+      setStep('verify-email')
+      setIsClerkPending(false)
+    }
+    void react()
+  }, [signUp, status, attempt, flow, pendingValues, createAccountMutate, getToken])
 
   const onSubmit = handleSubmit(async (values) => {
     if (!signUp) return
     setClerkError(null)
     setIsClerkPending(true)
 
+    if (sessionReady) {
+      // A previous submit already got Clerk's session; only PediTrack's own POST failed.
+      createAccountMutate({ payload: toPayload(values), token: await getToken() })
+      setIsClerkPending(false)
+      return
+    }
+
+    setFlow((n) => n + 1)
     const { error } = await signUp.password({ emailAddress: values.email, password: values.password })
     if (error) {
       setClerkError(clerkNotice(error, GENERIC_CLERK_ERROR))
       setIsClerkPending(false)
       return
     }
-
-    if (signUp.status === 'complete') {
-      await finishAccountCreation(values)
-      return
-    }
-
-    const sent = await signUp.verifications.sendEmailCode()
-    if (sent.error) {
-      setClerkError(clerkNotice(sent.error, GENERIC_CLERK_ERROR))
-      setIsClerkPending(false)
-      return
-    }
     setPendingValues(values)
-    setStep('verify-email')
-    setIsClerkPending(false)
+    setAttempt((n) => n + 1)
   })
 
   async function onSubmitCode(event: FormEvent) {
@@ -136,7 +174,8 @@ export function useSignupForm() {
       setIsClerkPending(false)
       return
     }
-    await finishAccountCreation(pendingValues)
+    // The status turns 'complete' on the next render; the effect above finalizes.
+    setAttempt((n) => n + 1)
   }
 
   useEffect(() => {

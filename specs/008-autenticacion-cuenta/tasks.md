@@ -196,13 +196,19 @@ Aplicación web existente: `backend/` (Go) y `frontend/` (React + Vite + TS). To
 
 ### Pruebas para la Historia de Usuario 5 ⚠️
 
-- [ ] T051 [P] [US5] Prueba de servicio para `GetAccountByClerkUserID` en `backend/internal/account/service_test.go`, extendiendo T009: con una cuenta existente `clerk_user_id IS NULL` y el mismo correo verificado que el de la sesión, la vincula (`UPDATE`) y la devuelve, en vez de `ErrAccountNotFound`; con un correo que no coincide con ninguna cuenta sin vincular, sigue devolviendo `ErrAccountNotFound`
-- [ ] T052 [P] [US5] Prueba de handler para `GET /accounts/me` en `backend/internal/account/handler_test.go`, extendiendo T032: cubre el camino de vinculación de T051 devolviendo `200` con la cuenta ya vinculada
+> **Implementado (revisión de código del PR #8)**: `Repository.LinkByEmail` (un solo `UPDATE` con subselect
+> `FOR UPDATE`, sin distinguir mayúsculas, solo cuentas con `clerk_user_id IS NULL`), `Service.LinkLegacyAccount`, y el
+> enlace ocurre en `GET /accounts/me` y en `POST /accounts` (que responde `200` en vez de `409`). Solo con el correo
+> **verificado** por Clerk (`clerkPrimaryEmail` rechaza uno sin verificar: `403` en `POST`, `404` en `GET /me`).
+> Pruebas en `account/{repository,service,handler}_test.go`.
+
+- [X] T051 [P] [US5] Prueba de servicio para `GetAccountByClerkUserID` en `backend/internal/account/service_test.go`, extendiendo T009: con una cuenta existente `clerk_user_id IS NULL` y el mismo correo verificado que el de la sesión, la vincula (`UPDATE`) y la devuelve, en vez de `ErrAccountNotFound`; con un correo que no coincide con ninguna cuenta sin vincular, sigue devolviendo `ErrAccountNotFound`
+- [X] T052 [P] [US5] Prueba de handler para `GET /accounts/me` en `backend/internal/account/handler_test.go`, extendiendo T032: cubre el camino de vinculación de T051 devolviendo `200` con la cuenta ya vinculada
 
 ### Implementación de la Historia de Usuario 5
 
-- [ ] T053 [US5] Extender `GetAccountByClerkUserID` (T009) en `backend/internal/account/repository.go`/`service.go`: si no hay ninguna cuenta con ese `clerk_user_id`, buscar una cuenta con `email` igual al correo verificado de la sesión (mismo mecanismo de T022, `user.Get`) y `clerk_user_id IS NULL`; si existe, `UPDATE accounts SET clerk_user_id = $1 WHERE id = $2` y devolverla; si no, `ErrAccountNotFound` (data-model.md, contracts/get-accounts-me.md)
-- [ ] T054 [US5] Confirmar en `frontend/src/features/auth/LoginPage.tsx` (T035) que el flujo de login normal (correo+contraseña o Google) ya cubre este caso sin ninguna pantalla/paso extra — Clerk no distingue "alta nueva" de "primer acceso migrado" del lado del cliente, la vinculación es enteramente responsabilidad del backend (T053); si el correo de la cuenta migrada nunca se registró en Clerk, el tutor usa el mismo botón "Registrarme"/Google de la Historia 1 con ese correo, y Clerk lo trata como una alta nueva de identidad (aunque la cuenta de PediTrack ya existía)
+- [X] T053 [US5] Extender `GetAccountByClerkUserID` (T009) en `backend/internal/account/repository.go`/`service.go`: si no hay ninguna cuenta con ese `clerk_user_id`, buscar una cuenta con `email` igual al correo verificado de la sesión (mismo mecanismo de T022, `user.Get`) y `clerk_user_id IS NULL`; si existe, `UPDATE accounts SET clerk_user_id = $1 WHERE id = $2` y devolverla; si no, `ErrAccountNotFound` (data-model.md, contracts/get-accounts-me.md)
+- [X] T054 [US5] Confirmar en `frontend/src/features/auth/LoginPage.tsx` (T035) que el flujo de login normal (correo+contraseña o Google) ya cubre este caso sin ninguna pantalla/paso extra — Clerk no distingue "alta nueva" de "primer acceso migrado" del lado del cliente, la vinculación es enteramente responsabilidad del backend (T053); si el correo de la cuenta migrada nunca se registró en Clerk, el tutor usa el mismo botón "Registrarme"/Google de la Historia 1 con ese correo, y Clerk lo trata como una alta nueva de identidad (aunque la cuenta de PediTrack ya existía)
 
 **Punto de Control**: Las 5 historias de usuario son funcionales de forma independiente — funcionalidad completa.
 

@@ -166,6 +166,24 @@ describe('ForgotPasswordPage', () => {
     expect(signIn.finalize).not.toHaveBeenCalled()
   })
 
+  it('does not verify the code twice when the tutor retries after Clerk rejected the new password', async () => {
+    signIn.resetPasswordEmailCode.submitPassword.mockResolvedValueOnce({ error: { code: 'form_password_pwned', message: 'pwned' } })
+    const user = userEvent.setup()
+    renderPage()
+
+    await requestCode(user)
+    await fillReset(user)
+    await screen.findByRole('alert')
+    await user.clear(screen.getByLabelText('Contraseña'))
+    await user.type(screen.getByLabelText('Contraseña'), 'OtraClave9$')
+    await user.click(screen.getByRole('button', { name: 'Cambiar contraseña' }))
+
+    expect(await screen.findByText('Home page')).toBeInTheDocument()
+    expect(signIn.resetPasswordEmailCode.verifyCode).toHaveBeenCalledOnce()
+    expect(signIn.resetPasswordEmailCode.submitPassword).toHaveBeenCalledTimes(2)
+    expect(signIn.resetPasswordEmailCode.submitPassword).toHaveBeenLastCalledWith({ password: 'OtraClave9$' })
+  })
+
   it('shows an error when the session cannot be finalized after changing the password', async () => {
     signIn.finalize.mockResolvedValue({ error: { code: 'unknown', message: 'nope' } })
     const user = userEvent.setup()

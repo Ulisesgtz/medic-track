@@ -92,6 +92,10 @@ describe('useSignupForm — email verification step', () => {
   it('creates the account once the code is verified', async () => {
     const user = userEvent.setup()
     const signUp = mockSignUp()
+    signUp.verifications.verifyEmailCode.mockImplementation(async () => {
+      signUp.status = 'complete'
+      return { error: null }
+    })
     vi.mocked(fetch).mockImplementation(async (_input, init) => {
       if (init?.method === 'POST') {
         return {
@@ -177,5 +181,51 @@ describe('useSignupForm — email verification step', () => {
     await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo crear tu cuenta. Intenta de nuevo.')
+  })
+
+  it('reacts to the status Clerk reports after signUp.password(): complete means no code step', async () => {
+    const user = userEvent.setup()
+    const signUp = mockSignUp()
+    signUp.password.mockImplementation(async () => {
+      signUp.status = 'complete'
+      return { error: null }
+    })
+    vi.mocked(fetch).mockImplementation(async (_input, init) =>
+      init?.method === 'POST'
+        ? ({ ok: true, json: async () => ({ id: 'a1', firstName: 'Ana', lastName: 'Gómez', email: 'ana@example.com', countryCode: null, stateCode: null, plan: 'free', children: [] }) } as Response)
+        : ({ ok: true, json: async () => [] } as Response),
+    )
+    renderForm()
+
+    await fillRequired(user)
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+
+    expect(await screen.findByText('HOME PAGE')).toBeInTheDocument()
+    expect(signUp.verifications.sendEmailCode).not.toHaveBeenCalled()
+    expect(signUp.finalize).toHaveBeenCalledOnce()
+  })
+
+  it('retries only POST /accounts, never Clerk, when the account could not be saved after Clerk finished', async () => {
+    const user = userEvent.setup()
+    const signUp = mockSignUp({ status: 'complete' })
+    let posts = 0
+    vi.mocked(fetch).mockImplementation(async (_input, init) => {
+      if (init?.method !== 'POST') return { ok: true, json: async () => [] } as Response
+      posts += 1
+      return posts === 1
+        ? ({ ok: false, status: 500, json: async () => ({ message: 'boom' }) } as Response)
+        : ({ ok: true, json: async () => ({ id: 'a1', firstName: 'Ana', lastName: 'Gómez', email: 'ana@example.com', countryCode: null, stateCode: null, plan: 'free', children: [] }) } as Response)
+    })
+    renderForm()
+
+    await fillRequired(user)
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+    expect(await screen.findByRole('alert')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
+
+    expect(await screen.findByText('HOME PAGE')).toBeInTheDocument()
+    expect(posts).toBe(2)
+    expect(signUp.password).toHaveBeenCalledOnce()
+    expect(signUp.finalize).toHaveBeenCalledOnce()
   })
 })

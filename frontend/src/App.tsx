@@ -9,14 +9,21 @@ import { NewConsultationPage } from './features/consultations/NewConsultationPag
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage'
 import { LoginPage } from './features/auth/LoginPage'
 import { RequireSession } from './features/auth/RequireSession'
+import { useClearCacheOnUserChange } from './features/auth/useClearCacheOnUserChange'
 import { SsoCallbackPage } from './features/auth/SsoCallbackPage'
 import { MessagePage } from './shared/ui/MessagePage'
 
 const queryClient = new QueryClient()
 
+function SessionCacheGuard() {
+  useClearCacheOnUserChange()
+  return null
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <SessionCacheGuard />
       <BrowserRouter>
         <Routes>
           <Route path="/signup" element={<AccountSignupPage />} />

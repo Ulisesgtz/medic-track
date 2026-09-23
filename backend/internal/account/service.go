@@ -121,9 +121,24 @@ func (s *Service) CreateAccount(ctx context.Context, input CreateAccountInput) (
 	}
 
 	if err := s.repo.Create(ctx, acc); err != nil {
+		if errors.Is(err, ErrClerkUserAlreadyLinked) {
+			// Lost a race against a twin request for the same session: the
+			// account it created is this session's account (idempotent success).
+			if existing, getErr := s.repo.GetByClerkUserID(ctx, input.ClerkUserID); getErr == nil {
+				return existing, ErrAccountAlreadyLinked
+			}
+		}
 		return nil, err
 	}
 	return acc, nil
+}
+
+// LinkLegacyAccount links the pre-authentication account whose email matches
+// (case-insensitively) to the session's Clerk user, returning it; it returns
+// ErrAccountNotFound when there is none. email MUST be the session's
+// Clerk-verified primary email (specs/008-autenticacion-cuenta, Historia 5).
+func (s *Service) LinkLegacyAccount(ctx context.Context, clerkUserID, email string) (*Account, error) {
+	return s.repo.LinkByEmail(ctx, clerkUserID, email)
 }
 
 // GetAccount retrieves an account and its children by id, for the home page
@@ -137,9 +152,8 @@ func (s *Service) GetAccount(ctx context.Context, id uuid.UUID) (*Account, error
 // contracts/get-accounts-me.md). This is the direct-link case only —
 // ErrAccountNotFound covers both "genuinely no account yet" (right after a
 // brand-new Clerk sign-up, before POST /accounts) and "an unlinked account
-// with a matching email exists"; the caller (GetMe handler) is responsible
-// for telling those apart until Historia 5 (specs/008) extends this method
-// with the email-based linking fallback.
+// with a matching email exists"; the handlers tell those apart with
+// LinkLegacyAccount, which needs the session's verified email.
 func (s *Service) GetAccountByClerkUserID(ctx context.Context, clerkUserID string) (*Account, error) {
 	return s.repo.GetByClerkUserID(ctx, clerkUserID)
 }

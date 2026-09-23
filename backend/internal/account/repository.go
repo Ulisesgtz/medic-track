@@ -72,14 +72,15 @@ func mapInsertError(err error, context string) error {
 		switch pgErr.Code {
 		case "23505": // unique_violation
 			// Two different UNIQUE constraints can fire this code on `accounts`
-			// (email, clerk_user_id). A clerk_user_id collision here would mean
-			// two near-simultaneous requests for the same brand-new session both
-			// passed CreateAccount's own GetByClerkUserID check — a vanishingly
-			// rare race; falls through to the generic 500 below rather than
-			// being misreported as a duplicate email.
-			if !strings.Contains(pgErr.ConstraintName, "clerk_user_id") {
-				return ErrEmailAlreadyExists
+			// (email, clerk_user_id). A clerk_user_id collision means two
+			// near-simultaneous requests for the same brand-new session both
+			// passed CreateAccount's own GetByClerkUserID check: reported as
+			// its own error (never as a duplicate email) so the service can
+			// answer with the account the other request created.
+			if strings.Contains(pgErr.ConstraintName, "clerk_user_id") {
+				return ErrClerkUserAlreadyLinked
 			}
+			return ErrEmailAlreadyExists
 		case "23514": // check_violation — e.g. the name-format/length CHECK constraints
 			return ErrInvalidNameFormat
 		}
@@ -246,6 +247,32 @@ func (r *Repository) GetByClerkUserID(ctx context.Context, clerkUserID string) (
 	}
 
 	return acc, nil
+}
+
+// LinkByEmail links the oldest account that has no Clerk user yet and whose
+// email matches (case-insensitively) to clerkUserID, for accounts created
+// before authentication existed (specs/008-autenticacion-cuenta, Historia 5).
+// It returns ErrAccountNotFound when there is nothing to link. The caller
+// must only pass an email Clerk has verified: whoever controls that email
+// takes over the account. A single UPDATE (row locked by the subselect) so two
+// concurrent first-logins can't both claim the same account.
+func (r *Repository) LinkByEmail(ctx context.Context, clerkUserID, email string) (*Account, error) {
+	tag, err := r.pool.Exec(ctx, `
+		UPDATE accounts SET clerk_user_id = $1
+		WHERE id = (
+			SELECT id FROM accounts
+			WHERE clerk_user_id IS NULL AND lower(email) = lower($2)
+			ORDER BY created_at ASC LIMIT 1
+			FOR UPDATE
+		)
+	`, clerkUserID, email)
+	if err != nil {
+		return nil, mapInsertError(err, "linking account by email")
+	}
+	if tag.RowsAffected() == 0 {
+		return nil, ErrAccountNotFound
+	}
+	return r.GetByClerkUserID(ctx, clerkUserID)
 }
 
 // EmailExists reports whether an account with the given email already exists.

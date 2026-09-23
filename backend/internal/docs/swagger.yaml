@@ -437,7 +437,8 @@ paths:
         A brand-new account always starts on the free plan, which allows at most 1 child
         (FR-007) — enforced server-side regardless of what the client already validated.
         Idempotent: if the session already has an account linked, returns it with 200
-        instead of creating a duplicate.
+        instead of creating a duplicate; an account created before authentication existed
+        with the same verified email is linked and returned with 200 too.
       parameters:
       - description: Account (and optional children) to create
         in: body
@@ -462,6 +463,10 @@ paths:
             $ref: '#/definitions/ValidationErrorResponse'
         "401":
           description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: The session's email address is not verified
           schema:
             $ref: '#/definitions/ErrorResponse'
         "409":
@@ -572,9 +577,10 @@ paths:
     get:
       description: |-
         Resolves the account linked to the caller's verified Clerk session — the
-        replacement for a client-supplied accountId (specs/008-autenticacion-cuenta). A 404
-        is the expected state right after a brand-new Clerk sign-up, before POST /accounts
-        has run.
+        replacement for a client-supplied accountId (specs/008-autenticacion-cuenta). An
+        account created before authentication existed, with the session's own verified
+        email, is linked on this first access. A 404 is the expected state right after a
+        brand-new Clerk sign-up, before POST /accounts has run.
       produces:
       - application/json
       responses:

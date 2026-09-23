@@ -78,3 +78,20 @@ func TestMockUserProfile(t *testing.T) {
 	}
 	t.Fatal("primary email address not found among EmailAddresses")
 }
+
+func TestMockUserProfileWithVerification_UsesTheGivenStatus(t *testing.T) {
+	authmwtest.MockUserProfileWithVerification(t, "user_abc", "ana@example.com", "unverified")
+
+	got, err := user.Get(context.Background(), "user_abc")
+	require.NoError(t, err)
+	require.NotNil(t, got.EmailAddresses[0].Verification)
+	require.Equal(t, "unverified", got.EmailAddresses[0].Verification.Status)
+}
+
+func TestMockClerkDown_MakesEveryBackendCallFail(t *testing.T) {
+	authmwtest.MockClerkDown(t)
+
+	_, err := user.Get(context.Background(), "user_abc")
+
+	require.Error(t, err)
+}

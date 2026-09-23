@@ -39,6 +39,13 @@ var (
 	// 201 that never reached the client) — the handler treats this as
 	// success, not failure (contracts/post-accounts.md, idempotencia).
 	ErrAccountAlreadyLinked = errors.New("session is already linked to an account")
+
+	// ErrClerkUserAlreadyLinked is returned by Repository.Create when the
+	// insert loses a race against another request that linked the same Clerk
+	// user to an account (two near-simultaneous POST /accounts for a brand-new
+	// session). Service.CreateAccount turns it into the idempotent success:
+	// the account the other request created is the account of this session.
+	ErrClerkUserAlreadyLinked = errors.New("clerk user is already linked to an account")
 )
 
 // FreemiumLimitError wraps ErrFreemiumChildLimitExceeded with the actual

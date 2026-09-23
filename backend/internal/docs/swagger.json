@@ -14,7 +14,7 @@
                         "ClerkSession": []
                     }
                 ],
-                "description": "Creates a padre/tutor account, optionally with one or more children in the\nsame request, for the tutor who already completed sign-up with Clerk (correo+\ncontraseña or Google) — the caller's verified Clerk session is required, and its\nemail is what gets stored, never a client-supplied one (specs/008-autenticacion-cuenta).\nA brand-new account always starts on the free plan, which allows at most 1 child\n(FR-007) — enforced server-side regardless of what the client already validated.\nIdempotent: if the session already has an account linked, returns it with 200\ninstead of creating a duplicate.",
+                "description": "Creates a padre/tutor account, optionally with one or more children in the\nsame request, for the tutor who already completed sign-up with Clerk (correo+\ncontraseña or Google) — the caller's verified Clerk session is required, and its\nemail is what gets stored, never a client-supplied one (specs/008-autenticacion-cuenta).\nA brand-new account always starts on the free plan, which allows at most 1 child\n(FR-007) — enforced server-side regardless of what the client already validated.\nIdempotent: if the session already has an account linked, returns it with 200\ninstead of creating a duplicate; an account created before authentication existed\nwith the same verified email is linked and returned with 200 too.",
                 "consumes": [
                     "application/json"
                 ],
@@ -61,6 +61,12 @@
                             "$ref": "#/definitions/ErrorResponse"
                         }
                     },
+                    "403": {
+                        "description": "The session's email address is not verified",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
                     "409": {
                         "description": "Email already in use",
                         "schema": {
@@ -89,7 +95,7 @@
                         "ClerkSession": []
                     }
                 ],
-                "description": "Resolves the account linked to the caller's verified Clerk session — the\nreplacement for a client-supplied accountId (specs/008-autenticacion-cuenta). A 404\nis the expected state right after a brand-new Clerk sign-up, before POST /accounts\nhas run.",
+                "description": "Resolves the account linked to the caller's verified Clerk session — the\nreplacement for a client-supplied accountId (specs/008-autenticacion-cuenta). An\naccount created before authentication existed, with the session's own verified\nemail, is linked on this first access. A 404 is the expected state right after a\nbrand-new Clerk sign-up, before POST /accounts has run.",
                 "produces": [
                     "application/json"
                 ],
