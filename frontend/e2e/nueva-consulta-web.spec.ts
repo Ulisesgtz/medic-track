@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test'
 import path from 'node:path'
 import fs from 'node:fs'
 import os from 'node:os'
-import { seedChild, saveAccount } from './helpers'
+import { seedChild } from './helpers'
 
 // "Nueva consulta", web design (mock 14): the children sidebar, a header ("← Cancelar", the
 // title and "Para Mateo Morales · 5 años 6 meses"), the dark OCR panel, the "Sugerido por
@@ -25,10 +25,9 @@ const box = async (locator: ReturnType<Page['locator']>) => {
   return { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height) }
 }
 
-async function open(page: Page, request: Parameters<typeof seedChild>[0], width: number) {
-  const { accountId, childId } = await seedChild(request, { withConsultation: false })
+async function open(page: Page, width: number) {
+  const { accountId, childId } = await seedChild(page, { withConsultation: false })
   await page.setViewportSize({ width, height: 900 })
-  await saveAccount(page, accountId)
   await page.goto(`/children/${childId}/consultations/new`)
   await page.evaluate(() => document.fonts.ready)
   return { accountId, childId }
@@ -42,8 +41,8 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     { width: 1280, titleX: 332, panelW: 896, nameW: 320, freqX: 692, freqW: 160, sinceInRow: true },
     { width: 1024, titleX: 328, panelW: 648, nameW: 284, freqX: 652, freqW: 142, sinceInRow: false },
   ]) {
-    test(`a ${width} px: barra lateral, título, panel del OCR y la fila del medicamento (Desde ${sinceInRow ? 'en el mismo renglón' : 'debajo, como el mock de tres campos'})`, async ({ page, request, browserName }) => {
-      await open(page, request, width)
+    test(`a ${width} px: barra lateral, título, panel del OCR y la fila del medicamento (Desde ${sinceInRow ? 'en el mismo renglón' : 'debajo, como el mock de tres campos'})`, async ({ page, browserName }) => {
+      await open(page, width)
 
       expect(await box(page.locator('aside').first())).toMatchObject({ x: 0, w: 280 })
       expect(await box(page.getByRole('heading', { level: 1, name: 'Nueva consulta' }))).toMatchObject({ x: titleX })
@@ -69,8 +68,8 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     })
   }
 
-  test('bajo 1024 px no hay barra lateral y los márgenes son de 24 px, como el mock', async ({ page, request }) => {
-    await open(page, request, 1000)
+  test('bajo 1024 px no hay barra lateral y los márgenes son de 24 px, como el mock', async ({ page }) => {
+    await open(page, 1000)
 
     await expect(page.getByRole('navigation', { name: 'Tus hijos' })).toHaveCount(0)
     expect(await box(page.getByRole('main'))).toMatchObject({ x: 0, w: 1000 })
@@ -78,8 +77,8 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false)
   })
 
-  test('título con "Para <hijo> · edad", "← Cancelar" y el panel del OCR antes y después de elegir foto', async ({ page, request }) => {
-    await open(page, request, 1280)
+  test('título con "Para <hijo> · edad", "← Cancelar" y el panel del OCR antes y después de elegir foto', async ({ page }) => {
+    await open(page, 1280)
 
     await expect(page.getByText(/^Para Mateo Morales · \d+ años?/)).toBeVisible()
     await expect(page.getByRole('link', { name: '← Cancelar' })).toBeVisible()
@@ -102,8 +101,8 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     await expect(page.getByText('Listo')).toBeVisible({ timeout: 60_000 })
   })
 
-  test('el grupo "Sugerido por OCR" lleva Doctor, Fecha y Síntomas; los campos de la fila del medicamento, sus placeholders', async ({ page, request }) => {
-    await open(page, request, 1280)
+  test('el grupo "Sugerido por OCR" lleva Doctor, Fecha y Síntomas; los campos de la fila del medicamento, sus placeholders', async ({ page }) => {
+    await open(page, 1280)
 
     const group = page.getByRole('group', { name: 'Sugerido por OCR · revisa y confirma' })
     await expect(group.getByLabel('Doctor')).toHaveClass(/border-bright/)
@@ -119,8 +118,8 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     expect(since.x).toBeGreaterThan(freq.x)
   })
 
-  test('medicamentos: el primero sin "Quitar"; se agregan, se numeran y se quitan', async ({ page, request }) => {
-    await open(page, request, 1280)
+  test('medicamentos: el primero sin "Quitar"; se agregan, se numeran y se quitan', async ({ page }) => {
+    await open(page, 1280)
     await expect(page.getByRole('group', { name: 'Medicamento 1' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Quitar medicamento' })).toHaveCount(0)
 
@@ -132,8 +131,8 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     await expect(page.getByRole('button', { name: 'Quitar medicamento' })).toHaveCount(0)
   })
 
-  test('guardar sin llenar nada: errores bajo los campos, aviso en rojo y foco en el primero', async ({ page, request }) => {
-    await open(page, request, 1280)
+  test('guardar sin llenar nada: errores bajo los campos, aviso en rojo y foco en el primero', async ({ page }) => {
+    await open(page, 1280)
 
     await page.getByRole('button', { name: 'Guardar consulta' }).click()
 
@@ -148,8 +147,8 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     await expect(page.getByText('Elige la hora de la primera toma.')).toBeVisible()
   })
 
-  test('guardar con todo lleno crea la consulta y abre su detalle', async ({ page, request }) => {
-    await open(page, request, 1280)
+  test('guardar con todo lleno crea la consulta y abre su detalle', async ({ page }) => {
+    await open(page, 1280)
     await page.getByLabel('Doctor').fill('Dra. Laura Cázares')
     await page.getByLabel('Fecha', { exact: true }).fill('2026-09-12')
     await page.getByLabel('Foto de la receta').setInputFiles(photo())
@@ -166,8 +165,8 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     await expect(page.getByText('Fiebre y tos')).toBeVisible()
   })
 
-  test('"← Cancelar" vuelve al hijo, y con algo capturado pide confirmar antes de descartarlo', async ({ page, request }) => {
-    const { childId } = await open(page, request, 1280)
+  test('"← Cancelar" vuelve al hijo, y con algo capturado pide confirmar antes de descartarlo', async ({ page }) => {
+    const { childId } = await open(page, 1280)
 
     await page.getByRole('link', { name: '← Cancelar' }).click()
     await expect(page).toHaveURL(new RegExp(`/children/${childId}$`))
@@ -184,8 +183,8 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     await expect(page.getByLabel('Doctor')).toHaveValue('Dr. Pérez')
   })
 
-  test('la barra lateral marca al hijo activo y su "+ Agregar hijo" abre el pop-up del plan', async ({ page, request }) => {
-    await open(page, request, 1280)
+  test('la barra lateral marca al hijo activo y su "+ Agregar hijo" abre el pop-up del plan', async ({ page }) => {
+    await open(page, 1280)
     const sidebar = page.getByRole('navigation', { name: 'Tus hijos' })
 
     await expect(sidebar.getByRole('link', { name: /^Mateo/ })).toHaveAttribute('aria-current', 'page')

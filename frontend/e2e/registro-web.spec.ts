@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { fillSignup } from './helpers'
+import { allowClerkOn, fillSignup, finishEmailVerificationIfAsked } from './helpers'
 
 // Signup, web design (mock 11): split screen — dark panel with the value
 // proposition and the checklist, the form with its title on the right. The numbers
@@ -14,6 +14,7 @@ const box = async (page: Page, locator: ReturnType<Page['locator']>) => {
 
 /** Opens the signup at a width and waits for the fonts: text wraps (and so heights) depend on them. */
 async function open(page: Page, width: number) {
+  await allowClerkOn(page)
   await page.setViewportSize({ width, height: 900 })
   await page.goto('/signup')
   await page.evaluate(() => document.fonts.ready)
@@ -153,6 +154,7 @@ test.describe('Registro web (mock 11) — medidas del mock', () => {
     await fillSignup(page)
 
     await page.getByRole('button', { name: 'Crear cuenta' }).click()
+    await finishEmailVerificationIfAsked(page)
 
     await expect(page).toHaveURL(/\/home$/)
   })

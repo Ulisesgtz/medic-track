@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import path from 'node:path'
 import fs from 'node:fs'
 import os from 'node:os'
-import { seedChild, saveAccount } from './helpers'
+import { seedChild } from './helpers'
 
 // "Nueva consulta", phone design (mock 04): dark header with "← Cancelar" and the
 // OCR panel, the "Sugerido por OCR" group, the medication cards and the save
@@ -20,9 +20,8 @@ function photo(): string {
 test.describe('Nueva consulta — diseño móvil (mock 04)', () => {
   test.use({ viewport: { width: 390, height: 844 } })
 
-  test.beforeEach(async ({ page, request }) => {
-    const { accountId, childId } = await seedChild(request, { withConsultation: false })
-    await saveAccount(page, accountId)
+  test.beforeEach(async ({ page }) => {
+    const { childId } = await seedChild(page, { withConsultation: false })
     await page.goto(`/children/${childId}/consultations/new`)
   })
 
@@ -107,6 +106,8 @@ test.describe('Nueva consulta — diseño móvil (mock 04)', () => {
   test('es una columna centrada de máximo 430 px, como el mock, sin desborde horizontal', async ({ page }) => {
     await page.setViewportSize({ width: 700, height: 900 })
 
+    // The page's own <main> (the "Cargando…" one, shown while the session and the data load, has no max width).
+    await expect(page.getByRole('main')).toHaveClass(/max-w-\[430px\]/)
     const box = await page.getByRole('main').boundingBox()
     expect(Math.round(box!.width)).toBe(430)
     expect(Math.round(box!.x)).toBe(135)

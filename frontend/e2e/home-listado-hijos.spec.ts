@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { designs, fillSignup, signUp, uniqueEmail } from './helpers'
+import { designs, seedAccount, signUp } from './helpers'
 
 // Covers specs/003-home-listado-hijos in both designs: the phone home (mock 02
 // list) and the web home (mock 15 "Hola, Ana / Tus hijos", with the sidebar).
@@ -71,13 +71,8 @@ for (const design of designs) {
 
     test('cuenta sin hijos: el modal "Agregar hijo" (mock 7) guarda al hijo y el siguiente ya topa con el límite', async ({
       page,
-      request,
     }) => {
-      const res = await request.post('http://localhost:8080/accounts', {
-        data: { firstName: 'Ana', lastName: 'Gómez', email: uniqueEmail('vacia'), children: [] },
-      })
-      const account = await res.json()
-      await page.addInitScript((id) => localStorage.setItem('peditrack.accountId', id), account.id)
+      await seedAccount(page, [])
       await page.goto('/home')
       await expect(page.getByText(/todavía no tienes hijos/i)).toBeVisible()
 
@@ -115,24 +110,21 @@ for (const design of designs) {
       await expect(page.getByRole('dialog', { name: 'Llegaste a un hijo registrado' })).toBeVisible()
     })
 
-    test('sin cuenta guardada muestra la invitación a crear cuenta (FR-002)', async ({ page }) => {
+    test('sin sesión, /home lleva al login, que ofrece crear cuenta (FR-002)', async ({ page }) => {
       await page.goto('/home')
 
-      await expect(page.getByText('Bienvenido a PediTrack')).toBeVisible()
+      await expect(page).toHaveURL(/\/login/)
+      await expect(page.getByRole('heading', { level: 1, name: 'Iniciar sesión' }).or(page.getByRole('heading', { level: 2, name: 'Iniciar sesión' }))).toBeVisible()
       await page.getByRole('link', { name: 'Crear cuenta' }).click()
       await expect(page).toHaveURL(/\/signup/)
     })
 
     test('click en un hijo abre su pantalla de detalle (FR-005)', async ({ page }) => {
-      await page.goto('/signup')
-      await fillSignup(page, {
+      await signUp(page, {
         firstName: 'Carla',
         lastName: 'Ruiz',
-        email: uniqueEmail('carla'),
         child: { firstName: 'Mateo', lastName: 'Ruiz', birthDate: '2019-06-01' },
       })
-      await page.getByRole('button', { name: 'Crear cuenta' }).click()
-      await expect(page).toHaveURL(/\/home/)
 
       await page.getByRole('main').getByText('Mateo Ruiz').click()
 

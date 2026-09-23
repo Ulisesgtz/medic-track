@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { seedChild, saveAccount } from './helpers'
+import { seedChild } from './helpers'
 
 // The free-plan limit pop-up, phone design (mock 05): opened by "+ Agregar hijo"
 // when the free plan already has its child. Amber header, message, "Entendido" and
@@ -10,9 +10,8 @@ import { seedChild, saveAccount } from './helpers'
 test.describe('Pop-up del plan gratuito — diseño móvil (mock 05)', () => {
   test.use({ viewport: { width: 390, height: 844 } })
 
-  test.beforeEach(async ({ page, request }) => {
-    const { accountId } = await seedChild(request, { withConsultation: false })
-    await saveAccount(page, accountId)
+  test.beforeEach(async ({ page }) => {
+    await seedChild(page, { withConsultation: false })
     await page.goto('/home')
   })
 
@@ -97,6 +96,8 @@ test.describe('Pop-up del plan gratuito — diseño móvil (mock 05)', () => {
   test('el home de fondo es una columna centrada de máximo 430 px, sin desborde horizontal', async ({ page }) => {
     await page.setViewportSize({ width: 700, height: 900 })
 
+    // The page's own <main> (the "Cargando…" one, shown while the session and the data load, has no max width).
+    await expect(page.getByRole('main')).toHaveClass(/max-w-\[430px\]/)
     const box = await page.getByRole('main').boundingBox()
     expect(Math.round(box!.width)).toBe(430)
     expect(Math.round(box!.x)).toBe(135)

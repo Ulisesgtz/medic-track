@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { seedChild, saveAccount } from './helpers'
+import { seedChild } from './helpers'
 
 // Consultation detail, phone design (mock 03): dark header with the child's
 // name and the date, the prescription photo card, the symptoms and each
@@ -14,9 +14,8 @@ const todayLong = () => {
 test.describe('Detalle de consulta — diseño móvil (mock 03)', () => {
   test.use({ viewport: { width: 390, height: 844 } })
 
-  test('muestra el encabezado, la foto, los síntomas y el medicamento con su horario', async ({ page, request }) => {
-    const { accountId, consultationId } = await seedChild(request)
-    await saveAccount(page, accountId)
+  test('muestra el encabezado, la foto, los síntomas y el medicamento con su horario', async ({ page }) => {
+    const { consultationId } = await seedChild(page)
     await page.goto(`/consultations/${consultationId}`)
 
     await expect(page.getByRole('link', { name: '← Mateo Morales' })).toBeVisible()
@@ -41,9 +40,8 @@ test.describe('Detalle de consulta — diseño móvil (mock 03)', () => {
     await expect(page.getByRole('link', { name: 'Nueva consulta' })).toHaveCount(0)
   })
 
-  test('cada chip alterna entre marcada y sin marcar, y se conserva al recargar', async ({ page, request }) => {
-    const { accountId, consultationId } = await seedChild(request)
-    await saveAccount(page, accountId)
+  test('cada chip alterna entre marcada y sin marcar, y se conserva al recargar', async ({ page }) => {
+    const { consultationId } = await seedChild(page)
     await page.goto(`/consultations/${consultationId}`)
     const chip = page.getByRole('button', { name: 'Toma de 00:00' })
     await expect(chip).toHaveAttribute('aria-pressed', 'false')
@@ -62,9 +60,8 @@ test.describe('Detalle de consulta — diseño móvil (mock 03)', () => {
     await expect(page.getByRole('button', { name: 'Toma de 00:00' })).toHaveText('00:00')
   })
 
-  test('"Ver completa" y la miniatura abren la foto en un visor y se cierra con Cerrar o Escape', async ({ page, request }) => {
-    const { accountId, consultationId } = await seedChild(request)
-    await saveAccount(page, accountId)
+  test('"Ver completa" y la miniatura abren la foto en un visor y se cierra con Cerrar o Escape', async ({ page }) => {
+    const { consultationId } = await seedChild(page)
     await page.goto(`/consultations/${consultationId}`)
     const viewer = page.getByRole('dialog', { name: 'Foto de la receta en tamaño completo' })
 
@@ -79,9 +76,8 @@ test.describe('Detalle de consulta — diseño móvil (mock 03)', () => {
     await expect(viewer).toBeHidden()
   })
 
-  test('"← Mateo Morales" vuelve al detalle del hijo', async ({ page, request }) => {
-    const { accountId, childId, consultationId } = await seedChild(request)
-    await saveAccount(page, accountId)
+  test('"← Mateo Morales" vuelve al detalle del hijo', async ({ page }) => {
+    const { childId, consultationId } = await seedChild(page)
     await page.goto(`/consultations/${consultationId}`)
 
     await page.getByRole('link', { name: '← Mateo Morales' }).click()
@@ -89,12 +85,13 @@ test.describe('Detalle de consulta — diseño móvil (mock 03)', () => {
     await expect(page).toHaveURL(new RegExp(`/children/${childId}$`))
   })
 
-  test('es una columna centrada de máximo 430 px, como el mock, sin desborde horizontal', async ({ page, request }) => {
-    const { accountId, consultationId } = await seedChild(request)
+  test('es una columna centrada de máximo 430 px, como el mock, sin desborde horizontal', async ({ page }) => {
+    const { consultationId } = await seedChild(page)
     await page.setViewportSize({ width: 700, height: 900 })
-    await saveAccount(page, accountId)
     await page.goto(`/consultations/${consultationId}`)
 
+    // The page's own <main> (the "Cargando…" one, shown while the session and the data load, has no max width).
+    await expect(page.getByRole('main')).toHaveClass(/max-w-\[430px\]/)
     const box = await page.getByRole('main').boundingBox()
     expect(Math.round(box!.width)).toBe(430)
     expect(Math.round(box!.x)).toBe(135)

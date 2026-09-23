@@ -18,7 +18,7 @@ Vite + React 19 + TypeScript. Auth: Clerk (`@clerk/react`). Forms: React Hook Fo
 | `src/shared/ui/PasswordInput.tsx` | Password `<input>` + the eye button (show/hide), shared by signup, login and recovery |
 | `src/shared/ui/Notice.tsx`, `src/shared/auth/clerkMessages.ts` | `Notice` is the block for feedback not tied to one field (`error` soft rose / `info` cyan / `success` mint, icon + dark ink text, `role="alert"` only for errors) — use it instead of ad-hoc red `<p>`s. `clerkNotice(error, fallback)` maps a Clerk error `code` to a Spanish message and tone (e.g. `session_exists` → info with a link to `/home`); unknown codes use the caller's Spanish fallback, Clerk's own `message` is never shown |
 | `src/shared/apiError.ts` | `ApiError<Kind>` base class (`kind`, `message`, optional `details`) — each feature's `api.ts` defines its own subclass with just the `Kind` union it needs |
-| `e2e/*.spec.ts`, `e2e/helpers.ts` | Playwright E2E. **Every flow runs twice, at 390 px (phone) and 1280 px (web)** through `designs` in `helpers.ts`; `signUp`/`fillSignup` create the account. Requires the backend running locally |
+| `e2e/*.spec.ts`, `e2e/helpers.ts`, `e2e/clerkApi.ts`, `e2e/global.setup.ts` | Playwright E2E against the **real Clerk development instance** (see "E2E con Clerk"). **Every flow runs twice, at 390 px (phone) and 1280 px (web)** through `designs` in `helpers.ts`. Requires the backend running locally |
 | `vite.config.ts` | Includes the Tailwind v4 Vite plugin — don't remove it, the whole UI silently loses styling if it's dropped |
 | `vitest.config.ts` | Coverage thresholds (>90%), `coverage.all: true` so untested files count |
 
@@ -125,10 +125,21 @@ Clerk API errors carry the useful code in `error.errors[0].code` (the top-level 
 
 Consultations, medications and their doses' schedule are immutable once created — no edit/delete UI, only the taken/not-taken toggle.
 
+## E2E con Clerk
+
+Las pruebas E2E usan la instancia de **desarrollo** de Clerk de verdad (nada de mocks de auth):
+
+- `global.setup.ts` (`globalSetup` de `playwright.config.ts`) llama `clerkSetup()` (token de pruebas de `@clerk/testing`) y, antes y después de la corrida, borra todos los usuarios de Clerk cuyo correo lleve el marcador `peditrack-e2e`. `clerkApi.ts` rechaza cualquier `CLERK_SECRET_KEY` que no sea `sk_test_`.
+- Los correos salen de `uniqueEmail()` (`…peditrack-e2e…+clerk_test@example.com`): Clerk no manda correo real y acepta el código fijo `424242` (`finishEmailVerificationIfAsked` lo escribe si el formulario lo pide).
+- Toda prueba que envía un formulario de Clerk desde la página llama `allowClerkOn(page)` (testing token: salta el CAPTCHA del registro). `signUp(page)` usa el formulario real; `seedChild(page)` / `seedAccount(page, children)` crean el usuario por la API de Clerk, inician sesión con `clerk.signIn` (ticket, sin formulario) y crean cuenta/hijo/consulta por la API de PediTrack con el token de esa sesión (`sessionToken`, `apiPost`).
+- Localmente las llaves se leen de `frontend/.env.local` (`VITE_CLERK_PUBLISHABLE_KEY`) y `backend/.env.local` (`CLERK_SECRET_KEY`); en CI vienen de los secretos `VITE_CLERK_PUBLISHABLE_KEY` y `CLERK_SECRET_KEY`.
+- `autenticacion.spec.ts` cubre login/logout con contraseña, el mensaje único de credenciales inválidas y que una sesión recibe 403 en los datos de otra cuenta (401 sin sesión).
+- Los avisos `[Clerk Testing] FAPI request failed … Test ended` al final de una prueba son ruido inofensivo.
+
 ## Running tests
 
 ```bash
 npx vitest run --coverage   # unit tests, >90% threshold gate
-npx playwright test         # E2E — needs backend (`go run ./cmd/api`) and frontend (`npm run dev`) both running
+npx playwright test         # E2E — needs the backend (`go run ./cmd/api`, with CLERK_SECRET_KEY) running, network access to Clerk; the frontend dev server is started by Playwright
 npx tsc --noEmit && npx eslint .   # type-check + lint
 ```

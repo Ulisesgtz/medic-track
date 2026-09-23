@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { seedChild, saveAccount } from './helpers'
+import { seedChild } from './helpers'
 
 // Web design, mock 15: the home ("Hola, Ana / Tus hijos", the child's card, the dashed plan
 // tile and the sidebar) and the free-plan pop-up opened by "Agregar hijo" — from the button
@@ -12,10 +12,9 @@ const box = async (locator: ReturnType<Page['locator']>) => {
   return { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height) }
 }
 
-async function open(page: Page, request: Parameters<typeof seedChild>[0], width: number) {
-  const { accountId } = await seedChild(request, { withConsultation: false })
+async function open(page: Page, width: number) {
+  await seedChild(page, { withConsultation: false })
   await page.setViewportSize({ width, height: 900 })
-  await saveAccount(page, accountId)
   await page.goto('/home')
   await page.evaluate(() => document.fonts.ready)
 }
@@ -30,8 +29,8 @@ test.describe('Home web y pop-up del plan gratuito (mock 15)', () => {
     { width: 1280, titleX: 332, buttonX: 1093, tileX: 790, tileW: 438, dialogX: 352 },
     { width: 1024, titleX: 328, buttonX: 841, tileX: 662, tileW: 314, dialogX: 224 },
   ]) {
-    test(`a ${width} px: home, tarjeta, recuadro del plan y pop-up en la posición del mock`, async ({ page, request, browserName }) => {
-      await open(page, request, width)
+    test(`a ${width} px: home, tarjeta, recuadro del plan y pop-up en la posición del mock`, async ({ page, browserName }) => {
+      await open(page, width)
 
       expect(await box(page.locator('aside').first())).toMatchObject({ x: 0, w: 280 })
       expect(await box(page.getByRole('heading', { level: 1, name: 'Tus hijos' }))).toMatchObject({ x: titleX })
@@ -54,8 +53,8 @@ test.describe('Home web y pop-up del plan gratuito (mock 15)', () => {
     })
   }
 
-  test('bajo 1024 px no hay barra lateral y los márgenes son de 24 px, como el mock', async ({ page, request }) => {
-    await open(page, request, 1000)
+  test('bajo 1024 px no hay barra lateral y los márgenes son de 24 px, como el mock', async ({ page }) => {
+    await open(page, 1000)
 
     await expect(page.getByRole('navigation', { name: 'Tus hijos' })).toHaveCount(0)
     expect(await box(page.getByRole('main'))).toMatchObject({ x: 0, w: 1000 })
@@ -66,8 +65,8 @@ test.describe('Home web y pop-up del plan gratuito (mock 15)', () => {
     await expect(dialog(page)).toBeVisible()
   })
 
-  test('la página lleva "Hola, Ana / Tus hijos", la tarjeta del hijo, el recuadro del plan y la barra lateral', async ({ page, request }) => {
-    await open(page, request, 1280)
+  test('la página lleva "Hola, Ana / Tus hijos", la tarjeta del hijo, el recuadro del plan y la barra lateral', async ({ page }) => {
+    await open(page, 1280)
 
     await expect(page.getByText('Hola, Ana')).toBeVisible()
     await expect(page.getByRole('heading', { level: 1, name: 'Tus hijos' })).toBeVisible()
@@ -86,8 +85,8 @@ test.describe('Home web y pop-up del plan gratuito (mock 15)', () => {
     await expect(page).toHaveURL(/\/children\/[^/]+$/)
   })
 
-  test('el pop-up dice el mensaje del mock y nombra al hijo (en móvil no)', async ({ page, request }) => {
-    await open(page, request, 1280)
+  test('el pop-up dice el mensaje del mock y nombra al hijo (en móvil no)', async ({ page }) => {
+    await open(page, 1280)
 
     await pageButton(page).click()
 
@@ -101,8 +100,8 @@ test.describe('Home web y pop-up del plan gratuito (mock 15)', () => {
     await expect(dialog(page).locator('div').first()).toHaveCSS('background-color', 'rgb(245, 158, 11)')
   })
 
-  test('el foco empieza en "Ver planes" y Tab no sale del pop-up', async ({ page, request }) => {
-    await open(page, request, 1280)
+  test('el foco empieza en "Ver planes" y Tab no sale del pop-up', async ({ page }) => {
+    await open(page, 1280)
     await pageButton(page).click()
     const stay = dialog(page).getByRole('button', { name: 'Entendido' })
     const plans = dialog(page).getByRole('button', { name: 'Ver planes' })
@@ -122,8 +121,8 @@ test.describe('Home web y pop-up del plan gratuito (mock 15)', () => {
     ['el botón "Agregar hijo" de la página', pageButton],
     ['el "+ Agregar hijo" de la barra lateral', sidebarButton],
   ] as const) {
-    test(`abierto con ${name}: Entendido, Escape y un clic en el fondo lo cierran y el foco vuelve a ese botón`, async ({ page, request }) => {
-      await open(page, request, 1280)
+    test(`abierto con ${name}: Entendido, Escape y un clic en el fondo lo cierran y el foco vuelve a ese botón`, async ({ page }) => {
+      await open(page, 1280)
 
       await opener(page).click()
       await dialog(page).getByRole('button', { name: 'Entendido' }).click()
@@ -144,8 +143,8 @@ test.describe('Home web y pop-up del plan gratuito (mock 15)', () => {
     })
   }
 
-  test('"Ver planes" abre la pantalla de planes', async ({ page, request }) => {
-    await open(page, request, 1280)
+  test('"Ver planes" abre la pantalla de planes', async ({ page }) => {
+    await open(page, 1280)
     await sidebarButton(page).click()
 
     await dialog(page).getByRole('button', { name: 'Ver planes' }).click()
@@ -153,8 +152,8 @@ test.describe('Home web y pop-up del plan gratuito (mock 15)', () => {
     await expect(page).toHaveURL(/\/planes$/)
   })
 
-  test('el pop-up queda por encima de la barra lateral y de la página (todo el fondo se oscurece)', async ({ page, request }) => {
-    await open(page, request, 1280)
+  test('el pop-up queda por encima de la barra lateral y de la página (todo el fondo se oscurece)', async ({ page }) => {
+    await open(page, 1280)
     await sidebarButton(page).click()
 
     const overlay = await page.evaluate(() => {

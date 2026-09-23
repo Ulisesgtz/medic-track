@@ -75,7 +75,7 @@ describe('HomePage', () => {
     expect(screen.getByRole('link', { name: 'Terminar registro' })).toHaveAttribute('href', '/registro/completar')
 
     await userEvent.setup().click(screen.getByRole('button', { name: 'Cerrar sesión' }))
-    expect(signOut).toHaveBeenCalledOnce()
+    expect(signOut).toHaveBeenCalledExactlyOnceWith({ redirectUrl: '/login' })
   })
 
   it.each([

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { seedChild, saveAccount } from './helpers'
+import { apiPost, seedChild } from './helpers'
 
 // Consultation detail, web design (mock 13): the children sidebar, a header row with the
 // back link, the date, the doctor and "Nueva consulta", medications and symptoms on the
@@ -14,7 +14,6 @@ const box = async (page: Page, locator: ReturnType<Page['locator']>) => {
 
 async function open(page: Page, width: number, ids: { accountId: string; consultationId?: string }) {
   await page.setViewportSize({ width, height: 900 })
-  await saveAccount(page, ids.accountId)
   await page.goto(`/consultations/${ids.consultationId}`)
   await page.evaluate(() => document.fonts.ready)
 }
@@ -25,8 +24,8 @@ test.describe('Detalle de consulta — diseño web (mock 13)', () => {
     { width: 1280, mainX: 280, mainW: 1000, titleX: 332, colW: 523, asideX: 903, asideW: 301 },
     { width: 1024, mainX: 280, mainW: 744, titleX: 328, colW: 374, asideX: 750, asideW: 202 },
   ]) {
-    test(`a ${width} px: barra lateral de 280 px y dos columnas 1.5fr / 1fr como el mock`, async ({ page, request }) => {
-      const ids = await seedChild(request)
+    test(`a ${width} px: barra lateral de 280 px y dos columnas 1.5fr / 1fr como el mock`, async ({ page }) => {
+      const ids = await seedChild(page)
       await open(page, width, ids)
 
       expect(await box(page, page.locator('aside').first())).toMatchObject({ x: 0, w: 280 })
@@ -38,8 +37,8 @@ test.describe('Detalle de consulta — diseño web (mock 13)', () => {
     })
   }
 
-  test('bajo 1024 px no hay barra lateral y la página va en una columna con márgenes de 24 px, como el mock', async ({ page, request }) => {
-    const ids = await seedChild(request)
+  test('bajo 1024 px no hay barra lateral y la página va en una columna con márgenes de 24 px, como el mock', async ({ page }) => {
+    const ids = await seedChild(page)
     await open(page, 1000, ids)
 
     // (The right column of the page is also an <aside>: the sidebar is the "Tus hijos" navigation.)
@@ -54,11 +53,8 @@ test.describe('Detalle de consulta — diseño web (mock 13)', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false)
   })
 
-  test('muestra la barra lateral con el hijo activo, el encabezado, los medicamentos, los síntomas, la foto y el tratamiento', async ({
-    page,
-    request,
-  }) => {
-    const ids = await seedChild(request, { durationDays: 7 })
+  test('muestra la barra lateral con el hijo activo, el encabezado, los medicamentos, los síntomas, la foto y el tratamiento', async ({ page }) => {
+    const ids = await seedChild(page, { durationDays: 7 })
     await open(page, 1280, ids)
 
     const sidebar = page.locator('aside')
@@ -83,8 +79,8 @@ test.describe('Detalle de consulta — diseño web (mock 13)', () => {
     await expect(treatment).toContainText(/termina el \d{1,2} \w{3}/)
   })
 
-  test('cada chip alterna entre marcada y sin marcar y se conserva al recargar', async ({ page, request }) => {
-    const ids = await seedChild(request)
+  test('cada chip alterna entre marcada y sin marcar y se conserva al recargar', async ({ page }) => {
+    const ids = await seedChild(page)
     await open(page, 1280, ids)
     const chip = page.getByRole('button', { name: 'Toma de 00:00' })
 
@@ -99,8 +95,8 @@ test.describe('Detalle de consulta — diseño web (mock 13)', () => {
     await expect(page.getByRole('button', { name: 'Toma de 00:00' })).toHaveAttribute('aria-pressed', 'false')
   })
 
-  test('los botones y enlaces llevan a donde dice el mock', async ({ page, request }) => {
-    const ids = await seedChild(request)
+  test('los botones y enlaces llevan a donde dice el mock', async ({ page }) => {
+    const ids = await seedChild(page)
     await open(page, 1280, ids)
 
     await page.getByRole('link', { name: 'Nueva consulta' }).click()
@@ -125,20 +121,18 @@ test.describe('Detalle de consulta — diseño web (mock 13)', () => {
     await expect(page.getByRole('dialog')).toBeHidden()
   })
 
-  test('el tratamiento activo dice "Ninguno" cuando no queda nada por delante', async ({ page, request }) => {
+  test('el tratamiento activo dice "Ninguno" cuando no queda nada por delante', async ({ page }) => {
     // A consultation from the past: its doses are all behind.
-    const { accountId, childId } = await seedChild(request, { withConsultation: false })
-    const created = await request.post(`http://localhost:8080/children/${childId}/consultations`, {
-      data: {
-        doctorName: 'Dr. Iván Robles',
-        consultDate: '2026-01-10',
-        photoBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-        symptoms: 'Control',
-        utcOffsetMinutes: 0,
-        medications: [{ name: 'Vitamina D', frequencyHours: 24, durationDays: 2, startTime: '08:00' }],
-      },
+    const { accountId, childId, token } = await seedChild(page, { withConsultation: false })
+    const created = await apiPost(page.context().request, token, `/children/${childId}/consultations`, {
+      doctorName: 'Dr. Iván Robles',
+      consultDate: '2026-01-10',
+      photoBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+      symptoms: 'Control',
+      utcOffsetMinutes: 0,
+      medications: [{ name: 'Vitamina D', frequencyHours: 24, durationDays: 2, startTime: '08:00' }],
     })
-    await open(page, 1280, { accountId, consultationId: (await created.json()).id })
+    await open(page, 1280, { accountId, consultationId: created.id })
 
     const treatment = page.getByText('Tratamiento activo').locator('..')
     await expect(treatment).toContainText('Ninguno')
