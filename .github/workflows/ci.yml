@@ -146,6 +146,8 @@ jobs:
         run: nohup go run ./cmd/api > /tmp/backend.log 2>&1 &
         env:
           FRONTEND_ORIGIN: http://localhost:5173
+          # The API refuses to start without it (specs/008). Repository secret: the *test* (sk_test_) key of the Clerk development instance.
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
 
       - name: Install frontend dependencies
         working-directory: frontend
@@ -170,6 +172,12 @@ jobs:
         # refuses to bind :5173 ("already used") since reuseExistingServer
         # is false in CI (process.env.CI is set).
         run: npx playwright test
+        env:
+          # The frontend throws without it (specs/008). Repository secret: the *test* (pk_test_) key of the Clerk development instance.
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+          # The suite signs up and signs in as real users of that development instance (Clerk testing token, `+clerk_test`
+          # addresses) and deletes them afterwards (e2e/global.setup.ts). It refuses any key that is not sk_test_.
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
 
       - name: Upload backend log on failure
         if: failure()

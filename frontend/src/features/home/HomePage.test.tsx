@@ -1,19 +1,26 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useAuth } from '@clerk/react'
 import { HomePage } from './HomePage'
+
+vi.mock('@clerk/react', () => ({ useAuth: vi.fn() }))
+
+let signOut: ReturnType<typeof vi.fn>
 
 function renderHome() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
+  const spy = vi.spyOn(queryClient, 'clear')
+  const utils = render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={['/home']}>
         <HomePage />
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  return { ...utils, queryClientClearSpy: spy }
 }
 
 /** Every request gets an answer shaped like the real API: the account, a child's consultations, or its overview. */
@@ -39,6 +46,13 @@ const dose = (taken: boolean) => ({
 describe('HomePage', () => {
   beforeEach(() => {
     window.localStorage.clear()
+    signOut = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(useAuth).mockReturnValue({
+      isLoaded: true,
+      isSignedIn: true,
+      getToken: async () => 'test-token',
+      signOut,
+    } as unknown as ReturnType<typeof useAuth>)
   })
 
   afterEach(() => {
@@ -46,11 +60,43 @@ describe('HomePage', () => {
     window.localStorage.clear()
   })
 
-  it('shows an invitation to create an account when no account id is saved (FR-002)', async () => {
+  it('invites the tutor to finish their registration when the session has no linked account yet (FR-006, specs/008)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: async () => ({ error: 'account_not_found_for_session', message: 'No account is linked to this session yet' }),
+      }),
+    )
     renderHome()
 
-    expect(await screen.findByText('Bienvenido a PediTrack')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Crear cuenta' })).toHaveAttribute('href', '/signup')
+    expect(await screen.findByText('Falta terminar tu registro')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Terminar registro' })).toHaveAttribute('href', '/registro/completar')
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Cerrar sesión' }))
+    expect(signOut).toHaveBeenCalledExactlyOnceWith({ redirectUrl: '/login' })
+  })
+
+  it.each([
+    ['a server error', 500],
+    ['an expired session', 401],
+  ])('shows an error screen with Reintentar for %s, never an empty home or a way to add a child', async (_name, status) => {
+    const user = userEvent.setup()
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status, json: async () => ({ error: 'x', message: 'boom' }) })
+    vi.stubGlobal('fetch', fetchMock)
+    renderHome()
+
+    expect(await screen.findByText('No pudimos cargar tu cuenta')).toBeInTheDocument()
+    expect(screen.queryByText(/todavía no tienes hijos/i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Agregar hijo/ })).not.toBeInTheDocument()
+
+    const callsBefore = fetchMock.mock.calls.length
+    await user.click(screen.getByRole('button', { name: 'Reintentar' }))
+    await vi.waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(callsBefore))
+
+    await user.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
+    expect(signOut).toHaveBeenCalledOnce()
   })
 
   it('shows an empty state when the account has no children yet (FR-006)', async () => {
@@ -81,6 +127,22 @@ describe('HomePage', () => {
 
     expect(await screen.findByText('Luis Gómez')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Luis Gómez/ })).toHaveAttribute('href', '/children/child-1')
+  })
+
+  it('signs out and clears the query cache when "Cerrar sesión" is clicked (phone)', async () => {
+    const user = userEvent.setup()
+    window.localStorage.setItem('peditrack.accountId', 'account-with-child')
+    stubApi({
+      id: 'account-with-child', firstName: 'Ana', lastName: 'Gómez', email: 'ana@example.com',
+      countryCode: null, stateCode: null, plan: 'free',
+      children: [{ id: 'child-1', firstName: 'Luis', lastName: 'Gómez', birthDate: '2020-01-15', height: null, weight: null }],
+    })
+    const { queryClientClearSpy } = renderHome()
+
+    await user.click(await screen.findByRole('button', { name: 'Cerrar sesión' }))
+
+    expect(signOut).toHaveBeenCalledOnce()
+    expect(queryClientClearSpy).toHaveBeenCalledOnce()
   })
 
   it('opens the AddChildModal when "Agregar hijo" is clicked and the plan has room (FR-004)', async () => {
@@ -135,22 +197,6 @@ describe('HomePage', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(opener).toHaveFocus()
-  })
-
-  it('clears the saved account id and shows the invitation when the account no longer exists (Caso Límite)', async () => {
-    window.localStorage.setItem('peditrack.accountId', 'stale-id')
-    vi.stubGlobal(
-      'fetch',
-      vi.fn().mockResolvedValue({
-        ok: false,
-        status: 404,
-        json: async () => ({ error: 'account_not_found', message: 'Account not found' }),
-      }),
-    )
-    renderHome()
-
-    expect(await screen.findByText('Bienvenido a PediTrack')).toBeInTheDocument()
-    expect(window.localStorage.getItem('peditrack.accountId')).toBeNull()
   })
 
   describe('child card chips on the phone (board screen 2)', () => {
@@ -251,7 +297,8 @@ describe('HomePage', () => {
 
     function renderDesktopHome() {
       const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      return render(
+      const spy = vi.spyOn(queryClient, 'clear')
+      const utils = render(
         <QueryClientProvider client={queryClient}>
           <MemoryRouter initialEntries={['/home']}>
             <Routes>
@@ -261,6 +308,7 @@ describe('HomePage', () => {
           </MemoryRouter>
         </QueryClientProvider>,
       )
+      return { ...utils, queryClientClearSpy: spy }
     }
 
     it("keeps the mock's responsive margins: smaller below 1024px, where the sidebar is hidden", async () => {
@@ -291,6 +339,19 @@ describe('HomePage', () => {
       expect(screen.getByRole('link', { name: /Luis Gómez/ })).toHaveAttribute('href', '/children/k1')
       expect(screen.getByText('Tu plan incluye un hijo')).toBeInTheDocument()
       expect(screen.getByRole('navigation', { name: 'Tus hijos' })).toBeInTheDocument()
+    })
+
+    it('signs out and clears the query cache when "Cerrar sesión" is clicked in the main content (desktop)', async () => {
+      const user = userEvent.setup()
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => account([kid('k1', 'Luis')]) }))
+      const { queryClientClearSpy } = renderDesktopHome()
+
+      await screen.findByText('Hola, Ana')
+      const main = screen.getByRole('main')
+      await user.click(within(main).getByRole('button', { name: 'Cerrar sesión' }))
+
+      expect(signOut).toHaveBeenCalledOnce()
+      expect(queryClientClearSpy).toHaveBeenCalledOnce()
     })
 
     it('opens the plan-limit pop-up from the button, naming the child', async () => {

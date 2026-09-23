@@ -4,12 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
+	clerkuser "github.com/clerk/clerk-sdk-go/v2/user"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 )
 
@@ -35,7 +38,6 @@ type createChildRequest struct {
 type createAccountRequest struct {
 	FirstName   string               `json:"firstName" example:"Ana"`
 	LastName    string               `json:"lastName" example:"Gómez"`
-	Email       string               `json:"email" example:"ana@example.com"`
 	CountryCode *string              `json:"countryCode" example:"MX"`
 	StateCode   *string              `json:"stateCode" example:"MX-JAL"`
 	Children    []createChildRequest `json:"children"`
@@ -110,20 +112,35 @@ const maxRequestBodyBytes = 1 << 20 // 1 MiB
 //
 //	@Summary		Create an account (tutor + optional children)
 //	@Description	Creates a padre/tutor account, optionally with one or more children in the
-//	@Description	same request. A brand-new account always starts on the free plan, which
-//	@Description	allows at most 1 child (FR-007) — enforced server-side regardless of what
-//	@Description	the client already validated. No login/password is accepted here (FR-009).
+//	@Description	same request, for the tutor who already completed sign-up with Clerk (correo+
+//	@Description	contraseña or Google) — the caller's verified Clerk session is required, and its
+//	@Description	email is what gets stored, never a client-supplied one (specs/008-autenticacion-cuenta).
+//	@Description	A brand-new account always starts on the free plan, which allows at most 1 child
+//	@Description	(FR-007) — enforced server-side regardless of what the client already validated.
+//	@Description	Idempotent: if the session already has an account linked, returns it with 200
+//	@Description	instead of creating a duplicate; an account created before authentication existed
+//	@Description	with the same verified email is linked and returned with 200 too.
 //	@Tags			accounts
 //	@Accept			json
 //	@Produce		json
+//	@Security		ClerkSession
 //	@Param			payload	body		createAccountRequest	true	"Account (and optional children) to create"
+//	@Success		200		{object}	accountResponse	"The session already had an account linked"
 //	@Success		201		{object}	accountResponse
-//	@Failure		400		{object}	validationErrorResponseDoc	"Missing/invalid field, e.g. a malformed email or future birth date"
+//	@Failure		400		{object}	validationErrorResponseDoc	"Missing/invalid field, e.g. a future birth date"
+//	@Failure		401		{object}	errorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	errorResponseDoc	"The session's email address is not verified"
 //	@Failure		409		{object}	emailConflictResponseDoc	"Email already in use"
 //	@Failure		422		{object}	freemiumLimitResponseDoc	"Free plan already has 1 child; upgrade required"
 //	@Failure		500		{object}	errorResponseDoc	"Unexpected server error"
 //	@Router			/accounts [post]
 func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
+	clerkUserID, ok := authmw.ClerkUserIDFromContext(r.Context())
+	if !ok {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusUnauthorized, "unauthorized", "A valid session is required", nil)
+		return
+	}
+
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 
 	var req createAccountRequest
@@ -132,10 +149,44 @@ func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// A retried request for a session that already has its account (e.g. a 201
+	// that never reached the client) is an idempotent success, answered
+	// before spending a Clerk API call on an email nobody needs
+	// (contracts/post-accounts.md).
+	if existing, err := h.service.GetAccountByClerkUserID(r.Context(), clerkUserID); err == nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusOK, toAccountResponse(existing), &existing.ID)
+		return
+	} else if !errors.Is(err, ErrAccountNotFound) {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not look up the session's account", nil)
+		return
+	}
+
+	email, err := clerkPrimaryEmail(r.Context(), clerkUserID)
+	if err != nil {
+		if errors.Is(err, errEmailNotVerified) {
+			h.responder.WriteJSONError(r.Context(), w, http.StatusForbidden, "forbidden", "The session's email address is not verified", nil)
+			return
+		}
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not resolve the session's email", nil)
+		return
+	}
+
+	// An account created before authentication existed, with this same
+	// verified email, is this tutor's account: link it instead of failing on
+	// the duplicate email (Historia 5).
+	if linked, err := h.service.LinkLegacyAccount(r.Context(), clerkUserID, email); err == nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusOK, toAccountResponse(linked), &linked.ID)
+		return
+	} else if !errors.Is(err, ErrAccountNotFound) {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not link the existing account", nil)
+		return
+	}
+
 	input := CreateAccountInput{
 		FirstName:   req.FirstName,
 		LastName:    req.LastName,
-		Email:       req.Email,
+		Email:       email,
+		ClerkUserID: clerkUserID,
 		CountryCode: req.CountryCode,
 		StateCode:   req.StateCode,
 	}
@@ -169,11 +220,47 @@ func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 
 	acc, err := h.service.CreateAccount(r.Context(), input)
 	if err != nil {
+		if errors.Is(err, ErrAccountAlreadyLinked) {
+			// A retried request for a session that already created its account
+			// (e.g. a 201 that never reached the client) — idempotent success,
+			// not an error (contracts/post-accounts.md).
+			h.responder.WriteJSON(r.Context(), w, http.StatusOK, toAccountResponse(acc), &acc.ID)
+			return
+		}
 		h.writeCreateAccountError(r.Context(), w, err, len(input.Children))
 		return
 	}
 
 	h.responder.WriteJSON(r.Context(), w, http.StatusCreated, toAccountResponse(acc), &acc.ID)
+}
+
+// errEmailNotVerified is returned by clerkPrimaryEmail when the session's
+// primary email exists but Clerk has not verified it.
+var errEmailNotVerified = errors.New("the session's primary email is not verified")
+
+// clerkPrimaryEmail resolves the verified primary email for a Clerk user id
+// via the Backend API — the session token's own claims don't expose a
+// typed email field in this SDK version, and this is otherwise the
+// documented way to read a user's verified profile (research.md, punto 2).
+// An unverified address is refused (errEmailNotVerified): the email is used
+// to store the account and to link a pre-authentication one, so it must be
+// one the tutor has proven to control.
+func clerkPrimaryEmail(ctx context.Context, clerkUserID string) (string, error) {
+	clerkUser, err := clerkuser.Get(ctx, clerkUserID)
+	if err != nil {
+		return "", fmt.Errorf("fetching clerk user: %w", err)
+	}
+	if clerkUser.PrimaryEmailAddressID != nil {
+		for _, e := range clerkUser.EmailAddresses {
+			if e.ID == *clerkUser.PrimaryEmailAddressID {
+				if e.Verification == nil || e.Verification.Status != "verified" {
+					return "", errEmailNotVerified
+				}
+				return e.EmailAddress, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("clerk user %s has no primary email address", clerkUserID)
 }
 
 // writeCreateAccountError dispatches on the error kind and, for each kind,
@@ -210,19 +297,88 @@ func (h *Handler) writeCreateAccountError(ctx context.Context, w http.ResponseWr
 	}
 }
 
+// accountNotFoundForSessionResponseDoc documents the 404 body shape of
+// GET /accounts/me (contracts/get-accounts-me.md).
+type accountNotFoundForSessionResponseDoc struct {
+	Error   string `json:"error" example:"account_not_found_for_session"`
+	Message string `json:"message" example:"No PediTrack account is linked to this session yet"`
+} // @name AccountNotFoundForSessionResponse
+
+// GetMe handles GET /accounts/me (contracts/get-accounts-me.md).
+//
+//	@Summary		Get the authenticated tutor's own account
+//	@Description	Resolves the account linked to the caller's verified Clerk session — the
+//	@Description	replacement for a client-supplied accountId (specs/008-autenticacion-cuenta). An
+//	@Description	account created before authentication existed, with the session's own verified
+//	@Description	email, is linked on this first access. A 404 is the expected state right after a
+//	@Description	brand-new Clerk sign-up, before POST /accounts has run.
+//	@Tags			accounts
+//	@Produce		json
+//	@Security		ClerkSession
+//	@Success		200	{object}	accountResponse
+//	@Failure		404	{object}	accountNotFoundForSessionResponseDoc	"No account is linked to this session yet"
+//	@Router			/accounts/me [get]
+func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
+	clerkUserID, ok := authmw.ClerkUserIDFromContext(r.Context())
+	if !ok {
+		// RequireSession already rejects a request with no valid session
+		// before it reaches here — this only guards against this handler
+		// ever being wired without that middleware.
+		h.responder.WriteJSONError(r.Context(), w, http.StatusUnauthorized, "unauthorized", "A valid session is required", nil)
+		return
+	}
+
+	acc, err := h.service.GetAccountByClerkUserID(r.Context(), clerkUserID)
+	if errors.Is(err, ErrAccountNotFound) {
+		// No direct link yet. An account created before authentication, with
+		// the session's own verified email, becomes this tutor's on their first
+		// access (Historia 5); otherwise there is genuinely no account yet.
+		acc, err = h.linkLegacyAccountForSession(r.Context(), clerkUserID)
+		if errors.Is(err, ErrAccountNotFound) {
+			h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, map[string]string{
+				"error":   "account_not_found_for_session",
+				"message": "No PediTrack account is linked to this session yet",
+			}, nil)
+			return
+		}
+	}
+	if err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not fetch account", nil)
+		return
+	}
+
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, toAccountResponse(acc), &acc.ID)
+}
+
+// linkLegacyAccountForSession looks for a pre-authentication account with the
+// session's verified email and links it. It never writes a response: an
+// unverified email counts as "nothing to link" (ErrAccountNotFound), any other
+// failure is returned for the caller to answer.
+func (h *Handler) linkLegacyAccountForSession(ctx context.Context, clerkUserID string) (*Account, error) {
+	email, err := clerkPrimaryEmail(ctx, clerkUserID)
+	if err != nil {
+		if errors.Is(err, errEmailNotVerified) {
+			return nil, ErrAccountNotFound
+		}
+		return nil, err
+	}
+	return h.service.LinkLegacyAccount(ctx, clerkUserID, email)
+}
+
 // GetAccount handles GET /accounts/{accountId}
 // (specs/003-home-listado-hijos/contracts/get-account.md).
 //
 //	@Summary		Get an account and its children
-//	@Description	Retrieves an account (tutor + children) by id, to populate the home page's
-//	@Description	children listing (FR-001). No authentication — the account id acts as a
-//	@Description	de facto access token, a deliberate continuation of the posture already
-//	@Description	accepted in specs/001/002 (see plan.md's privacy note).
+//	@Description	Retrieves an account (tutor + children) by id (FR-001). Requires a Clerk session
+//	@Description	that owns this account (specs/008-autenticacion-cuenta): 403 for any other.
 //	@Tags			accounts
 //	@Produce		json
 //	@Param			accountId	path		string	true	"Account UUID"
 //	@Success		200			{object}	accountResponse
 //	@Failure		404			{object}	accountNotFoundResponseDoc	"No account exists for this id"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	errorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	errorResponseDoc	"The session does not own this resource"
 //	@Router			/accounts/{accountId} [get]
 func (h *Handler) GetAccount(w http.ResponseWriter, r *http.Request) {
 	id, err := uuid.Parse(chi.URLParam(r, "accountId"))
@@ -262,6 +418,9 @@ func (h *Handler) GetAccount(w http.ResponseWriter, r *http.Request) {
 //	@Failure		400			{object}	validationErrorResponseDoc	"Missing/invalid field"
 //	@Failure		404			{object}	accountNotFoundResponseDoc	"No account exists for this id"
 //	@Failure		422			{object}	freemiumLimitResponseDoc	"Free plan already has 1 child; upgrade required"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	errorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	errorResponseDoc	"The session does not own this resource"
 //	@Router			/accounts/{accountId}/children [post]
 func (h *Handler) AddChild(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)

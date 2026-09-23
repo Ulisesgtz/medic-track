@@ -1,5 +1,13 @@
-basePath: /
 definitions:
+  AccountNotFoundForSessionResponse:
+    properties:
+      error:
+        example: account_not_found_for_session
+        type: string
+      message:
+        example: No PediTrack account is linked to this session yet
+        type: string
+    type: object
   AccountNotFoundResponse:
     properties:
       error:
@@ -92,6 +100,15 @@ definitions:
         type: string
       message:
         example: Consultation not found
+        type: string
+    type: object
+  ConsultationSessionErrorResponse:
+    properties:
+      error:
+        example: forbidden
+        type: string
+      message:
+        example: This resource does not belong to the current session
         type: string
     type: object
   ConsultationSummaryResponse:
@@ -308,9 +325,6 @@ definitions:
       countryCode:
         example: MX
         type: string
-      email:
-        example: ana@example.com
-        type: string
       firstName:
         example: Ana
         type: string
@@ -417,9 +431,14 @@ paths:
       - application/json
       description: |-
         Creates a padre/tutor account, optionally with one or more children in the
-        same request. A brand-new account always starts on the free plan, which
-        allows at most 1 child (FR-007) — enforced server-side regardless of what
-        the client already validated. No login/password is accepted here (FR-009).
+        same request, for the tutor who already completed sign-up with Clerk (correo+
+        contraseña or Google) — the caller's verified Clerk session is required, and its
+        email is what gets stored, never a client-supplied one (specs/008-autenticacion-cuenta).
+        A brand-new account always starts on the free plan, which allows at most 1 child
+        (FR-007) — enforced server-side regardless of what the client already validated.
+        Idempotent: if the session already has an account linked, returns it with 200
+        instead of creating a duplicate; an account created before authentication existed
+        with the same verified email is linked and returned with 200 too.
       parameters:
       - description: Account (and optional children) to create
         in: body
@@ -430,15 +449,26 @@ paths:
       produces:
       - application/json
       responses:
+        "200":
+          description: The session already had an account linked
+          schema:
+            $ref: '#/definitions/internal_account.accountResponse'
         "201":
           description: Created
           schema:
             $ref: '#/definitions/internal_account.accountResponse'
         "400":
-          description: Missing/invalid field, e.g. a malformed email or future birth
-            date
+          description: Missing/invalid field, e.g. a future birth date
           schema:
             $ref: '#/definitions/ValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: The session's email address is not verified
+          schema:
+            $ref: '#/definitions/ErrorResponse'
         "409":
           description: Email already in use
           schema:
@@ -451,16 +481,16 @@ paths:
           description: Unexpected server error
           schema:
             $ref: '#/definitions/ErrorResponse'
+      security:
+      - ClerkSession: []
       summary: Create an account (tutor + optional children)
       tags:
       - accounts
   /accounts/{accountId}:
     get:
       description: |-
-        Retrieves an account (tutor + children) by id, to populate the home page's
-        children listing (FR-001). No authentication — the account id acts as a
-        de facto access token, a deliberate continuation of the posture already
-        accepted in specs/001/002 (see plan.md's privacy note).
+        Retrieves an account (tutor + children) by id (FR-001). Requires a Clerk session
+        that owns this account (specs/008-autenticacion-cuenta): 403 for any other.
       parameters:
       - description: Account UUID
         in: path
@@ -474,10 +504,20 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/internal_account.accountResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ErrorResponse'
         "404":
           description: No account exists for this id
           schema:
             $ref: '#/definitions/AccountNotFoundResponse'
+      security:
+      - ClerkSession: []
       summary: Get an account and its children
       tags:
       - accounts
@@ -512,6 +552,14 @@ paths:
           description: Missing/invalid field
           schema:
             $ref: '#/definitions/ValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ErrorResponse'
         "404":
           description: No account exists for this id
           schema:
@@ -520,7 +568,33 @@ paths:
           description: Free plan already has 1 child; upgrade required
           schema:
             $ref: '#/definitions/FreemiumLimitResponse'
+      security:
+      - ClerkSession: []
       summary: Add a child to an existing account
+      tags:
+      - accounts
+  /accounts/me:
+    get:
+      description: |-
+        Resolves the account linked to the caller's verified Clerk session — the
+        replacement for a client-supplied accountId (specs/008-autenticacion-cuenta). An
+        account created before authentication existed, with the session's own verified
+        email, is linked on this first access. A 404 is the expected state right after a
+        brand-new Clerk sign-up, before POST /accounts has run.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_account.accountResponse'
+        "404":
+          description: No account is linked to this session yet
+          schema:
+            $ref: '#/definitions/AccountNotFoundForSessionResponse'
+      security:
+      - ClerkSession: []
+      summary: Get the authenticated tutor's own account
       tags:
       - accounts
   /catalog/countries:
@@ -591,10 +665,20 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/ConsultationListResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
         "404":
           description: No child exists for this id
           schema:
             $ref: '#/definitions/ChildNotFoundResponse'
+      security:
+      - ClerkSession: []
       summary: List a child's consultations
       tags:
       - consultations
@@ -628,10 +712,20 @@ paths:
           description: Missing/invalid field
           schema:
             $ref: '#/definitions/ConsultationValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
         "404":
           description: No child exists for this id
           schema:
             $ref: '#/definitions/ChildNotFoundResponse'
+      security:
+      - ClerkSession: []
       summary: Register a new medical consultation
       tags:
       - consultations
@@ -671,10 +765,20 @@ paths:
           description: Missing/invalid window
           schema:
             $ref: '#/definitions/ConsultationValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
         "404":
           description: No child exists for this id
           schema:
             $ref: '#/definitions/ChildNotFoundResponse'
+      security:
+      - ClerkSession: []
       summary: A child's doses in a window and active treatment
       tags:
       - consultations
@@ -696,10 +800,20 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/ConsultationDetailResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
         "404":
           description: No consultation exists for this id
           schema:
             $ref: '#/definitions/ConsultationNotFoundResponse'
+      security:
+      - ClerkSession: []
       summary: Get a consultation's full detail
       tags:
       - consultations
@@ -734,11 +848,27 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/DoseResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
         "404":
           description: No dose exists for this id
           schema:
             $ref: '#/definitions/DoseNotFoundResponse'
+      security:
+      - ClerkSession: []
       summary: Mark or unmark a dose as taken
       tags:
       - consultations
+securityDefinitions:
+  ClerkSession:
+    description: Clerk session token, sent as "Bearer <token>".
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

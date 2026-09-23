@@ -1,6 +1,10 @@
+import { Link } from 'react-router-dom'
 import { FormField as Field } from '../../shared/ui/FormField'
 import { Logo } from '../../shared/ui/Logo'
+import { EmailCodeStep } from './EmailCodeStep'
 import { GoogleSignupButton } from './GoogleSignupButton'
+import { PasswordField } from './PasswordField'
+import { Notice } from '../../shared/ui/Notice'
 import {
   BIRTH_DATE_MESSAGE,
   CHILD_NAME_MESSAGE,
@@ -30,12 +34,12 @@ const childField =
  * Deviations from the mock, by decision: the account also asks for the tutor's
  * first/last name and (optionally) país/estado, and the child block has
  * separate Nombre/Apellido plus optional talla/peso (the account model stores
- * them); "Contraseña" is only validated (min. 8), never sent or stored — the
- * authentication (Clerk or AWS Cognito) is a later feature (BACKLOG.md); and
- * "Registrarme con Google" is not in the mock (requested; says "pronto").
+ * them); "Contraseña" goes to Clerk only (`signUp.password()`), PediTrack's own
+ * backend never receives it; and "Registrarme con Google" is not in the mock
+ * (requested; it starts the real Clerk OAuth flow).
  */
 export function SignupPhone({ form }: { form: SignupForm }) {
-  const { register, setValue, errors, onSubmit, countryCode, countries, states, isPending, serverError } = form
+  const { register, setValue, errors, onSubmit, countryCode, countries, states, isPending, serverNotice, step, password } = form
   const childErrors = errors.children?.[0]
 
   return (
@@ -55,6 +59,11 @@ export function SignupPhone({ form }: { form: SignupForm }) {
         </p>
       </header>
 
+      {step === 'verify-email' ? (
+        <div className="px-6 pt-7 pb-9">
+          <EmailCodeStep form={form} />
+        </div>
+      ) : (
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-6 px-6 pt-7 pb-9">
         <Field id="email" text="Correo" error={errors.email ? EMAIL_MESSAGE : undefined}>
           <input
@@ -68,17 +77,12 @@ export function SignupPhone({ form }: { form: SignupForm }) {
           />
         </Field>
 
-        <Field id="password" text="Contraseña" error={errors.password ? PASSWORD_MESSAGE : undefined}>
-          <input
-            id="password"
-            type="password"
-            size={1}
-            autoComplete="new-password"
-            placeholder="Mínimo 8 caracteres"
-            className={`${tutorField} ${border(!!errors.password, 'border-slate-300')}`}
-            {...register('password', passwordValidation)}
-          />
-        </Field>
+        <PasswordField
+          registration={register('password', passwordValidation)}
+          value={password ?? ''}
+          error={errors.password ? PASSWORD_MESSAGE : undefined}
+          inputClassName={`${tutorField} ${border(!!errors.password, 'border-slate-300')}`}
+        />
 
         <div className="flex flex-col gap-6">
           <Field id="firstName" text="Tu nombre" error={nameError(errors.firstName, 'El nombre')}>
@@ -214,10 +218,15 @@ export function SignupPhone({ form }: { form: SignupForm }) {
           </div>
         </fieldset>
 
-        {serverError && (
-          <p role="alert" className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-800">
-            {serverError}
-          </p>
+        {/* Required by Clerk for bot protection on custom sign-up flows — must exist in the
+            DOM before signUp.password() runs (Clerk docs: "Add bot protection"). Invisible by
+            default; Clerk mounts its own widget into it only when a challenge is needed. */}
+        <div id="clerk-captcha" />
+
+        {serverNotice && (
+          <Notice tone={serverNotice.tone} action={serverNotice.action}>
+            {serverNotice.message}
+          </Notice>
         )}
 
         <button
@@ -230,10 +239,18 @@ export function SignupPhone({ form }: { form: SignupForm }) {
 
         <GoogleSignupButton />
 
+        <p className="text-center text-[15px] text-slate-600">
+          ¿Ya tienes cuenta?{' '}
+          <Link to="/login" className="font-extrabold text-action hover:underline">
+            Inicia sesión
+          </Link>
+        </p>
+
         <p className="text-center text-[13px] leading-relaxed text-slate-500">
           El plan gratuito incluye un hijo. Puedes agregar más después.
         </p>
       </form>
+      )}
     </main>
   )
 }

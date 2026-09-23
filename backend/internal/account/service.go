@@ -2,6 +2,7 @@ package account
 
 import (
 	"context"
+	"errors"
 	"regexp"
 	"strconv"
 	"time"
@@ -9,8 +10,6 @@ import (
 
 	"github.com/google/uuid"
 )
-
-var emailPattern = regexp.MustCompile(`^[^\s@]+@[^\s@]+\.[^\s@]+$`)
 
 // namePattern allows letters (including accented characters and ñ), spaces,
 // hyphens and apostrophes, for compound and hyphenated names. Digits and
@@ -29,11 +28,15 @@ const nameMaxLength = 100
 const freePlanChildLimit = 1
 
 // CreateAccountInput is the input to Service.CreateAccount, mirroring the
-// POST /accounts request body (contracts/post-accounts.md).
+// POST /accounts request body (contracts/post-accounts.md). Email and
+// ClerkUserID are never taken from the client's JSON body — the handler
+// fills them from the caller's verified Clerk session before this is called
+// (specs/008-autenticacion-cuenta, research.md punto 2/6).
 type CreateAccountInput struct {
 	FirstName   string
 	LastName    string
 	Email       string
+	ClerkUserID string
 	CountryCode *string
 	StateCode   *string
 	Children    []CreateChildInput
@@ -60,8 +63,21 @@ func NewService(repo *Repository) *Service {
 }
 
 // CreateAccount validates input and persists a new Account (with its
-// Children, if any and if allowed by the plan).
+// Children, if any and if allowed by the plan). If input.ClerkUserID is
+// already linked to an Account (e.g. a retried request after a 201 that
+// never reached the client), it returns that existing Account together with
+// ErrAccountAlreadyLinked instead of attempting a duplicate insert — the
+// handler treats that as success, not failure (contracts/post-accounts.md,
+// caso doble-envío).
 func (s *Service) CreateAccount(ctx context.Context, input CreateAccountInput) (*Account, error) {
+	existing, err := s.repo.GetByClerkUserID(ctx, input.ClerkUserID)
+	if err == nil {
+		return existing, ErrAccountAlreadyLinked
+	}
+	if !errors.Is(err, ErrAccountNotFound) {
+		return nil, err
+	}
+
 	// FR-007: a brand-new account is always on the free plan, which allows
 	// at most one child. This check runs server-side regardless of what the
 	// client already validated (defense in depth, per research.md), and
@@ -84,10 +100,12 @@ func (s *Service) CreateAccount(ctx context.Context, input CreateAccountInput) (
 		return nil, ErrEmailAlreadyExists
 	}
 
+	clerkUserID := input.ClerkUserID
 	acc := &Account{
 		FirstName:   input.FirstName,
 		LastName:    input.LastName,
 		Email:       input.Email,
+		ClerkUserID: &clerkUserID,
 		CountryCode: input.CountryCode,
 		StateCode:   input.StateCode,
 		Plan:        PlanFree,
@@ -103,15 +121,41 @@ func (s *Service) CreateAccount(ctx context.Context, input CreateAccountInput) (
 	}
 
 	if err := s.repo.Create(ctx, acc); err != nil {
+		if errors.Is(err, ErrClerkUserAlreadyLinked) {
+			// Lost a race against a twin request for the same session: the
+			// account it created is this session's account (idempotent success).
+			if existing, getErr := s.repo.GetByClerkUserID(ctx, input.ClerkUserID); getErr == nil {
+				return existing, ErrAccountAlreadyLinked
+			}
+		}
 		return nil, err
 	}
 	return acc, nil
+}
+
+// LinkLegacyAccount links the pre-authentication account whose email matches
+// (case-insensitively) to the session's Clerk user, returning it; it returns
+// ErrAccountNotFound when there is none. email MUST be the session's
+// Clerk-verified primary email (specs/008-autenticacion-cuenta, Historia 5).
+func (s *Service) LinkLegacyAccount(ctx context.Context, clerkUserID, email string) (*Account, error) {
+	return s.repo.LinkByEmail(ctx, clerkUserID, email)
 }
 
 // GetAccount retrieves an account and its children by id, for the home page
 // listing (specs/003-home-listado-hijos FR-001).
 func (s *Service) GetAccount(ctx context.Context, id uuid.UUID) (*Account, error) {
 	return s.repo.GetByID(ctx, id)
+}
+
+// GetAccountByClerkUserID resolves the account linked to a Clerk session,
+// for GET /accounts/me (specs/008-autenticacion-cuenta,
+// contracts/get-accounts-me.md). This is the direct-link case only —
+// ErrAccountNotFound covers both "genuinely no account yet" (right after a
+// brand-new Clerk sign-up, before POST /accounts) and "an unlinked account
+// with a matching email exists"; the handlers tell those apart with
+// LinkLegacyAccount, which needs the session's verified email.
+func (s *Service) GetAccountByClerkUserID(ctx context.Context, clerkUserID string) (*Account, error) {
+	return s.repo.GetByClerkUserID(ctx, clerkUserID)
 }
 
 // AddChild adds a single child to an already-existing account, reusing the
@@ -176,11 +220,8 @@ func validateCreateAccountInput(input CreateAccountInput) ValidationErrors {
 	} else if err := validateNameFormat(input.LastName); err != "" {
 		errs = append(errs, ValidationError{Field: "lastName", Message: err})
 	}
-	if input.Email == "" {
-		errs = append(errs, ValidationError{Field: "email", Message: "email is required"})
-	} else if !emailPattern.MatchString(input.Email) {
-		errs = append(errs, ValidationError{Field: "email", Message: "invalid email format"})
-	}
+	// Email is no longer client input (see CreateAccountInput's doc comment) — it comes from the
+	// caller's verified Clerk session, so there is nothing here left to validate about its format.
 
 	for i, c := range input.Children {
 		for _, e := range validateChildFields(c) {

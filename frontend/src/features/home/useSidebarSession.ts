@@ -1,6 +1,5 @@
-import { useState } from 'react'
 import { useIsDesktop, useIsWide } from '../../shared/ui/useIsDesktop'
-import { useAccountSession } from './useAccountSession'
+import { useCurrentAccount } from '../auth/useCurrentAccount'
 
 /**
  * Whether the desktop children sidebar is on screen, and for which account.
@@ -13,7 +12,7 @@ import { useAccountSession } from './useAccountSession'
 export function useSidebarSession(): { accountId: string | null; hasSidebar: boolean; isDesktop: boolean } {
   const isDesktop = useIsDesktop()
   const isWide = useIsWide()
-  const { getAccountId } = useAccountSession()
-  const [accountId] = useState<string | null>(() => getAccountId())
+  const { data } = useCurrentAccount()
+  const accountId = data?.id ?? null
   return { accountId, hasSidebar: isDesktop && isWide && accountId !== null, isDesktop }
 }

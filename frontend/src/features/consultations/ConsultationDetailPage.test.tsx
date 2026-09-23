@@ -83,7 +83,7 @@ describe('ConsultationDetailPage', () => {
 
       expect(await screen.findByRole('heading', { level: 1, name: 'Dra. López' })).toBeInTheDocument()
       expect(screen.getByText('15 enero 2026')).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: '← Volver al reporte de consultas' })).toHaveAttribute('href', '/children/child-1')
+      expect(await screen.findByRole('link', { name: '← Mateo Morales' })).toHaveAttribute('href', '/children/child-1')
       expect(screen.getByText('Foto de la receta')).toBeInTheDocument()
       expect(screen.getByText('Leída con OCR en el dispositivo')).toBeInTheDocument()
       expect(screen.getByText('Síntomas registrados')).toBeInTheDocument()
@@ -100,12 +100,17 @@ describe('ConsultationDetailPage', () => {
       expect(screen.getByRole('main')).toHaveClass('mx-auto', 'max-w-[430px]')
     })
 
-    it('names the child in the back link when the account is saved', async () => {
-      window.localStorage.setItem('peditrack.accountId', 'a1')
-      stubApi(consultation())
+    it('falls back to a generic back link when the session has no linked account yet', async () => {
+      const fetchMock = vi.fn().mockImplementation(async (input: string) => {
+        const url = String(input)
+        if (url.includes('/overview')) return { ok: true, json: async () => ({ childId: 'child-1', doses: [], activeTreatment: null }) }
+        if (url.includes('/accounts/')) return { ok: false, status: 404, json: async () => ({ message: 'no account' }) }
+        return { ok: true, json: async () => consultation() }
+      })
+      vi.stubGlobal('fetch', fetchMock)
       renderPage()
 
-      expect(await screen.findByRole('link', { name: '← Mateo Morales' })).toBeInTheDocument()
+      expect(await screen.findByRole('link', { name: '← Volver al reporte de consultas' })).toBeInTheDocument()
     })
 
     it('omits the symptoms section when there are none', async () => {

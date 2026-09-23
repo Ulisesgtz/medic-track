@@ -29,12 +29,6 @@ dejó pendientes (2026-09-21). No se construye nada de esto hasta que se respond
 
 ## Prioridad alta
 
-- **Autenticación real con Clerk o AWS Cognito** — siguiente feature (proveedor por decidir entre esos dos).
-  Hoy la "sesión" es solo el `account_id` en `localStorage`. Los registros (móvil y web) ya tienen el campo
-  "Contraseña" del mock (mínimo 8 caracteres) pero **no se envía ni se guarda**, y el botón "Registrarme con Google" solo
-  avisa que estará disponible pronto. Al construirla: conectar ambos al proveedor (el registro con Google y la
-  contraseña pasan a ser del proveedor, no de nuestro backend), la pantalla de inicio de sesión, y revisar `GET /accounts/{accountId}` y `POST /accounts/{accountId}/children`
-  (hoy sin autenticación) y `useAccountSession`.
 - **Homologar todas las pantallas a los mocks** — hecho en `specs/007-homologar-pantallas-a-mocks/`
   (rama `feature/007-homologar-pantallas-a-mocks`); las desviaciones que quedan están listadas en su spec.
   Pendiente de esa spec: las pantallas que aún no tienen mock (planes `/planes`, estados vacíos y de error).
@@ -61,13 +55,6 @@ dejó pendientes (2026-09-21). No se construye nada de esto hasta que se respond
 - **Excepción de `cmd/api` en el gate de cobertura de CI** — actualmente `cmd/api` (wiring de Go) no
   cuenta para el >90% exigido por el Principio VI. Pregunta abierta sin resolver con el usuario: si
   se acepta la excepción permanentemente o se agrega alguna prueba de wiring.
-- **Autenticación real (login/contraseña)** — `specs/003-home-listado-hijos/` introduce un
-  `account_id` guardado en `localStorage` como "sesión" de facto, sin ningún mecanismo real de
-  login, explícitamente aceptado como solución interina (ver plan.md, nota de Privacidad del
-  Principio II). Cuando se diseñe la autenticación real, revisar `GET /accounts/{accountId}` y
-  `POST /accounts/{accountId}/children` (hoy sin autenticación) y `useAccountSession` en el
-  frontend. Consecuencia visible hoy: si se abre la URL de un hijo en un navegador donde nunca se creó la
-  cuenta (sin `account_id` guardado), la pantalla carga pero sin la barra lateral de escritorio.
 - **Almacenamiento de fotos de recetas en object storage** — `specs/004-detalle-consulta-hijo/`
   guarda la foto de la receta como `bytea` directamente en Postgres (ver research.md), por
   simplicidad y porque no hay infraestructura de archivos decidida todavía. Revisar migrar a un
@@ -101,6 +88,31 @@ dejó pendientes (2026-09-21). No se construye nada de esto hasta que se respond
 - **Pantalla de planes de pago** — hoy `/planes` muestra un aviso "Estamos preparando los planes" (`MessagePage`) para que "Ver planes" no caiga en una pantalla en blanco. El modal de límite freemium (franja ámbar) es el punto de entrada
   visual ya establecido; la pantalla de planes debe continuarlo. Ver `specs/005-identidad-visual-front-end/spec.md`,
   "Adiciones Futuras Previstas".
+- **Patrocinios contextuales (publicidad sin perfilar al usuario)** — decidido en conversación 2026-09-22, no construir aún.
+  Matiza (no revoca) la regla "sin anuncios" de `peditrack-monetization.md`: se permite mostrar patrocinios genéricos,
+  siempre que ningún dato médico o del niño se use para elegirlos ni se comparta con el anunciante.
+  - **Mecanismo**: catálogo propio servido por el backend de PediTrack (tabla `sponsorships`: anunciante, imagen, texto,
+    liga, categoría, vigencia), rotación simple por posición de pantalla — nada de SDKs de ad-tech de terceros (Google
+    AdSense, Meta Audience Network, etc.), nada de cookies/IDs de publicidad de terceros, ninguna impresión vinculada
+    al `accountId` (a lo mucho una métrica agregada por posición).
+  - **Dónde**: una tarjeta en el home (tras el listado de hijos) y/o en `/planes`. Nunca dentro de la ficha de
+    consulta/receta ni cerca de la foto de la receta. Siempre etiquetado "Contenido patrocinado", visualmente distinto
+    del resto de la UI.
+  - **Categorías permitidas**: seguros de gastos médicos para niños, guarderías, papelería/juguetes educativos, higiene
+    infantil (pañales, etc.), servicios de vacunación/pediatría (se solapa con el Plan Consultorio B2B2C).
+  - **Categorías prohibidas, no negociables**: medicamentos y suplementos, **fórmula/sustitutos de leche materna**
+    (Código Internacional de la OMS + regulación mexicana), alcohol/tabaco, y cualquier anuncio que sugiera diagnóstico
+    o tratamiento (choca con Principio I de la constitución).
+  - **Proceso de negocio (venta directa, no programática)**: prospección uno-a-uno a marcas de esas categorías,
+    tarifa fija pactada (por periodo o por volumen garantizado de impresiones, no puja), orden de inserción/contrato
+    corto con las exclusiones por escrito, revisión manual de cada creatividad antes de publicarla, reporte agregado
+    de impresiones (sin datos de usuario) al anunciante. A la escala actual esto es un canal secundario, no la fuente
+    principal de ingreso (esa sigue siendo el Plan Familia anual y el Plan Consultorio B2B2C). Alternativa más
+    escalable si hace falta bajar el esfuerzo de ventas: formulario de autoservicio con pago (Stripe) para negocios
+    chicos/locales, con la misma revisión manual de creatividad.
+  - **Mensaje a ajustar**: el pitch de privacidad ("tus datos jamás se comparten") sigue siendo cierto bajo este
+    esquema, pero conviene matizarlo a algo como "no vendemos ni compartimos tu información; los patrocinios que veas
+    no usan tus datos médicos" para que no choque con el banner de aviso al crear la cuenta.
 
 ## Despliegue
 
@@ -120,6 +132,12 @@ dejó pendientes (2026-09-21). No se construye nada de esto hasta que se respond
   adelante conviene consolidar todo en Cloudflare.
 - Relacionado: **fotos de recetas en `bytea` dentro de Postgres** (ver "Backend" arriba) — el proveedor de
   hosting elegido debe soportar que la base de datos crezca con cada foto hasta que se migre a un object storage.
+- **Instancia de producción de Clerk** (`specs/008-autenticacion-cuenta/`) — el desarrollo usa la instancia de
+  Desarrollo de Clerk (`pk_test_`/`sk_test_`, sin configuración extra). Al desplegar a producción hay que: crear
+  la instancia de Producción de la misma app de Clerk (`pk_live_`/`sk_live_`), apuntarla al dominio real
+  (`pedi-track.com`), y **volver a configurar el login con Google ahí** — Clerk no copia la configuración de
+  SSO/Integrations de dev a prod, y en prod ya no se usan las credenciales de Google compartidas de Clerk, hay
+  que dar de alta credenciales propias en Google Cloud Console.
 
 ## Producto / Legal
 

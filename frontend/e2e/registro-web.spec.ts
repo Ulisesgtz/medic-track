@@ -1,5 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
-import { fillSignup } from './helpers'
+import type { Page } from '@playwright/test'
+import { test, expect, allowClerkOn, fillSignup, finishEmailVerificationIfAsked } from './helpers'
 
 // Signup, web design (mock 11): split screen — dark panel with the value
 // proposition and the checklist, the form with its title on the right. The numbers
@@ -14,6 +14,7 @@ const box = async (page: Page, locator: ReturnType<Page['locator']>) => {
 
 /** Opens the signup at a width and waits for the fonts: text wraps (and so heights) depend on them. */
 async function open(page: Page, width: number) {
+  await allowClerkOn(page)
   await page.setViewportSize({ width, height: 900 })
   await page.goto('/signup')
   await page.evaluate(() => document.fonts.ready)
@@ -89,8 +90,8 @@ test.describe('Registro web (mock 11) — medidas del mock', () => {
     const email = page.getByLabel('Correo')
 
     await expect(email).toHaveAttribute('placeholder', 'tu@correo.mx')
-    await expect(page.getByLabel('Contraseña')).toHaveAttribute('placeholder', 'Mínimo 8 caracteres')
-    await expect(page.getByLabel('Contraseña')).toHaveAttribute('type', 'password')
+    await expect(page.getByLabel('Contraseña', { exact: true })).toHaveAttribute('placeholder', 'Mínimo 8 caracteres')
+    await expect(page.getByLabel('Contraseña', { exact: true })).toHaveAttribute('type', 'password')
     // The child's fields have the bright cyan border.
     await expect(page.locator('#children\\.0\\.firstName')).toHaveCSS('border-top-color', 'rgb(103, 232, 249)')
     await expect(page.locator('#children\\.0\\.birthDate')).toHaveCSS('border-top-color', 'rgb(103, 232, 249)')
@@ -108,13 +109,13 @@ test.describe('Registro web (mock 11) — medidas del mock', () => {
     // The first invalid field takes the focus (its focus border, ink, wins over the red one, as in the
     // mock); the others show the red border.
     await expect(page.getByLabel('Correo')).toBeFocused()
-    await expect(page.getByLabel('Contraseña')).toHaveClass(/border-red-600/)
+    await expect(page.getByLabel('Contraseña', { exact: true })).toHaveClass(/border-red-600/)
     await expect(page.locator('#children\\.0\\.firstName')).toHaveClass(/border-red-600/)
     const message = page.getByText('Escribe un correo válido.')
     await expect(message).toHaveClass(/text-red-700/)
     await expect(message).toHaveCSS('font-size', '13px')
     await expect(message).toHaveCSS('font-weight', '600')
-    await expect(page.getByText('La contraseña necesita al menos 8 caracteres.')).toBeVisible()
+    await expect(page.getByText('La contraseña no cumple con las reglas.')).toBeVisible()
     await expect(page.getByText('Escribe el nombre de tu hijo.')).toBeVisible()
     await expect(page.getByText('Elige la fecha de nacimiento.')).toBeVisible()
   })
@@ -124,16 +125,17 @@ test.describe('Registro web (mock 11) — medidas del mock', () => {
 
     await page.getByLabel('Correo').focus()
     const order: string[] = []
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < 17; i++) {
       const current = await page.evaluate(() => (document.activeElement as HTMLElement).id || (document.activeElement as HTMLElement).textContent || '')
       // A date input has one Tab stop per segment (day, month, year): count it once.
       if (order[order.length - 1] !== current) order.push(current)
       await page.keyboard.press('Tab')
     }
 
-    expect(order.slice(0, 12)).toEqual([
+    expect(order.slice(0, 13)).toEqual([
       'email',
       'password',
+      'password-toggle',
       'firstName',
       'lastName',
       'countryCode',
@@ -152,6 +154,7 @@ test.describe('Registro web (mock 11) — medidas del mock', () => {
     await fillSignup(page)
 
     await page.getByRole('button', { name: 'Crear cuenta' }).click()
+    await finishEmailVerificationIfAsked(page)
 
     await expect(page).toHaveURL(/\/home$/)
   })

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -22,6 +23,14 @@ func uniqueEmail(base string) string {
 	return fmt.Sprintf("%s.%d@example.com", base, time.Now().UnixNano())
 }
 
+// uniqueClerkUserID returns a Clerk user id guaranteed not to collide with a
+// previous test run (accounts.clerk_user_id is UNIQUE, same rationale as
+// uniqueEmail) — every CreateAccountInput needs one now that CreateAccount
+// checks it first (specs/008-autenticacion-cuenta).
+func uniqueClerkUserID(base string) string {
+	return fmt.Sprintf("user_%s_%d", base, time.Now().UnixNano())
+}
+
 func testPool(t *testing.T) *pgxpool.Pool {
 	t.Helper()
 	dsn := os.Getenv("DATABASE_URL")
@@ -36,9 +45,11 @@ func testPool(t *testing.T) *pgxpool.Pool {
 
 func float64Ptr(f float64) *float64 { return &f }
 
-// TestService_CreateAccount_Validation covers FR-001/FR-002: required fields
-// and email format, without touching the database (no email is unique yet
-// since these inputs are all invalid before reaching the repository).
+// TestService_CreateAccount_Validation covers FR-001/FR-002: required
+// fields and name format, without touching the database (these inputs are
+// all invalid before reaching the repository). Email format is no longer
+// client input (specs/008-autenticacion-cuenta) — there's nothing left to
+// validate about it here.
 func TestService_CreateAccount_Validation(t *testing.T) {
 	pool := testPool(t)
 	svc := account.NewService(account.NewRepository(pool))
@@ -59,16 +70,6 @@ func TestService_CreateAccount_Validation(t *testing.T) {
 			wantFieldErrs: []string{"lastName"},
 		},
 		{
-			name:          "missing email",
-			input:         account.CreateAccountInput{FirstName: "Ana", LastName: "Gómez"},
-			wantFieldErrs: []string{"email"},
-		},
-		{
-			name:          "invalid email format",
-			input:         account.CreateAccountInput{FirstName: "Ana", LastName: "Gómez", Email: "not-an-email"},
-			wantFieldErrs: []string{"email"},
-		},
-		{
 			name:          "first name contains digits",
 			input:         account.CreateAccountInput{FirstName: "Ana123", LastName: "Gómez", Email: "valid@example.com"},
 			wantFieldErrs: []string{"firstName"},
@@ -87,6 +88,7 @@ func TestService_CreateAccount_Validation(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tt.input.ClerkUserID = uniqueClerkUserID(tt.name)
 			_, err := svc.CreateAccount(context.Background(), tt.input)
 
 			require.Error(t, err)
@@ -123,9 +125,10 @@ func TestService_CreateAccount_NameFormatAccepted(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := svc.CreateAccount(context.Background(), account.CreateAccountInput{
-				FirstName: tt.firstName,
-				LastName:  tt.lastName,
-				Email:     uniqueEmail("name-format-ok"),
+				FirstName:   tt.firstName,
+				LastName:    tt.lastName,
+				Email:       uniqueEmail("name-format-ok"),
+				ClerkUserID: uniqueClerkUserID(tt.name),
 			})
 
 			require.NoError(t, err)
@@ -192,10 +195,11 @@ func TestService_CreateAccount_ChildValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			input := account.CreateAccountInput{
-				FirstName: "Ana",
-				LastName:  "Gómez",
-				Email:     uniqueEmail("ana-" + tt.name),
-				Children:  []account.CreateChildInput{tt.child},
+				FirstName:   "Ana",
+				LastName:    "Gómez",
+				Email:       uniqueEmail("ana-" + tt.name),
+				ClerkUserID: uniqueClerkUserID(tt.name),
+				Children:    []account.CreateChildInput{tt.child},
 			}
 
 			_, err := svc.CreateAccount(context.Background(), input)
@@ -222,9 +226,10 @@ func TestService_CreateAccount_FreemiumLimit(t *testing.T) {
 	svc := account.NewService(account.NewRepository(pool))
 
 	input := account.CreateAccountInput{
-		FirstName: "Carla",
-		LastName:  "Ruiz",
-		Email:     uniqueEmail("carla.freemium.test"),
+		FirstName:   "Carla",
+		LastName:    "Ruiz",
+		Email:       uniqueEmail("carla.freemium.test"),
+		ClerkUserID: uniqueClerkUserID("carla.freemium.test"),
 		Children: []account.CreateChildInput{
 			{FirstName: "Hijo Uno", LastName: "Ruiz", BirthDate: time.Now().AddDate(-3, 0, 0)},
 			{FirstName: "Hijo Dos", LastName: "Ruiz", BirthDate: time.Now().AddDate(-1, 0, 0)},
@@ -246,6 +251,30 @@ func TestService_GetAccount_NotFound(t *testing.T) {
 	require.ErrorIs(t, err, account.ErrAccountNotFound)
 }
 
+// TestService_GetAccountByClerkUserID covers the direct-link case of
+// GET /accounts/me (specs/008-autenticacion-cuenta, contracts/get-accounts-me.md):
+// found when linked, ErrAccountNotFound when no account has that
+// clerk_user_id (Historia 5's email-fallback is covered separately once
+// that phase adds it).
+func TestService_GetAccountByClerkUserID(t *testing.T) {
+	pool := testPool(t)
+	svc := account.NewService(account.NewRepository(pool))
+	clerkUserID := uniqueClerkUserID("getbyclerk")
+
+	_, err := svc.GetAccountByClerkUserID(context.Background(), clerkUserID)
+	require.ErrorIs(t, err, account.ErrAccountNotFound)
+
+	created, err := svc.CreateAccount(context.Background(), account.CreateAccountInput{
+		FirstName: "Ana", LastName: "Gómez", Email: uniqueEmail("getbyclerk"),
+		ClerkUserID: clerkUserID,
+	})
+	require.NoError(t, err)
+
+	found, err := svc.GetAccountByClerkUserID(context.Background(), clerkUserID)
+	require.NoError(t, err)
+	require.Equal(t, created.ID, found.ID)
+}
+
 // TestService_AddChild_Success covers adding a child under the freemium
 // limit to an account that starts with none.
 func TestService_AddChild_Success(t *testing.T) {
@@ -254,6 +283,7 @@ func TestService_AddChild_Success(t *testing.T) {
 
 	acc, err := svc.CreateAccount(context.Background(), account.CreateAccountInput{
 		FirstName: "Ana", LastName: "Gómez", Email: uniqueEmail("addchild.success"),
+		ClerkUserID: uniqueClerkUserID("addchild.success"),
 	})
 	require.NoError(t, err)
 
@@ -274,6 +304,7 @@ func TestService_AddChild_FreemiumLimit(t *testing.T) {
 
 	acc, err := svc.CreateAccount(context.Background(), account.CreateAccountInput{
 		FirstName: "Carla", LastName: "Ruiz", Email: uniqueEmail("addchild.freemium"),
+		ClerkUserID: uniqueClerkUserID("addchild.freemium"),
 		Children: []account.CreateChildInput{
 			{FirstName: "Hijo Uno", LastName: "Ruiz", BirthDate: time.Now().AddDate(-3, 0, 0)},
 		},
@@ -312,6 +343,7 @@ func TestService_AddChild_FieldValidation(t *testing.T) {
 
 	acc, err := svc.CreateAccount(context.Background(), account.CreateAccountInput{
 		FirstName: "Ana", LastName: "Gómez", Email: uniqueEmail("addchild.validation"),
+		ClerkUserID: uniqueClerkUserID("addchild.validation"),
 	})
 	require.NoError(t, err)
 
@@ -323,4 +355,52 @@ func TestService_AddChild_FieldValidation(t *testing.T) {
 	var validationErrs account.ValidationErrors
 	require.ErrorAs(t, err, &validationErrs)
 	require.Equal(t, "firstName", validationErrs[0].Field)
+}
+
+// Twin POST /accounts for a brand-new session: whichever loses the insert race
+// must answer with the account the winner created, never fail.
+func TestService_CreateAccount_ConcurrentTwinRequestsForOneSessionAllSucceed(t *testing.T) {
+	pool := testPool(t)
+	svc := account.NewService(account.NewRepository(pool))
+	clerkID := uniqueClerkUserID("race")
+	const twins = 12
+
+	var wg sync.WaitGroup
+	results := make([]error, twins)
+	ids := make([]uuid.UUID, twins)
+	for i := 0; i < twins; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			acc, err := svc.CreateAccount(context.Background(), account.CreateAccountInput{
+				FirstName: "Ana", LastName: "Gómez", Email: uniqueEmail(fmt.Sprintf("service.race%d", i)), ClerkUserID: clerkID,
+			})
+			results[i] = err
+			if acc != nil {
+				ids[i] = acc.ID
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	for i, err := range results {
+		if err != nil {
+			require.ErrorIs(t, err, account.ErrAccountAlreadyLinked, "twin %d", i)
+		}
+		require.Equal(t, ids[0], ids[i], "every twin gets the same account")
+	}
+}
+
+func TestService_LinkLegacyAccount(t *testing.T) {
+	pool := testPool(t)
+	svc := account.NewService(account.NewRepository(pool))
+	email := uniqueEmail("service.legacy")
+	require.NoError(t, account.NewRepository(pool).Create(context.Background(), newLegacyAccount(email)))
+
+	linked, err := svc.LinkLegacyAccount(context.Background(), uniqueClerkUserID("svc"), email)
+	require.NoError(t, err)
+	require.Equal(t, email, linked.Email)
+
+	_, err = svc.LinkLegacyAccount(context.Background(), uniqueClerkUserID("svc2"), uniqueEmail("service.nobody"))
+	require.ErrorIs(t, err, account.ErrAccountNotFound)
 }

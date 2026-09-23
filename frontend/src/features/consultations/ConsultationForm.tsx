@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useAuth } from '@clerk/react'
 import { Link } from 'react-router-dom'
 import { useForm, useFieldArray, type Path } from 'react-hook-form'
 import { useMutation } from '@tanstack/react-query'
@@ -219,6 +220,7 @@ export function ConsultationForm({
     onDirtyChange?.(dirty)
   }, [dirty, onDirtyChange])
 
+  const { getToken } = useAuth()
   const mutation = useMutation({
     mutationFn: async ({ values, photo }: { values: ConsultationFormValues; photo: File }) => {
       const photoBase64 = await fileToBase64(photo)
@@ -236,7 +238,7 @@ export function ConsultationForm({
         // Start times are read in the parent's own time zone (their offset on the consult date).
         utcOffsetMinutes: -new Date(`${values.consultDate}T00:00:00`).getTimezoneOffset(),
       }
-      return createConsultation(childId, payload)
+      return createConsultation(childId, payload, await getToken())
     },
     onSuccess: (consultation) => onSuccess(consultation.id),
   })

@@ -1,16 +1,21 @@
-import { test, expect } from '@playwright/test'
-import { designs, fillSignup, uniqueEmail } from './helpers'
+import { clerk } from '@clerk/testing/playwright'
+import { test, expect, allowClerkOn, designs, E2E_PASSWORD, fillSignup, finishEmailVerificationIfAsked, uniqueEmail } from './helpers'
 
 // Covers specs/001-registro-cuenta-usuario in both designs: the phone mock
 // (01) and the web mock (11). The first child is part of the form (as in the
-// mocks), and both have a password (validated, never stored) and a Google
-// button ("coming soon"). Requires the backend running
-// locally — this suite is a separate CI gate from the unit-test coverage gate
+// mocks), and both have a password (which only Clerk ever receives) and a Google
+// button. Requires the backend running locally and Clerk's development instance
+// (`+clerk_test` addresses, the fixed 424242 code, the testing token that skips the
+// CAPTCHA) — this suite is a separate CI gate from the unit-test coverage gate
 // (constitution, Principio VI).
 
 for (const design of designs) {
   test.describe(`Registro de cuenta — diseño ${design.name}`, () => {
     test.use({ viewport: design.viewport })
+
+    test.beforeEach(async ({ page }) => {
+      await allowClerkOn(page)
+    })
 
     test('muestra el diseño de su mock y nunca el del otro', async ({ page }) => {
       await page.goto('/signup')
@@ -23,8 +28,8 @@ for (const design of designs) {
       await expect(webOnly).toHaveCount(design.isWeb ? 1 : 0)
       await expect(phoneOnly).toHaveCount(design.isWeb ? 0 : 1)
       await expect(page.getByRole('heading', { level: 2, name: 'Crear cuenta' })).toHaveCount(design.isWeb ? 1 : 0)
-      // Both mocks: the password field (validated, never stored) and the Google button ("pronto").
-      await expect(page.getByLabel('Contraseña')).toHaveCount(1)
+      // Both mocks: the password field and the Google button.
+      await expect(page.getByLabel('Contraseña', { exact: true })).toHaveCount(1)
       await expect(page.getByRole('button', { name: 'Registrarme con Google' })).toHaveCount(1)
     })
 
@@ -33,10 +38,29 @@ for (const design of designs) {
       await fillSignup(page)
 
       await page.getByRole('button', { name: 'Crear cuenta' }).click()
+      await finishEmailVerificationIfAsked(page)
 
       // FR-003: a successful signup navigates straight to the home page.
       await expect(page).toHaveURL(/\/home/)
       await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
+    })
+
+    test('la cuenta nueva ve el aviso "informativa y de seguimiento" y "Entendido" lo quita para siempre', async ({ page }) => {
+      await page.goto('/signup')
+      await fillSignup(page)
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+      await finishEmailVerificationIfAsked(page)
+      await expect(page).toHaveURL(/\/home/)
+
+      const notice = page.getByRole('region', { name: 'Antes de empezar' })
+      await expect(notice).toContainText('no sustituye una consulta médica')
+      await expect(notice).toContainText('acude siempre a tu médico')
+
+      await page.getByRole('button', { name: 'Entendido' }).click()
+      await expect(notice).toHaveCount(0)
+      await page.reload()
+      await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
+      await expect(notice).toHaveCount(0)
     })
 
     test('no hay forma de agregar un segundo hijo desde el registro (límite del plan gratuito)', async ({ page }) => {
@@ -59,7 +83,7 @@ for (const design of designs) {
       await expect(page.getByText('El nombre es obligatorio')).toBeVisible()
       await expect(page.getByText('El apellido es obligatorio')).toBeVisible()
       await expect(page.getByText('Escribe un correo válido.')).toBeVisible()
-      await expect(page.getByText('La contraseña necesita al menos 8 caracteres.')).toBeVisible()
+      await expect(page.getByText('La contraseña no cumple con las reglas.')).toBeVisible()
       await expect(page.getByText('Escribe el nombre de tu hijo.')).toBeVisible()
       await expect(page.getByText('El apellido del hijo es obligatorio')).toBeVisible()
       await expect(page.getByText('Elige la fecha de nacimiento.')).toBeVisible()
@@ -83,6 +107,7 @@ for (const design of designs) {
       await fillSignup(page, { child: { firstName: 'Luis', lastName: 'Gómez', birthDate: future.toISOString().slice(0, 10) } })
 
       await page.getByRole('button', { name: 'Crear cuenta' }).click()
+      await finishEmailVerificationIfAsked(page)
 
       // The date input has no min/max, so this reaches the server, which must
       // reject it: no navigation to /home and the server's message is shown.
@@ -120,21 +145,39 @@ for (const design of designs) {
       expect(postCalled).toBe(false)
     })
 
-    test('correo duplicado: el servidor responde 409 y el mensaje se muestra (FR-002)', async ({ page }) => {
+    test('correo duplicado: Clerk lo rechaza y el mensaje, en español, se muestra (FR-002)', async ({ page }) => {
       const email = uniqueEmail('dup')
 
       await page.goto('/signup')
       await fillSignup(page, { email })
       await page.getByRole('button', { name: 'Crear cuenta' }).click()
+      await finishEmailVerificationIfAsked(page)
       await expect(page).toHaveURL(/\/home/)
 
-      // A second account with the exact same email.
+      // A second account with the exact same email, from a browser with no session.
+      await clerk.signOut({ page })
       await page.goto('/signup')
       await fillSignup(page, { firstName: 'Otra', lastName: 'Persona', email })
       await page.getByRole('button', { name: 'Crear cuenta' }).click()
 
-      await expect(page.getByText('Este correo ya está en uso.')).toBeVisible()
+      await expect(page.getByRole('alert')).toContainText('Ya existe una cuenta con este correo')
       await expect(page).toHaveURL(/\/signup/)
+    })
+
+    test('quien ya tiene sesión y va a crear otra cuenta recibe un aviso con salida, no un error', async ({ page }) => {
+      await page.goto('/signup')
+      await fillSignup(page)
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+      await finishEmailVerificationIfAsked(page)
+      await expect(page).toHaveURL(/\/home/)
+
+      await page.goto('/signup')
+      await fillSignup(page)
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+
+      await expect(page.getByRole('status')).toContainText('Ya tienes una sesión iniciada')
+      await page.getByRole('link', { name: 'Ir a mi inicio' }).click()
+      await expect(page).toHaveURL(/\/home/)
     })
 
     test('un correo sin formato de correo es rechazado antes de enviar', async ({ page }) => {
@@ -169,20 +212,22 @@ for (const design of designs) {
       })
       await page.goto('/signup')
       await fillSignup(page)
-      await page.getByLabel('Contraseña').fill('1234567')
+      await page.getByLabel('Contraseña', { exact: true }).fill('1234567')
 
       await page.getByRole('button', { name: 'Crear cuenta' }).click()
-      await expect(page.getByText('La contraseña necesita al menos 8 caracteres.')).toBeVisible()
+      await expect(page.getByText('La contraseña no cumple con las reglas.')).toBeVisible()
       expect(body).toBe('')
 
-      await page.getByLabel('Contraseña').fill('secreto123')
+      await page.getByLabel('Contraseña', { exact: true }).fill(E2E_PASSWORD)
       await page.getByRole('button', { name: 'Crear cuenta' }).click()
+      await finishEmailVerificationIfAsked(page)
       await expect(page).toHaveURL(/\/home/)
-      expect(body).not.toContain('secreto123')
+      // The password goes to Clerk and only to Clerk: PediTrack's own POST /accounts never carries it.
+      expect(body).not.toContain(E2E_PASSWORD)
       expect(body).not.toContain('password')
     })
 
-    test('"Registrarme con Google" avisa que estará disponible pronto y no envía nada', async ({ page }) => {
+    test('"Registrarme con Google" lleva a Google y no crea nada en PediTrack todavía', async ({ page }) => {
       let posted = false
       await page.route('**/accounts', async (route) => {
         posted = true
@@ -192,8 +237,8 @@ for (const design of designs) {
 
       await page.getByRole('button', { name: 'Registrarme con Google' }).click()
 
-      await expect(page.getByRole('status')).toHaveText('El registro con Google estará disponible pronto.')
-      await expect(page).toHaveURL(/\/signup/)
+      // The real OAuth redirect (the sign-in itself is Google's, not ours to automate).
+      await page.waitForURL(/accounts\.google\.com/, { timeout: 30_000 })
       expect(posted).toBe(false)
     })
   })

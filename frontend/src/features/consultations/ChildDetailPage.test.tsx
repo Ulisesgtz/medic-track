@@ -113,8 +113,16 @@ describe('ChildDetailPage', () => {
       expect(screen.getByRole('main')).toHaveClass('mx-auto', 'max-w-[430px]')
     })
 
-    it('falls back to a generic title when no account is saved', async () => {
-      stubApi()
+    it('falls back to a generic title when the session has no linked account yet', async () => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockImplementation(async (input: string) => {
+          const url = String(input)
+          if (url.includes('/overview')) return { ok: true, json: async () => emptyOverview }
+          if (url.includes('/accounts/')) return { ok: false, status: 404, json: async () => ({ message: 'no account' }) }
+          return { ok: true, json: async () => ({ childId: 'child-1', consultations }) }
+        }),
+      )
       renderPage()
 
       expect(await screen.findByRole('heading', { level: 1, name: 'Consultas médicas' })).toBeInTheDocument()

@@ -16,7 +16,7 @@ export interface AccountSignupFormValues {
   firstName: string
   lastName: string
   email: string
-  /** Only in the web form (mock 11), and never sent: the accounts have no password until authentication (Clerk / AWS Cognito) arrives. */
+  /** Sent only to Clerk (`signUp.password()`); PediTrack's backend has no password and `toPayload` leaves it out. */
   password: string
   countryCode: string
   stateCode: string

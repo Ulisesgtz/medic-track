@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createAccount, CreateAccountError } from './api'
 
-const basePayload = { firstName: 'Ana', lastName: 'Gómez', email: 'ana@example.com', children: [] }
+const basePayload = { firstName: 'Ana', lastName: 'Gómez', children: [] }
+const token = 'test-token'
 
 describe('createAccount', () => {
   beforeEach(() => {
@@ -12,25 +13,49 @@ describe('createAccount', () => {
     vi.unstubAllGlobals()
   })
 
+  it('sends the session token as a Bearer Authorization header', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ ...basePayload, id: 'abc', email: 'ana@example.com', countryCode: null, stateCode: null, plan: 'free' }),
+    } as Response)
+
+    await createAccount(basePayload, token)
+
+    const [, init] = vi.mocked(fetch).mock.calls[0]
+    expect((init as RequestInit).headers).toMatchObject({ Authorization: 'Bearer test-token' })
+  })
+
   it('returns the created account on success', async () => {
-    const created = { ...basePayload, id: 'abc', countryCode: null, stateCode: null, plan: 'free' }
+    const created = { ...basePayload, id: 'abc', email: 'ana@example.com', countryCode: null, stateCode: null, plan: 'free' }
     vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => created } as Response)
 
-    const result = await createAccount(basePayload)
+    const result = await createAccount(basePayload, token)
 
     expect(result).toEqual(created)
+  })
+
+  it('throws on 401 (no valid session)', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      json: async () => ({ message: 'A valid session is required' }),
+    } as Response)
+
+    const err = await createAccount(basePayload, token).catch((e) => e)
+    expect(err).toBeInstanceOf(CreateAccountError)
+    expect(err.message).toBe('A valid session is required')
   })
 
   it('throws validation_error on 400', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({
       ok: false,
       status: 400,
-      json: async () => ({ message: 'bad input', details: [{ field: 'email', message: 'required' }] }),
+      json: async () => ({ message: 'bad input', details: [{ field: 'firstName', message: 'required' }] }),
     } as Response)
 
-    await expect(createAccount(basePayload)).rejects.toMatchObject({
+    await expect(createAccount(basePayload, token)).rejects.toMatchObject({
       kind: 'validation_error',
-      details: [{ field: 'email', message: 'required' }],
+      details: [{ field: 'firstName', message: 'required' }],
     })
   })
 
@@ -41,7 +66,7 @@ describe('createAccount', () => {
       json: async () => ({ message: 'Email is already in use' }),
     } as Response)
 
-    const err = await createAccount(basePayload).catch((e) => e)
+    const err = await createAccount(basePayload, token).catch((e) => e)
     expect(err).toBeInstanceOf(CreateAccountError)
     expect(err.kind).toBe('email_already_exists')
   })
@@ -53,7 +78,7 @@ describe('createAccount', () => {
       json: async () => ({ message: 'Free plan limit exceeded', limit: 1, received: 2 }),
     } as Response)
 
-    const err = await createAccount(basePayload).catch((e) => e)
+    const err = await createAccount(basePayload, token).catch((e) => e)
     expect(err.kind).toBe('freemium_child_limit_exceeded')
   })
 
@@ -64,25 +89,25 @@ describe('createAccount', () => {
       json: async () => ({ message: 'boom' }),
     } as Response)
 
-    const err = await createAccount(basePayload).catch((e) => e)
+    const err = await createAccount(basePayload, token).catch((e) => e)
     expect(err.kind).toBe('unknown')
   })
 
   it('falls back to default messages when the server omits `message`', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({}) } as Response)
-    let err = await createAccount(basePayload).catch((e) => e)
+    let err = await createAccount(basePayload, token).catch((e) => e)
     expect(err.message).toBe('Validation error')
 
     vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 409, json: async () => ({}) } as Response)
-    err = await createAccount(basePayload).catch((e) => e)
+    err = await createAccount(basePayload, token).catch((e) => e)
     expect(err.message).toBe('Email already in use')
 
     vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 422, json: async () => ({}) } as Response)
-    err = await createAccount(basePayload).catch((e) => e)
+    err = await createAccount(basePayload, token).catch((e) => e)
     expect(err.message).toBe('Free plan limit exceeded')
 
     vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) } as Response)
-    err = await createAccount(basePayload).catch((e) => e)
+    err = await createAccount(basePayload, token).catch((e) => e)
     expect(err.message).toBe('Unexpected error creating account')
   })
 })

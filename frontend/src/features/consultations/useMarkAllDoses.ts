@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@clerk/react'
 import { updateDoseStatus } from './api'
 import type { OverviewDose } from './types'
 
@@ -7,10 +8,13 @@ import type { OverviewDose } from './types'
  * refreshes the overview plus each consultation those doses belong to.
  */
 export function useMarkAllDoses() {
+  const { getToken } = useAuth()
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (doses: Pick<OverviewDose, 'id' | 'consultationId'>[]) =>
-      Promise.all(doses.map((dose) => updateDoseStatus(dose.consultationId, dose.id, true))),
+    mutationFn: async (doses: Pick<OverviewDose, 'id' | 'consultationId'>[]) => {
+      const token = await getToken()
+      return Promise.all(doses.map((dose) => updateDoseStatus(dose.consultationId, dose.id, true, token)))
+    },
     onSuccess: (_result, doses) => {
       queryClient.invalidateQueries({ queryKey: ['overview'] })
       for (const consultationId of new Set(doses.map((d) => d.consultationId))) {
