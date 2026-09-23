@@ -15,6 +15,7 @@ Vite + React 18 + TypeScript. Forms: React Hook Form. Server state: TanStack Que
 | `src/shared/age.ts` | `computeAge(birthDate)` — months under 2 years old, whole years after. `formatAgeLong`/`formatAgeShort` give "5 años 6 meses" / "5a 6m" for the cards, headers and sidebar |
 | `src/shared/useLocalDay.ts` | The parent's local "today" `{from, to}`, rolled over at local midnight and re-checked when the app returns to the foreground. Use it, never a `useState(() => localDayRange())` that freezes at mount |
 | `src/shared/date.ts` | `formatDateShort('2026-09-15')` → `15 sep 2026`, `formatDateLong` → `12 septiembre 2026`, `formatDayMonth`, `formatTime` — every date shown to the user goes through them (fixed month names, no `Intl`, no timezone shift) |
+| `src/shared/ui/PasswordInput.tsx` | Password `<input>` + the eye button (show/hide), shared by signup, login and recovery |
 | `src/shared/ui/Notice.tsx`, `src/shared/auth/clerkMessages.ts` | `Notice` is the block for feedback not tied to one field (`error` soft rose / `info` cyan / `success` mint, icon + dark ink text, `role="alert"` only for errors) — use it instead of ad-hoc red `<p>`s. `clerkNotice(error, fallback)` maps a Clerk error `code` to a Spanish message and tone (e.g. `session_exists` → info with a link to `/home`); unknown codes use the caller's Spanish fallback, Clerk's own `message` is never shown |
 | `src/shared/apiError.ts` | `ApiError<Kind>` base class (`kind`, `message`, optional `details`) — each feature's `api.ts` defines its own subclass with just the `Kind` union it needs |
 | `e2e/*.spec.ts`, `e2e/helpers.ts` | Playwright E2E. **Every flow runs twice, at 390 px (phone) and 1280 px (web)** through `designs` in `helpers.ts`; `signUp`/`fillSignup` create the account. Requires the backend running locally |
@@ -82,6 +83,18 @@ Tokens de color y tipografía viven en el bloque `@theme` de `src/index.css`; la
 - On success it saves the new account id via `useAccountSession` (from `features/home/`) and navigates to `/home`.
 - Changing the país `<select>` clears `stateCode` via `register('countryCode', { onChange })` — don't drop it, or a stale estado from a previous país can be submitted silently.
 - Name validation (`NAME_PATTERN`/`NAME_MAX_LENGTH`) must stay in sync with `backend/internal/account/service.go`'s `namePattern`.
+
+## `src/features/auth/` — session, login, password recovery
+
+| File | Role |
+|---|---|
+| `useCurrentAccount.ts`, `RequireSession.tsx`, `useLogout.ts` | The one source of "which account is mine" (`GET /accounts/me`, key `['accounts', 'me']`), the route guard (signed out → `/login`) and logout (Clerk `signOut` + `queryClient.clear()`) |
+| `LoginPage.tsx`, `useLoginForm.ts` | `/login`: correo + contraseña (eye button) or Google, link to recovery and to signup, already-signed-in → `/home`. Wrong password and unknown correo show the **same** message (FR-009). New-device confirmation (`needs_client_trust`/`needs_second_factor`) asks for the emailed code. The hook **reacts to `signIn.status` on each render** (`attempt` counter), it never reads the status right after an `await` (the snapshot can be stale) |
+| `ForgotPasswordPage.tsx`, `useForgotPassword.ts` | `/recuperar-contrasena`: correo → code + new password (same rules as signup) → signed in. A correo with no account goes to the code step like any other (no account enumeration) |
+| `AuthLayout.tsx` | Frame of the sign-in screens: the signup's phone header or web split screen, chosen with `useIsDesktop` |
+| `SsoCallbackPage.tsx`, `api.ts` | Google return page (waits for `fetchStatus`, `signIn.isTransferable` → `signUp.create({ transfer })`) and `fetchMe` |
+
+Clerk API errors carry the useful code in `error.errors[0].code` (the top-level one is `api_response_error`): always go through `clerkNotice()` / `hasClerkCode()` from `shared/auth/clerkMessages.ts`, never `error.code` directly.
 
 ## `src/features/home/` — home page, sidebar, add-child
 

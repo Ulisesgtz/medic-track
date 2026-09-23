@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { FormField as Field } from '../../shared/ui/FormField'
 import { Logo } from '../../shared/ui/Logo'
 import { EmailCodeStep } from './EmailCodeStep'
@@ -237,6 +238,13 @@ export function SignupPhone({ form }: { form: SignupForm }) {
         </button>
 
         <GoogleSignupButton />
+
+        <p className="text-center text-[15px] text-slate-600">
+          ¿Ya tienes cuenta?{' '}
+          <Link to="/login" className="font-extrabold text-action hover:underline">
+            Inicia sesión
+          </Link>
+        </p>
 
         <p className="text-center text-[13px] leading-relaxed text-slate-500">
           El plan gratuito incluye un hijo. Puedes agregar más después.

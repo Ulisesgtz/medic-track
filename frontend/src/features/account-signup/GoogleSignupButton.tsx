@@ -15,13 +15,14 @@ function GoogleIcon() {
 }
 
 /**
- * "o" separator and "Registrarme con Google" (both signups). Not in the
+ * "o" separator and the Google button ("Registrarme con Google" in the signups,
+ * "Continuar con Google" in the login). Not in the
  * mocks: the user asked for it. Uses `signIn.sso()` (not a separate sign-up
  * call) because Clerk decides whether this Google account is new or
  * returning — SsoCallbackPage (`/sso-callback`) is where that gets sorted
  * out (specs/008-autenticacion-cuenta, research.md punto 1).
  */
-export function GoogleSignupButton() {
+export function GoogleSignupButton({ label = 'Registrarme con Google' }: { label?: string }) {
   const { signIn } = useSignIn()
   const [error, setError] = useState<ClerkNotice | null>(null)
 
@@ -56,7 +57,7 @@ export function GoogleSignupButton() {
           className="flex min-h-11 cursor-pointer items-center justify-center gap-3 rounded-2xl border-2 border-slate-300 bg-surface py-3.5 text-base font-extrabold text-ink transition-colors duration-200 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
         >
           <GoogleIcon />
-          Registrarme con Google
+          {label}
         </button>
         {error && (
           <Notice tone={error.tone} action={error.action}>

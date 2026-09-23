@@ -6,6 +6,8 @@ import { HomePage } from './features/home/HomePage'
 import { ChildDetailPage } from './features/consultations/ChildDetailPage'
 import { ConsultationDetailPage } from './features/consultations/ConsultationDetailPage'
 import { NewConsultationPage } from './features/consultations/NewConsultationPage'
+import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage'
+import { LoginPage } from './features/auth/LoginPage'
 import { RequireSession } from './features/auth/RequireSession'
 import { SsoCallbackPage } from './features/auth/SsoCallbackPage'
 import { MessagePage } from './shared/ui/MessagePage'
@@ -27,19 +29,8 @@ function App() {
             }
           />
           <Route path="/sso-callback" element={<SsoCallbackPage />} />
-          {/* The real login screen lands in Historia 2 (specs/008) — this placeholder keeps the route
-              wired (and testable) from the moment RequireSession starts redirecting to it. */}
-          <Route
-            path="/login"
-            element={
-              <MessagePage
-                title="Inicio de sesión"
-                message="Estamos construyendo el login. Mientras tanto, usa el registro."
-                to="/signup"
-                linkLabel="Ir al registro"
-              />
-            }
-          />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/recuperar-contrasena" element={<ForgotPasswordPage />} />
           <Route
             path="/home"
             element={

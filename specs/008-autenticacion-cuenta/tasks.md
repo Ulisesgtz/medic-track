@@ -106,15 +106,27 @@ Aplicación web existente: `backend/` (Go) y `frontend/` (React + Vite + TS). To
 
 ### Pruebas para la Historia de Usuario 2 ⚠️
 
-- [ ] T032 [P] [US2] Prueba de handler para `GET /accounts/me` en `backend/internal/account/handler_test.go`: `401` sin token, `200` con el cuerpo de la cuenta cuando `clerk_user_id` ya está vinculado, `404 account_not_found_for_session` con una sesión de Clerk válida sin ninguna cuenta vinculada ni por correo (contracts/get-accounts-me.md)
-- [ ] T033 [P] [US2] Prueba unitaria de `useLoginForm`/`LoginPage` en `frontend/src/features/auth/LoginPage.test.tsx`, mockeando `@clerk/react`: contraseña correcta navega a `/home`; contraseña incorrecta muestra un error genérico sin decir si el correo existe (FR-009); un tutor con `isSignedIn` ya verdadero al montar la pantalla es redirigido directo a `/home` (Escenario de Aceptación 4 de la Historia 2 de spec.md, a la inversa)
+> **Implementado, con estas diferencias respecto al desglose**: la pantalla es `features/auth/LoginPage.tsx` sobre un
+> `AuthLayout` que reutiliza los dos diseños del registro (móvil y web, nunca mezclados); el estado vive en
+> `useLoginForm.ts`, que **reacciona a `signIn.status` en cada render** (contador `attempt`) en vez de leerlo justo
+> después del `await`, y cubre `needs_client_trust`/`needs_second_factor` con el código que Clerk manda por correo
+> (paso "Confirma que eres tú"). Se agregó **"¿Olvidaste tu contraseña?"** (`/recuperar-contrasena`,
+> `useForgotPassword.ts`), que no estaba en el desglose: correo → código → nueva contraseña (con las mismas reglas del
+> registro), y un correo sin cuenta avanza igual al paso del código para no revelar qué correos existen. Contraseña
+> incorrecta y correo inexistente muestran el mismo mensaje (FR-009). `GoogleSignupButton` gana la prop `label`
+> ("Continuar con Google") y el registro enlaza a `/login`. Hallazgo con Clerk real: sus errores de API traen el código
+> específico en `error.errors[0].code` y uno genérico (`api_response_error`) arriba; `clerkNotice`/`hasClerkCode` leen
+> ambos niveles.
+
+- [X] T032 [P] [US2] Prueba de handler para `GET /accounts/me` en `backend/internal/account/handler_test.go`: `401` sin token, `200` con el cuerpo de la cuenta cuando `clerk_user_id` ya está vinculado, `404 account_not_found_for_session` con una sesión de Clerk válida sin ninguna cuenta vinculada ni por correo (contracts/get-accounts-me.md)
+- [X] T033 [P] [US2] Prueba unitaria de `useLoginForm`/`LoginPage` en `frontend/src/features/auth/LoginPage.test.tsx`, mockeando `@clerk/react`: contraseña correcta navega a `/home`; contraseña incorrecta muestra un error genérico sin decir si el correo existe (FR-009); un tutor con `isSignedIn` ya verdadero al montar la pantalla es redirigido directo a `/home` (Escenario de Aceptación 4 de la Historia 2 de spec.md, a la inversa)
 
 ### Implementación de la Historia de Usuario 2
 
-- [ ] T034 [US2] Crear `frontend/src/features/auth/useLoginForm.ts`: `signIn.password({ identifier: email, password })` → `signIn.finalize({ navigate })`; en éxito, invalida/refetch de `['accounts', 'me']` (T015) y navega a `/home`; en error, mensaje único para credencial inválida (FR-009 — nunca distinguir "correo no existe" de "contraseña incorrecta")
-- [ ] T035 [US2] Crear `frontend/src/features/auth/LoginPage.tsx`: campos correo/contraseña + el mismo botón de Google que el registro (reutilizar `GoogleSignupButton`-style, apuntando a `signIn.sso(...)` en vez de alta — puede ser el mismo componente con una prop `mode: 'login' | 'signup'` si el texto del botón cambia), diseño propio con `useIsDesktop` (sin mock, seguir `design-tokens.md` — frontend/CLAUDE.md)
-- [ ] T036 [US2] Reemplazar el placeholder de `/login` en `frontend/src/App.tsx` (T019) por `LoginPage` (T035)
-- [ ] T037 [US2] Ajustar `SsoCallbackPage` (T030) para el caso de login (ya cubierto por su rama `signIn.status === 'complete'`) — confirmar con una prueba que ese camino navega a `/home` sin pasar por `/registro/completar`
+- [X] T034 [US2] Crear `frontend/src/features/auth/useLoginForm.ts`: `signIn.password({ identifier: email, password })` → `signIn.finalize({ navigate })`; en éxito, invalida/refetch de `['accounts', 'me']` (T015) y navega a `/home`; en error, mensaje único para credencial inválida (FR-009 — nunca distinguir "correo no existe" de "contraseña incorrecta")
+- [X] T035 [US2] Crear `frontend/src/features/auth/LoginPage.tsx`: campos correo/contraseña + el mismo botón de Google que el registro (reutilizar `GoogleSignupButton`-style, apuntando a `signIn.sso(...)` en vez de alta — puede ser el mismo componente con una prop `mode: 'login' | 'signup'` si el texto del botón cambia), diseño propio con `useIsDesktop` (sin mock, seguir `design-tokens.md` — frontend/CLAUDE.md)
+- [X] T036 [US2] Reemplazar el placeholder de `/login` en `frontend/src/App.tsx` (T019) por `LoginPage` (T035)
+- [X] T037 [US2] Ajustar `SsoCallbackPage` (T030) para el caso de login (ya cubierto por su rama `signIn.status === 'complete'`) — confirmar con una prueba que ese camino navega a `/home` sin pasar por `/registro/completar`
 
 **Punto de Control**: Un tutor con cuenta ya creada puede volver a entrar desde cualquier navegador, con contraseña o Google — las Historias 1 y 2 funcionan juntas de punta a punta.
 

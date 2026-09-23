@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { FormField as Field } from '../../shared/ui/FormField'
 import { Logo } from '../../shared/ui/Logo'
 import { EmailCodeStep } from './EmailCodeStep'
@@ -264,6 +265,13 @@ export function SignupWeb({ form }: { form: SignupForm }) {
           </button>
 
           <GoogleSignupButton />
+
+          <p className="text-[15px] text-slate-600">
+            ¿Ya tienes cuenta?{' '}
+            <Link to="/login" className="font-extrabold text-action hover:underline">
+              Inicia sesión
+            </Link>
+          </p>
 
           <p className="text-[13px] leading-relaxed text-slate-500">
             Al crear la cuenta aceptas que los datos se guardan para tu uso personal. No se comparten con terceros.

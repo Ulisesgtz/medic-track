@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { clerkNotice } from './clerkMessages'
+import { clerkNotice, hasClerkCode } from './clerkMessages'
 
 describe('clerkNotice', () => {
   it('turns "already signed in" into an info notice with a way to the home', () => {
@@ -20,6 +20,21 @@ describe('clerkNotice', () => {
     const notice = clerkNotice({ code }, 'fallback')
     expect(notice.tone).toBe('error')
     expect(notice.message).toMatch(expected)
+  })
+
+  it('reads the specific code nested in a real Clerk API error, not its generic top-level one', () => {
+    const realShape = { code: 'api_response_error', errors: [{ code: 'form_password_pwned' }] }
+
+    expect(clerkNotice(realShape, 'fallback').message).toMatch(/filtraciones/)
+    expect(clerkNotice({ code: 'api_response_error', errors: [{ code: 'session_exists' }] }, 'fallback').tone).toBe('info')
+    expect(clerkNotice({ code: 'api_response_error', errors: [{ code: 'something_new' }] }, 'fallback').message).toBe('fallback')
+  })
+
+  it('hasClerkCode finds a code at either level', () => {
+    expect(hasClerkCode({ code: 'api_response_error', errors: [{ code: 'form_identifier_not_found' }] }, 'form_identifier_not_found')).toBe(true)
+    expect(hasClerkCode({ code: 'form_identifier_not_found' }, 'form_identifier_not_found')).toBe(true)
+    expect(hasClerkCode({ code: 'api_response_error' }, 'form_identifier_not_found')).toBe(false)
+    expect(hasClerkCode(null, 'x')).toBe(false)
   })
 
   it('reads a cancelled Google access as info, not as a failure', () => {
