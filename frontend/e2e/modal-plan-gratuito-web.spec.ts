@@ -1,5 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
-import { seedChild } from './helpers'
+import type { Page } from '@playwright/test'
+import { test, expect, seedChild } from './helpers'
 
 // Web design, mock 15: the home ("Hola, Ana / Tus hijos", the child's card, the dashed plan
 // tile and the sidebar) and the free-plan pop-up opened by "Agregar hijo" — from the button

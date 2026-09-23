@@ -1,8 +1,8 @@
-import { test, expect, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
 import path from 'node:path'
 import fs from 'node:fs'
 import os from 'node:os'
-import { seedChild } from './helpers'
+import { test, expect, seedChild } from './helpers'
 
 // "Nueva consulta", web design (mock 14): the children sidebar, a header ("← Cancelar", the
 // title and "Para Mateo Morales · 5 años 6 meses"), the dark OCR panel, the "Sugerido por

@@ -1,8 +1,7 @@
-import { test, expect } from '@playwright/test'
 import path from 'node:path'
 import fs from 'node:fs'
 import os from 'node:os'
-import { seedChild } from './helpers'
+import { test, expect, seedChild } from './helpers'
 
 // "Nueva consulta", phone design (mock 04): dark header with "← Cancelar" and the
 // OCR panel, the "Sugerido por OCR" group, the medication cards and the save

@@ -97,6 +97,21 @@ export async function deleteE2EUsers(olderThanMs = 0) {
   }
 }
 
+/**
+ * Deletes the users with exactly these addresses. Each test does it for the ones it made as soon as
+ * it ends (see `test` in helpers.ts), so the users of the run never add up towards the 100 cap.
+ */
+export async function deleteUsersByEmail(emails: string[]) {
+  for (const email of emails) {
+    try {
+      const users = (await clerkFetch(`/users?email_address=${encodeURIComponent(email)}`)) as ClerkUser[]
+      for (const user of users) await clerkFetch(`/users/${user.id}`, { method: 'DELETE' })
+    } catch {
+      // Best effort: the age-based pruning and the global teardown still catch anything left.
+    }
+  }
+}
+
 let lastPrune = 0
 
 /**

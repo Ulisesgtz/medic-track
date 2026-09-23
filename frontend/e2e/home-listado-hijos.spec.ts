@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test'
-import { designs, seedAccount, signUp } from './helpers'
+import { test, expect, designs, seedAccount, signUp } from './helpers'
 
 // Covers specs/003-home-listado-hijos in both designs: the phone home (mock 02
 // list) and the web home (mock 15 "Hola, Ana / Tus hijos", with the sidebar).

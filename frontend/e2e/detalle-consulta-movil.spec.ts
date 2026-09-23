@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test'
-import { seedChild } from './helpers'
+import { test, expect, seedChild } from './helpers'
 
 // Consultation detail, phone design (mock 03): dark header with the child's
 // name and the date, the prescription photo card, the symptoms and each

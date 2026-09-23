@@ -1,6 +1,5 @@
-import { test, expect } from '@playwright/test'
 import { createClerkUser } from './clerkApi'
-import { allowClerkOn, designs, E2E_PASSWORD, seedAccount, seedChild, uniqueEmail } from './helpers'
+import { test, expect, allowClerkOn, designs, E2E_PASSWORD, seedAccount, seedChild, uniqueEmail } from './helpers'
 
 // specs/008-autenticacion-cuenta: login and logout through the real forms, and the guarantee that a
 // session only reaches its own account's data (T058/T059). Same requirements as the signup suite:

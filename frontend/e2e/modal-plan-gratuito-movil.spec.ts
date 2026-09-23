@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test'
-import { seedChild } from './helpers'
+import { test, expect, seedChild } from './helpers'
 
 // The free-plan limit pop-up, phone design (mock 05): opened by "+ Agregar hijo"
 // when the free plan already has its child. Amber header, message, "Entendido" and

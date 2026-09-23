@@ -1,6 +1,5 @@
-import { test, expect } from '@playwright/test'
 import { clerk } from '@clerk/testing/playwright'
-import { allowClerkOn, designs, E2E_PASSWORD, fillSignup, finishEmailVerificationIfAsked, uniqueEmail } from './helpers'
+import { test, expect, allowClerkOn, designs, E2E_PASSWORD, fillSignup, finishEmailVerificationIfAsked, uniqueEmail } from './helpers'
 
 // Covers specs/001-registro-cuenta-usuario in both designs: the phone mock
 // (01) and the web mock (11). The first child is part of the form (as in the

@@ -1,5 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
-import { apiPost, seedChild } from './helpers'
+import type { Page } from '@playwright/test'
+import { test, expect, apiPost, seedChild } from './helpers'
 
 // Consultation detail, web design (mock 13): the children sidebar, a header row with the
 // back link, the date, the doctor and "Nueva consulta", medications and symptoms on the

@@ -1,5 +1,5 @@
-import { test, expect, type Page } from '@playwright/test'
-import { allowClerkOn, fillSignup, finishEmailVerificationIfAsked } from './helpers'
+import type { Page } from '@playwright/test'
+import { test, expect, allowClerkOn, fillSignup, finishEmailVerificationIfAsked } from './helpers'
 
 // Signup, web design (mock 11): split screen — dark panel with the value
 // proposition and the checklist, the form with its title on the right. The numbers

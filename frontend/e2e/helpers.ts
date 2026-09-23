@@ -1,8 +1,27 @@
 import { clerk, setupClerkTestingToken } from '@clerk/testing/playwright'
-import { expect, type APIRequestContext, type Page } from '@playwright/test'
-import { createClerkUser, E2E_MARKER, E2E_PASSWORD, E2E_VERIFICATION_CODE, pruneOldE2EUsers } from './clerkApi'
+import { expect, test as base, type APIRequestContext, type Page } from '@playwright/test'
+import { createClerkUser, deleteUsersByEmail, E2E_MARKER, E2E_PASSWORD, E2E_VERIFICATION_CODE, pruneOldE2EUsers } from './clerkApi'
 
-export { E2E_PASSWORD }
+export { E2E_PASSWORD, expect }
+
+// Every address `uniqueEmail` hands out in this worker (a worker runs one test at a time).
+const madeInThisTest: string[] = []
+
+/**
+ * `test` of the E2E suite: Playwright's own plus an automatic step that deletes the Clerk users the
+ * test made once it ends, pass or fail. Import it from here, not from `@playwright/test`.
+ */
+export const test = base.extend<{ deleteTestUsers: void }>({
+  deleteTestUsers: [
+    // Playwright needs the (empty) destructuring to know this fixture takes no others.
+    // eslint-disable-next-line no-empty-pattern
+    async ({}, use) => {
+      await use()
+      await deleteUsersByEmail(madeInThisTest.splice(0))
+    },
+    { auto: true },
+  ],
+})
 
 /**
  * The app has two separate designs (see frontend/CLAUDE.md, "Web y móvil"):
@@ -20,8 +39,11 @@ const API = 'http://localhost:8080'
  * A fresh, recognisable test address: the marker lets the global teardown delete every user
  * the suite made, and `+clerk_test` makes Clerk accept the fixed verification code.
  */
-export const uniqueEmail = (prefix: string) =>
-  `${prefix}.${E2E_MARKER}.${Date.now()}${Math.random().toString(36).slice(2, 7)}+clerk_test@example.com`
+export const uniqueEmail = (prefix: string) => {
+  const email = `${prefix}.${E2E_MARKER}.${Date.now()}${Math.random().toString(36).slice(2, 7)}+clerk_test@example.com`
+  madeInThisTest.push(email)
+  return email
+}
 
 interface SignupData {
   firstName?: string

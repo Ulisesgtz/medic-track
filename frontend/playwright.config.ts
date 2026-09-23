@@ -8,6 +8,9 @@ export default defineConfig({
   testDir: './e2e',
   globalSetup: './e2e/global.setup.ts',
   fullyParallel: true,
+  // Every flow goes through Clerk's real servers, and CI's shared runners are slower than a laptop.
+  expect: { timeout: process.env.CI ? 15_000 : 5_000 },
+  retries: process.env.CI ? 1 : 0,
   reporter: 'html',
   use: {
     baseURL: 'http://localhost:5173',
