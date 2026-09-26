@@ -51,6 +51,28 @@ function renderShell(activeChildId?: string) {
 }
 
 describe('AppShell', () => {
+  it('does not remount the screen when the account arrives and the sidebar appears', async () => {
+    stubWidth(1280)
+    let resolveAccount: (value: Response) => void = () => {}
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise<Response>((resolve) => (resolveAccount = resolve))))
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <AppShell>
+            <input aria-label="Doctor" />
+          </AppShell>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    await userEvent.type(screen.getByLabelText('Doctor'), 'Dra. Cázares')
+
+    resolveAccount({ ok: true, json: async () => account } as Response)
+
+    expect(await screen.findByRole('navigation', { name: 'Tus hijos' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Doctor')).toHaveValue('Dra. Cázares')
+  })
+
   beforeEach(() => {
     window.localStorage.setItem('peditrack.accountId', 'a1')
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => account }))

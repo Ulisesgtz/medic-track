@@ -12,16 +12,20 @@ interface AppShellProps {
  * column); from 900px up it adds the persistent children sidebar next to
  * it (FR-012). Without a saved account there's no children list to show,
  * so it never renders the sidebar.
+ *
+ * The screen keeps the same place in the tree whether or not the sidebar is there: the account
+ * arrives after the screen has mounted, and if the sidebar's arrival changed the screen's parent,
+ * React would remount it and wipe what the tutor had already typed (or the photo already chosen).
  */
 export function AppShell({ activeChildId, children }: AppShellProps) {
   const { accountId, hasSidebar } = useSidebarSession()
 
-  if (!hasSidebar || accountId === null) return <>{children}</>
+  const sidebar = hasSidebar && accountId !== null
 
   return (
-    <div className="flex min-h-screen">
-        <ChildrenSidebar accountId={accountId} activeChildId={activeChildId} />
-        <div className="min-w-0 flex-1">{children}</div>
+    <div className={sidebar ? 'flex min-h-screen' : undefined}>
+      {sidebar && <ChildrenSidebar accountId={accountId} activeChildId={activeChildId} />}
+      <div className={sidebar ? 'min-w-0 flex-1' : undefined}>{children}</div>
     </div>
   )
 }

@@ -49,7 +49,7 @@ Tokens de color y tipografía viven en el bloque `@theme` de `src/index.css`; la
 - Las pantallas con sesión van dentro de `features/home/AppShell.tsx`: desde 1024 px (`lg`, como los mocks web 13/14/15) agrega `ChildrenSidebar`
   (280 px: hijos, "+ Agregar hijo", tutor y plan); en móvil y entre 900 y 1023 px no hay barra (el mock apila la página en una columna, con `px-6 py-8` en vez de `px-12 py-11`). Se **renderiza condicionalmente**, no se
   oculta con CSS, así nunca hay dos copias de la lista de hijos en el árbol de accesibilidad. Toda pantalla nueva con
-  sesión debe envolverse en `AppShell`. `AppHeader` es solo del diseño móvil (el web no tiene banda de encabezado).
+  sesión debe envolverse en `AppShell`. **La pantalla ocupa siempre el mismo lugar en el árbol** (solo la barra aparece o desaparece): la cuenta llega después de montar la pantalla, y si su llegada cambiara el padre, React la remontaría y borraría lo ya escrito o la foto ya elegida (pasaba en "Nueva consulta"; hay prueba en `AppShell.test.tsx`). `AppHeader` es solo del diseño móvil (el web no tiene banda de encabezado).
 - En E2E web la barra lateral repite el nombre del hijo y "Agregar hijo": acotar selectores a `page.getByRole('main')`
   o `page.locator('aside')`.
 - **Todo overlay va con `createPortal(…, document.body)`** (`AddChildModal`, `FreemiumLimitModal`): la barra es
