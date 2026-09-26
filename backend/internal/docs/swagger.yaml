@@ -267,6 +267,12 @@ definitions:
         example: One or more fields are invalid
         type: string
     type: object
+  internal_account.acceptDisclaimerRequest:
+    properties:
+      version:
+        example: "2026-09-26"
+        type: string
+    type: object
   internal_account.accountResponse:
     properties:
       children:
@@ -275,6 +281,15 @@ definitions:
         type: array
       countryCode:
         example: MX
+        type: string
+      disclaimerAccepted:
+        example: false
+        type: boolean
+      disclaimerVersion:
+        description: |-
+          DisclaimerVersion is the version of the "Antes de empezar" notice the client must show, and
+          DisclaimerAccepted whether this account already acknowledged it (specs/010-registro-aceptacion-aviso).
+        example: "2026-09-26"
         type: string
       email:
         example: ana@example.com
@@ -352,6 +367,15 @@ definitions:
       weight:
         example: 14.2
         type: number
+    type: object
+  internal_account.disclaimerAcceptanceResponse:
+    properties:
+      acceptedAt:
+        example: "2026-09-26T18:04:05Z"
+        type: string
+      version:
+        example: "2026-09-26"
+        type: string
     type: object
   internal_catalog.countryResponse:
     properties:
@@ -571,6 +595,55 @@ paths:
       security:
       - ClerkSession: []
       summary: Add a child to an existing account
+      tags:
+      - accounts
+  /accounts/{accountId}/disclaimer-acceptance:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Stores which version of the notice this account acknowledged and when (audit trail).
+        Idempotent: acknowledging the same version again returns the original record.
+        The version must be the current one, the one every account response carries as
+        disclaimerVersion.
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: Version acknowledged
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_account.acceptDisclaimerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_account.disclaimerAcceptanceResponse'
+        "400":
+          description: Missing or stale version
+          schema:
+            $ref: '#/definitions/ValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/AccountNotFoundResponse'
+      security:
+      - ClerkSession: []
+      summary: Record that the tutor acknowledged the "Antes de empezar" notice
       tags:
       - accounts
   /accounts/me:

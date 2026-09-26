@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { addChild, AccountApiError } from './api'
+import { addChild, acceptDisclaimer, AccountApiError } from './api'
 
 const childPayload = { firstName: 'Luis', lastName: 'Gómez', birthDate: '2020-01-15' }
 
@@ -67,6 +67,55 @@ describe('addChild', () => {
     vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) } as Response)
 
     const err = await addChild('a1', childPayload, 'tok').catch((e) => e)
+    expect(err.kind).toBe('unknown')
+  })
+})
+
+describe('acceptDisclaimer', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('posts the version with the session token and returns the record', async () => {
+    const record = { version: '2026-09-26', acceptedAt: '2026-09-26T18:00:00Z' }
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => record } as Response)
+
+    expect(await acceptDisclaimer('a1', '2026-09-26', 'tok')).toEqual(record)
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0]
+    expect(String(url)).toMatch(/\/accounts\/a1\/disclaimer-acceptance$/)
+    expect((init as RequestInit).headers).toMatchObject({ Authorization: 'Bearer tok' })
+  })
+
+  it.each([403, 404])('maps %i to not_found', async (status) => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status, json: async () => ({}) } as Response)
+
+    const err = await acceptDisclaimer('a1', 'v', 'tok').catch((e) => e)
+    expect(err).toBeInstanceOf(AccountApiError)
+    expect(err.kind).toBe('not_found')
+  })
+
+  it('maps 400 to validation_error (a stale version)', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({ message: 'stale' }) } as Response)
+
+    const err = await acceptDisclaimer('a1', 'old', 'tok').catch((e) => e)
+    expect(err.kind).toBe('validation_error')
+  })
+
+  it('maps anything else to unknown, even when the body is not JSON', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: false,
+      status: 502,
+      json: async () => {
+        throw new Error('not json')
+      },
+    } as unknown as Response)
+
+    const err = await acceptDisclaimer('a1', 'v', 'tok').catch((e) => e)
     expect(err.kind).toBe('unknown')
   })
 })

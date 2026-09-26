@@ -132,18 +132,26 @@ const PNG_BASE64 =
 
 /**
  * Creates a real Clerk user, signs the page in as them and creates their PediTrack account (with
- * the given children) straight through the API. Returns the session token so a test can keep
+ * the given children) straight through the API, having already acknowledged the "Antes de empezar"
+ * notice unless told otherwise. Returns the session token so a test can keep
  * calling the API as that tutor.
  */
 export async function seedAccount(
   page: Page,
   children: { firstName: string; lastName: string; birthDate: string }[],
+  { acknowledgeDisclaimer = true }: { acknowledgeDisclaimer?: boolean } = {},
 ) {
   const email = uniqueEmail('seed')
   await createClerkUser(email)
   await signInAs(page, email)
   const token = await sessionToken(page)
   const account = await apiPost(page.context().request, token, '/accounts', { firstName: 'Ana', lastName: 'Morales', children })
+  if (acknowledgeDisclaimer) {
+    // So the "Antes de empezar" notice doesn't sit on top of every screen a test is about.
+    await apiPost(page.context().request, token, `/accounts/${account.id}/disclaimer-acceptance`, {
+      version: account.disclaimerVersion,
+    })
+  }
   return { account, token, email }
 }
 

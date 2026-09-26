@@ -116,6 +116,23 @@ describe('HomePage', () => {
     expect(await screen.findByText(/todavía no tienes hijos/i)).toBeInTheDocument()
   })
 
+  it('shows the "Antes de empezar" notice only while the account has not acknowledged it (specs/010)', async () => {
+    const account = {
+      id: 'account-notice', firstName: 'Ana', lastName: 'Gómez', email: 'ana@example.com',
+      countryCode: null, stateCode: null, plan: 'free', children: [],
+      disclaimerVersion: '2026-09-26', disclaimerAccepted: false,
+    }
+    stubApi(account)
+    const { unmount } = renderHome()
+    expect(await screen.findByRole('region', { name: 'Antes de empezar' })).toBeInTheDocument()
+    unmount()
+
+    stubApi({ ...account, disclaimerAccepted: true })
+    renderHome()
+    expect(await screen.findByText(/todavía no tienes hijos/i)).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Antes de empezar' })).not.toBeInTheDocument()
+  })
+
   it('lists a card per child with name and age (FR-001)', async () => {
     window.localStorage.setItem('peditrack.accountId', 'account-with-child')
     stubApi({

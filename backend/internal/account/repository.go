@@ -124,7 +124,11 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Account, error
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterating children: %w", err)
 	}
+	rows.Close()
 
+	if acc.DisclaimerAccepted, err = disclaimerAccepted(ctx, r.pool, id); err != nil {
+		return nil, err
+	}
 	return acc, nil
 }
 
@@ -200,6 +204,10 @@ func (r *Repository) AddChildIfUnderLimit(ctx context.Context, accountID uuid.UU
 	}
 	acc.Children = append(acc.Children, child)
 
+	if acc.DisclaimerAccepted, err = disclaimerAccepted(ctx, tx, accountID); err != nil {
+		return nil, err
+	}
+
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("committing transaction: %w", err)
 	}
@@ -245,7 +253,11 @@ func (r *Repository) GetByClerkUserID(ctx context.Context, clerkUserID string) (
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iterating children: %w", err)
 	}
+	rows.Close()
 
+	if acc.DisclaimerAccepted, err = disclaimerAccepted(ctx, r.pool, id); err != nil {
+		return nil, err
+	}
 	return acc, nil
 }
 
@@ -283,4 +295,48 @@ func (r *Repository) EmailExists(ctx context.Context, email string) (bool, error
 		return false, fmt.Errorf("checking email existence: %w", err)
 	}
 	return exists, nil
+}
+
+// rowQuerier is what pgxpool.Pool and pgx.Tx have in common for a single-row query.
+type rowQuerier interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+// disclaimerAccepted reports whether the account has acknowledged CurrentDisclaimerVersion.
+func disclaimerAccepted(ctx context.Context, q rowQuerier, accountID uuid.UUID) (bool, error) {
+	var accepted bool
+	err := q.QueryRow(ctx, `
+		SELECT EXISTS(SELECT 1 FROM disclaimer_acceptances WHERE account_id = $1 AND version = $2)
+	`, accountID, CurrentDisclaimerVersion).Scan(&accepted)
+	if err != nil {
+		return false, fmt.Errorf("checking disclaimer acceptance: %w", err)
+	}
+	return accepted, nil
+}
+
+// AcceptDisclaimer records that the account acknowledged version of the notice and returns the
+// record. It is idempotent: a second call for the same (account, version) inserts nothing and
+// returns the original timestamp, so the audit trail keeps when it was first acknowledged.
+// ErrAccountNotFound if the account doesn't exist.
+func (r *Repository) AcceptDisclaimer(ctx context.Context, accountID uuid.UUID, version string) (*DisclaimerAcceptance, error) {
+	_, err := r.pool.Exec(ctx, `
+		INSERT INTO disclaimer_acceptances (account_id, version) VALUES ($1, $2)
+		ON CONFLICT (account_id, version) DO NOTHING
+	`, accountID, version)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" { // foreign_key_violation: no such account
+			return nil, ErrAccountNotFound
+		}
+		return nil, fmt.Errorf("recording disclaimer acceptance: %w", err)
+	}
+
+	acceptance := &DisclaimerAcceptance{AccountID: accountID.String(), Version: version}
+	err = r.pool.QueryRow(ctx, `
+		SELECT accepted_at FROM disclaimer_acceptances WHERE account_id = $1 AND version = $2
+	`, accountID, version).Scan(&acceptance.AcceptedAt)
+	if err != nil {
+		return nil, fmt.Errorf("reading disclaimer acceptance: %w", err)
+	}
+	return acceptance, nil
 }

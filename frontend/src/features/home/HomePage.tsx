@@ -158,7 +158,7 @@ export function HomePage() {
               </div>
             </div>
 
-            <WelcomeDisclaimer />
+            <WelcomeDisclaimer account={account} />
 
             {children.length === 0 ? (
               emptyState
@@ -211,7 +211,7 @@ export function HomePage() {
 
         <div className="px-6 pt-6">
           <div className="empty:hidden [&:not(:empty)]:mb-4">
-            <WelcomeDisclaimer />
+            <WelcomeDisclaimer account={account} />
           </div>
           {children.length === 0 ? (
             emptyState

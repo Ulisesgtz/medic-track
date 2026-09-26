@@ -53,6 +53,14 @@ for (const design of designs) {
       await expect(page).toHaveURL(/\/login/)
     })
 
+    test('una cuenta que nunca vio el aviso lo ve al entrar, la primera vez que abre el home', async ({ page }) => {
+      await seedAccount(page, [{ firstName: 'Luis', lastName: 'Gómez', birthDate: '2020-01-15' }], { acknowledgeDisclaimer: false })
+      await page.goto('/home')
+
+      await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
+      await expect(page.getByRole('region', { name: 'Antes de empezar' })).toBeVisible()
+    })
+
     test('campos vacíos: pide correo y contraseña sin llamar a Clerk', async ({ page }) => {
       await page.goto('/login')
       await page.getByRole('button', { name: 'Iniciar sesión' }).click()

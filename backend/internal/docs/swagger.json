@@ -247,6 +247,76 @@
                 }
             }
         },
+        "/accounts/{accountId}/disclaimer-acceptance": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Stores which version of the notice this account acknowledged and when (audit trail).\nIdempotent: acknowledging the same version again returns the original record.\nThe version must be the current one, the one every account response carries as\ndisclaimerVersion.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Record that the tutor acknowledged the \"Antes de empezar\" notice",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Version acknowledged",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.acceptDisclaimerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.disclaimerAcceptanceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or stale version",
+                        "schema": {
+                            "$ref": "#/definitions/ValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AccountNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/catalog/countries": {
             "get": {
                 "description": "Read-only catalog used to populate the país selector (contracts/get-catalog.md).",
@@ -1024,6 +1094,15 @@
                 }
             }
         },
+        "internal_account.acceptDisclaimerRequest": {
+            "type": "object",
+            "properties": {
+                "version": {
+                    "type": "string",
+                    "example": "2026-09-26"
+                }
+            }
+        },
         "internal_account.accountResponse": {
             "type": "object",
             "properties": {
@@ -1036,6 +1115,15 @@
                 "countryCode": {
                     "type": "string",
                     "example": "MX"
+                },
+                "disclaimerAccepted": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "disclaimerVersion": {
+                    "description": "DisclaimerVersion is the version of the \"Antes de empezar\" notice the client must show, and\nDisclaimerAccepted whether this account already acknowledged it (specs/010-registro-aceptacion-aviso).",
+                    "type": "string",
+                    "example": "2026-09-26"
                 },
                 "email": {
                     "type": "string",
@@ -1141,6 +1229,19 @@
                 "weight": {
                     "type": "number",
                     "example": 14.2
+                }
+            }
+        },
+        "internal_account.disclaimerAcceptanceResponse": {
+            "type": "object",
+            "properties": {
+                "acceptedAt": {
+                    "type": "string",
+                    "example": "2026-09-26T18:04:05Z"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "2026-09-26"
                 }
             }
         },

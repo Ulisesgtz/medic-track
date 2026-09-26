@@ -173,6 +173,16 @@ func (s *Service) AddChild(ctx context.Context, accountID uuid.UUID, input Creat
 	return s.repo.AddChildIfUnderLimit(ctx, accountID, input, freePlanChildLimit)
 }
 
+// AcceptDisclaimer records the account's acknowledgement of the "Antes de empezar" notice
+// (specs/010-registro-aceptacion-aviso). version must be the one the server currently serves
+// (CurrentDisclaimerVersion): an acknowledgement of a stale or invented text is not recorded.
+func (s *Service) AcceptDisclaimer(ctx context.Context, accountID uuid.UUID, version string) (*DisclaimerAcceptance, error) {
+	if version != CurrentDisclaimerVersion {
+		return nil, ValidationErrors{{Field: "version", Message: "must be the current version of the notice"}}
+	}
+	return s.repo.AcceptDisclaimer(ctx, accountID, version)
+}
+
 // validateChildFields validates a single child's fields (name format/length,
 // birth date, height/weight), with field names unprefixed (e.g. "firstName",
 // not "children[0].firstName"). validateCreateAccountInput wraps these with

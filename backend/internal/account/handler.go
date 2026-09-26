@@ -61,6 +61,19 @@ type accountResponse struct {
 	StateCode   *string         `json:"stateCode" example:"MX-JAL"`
 	Plan        string          `json:"plan" example:"free"`
 	Children    []childResponse `json:"children"`
+	// DisclaimerVersion is the version of the "Antes de empezar" notice the client must show, and
+	// DisclaimerAccepted whether this account already acknowledged it (specs/010-registro-aceptacion-aviso).
+	DisclaimerVersion  string `json:"disclaimerVersion" example:"2026-09-26"`
+	DisclaimerAccepted bool   `json:"disclaimerAccepted" example:"false"`
+}
+
+type acceptDisclaimerRequest struct {
+	Version string `json:"version" example:"2026-09-26"`
+}
+
+type disclaimerAcceptanceResponse struct {
+	Version    string `json:"version" example:"2026-09-26"`
+	AcceptedAt string `json:"acceptedAt" example:"2026-09-26T18:04:05Z"`
 }
 
 // fieldErrorDoc documents one entry of validationErrorResponse.Details.
@@ -467,6 +480,58 @@ func (h *Handler) AddChild(w http.ResponseWriter, r *http.Request) {
 	h.responder.WriteJSON(r.Context(), w, http.StatusCreated, toAccountResponse(acc), &acc.ID)
 }
 
+// AcceptDisclaimer handles POST /accounts/{accountId}/disclaimer-acceptance
+// (specs/010-registro-aceptacion-aviso/contracts/post-disclaimer-acceptance.md).
+//
+//	@Summary		Record that the tutor acknowledged the "Antes de empezar" notice
+//	@Description	Stores which version of the notice this account acknowledged and when (audit trail).
+//	@Description	Idempotent: acknowledging the same version again returns the original record.
+//	@Description	The version must be the current one, the one every account response carries as
+//	@Description	disclaimerVersion.
+//	@Tags			accounts
+//	@Accept			json
+//	@Produce		json
+//	@Param			accountId	path		string					true	"Account UUID"
+//	@Param			payload		body		acceptDisclaimerRequest	true	"Version acknowledged"
+//	@Success		200			{object}	disclaimerAcceptanceResponse
+//	@Failure		400			{object}	validationErrorResponseDoc	"Missing or stale version"
+//	@Failure		404			{object}	accountNotFoundResponseDoc	"No account exists for this id"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	errorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	errorResponseDoc	"The session does not own this resource"
+//	@Router			/accounts/{accountId}/disclaimer-acceptance [post]
+func (h *Handler) AcceptDisclaimer(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+
+	id, err := uuid.Parse(chi.URLParam(r, "accountId"))
+	if err != nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, accountNotFoundBody(), nil)
+		return
+	}
+
+	var req acceptDisclaimerRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusBadRequest, "validation_error", "Malformed JSON body", &id)
+		return
+	}
+
+	acceptance, err := h.service.AcceptDisclaimer(r.Context(), id, req.Version)
+	var validationErrs ValidationErrors
+	switch {
+	case errors.As(err, &validationErrs):
+		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody(validationErrs, "One or more fields are invalid"), &id)
+	case errors.Is(err, ErrAccountNotFound):
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, accountNotFoundBody(), nil)
+	case err != nil:
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not record the acknowledgement", &id)
+	default:
+		h.responder.WriteJSON(r.Context(), w, http.StatusOK, disclaimerAcceptanceResponse{
+			Version:    acceptance.Version,
+			AcceptedAt: acceptance.AcceptedAt.UTC().Format(time.RFC3339),
+		}, &id)
+	}
+}
+
 // writeAddChildError mirrors writeCreateAccountError's pattern of calling
 // h.responder directly from each case branch, for distinct error_logs
 // attribution per backend/CLAUDE.md.
@@ -546,5 +611,8 @@ func toAccountResponse(acc *Account) accountResponse {
 		StateCode:   acc.StateCode,
 		Plan:        string(acc.Plan),
 		Children:    children,
+
+		DisclaimerVersion:  CurrentDisclaimerVersion,
+		DisclaimerAccepted: acc.DisclaimerAccepted,
 	}
 }

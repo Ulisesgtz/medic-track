@@ -45,3 +45,33 @@ export async function addChild(accountId: string, payload: AddChildPayload, toke
   }
   throw new AccountApiError('unknown', body.message ?? 'Unexpected error adding child')
 }
+
+export interface DisclaimerAcceptance {
+  version: string
+  acceptedAt: string
+}
+
+// specs/010-registro-aceptacion-aviso/contracts/post-disclaimer-acceptance.md
+export async function acceptDisclaimer(
+  accountId: string,
+  version: string,
+  token: string | null,
+): Promise<DisclaimerAcceptance> {
+  const res = await fetch(`${API_BASE_URL}/accounts/${accountId}/disclaimer-acceptance`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...withAuthHeader(token) },
+    body: JSON.stringify({ version }),
+  })
+  const body = await res.json().catch(() => ({}))
+
+  if (res.ok) {
+    return body as DisclaimerAcceptance
+  }
+  if (res.status === 404 || res.status === 403) {
+    throw new AccountApiError('not_found', body.message ?? 'Account not found')
+  }
+  if (res.status === 400) {
+    throw new AccountApiError('validation_error', body.message ?? 'Validation error', body.details)
+  }
+  throw new AccountApiError('unknown', body.message ?? 'Unexpected error recording the acknowledgement')
+}

@@ -120,6 +120,7 @@ func (w *world) routes() []struct {
 	}{
 		{"get account", http.MethodGet, "/accounts/" + w.accountA.String(), "", http.StatusOK},
 		{"add child", http.MethodPost, "/accounts/" + w.accountA.String() + "/children", `{}`, http.StatusBadRequest},
+		{"accept disclaimer", http.MethodPost, "/accounts/" + w.accountA.String() + "/disclaimer-acceptance", `{}`, http.StatusBadRequest},
 		{"list consultations", http.MethodGet, "/children/" + w.childA.String() + "/consultations", "", http.StatusOK},
 		{"child overview", http.MethodGet, "/children/" + w.childA.String() + "/overview" + window, "", http.StatusOK},
 		{"create consultation", http.MethodPost, "/children/" + w.childA.String() + "/consultations", `{}`, http.StatusBadRequest},

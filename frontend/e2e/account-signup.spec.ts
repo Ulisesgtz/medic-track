@@ -1,5 +1,5 @@
 import { clerk } from '@clerk/testing/playwright'
-import { test, expect, allowClerkOn, designs, E2E_PASSWORD, fillSignup, finishEmailVerificationIfAsked, uniqueEmail } from './helpers'
+import { test, expect, allowClerkOn, designs, sessionToken, E2E_PASSWORD, fillSignup, finishEmailVerificationIfAsked, uniqueEmail } from './helpers'
 
 // Covers specs/001-registro-cuenta-usuario in both designs: the phone mock
 // (01) and the web mock (11). The first child is part of the form (as in the
@@ -45,9 +45,10 @@ for (const design of designs) {
       await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
     })
 
-    test('la cuenta nueva ve el aviso "informativa y de seguimiento" y "Entendido" lo quita para siempre', async ({ page }) => {
+    test('la cuenta nueva ve el aviso "Antes de empezar"; "Entendido" queda registrado y no vuelve, ni al reiniciar sesión', async ({ page }) => {
+      const email = uniqueEmail('aviso')
       await page.goto('/signup')
-      await fillSignup(page)
+      await fillSignup(page, { email })
       await page.getByRole('button', { name: 'Crear cuenta' }).click()
       await finishEmailVerificationIfAsked(page)
       await expect(page).toHaveURL(/\/home/)
@@ -55,10 +56,26 @@ for (const design of designs) {
       const notice = page.getByRole('region', { name: 'Antes de empezar' })
       await expect(notice).toContainText('no sustituye una consulta médica')
       await expect(notice).toContainText('acude siempre a tu médico')
+      const token = await sessionToken(page)
+      const me = () => page.context().request.get('http://localhost:8080/accounts/me', { headers: { Authorization: `Bearer ${token}` } })
+      expect((await (await me()).json()).disclaimerAccepted).toBe(false)
 
       await page.getByRole('button', { name: 'Entendido' }).click()
       await expect(notice).toHaveCount(0)
+      // Recorded in the backend, not just hidden in the page.
+      await expect.poll(async () => (await (await me()).json()).disclaimerAccepted).toBe(true)
+
       await page.reload()
+      await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
+      await expect(notice).toHaveCount(0)
+
+      // Another session of the same tutor doesn't ask again.
+      await page.getByRole('button', { name: 'Cerrar sesión' }).first().click()
+      await expect(page).toHaveURL(/\/login/)
+      await page.getByLabel('Correo').fill(email)
+      await page.getByLabel('Contraseña', { exact: true }).fill(E2E_PASSWORD)
+      await page.getByRole('button', { name: 'Iniciar sesión' }).click()
+      await expect(page).toHaveURL(/\/home/, { timeout: 15_000 })
       await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
       await expect(notice).toHaveCount(0)
     })

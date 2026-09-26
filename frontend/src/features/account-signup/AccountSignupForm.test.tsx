@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AccountSignupForm } from './AccountSignupForm'
-import { WelcomeDisclaimer } from '../home/WelcomeDisclaimer'
 
 function stubMatchMedia(matches: boolean) {
   vi.stubGlobal(
@@ -20,7 +19,7 @@ function renderForm() {
       <MemoryRouter initialEntries={['/signup']}>
         <Routes>
           <Route path="/signup" element={<AccountSignupForm />} />
-          <Route path="/home" element={<div>HOME PAGE<WelcomeDisclaimer /></div>} />
+          <Route path="/home" element={<div>HOME PAGE</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -206,8 +205,6 @@ describe('AccountSignupForm', () => {
       await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
       expect(await screen.findByText('HOME PAGE')).toBeInTheDocument()
-      // A brand-new account lands on the home with the informative-only notice.
-      expect(screen.getByRole('region', { name: 'Antes de empezar' })).toBeInTheDocument()
       const [, init] = postCalls()[0]
       const body = (init as RequestInit).body as string
       expect(body).not.toContain('Secreto123!')

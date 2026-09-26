@@ -61,6 +61,7 @@ func NewRouter(d Deps) *chi.Mux {
 		r.Post("/accounts", d.Account.CreateAccount)
 		r.With(ownsAccount).Get("/accounts/{accountId}", d.Account.GetAccount)
 		r.With(ownsAccount).Post("/accounts/{accountId}/children", d.Account.AddChild)
+		r.With(ownsAccount).Post("/accounts/{accountId}/disclaimer-acceptance", d.Account.AcceptDisclaimer)
 
 		r.With(ownsChild).Get("/children/{childId}/consultations", d.Consultation.ListConsultations)
 		r.With(ownsChild).Get("/children/{childId}/overview", d.Consultation.GetChildOverview)
