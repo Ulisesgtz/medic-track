@@ -34,6 +34,9 @@ type Account struct {
 	// DisclaimerAccepted is whether the account has acknowledged CurrentDisclaimerVersion of the
 	// "Antes de empezar" notice (specs/010-registro-aceptacion-aviso). Filled by the repository's reads.
 	DisclaimerAccepted bool
+	// ReminderDetail is what this account's dose reminders show: "detailed" (medication and child)
+	// or "generic". Nil until the tutor chooses, on the first activation (specs/011-recordatorios-push).
+	ReminderDetail *string
 }
 
 // Child represents a child associated with an Account.

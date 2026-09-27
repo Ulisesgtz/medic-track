@@ -325,6 +325,222 @@ const docTemplate = `{
                 }
             }
         },
+        "/accounts/{accountId}/reminder-devices": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Stores this browser's push subscription for the account. Idempotent by endpoint: an\nendpoint already known (for this or another account) is updated and moved to this\naccount — a browser reminds one account at a time.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reminders"
+                ],
+                "summary": "Turn reminders on for this browser",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The browser's PushSubscription (toJSON())",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.registerDeviceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Already known, reactivated",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.deviceResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.deviceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing keys, malformed JSON, or not a supported push service",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.validationErrorDoc"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this account",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    },
+                    "404": {
+                        "description": "Malformed account id",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    },
+                    "503": {
+                        "description": "The server has no VAPID keys",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}/reminder-devices/remove": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Idempotent. An endpoint that isn't this account's is left untouched and not reported.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reminders"
+                ],
+                "summary": "Turn reminders off for this browser",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The browser's endpoint",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.removeDeviceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Missing endpoint or malformed JSON",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.validationErrorDoc"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this account",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    },
+                    "404": {
+                        "description": "Malformed account id",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}/reminder-settings": {
+            "patch": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "\"detailed\" (medication, time and child) or \"generic\" (\"Hay una toma programada\").\nApplies to every device of the account.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Choose what dose reminders show",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "What reminders show",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.reminderSettingsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.accountResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Not \\\"detailed\\\" or \\\"generic\\\", or malformed JSON",
+                        "schema": {
+                            "$ref": "#/definitions/ValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AccountNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/catalog/countries": {
             "get": {
                 "description": "Read-only catalog used to populate the país selector (contracts/get-catalog.md).",
@@ -711,6 +927,77 @@ const docTemplate = `{
                         "description": "No dose exists for this id",
                         "schema": {
                             "$ref": "#/definitions/DoseNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/reminders/actions/taken": {
+            "post": {
+                "description": "Public (no session). The token names one dose and the device that received it; it\nonly works while that device is on and belongs to the dose's account, and for 24 h.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reminders"
+                ],
+                "summary": "Mark a dose as taken from its reminder",
+                "parameters": [
+                    {
+                        "description": "The reminder's action token",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.actionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Missing token or malformed JSON",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.validationErrorDoc"
+                        }
+                    },
+                    "403": {
+                        "description": "Invalid, expired or no longer valid token",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    }
+                }
+            }
+        },
+        "/reminders/config": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Whether this server can send reminders and the VAPID public key to subscribe with\n(null when it can't).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reminders"
+                ],
+                "summary": "What a browser needs to turn reminders on",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.configResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
                         }
                     }
                 }
@@ -1153,6 +1440,11 @@ const docTemplate = `{
                     "type": "string",
                     "example": "free"
                 },
+                "reminderDetail": {
+                    "description": "ReminderDetail is what the dose reminders show, \"detailed\" or \"generic\"; null until the tutor\nchooses on the first activation (specs/011-recordatorios-push).",
+                    "type": "string",
+                    "example": "generic"
+                },
                 "stateCode": {
                     "type": "string",
                     "example": "MX-JAL"
@@ -1253,6 +1545,15 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_account.reminderSettingsRequest": {
+            "type": "object",
+            "properties": {
+                "reminderDetail": {
+                    "type": "string",
+                    "example": "generic"
+                }
+            }
+        },
         "internal_catalog.countryResponse": {
             "type": "object",
             "properties": {
@@ -1337,6 +1638,124 @@ const docTemplate = `{
                 "taken": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "internal_reminder.actionRequest": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string",
+                    "example": "ZG9zZS4uLg.c2lnbmF0dXJl"
+                }
+            }
+        },
+        "internal_reminder.configResponse": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "vapidPublicKey": {
+                    "type": "string",
+                    "example": "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U"
+                }
+            }
+        },
+        "internal_reminder.deviceKeysRequest": {
+            "type": "object",
+            "properties": {
+                "auth": {
+                    "type": "string",
+                    "example": "tBHItJI5svbpez7KI4CCXg"
+                },
+                "p256dh": {
+                    "type": "string",
+                    "example": "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM"
+                }
+            }
+        },
+        "internal_reminder.deviceResponse": {
+            "type": "object",
+            "properties": {
+                "activatedAt": {
+                    "type": "string",
+                    "example": "2026-09-27T18:04:05Z"
+                },
+                "active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "id": {
+                    "type": "string",
+                    "example": "5f0c2e7a-0000-0000-0000-000000000000"
+                }
+            }
+        },
+        "internal_reminder.errorDoc": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "reminders_unavailable"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Reminders are not available on this server"
+                }
+            }
+        },
+        "internal_reminder.fieldErrorDoc": {
+            "type": "object",
+            "properties": {
+                "field": {
+                    "type": "string",
+                    "example": "endpoint"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "is required"
+                }
+            }
+        },
+        "internal_reminder.registerDeviceRequest": {
+            "type": "object",
+            "properties": {
+                "endpoint": {
+                    "type": "string",
+                    "example": "https://fcm.googleapis.com/fcm/send/abc123"
+                },
+                "keys": {
+                    "$ref": "#/definitions/internal_reminder.deviceKeysRequest"
+                }
+            }
+        },
+        "internal_reminder.removeDeviceRequest": {
+            "type": "object",
+            "properties": {
+                "endpoint": {
+                    "type": "string",
+                    "example": "https://fcm.googleapis.com/fcm/send/abc123"
+                }
+            }
+        },
+        "internal_reminder.validationErrorDoc": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_reminder.fieldErrorDoc"
+                    }
+                },
+                "error": {
+                    "type": "string",
+                    "example": "validation_error"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "One or more fields are invalid"
                 }
             }
         }

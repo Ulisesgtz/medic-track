@@ -17,6 +17,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	clerk "github.com/clerk/clerk-sdk-go/v2"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
@@ -30,11 +33,14 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
 	"github.com/Ulisesgtz/medic-track/backend/internal/platform"
+	"github.com/Ulisesgtz/medic-track/backend/internal/reminder"
 	"github.com/Ulisesgtz/medic-track/backend/internal/server"
 )
 
 func main() {
-	ctx := context.Background()
+	// Cancelled on SIGINT/SIGTERM: stops the reminder scheduler and shuts the server down gracefully.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
 
 	clerkSecretKey := os.Getenv("CLERK_SECRET_KEY")
 	if clerkSecretKey == "" {
@@ -62,6 +68,16 @@ func main() {
 	consultationService := consultation.NewService(consultationRepo)
 	consultationHandler := consultation.NewHandler(consultationService, responder)
 
+	// Dose reminders (specs/011): without VAPID keys the API still runs, reminders are just unavailable.
+	reminderConfig := reminder.ConfigFromEnv()
+	reminderService := reminder.NewService(reminder.NewRepository(pool), reminder.NewWebPushSender(reminderConfig, nil), reminderConfig)
+	reminderHandler := reminder.NewHandler(reminderService, responder)
+	if reminderConfig.Available() {
+		go reminderService.RunScheduler(ctx)
+	} else {
+		log.Printf("reminders unavailable: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT and REMINDER_ACTION_SECRET must all be set")
+	}
+
 	frontendOrigin := os.Getenv("FRONTEND_ORIGIN")
 	if frontendOrigin == "" {
 		frontendOrigin = "http://localhost:5173"
@@ -72,6 +88,7 @@ func main() {
 		Catalog:        catalogHandler,
 		Account:        accountHandler,
 		Consultation:   consultationHandler,
+		Reminder:       reminderHandler,
 		Ownership:      ownership.NewRepository(pool),
 		FrontendOrigin: frontendOrigin,
 		RequireSession: authmw.RequireSession(responder),
@@ -87,8 +104,16 @@ func main() {
 		port = "8080"
 	}
 
+	srv := &http.Server{Addr: ":" + port, Handler: r, ReadHeaderTimeout: 10 * time.Second}
+	go func() {
+		<-ctx.Done()
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(shutdownCtx)
+	}()
+
 	log.Printf("PediTrack API listening on :%s", port)
-	if err := http.ListenAndServe(":"+port, r); err != nil {
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("server error: %v", err)
 	}
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
+	"github.com/Ulisesgtz/medic-track/backend/internal/reminder"
 )
 
 // Deps is everything the router is built from.
@@ -25,6 +26,7 @@ type Deps struct {
 	Catalog        *catalog.Handler
 	Account        *account.Handler
 	Consultation   *consultation.Handler
+	Reminder       *reminder.Handler
 	Ownership      *ownership.Repository
 	FrontendOrigin string
 	// RequireSession verifies the Clerk session (authmw.RequireSession in
@@ -50,6 +52,10 @@ func NewRouter(d Deps) *chi.Mux {
 	r.Get("/catalog/countries", d.Catalog.ListCountries)
 	r.Get("/catalog/countries/{countryCode}/states", d.Catalog.ListStates)
 
+	// The "Tomada" button of a reminder, sent by the service worker, which has no session: the
+	// signed action token is the only thing it accepts, and it names a single dose (specs/011).
+	r.Post("/reminders/actions/taken", d.Reminder.MarkTaken)
+
 	ownsAccount := authmw.RequireOwner(d.Responder, "accountId", d.Ownership.OwnsAccount)
 	ownsChild := authmw.RequireOwner(d.Responder, "childId", d.Ownership.OwnsChild)
 	ownsConsultation := authmw.RequireOwner(d.Responder, "consultationId", d.Ownership.OwnsConsultation)
@@ -62,6 +68,11 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(ownsAccount).Get("/accounts/{accountId}", d.Account.GetAccount)
 		r.With(ownsAccount).Post("/accounts/{accountId}/children", d.Account.AddChild)
 		r.With(ownsAccount).Post("/accounts/{accountId}/disclaimer-acceptance", d.Account.AcceptDisclaimer)
+		r.With(ownsAccount).Patch("/accounts/{accountId}/reminder-settings", d.Account.UpdateReminderSettings)
+		r.With(ownsAccount).Post("/accounts/{accountId}/reminder-devices", d.Reminder.RegisterDevice)
+		r.With(ownsAccount).Post("/accounts/{accountId}/reminder-devices/remove", d.Reminder.RemoveDevice)
+
+		r.Get("/reminders/config", d.Reminder.GetConfig)
 
 		r.With(ownsChild).Get("/children/{childId}/consultations", d.Consultation.ListConsultations)
 		r.With(ownsChild).Get("/children/{childId}/overview", d.Consultation.GetChildOverview)
