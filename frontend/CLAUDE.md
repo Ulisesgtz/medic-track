@@ -135,6 +135,7 @@ Las pruebas E2E usan la instancia de **desarrollo** de Clerk de verdad (nada de 
 - Toda prueba que envía un formulario de Clerk desde la página llama `allowClerkOn(page)` (testing token: salta el CAPTCHA del registro). `signUp(page)` usa el formulario real; `seedChild(page)` / `seedAccount(page, children)` crean el usuario por la API de Clerk, inician sesión con `clerk.signIn` (ticket, sin formulario) y crean cuenta/hijo/consulta por la API de PediTrack con el token de esa sesión (`sessionToken`, `apiPost`).
 - Localmente las llaves se leen de `frontend/.env.local` (`VITE_CLERK_PUBLISHABLE_KEY`) y `backend/.env.local` (`CLERK_SECRET_KEY`); en CI vienen de los secretos `VITE_CLERK_PUBLISHABLE_KEY` y `CLERK_SECRET_KEY`.
 - `autenticacion.spec.ts` cubre login/logout con contraseña, el mensaje único de credenciales inválidas y que una sesión recibe 403 en los datos de otra cuenta (401 sin sesión).
+- Clerk limita las peticiones de la instancia de desarrollo (429 "Too Many Requests"), y ese límite lo comparten todas las corridas, locales y de CI. Toda llamada a su API (`clerkFetch`) y `signInAs` pasan por `retryWhileRateLimited` (`clerkApi.ts`): reintenta con espera creciente y solo por 429. En CI cada prueba tiene 60 s para dejar lugar a esas esperas.
 - Los avisos `[Clerk Testing] FAPI request failed … Test ended` al final de una prueba son ruido inofensivo.
 
 ## Running tests

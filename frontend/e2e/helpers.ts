@@ -1,6 +1,6 @@
 import { clerk, setupClerkTestingToken } from '@clerk/testing/playwright'
 import { expect, test as base, type APIRequestContext, type Page } from '@playwright/test'
-import { createClerkUser, deleteUsersByEmail, E2E_MARKER, E2E_PASSWORD, E2E_VERIFICATION_CODE, pruneOldE2EUsers } from './clerkApi'
+import { createClerkUser, deleteUsersByEmail, E2E_MARKER, E2E_PASSWORD, E2E_VERIFICATION_CODE, pruneOldE2EUsers, retryWhileRateLimited } from './clerkApi'
 
 export { E2E_PASSWORD, expect }
 
@@ -101,11 +101,11 @@ export async function signUp(page: Page, data: SignupData = {}) {
 
 /**
  * Signs the page in as an existing Clerk user without going through the login form (a ticket
- * minted with the secret key), then it is a normal signed-in browser.
+ * minted with the secret key), then it is a normal signed-in browser. Retried while Clerk rate limits.
  */
 export async function signInAs(page: Page, emailAddress: string) {
   await page.goto('/login')
-  await clerk.signIn({ page, emailAddress })
+  await retryWhileRateLimited(() => clerk.signIn({ page, emailAddress }))
 }
 
 /** The signed-in page's session token, the same Bearer token the app sends to the backend. */

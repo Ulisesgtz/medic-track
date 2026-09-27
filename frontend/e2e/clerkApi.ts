@@ -46,7 +46,31 @@ function secretKey() {
   return key
 }
 
-async function clerkFetch(path: string, init: RequestInit = {}) {
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
+ * Runs `attempt` again, with a growing pause, while it fails because Clerk is rate limiting the
+ * development instance (429 / "Too Many Requests"). The suite hits Clerk's real servers hundreds of
+ * times per run, and the limit is shared with every other run and with local runs, so a burst of
+ * 429s is expected now and then — it is not a failure of the app. Any other error is thrown at once.
+ */
+export async function retryWhileRateLimited<T>(attempt: () => Promise<T>, waitsMs = [1_000, 2_000, 4_000, 8_000]): Promise<T> {
+  for (let i = 0; ; i++) {
+    try {
+      return await attempt()
+    } catch (error) {
+      const rateLimited = error instanceof Error && /(-> 429:|too many requests)/i.test(error.message)
+      if (!rateLimited || i >= waitsMs.length) throw error
+      await sleep(waitsMs[i] + Math.random() * 500)
+    }
+  }
+}
+
+function clerkFetch(path: string, init: RequestInit = {}) {
+  return retryWhileRateLimited(() => clerkFetchOnce(path, init))
+}
+
+async function clerkFetchOnce(path: string, init: RequestInit) {
   const res = await fetch(`${CLERK_API}${path}`, {
     ...init,
     headers: { Authorization: `Bearer ${secretKey()}`, 'Content-Type': 'application/json', ...init.headers },

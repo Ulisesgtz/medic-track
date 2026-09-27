@@ -10,6 +10,8 @@ export default defineConfig({
   fullyParallel: true,
   // Every flow goes through Clerk's real servers, and CI's shared runners are slower than a laptop.
   expect: { timeout: process.env.CI ? 15_000 : 5_000 },
+  // Room for the waits of retryWhileRateLimited (e2e/clerkApi.ts) when Clerk rate limits the instance.
+  timeout: process.env.CI ? 60_000 : 30_000,
   retries: process.env.CI ? 1 : 0,
   reporter: 'html',
   use: {
