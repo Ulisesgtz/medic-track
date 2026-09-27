@@ -93,7 +93,7 @@ Tokens de color y tipografía viven en el bloque `@theme` de `src/index.css`; la
 | `ForgotPasswordPage.tsx`, `useForgotPassword.ts` | `/recuperar-contrasena`: correo → code + new password (same rules as signup) → signed in. A correo with no account goes to the code step like any other (no account enumeration) |
 | `useClearCacheOnUserChange.ts` | Mounted once in `App`: clears the whole query cache when the Clerk user id changes (session expired, signed out in another tab, another tutor logging in) — our own logout already clears it, but the cache keys carry no user id |
 | `AuthLayout.tsx` | Frame of the sign-in screens: the signup's phone header or web split screen, chosen with `useIsDesktop` |
-| `SsoCallbackPage.tsx`, `api.ts` | Google return page (waits for `fetchStatus`, `signIn.isTransferable` → `signUp.create({ transfer })`) and `fetchMe` |
+| `SsoCallbackPage.tsx`, `api.ts` | Google return page and `fetchMe`. **Decides nothing until `useAuth().isLoaded`** (before that `signIn`/`signUp` are blank placeholders and a new Google tutor landed on "No se pudo continuar"), then waits for `fetchStatus`; same order of checks as Clerk's `HandleSSOCallback`: complete → `/home`, still needs a factor → `/login`, `signIn.isTransferable` → `signUp.create({ transfer })` → `/registro/completar`. Renders `#clerk-captcha` for the bot-protection challenge the transfer may need |
 
 Clerk API errors carry the useful code in `error.errors[0].code` (the top-level one is `api_response_error`): always go through `clerkNotice()` / `hasClerkCode()` from `shared/auth/clerkMessages.ts`, never `error.code` directly.
 

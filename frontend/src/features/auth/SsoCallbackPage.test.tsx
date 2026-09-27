@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
-import { useClerk, useSignIn, useSignUp } from '@clerk/react'
+import { useAuth, useClerk, useSignIn, useSignUp } from '@clerk/react'
 import { SsoCallbackPage } from './SsoCallbackPage'
 
 vi.mock('@clerk/react', () => ({
+  useAuth: vi.fn(),
   useSignIn: vi.fn(),
   useSignUp: vi.fn(),
   useClerk: vi.fn(),
@@ -17,6 +18,7 @@ function renderCallback() {
         <Route path="/sso-callback" element={<SsoCallbackPage />} />
         <Route path="/home" element={<p>Home page</p>} />
         <Route path="/registro/completar" element={<p>Completar registro</p>} />
+        <Route path="/login" element={<p>Login page</p>} />
       </Routes>
     </MemoryRouter>,
   )
@@ -37,6 +39,7 @@ const baseSignUp = {
 
 describe('SsoCallbackPage', () => {
   beforeEach(() => {
+    vi.mocked(useAuth).mockReturnValue({ isLoaded: true } as unknown as ReturnType<typeof useAuth>)
     vi.mocked(useClerk).mockReturnValue({ setActive: vi.fn() } as unknown as ReturnType<typeof useClerk>)
   })
 
@@ -83,6 +86,82 @@ describe('SsoCallbackPage', () => {
 
     expect(await screen.findByText('Home page')).toBeInTheDocument()
     expect(finalize).toHaveBeenCalledOnce()
+  })
+
+  it('decides nothing until Clerk has loaded — its blank placeholders are not a failed Google return', async () => {
+    const create = vi.fn().mockResolvedValue({ error: null })
+    const finalize = vi.fn().mockResolvedValue({ error: null })
+    vi.mocked(useAuth).mockReturnValue({ isLoaded: false } as unknown as ReturnType<typeof useAuth>)
+    // What useSignIn/useSignUp return before Clerk loads: blank defaults, nothing fetching.
+    vi.mocked(useSignIn).mockReturnValue({
+      signIn: { ...baseSignIn, status: 'needs_identifier' },
+      fetchStatus: 'idle',
+    } as unknown as ReturnType<typeof useSignIn>)
+    vi.mocked(useSignUp).mockReturnValue({ signUp: baseSignUp, fetchStatus: 'idle' } as unknown as ReturnType<typeof useSignUp>)
+
+    const view = renderCallback()
+    expect(screen.getByText('Iniciando sesión…')).toBeInTheDocument()
+    expect(screen.queryByText('No se pudo continuar')).not.toBeInTheDocument()
+    expect(document.getElementById('clerk-captcha')).toBeInTheDocument()
+
+    // Clerk loads with the real result of a brand-new Google identity.
+    vi.mocked(useAuth).mockReturnValue({ isLoaded: true } as unknown as ReturnType<typeof useAuth>)
+    vi.mocked(useSignIn).mockReturnValue({
+      signIn: { ...baseSignIn, isTransferable: true },
+      fetchStatus: 'idle',
+    } as unknown as ReturnType<typeof useSignIn>)
+    vi.mocked(useSignUp).mockReturnValue({
+      signUp: { ...baseSignUp, create, finalize },
+      fetchStatus: 'idle',
+    } as unknown as ReturnType<typeof useSignUp>)
+    view.rerender(
+      <MemoryRouter initialEntries={['/sso-callback']}>
+        <Routes>
+          <Route path="/sso-callback" element={<SsoCallbackPage />} />
+          <Route path="/registro/completar" element={<p>Completar registro</p>} />
+        </Routes>
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText('Completar registro')).toBeInTheDocument()
+    expect(create).toHaveBeenCalledWith({ transfer: true })
+  })
+
+  it.each(['needs_second_factor', 'needs_client_trust', 'needs_new_password'])(
+    'sends a sign-in that still needs a step (%s) to /login, which asks for it',
+    async (status) => {
+      vi.mocked(useSignIn).mockReturnValue({ signIn: { ...baseSignIn, status } } as unknown as ReturnType<typeof useSignIn>)
+      vi.mocked(useSignUp).mockReturnValue({ signUp: baseSignUp } as unknown as ReturnType<typeof useSignUp>)
+
+      renderCallback()
+
+      expect(await screen.findByText('Login page')).toBeInTheDocument()
+    },
+  )
+
+  it('finalizes a sign-up that Clerk already completed and goes to /registro/completar', async () => {
+    const finalize = vi.fn().mockResolvedValue({ error: null })
+    vi.mocked(useSignIn).mockReturnValue({ signIn: baseSignIn } as unknown as ReturnType<typeof useSignIn>)
+    vi.mocked(useSignUp).mockReturnValue({
+      signUp: { ...baseSignUp, status: 'complete', finalize },
+    } as unknown as ReturnType<typeof useSignUp>)
+
+    renderCallback()
+
+    expect(await screen.findByText('Completar registro')).toBeInTheDocument()
+    expect(finalize).toHaveBeenCalledOnce()
+  })
+
+  it('shows an error when finalizing an already-completed sign-up fails', async () => {
+    const finalize = vi.fn().mockResolvedValue({ error: { code: 'unknown', message: 'nope' } })
+    vi.mocked(useSignIn).mockReturnValue({ signIn: baseSignIn } as unknown as ReturnType<typeof useSignIn>)
+    vi.mocked(useSignUp).mockReturnValue({
+      signUp: { ...baseSignUp, status: 'complete', finalize },
+    } as unknown as ReturnType<typeof useSignUp>)
+
+    renderCallback()
+
+    expect(await screen.findByText('No se pudo continuar el registro con Google. Intenta de nuevo.')).toBeInTheDocument()
   })
 
   it('finalizes and goes to /home when the sign-in is complete (returning tutor)', async () => {
