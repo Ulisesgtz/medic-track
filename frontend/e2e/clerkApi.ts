@@ -55,6 +55,18 @@ async function clerkFetch(path: string, init: RequestInit = {}) {
   return res.status === 204 ? null : res.json()
 }
 
+/**
+ * Deletes one user. Already gone (404) counts as deleted: another process sharing the instance — a
+ * worker's own cleanup, or another run — may have removed it between listing and deleting.
+ */
+async function deleteUser(id: string) {
+  try {
+    await clerkFetch(`/users/${id}`, { method: 'DELETE' })
+  } catch (error) {
+    if (!(error instanceof Error && / -> 404:/.test(error.message))) throw error
+  }
+}
+
 /** Creates a verified Clerk user, so a test can sign in as them without going through the signup form. */
 export async function createClerkUser(email: string) {
   await pruneOldE2EUsers()
@@ -91,7 +103,7 @@ export async function deleteE2EUsers(olderThanMs = 0) {
     )
     if (mine.length === 0) return deleted
     for (const user of mine) {
-      await clerkFetch(`/users/${user.id}`, { method: 'DELETE' })
+      await deleteUser(user.id)
       deleted += 1
     }
   }
@@ -105,7 +117,7 @@ export async function deleteUsersByEmail(emails: string[]) {
   for (const email of emails) {
     try {
       const users = (await clerkFetch(`/users?email_address=${encodeURIComponent(email)}`)) as ClerkUser[]
-      for (const user of users) await clerkFetch(`/users/${user.id}`, { method: 'DELETE' })
+      for (const user of users) await deleteUser(user.id)
     } catch {
       // Best effort: the age-based pruning and the global teardown still catch anything left.
     }

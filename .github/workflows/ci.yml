@@ -107,6 +107,12 @@ jobs:
   frontend-e2e:
     name: Frontend — Playwright E2E gate
     runs-on: ubuntu-latest
+    # Every E2E run signs up and deletes users in the same Clerk development instance: two at once
+    # (two quick pushes, two PRs) cleaned up each other's users. One at a time, repo-wide; a newer
+    # pending run replaces an older pending one, a running one is never cancelled.
+    concurrency:
+      group: e2e-clerk-dev-instance
+      cancel-in-progress: false
     services:
       postgres:
         image: postgres:18
