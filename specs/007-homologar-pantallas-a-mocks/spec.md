@@ -112,6 +112,7 @@ Por límites de datos o del producto:
   fondo. El foco vuelve al botón que lo abrió aunque el navegador no lo enfoque al hacer clic (Safari), como en el
   mock. Diferencia: el fondo del mock 05 es un home sin tarjeta de hijo y con encabezado sin saludo ni avatar; el
   home real (con su hijo, que es lo que activa el límite) sigue la pantalla 2 del tablero (saludo, avatar, chips).
+  **Decidido por el usuario (2026-09-27): se queda así** — el home no se cambia para parecerse al fondo del mock 05.
   Columna centrada de máx. 430 px. Al tocar "Ver planes" la app abre `/planes` (el mock solo cambia el texto).
 - Punto de corte web/móvil en **900 px** (el mock usa `lg` = 1024 px para su diseño de tabla). Entre 900 y 1023 px se
   sigue el diseño responsivo del propio mock web: sin barra lateral y en una columna (mocks 11 y 13 ya lo hacen así;
