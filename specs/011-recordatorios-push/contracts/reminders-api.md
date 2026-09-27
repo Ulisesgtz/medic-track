@@ -37,8 +37,9 @@ Activa los recordatorios en el dispositivo actual. Idempotente por `endpoint`: a
 ```json
 { "id": "5f0c…", "active": true, "activatedAt": "2026-09-27T18:04:05Z" }
 ```
-**400** `validation_error` — falta `endpoint`, `keys.p256dh` o `keys.auth`, el `endpoint` no es `https://` (en
-desarrollo se acepta `http://localhost`/`127.0.0.1`), o JSON mal formado.
+**400** `validation_error` — falta `endpoint`, `keys.p256dh` o `keys.auth`, JSON mal formado, o el `endpoint` no es una
+URL `https://` de un servicio de avisos conocido (`fcm.googleapis.com`, `updates.push.services.mozilla.com`,
+`*.push.apple.com`, `*.notify.windows.com`): el servidor hace un POST a esa URL, así que no acepta ninguna otra.
 **401** · **403** · **404** · **503** `reminders_unavailable` si el backend no tiene claves VAPID.
 
 ---

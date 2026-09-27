@@ -9,6 +9,8 @@ Vite + React 19 + TypeScript. Auth: Clerk (`@clerk/react`). Forms: React Hook Fo
 | `src/App.tsx` | Router + QueryClientProvider (+ `useClearCacheOnUserChange`) — public: `/signup` → `AccountSignupPage`, `/login` → `LoginPage`, `/recuperar-contrasena` → `ForgotPasswordPage`, `/sso-callback` → `SsoCallbackPage`; behind `RequireSession`: `/registro/completar` → `CompleteGoogleSignupPage`, `/home` → `HomePage`, `/children/:childId` → `ChildDetailPage`, `/children/:childId/consultations/new` → `NewConsultationPage`, `/consultations/:consultationId` → `ConsultationDetailPage`, `/planes` → placeholder (`MessagePage`) |
 | `src/features/account-signup/` | The account + first child signup feature, and the plan-limit pop-up (see below) |
 | `src/features/home/` | The home page: children listing, "Agregar hijo" dialogs, the desktop sidebar, the `account_id`-in-`localStorage` session (see below) |
+| `src/features/reminders/` | Dose reminders by Web Push (spec 011) — see below |
+| `src/sw.ts` | The service worker (compiled by `vite-plugin-pwa`, `injectManifest`, no precache, registered by the plugin's `registerSW.js`): only wires `push`/`notificationclick` to `features/reminders/notification.ts`. Excluded from coverage for that reason |
 | `src/features/consultations/` | Child detail page, "Nueva consulta" page (with client-side OCR), consultation detail, dose marking (see below) |
 | `src/shared/catalog/` | Country/state catalog fetch hooks (`useCountries`, `useStates`) shared across features |
 | `src/shared/ui/` | Presentational pieces used by more than one feature: `Logo`, `AppHeader` (phone dark header: eyebrow, title, action), `FormField` (label + control + inline error), `MessagePage`, `useIsDesktop` (true from 900px, `matchMedia`-based — **the one rule that picks the web or the phone design**) and `useIsWide` (true from 1024px, `lg`: where the web mocks show the sidebar) |
@@ -109,6 +111,17 @@ Clerk API errors carry the useful code in `error.errors[0].code` (the top-level 
 | `AddChildModal.tsx` | Board screen 7: title/subtitle + "×", Nombre, Apellido, Fecha de nacimiento, Talla/Peso (optional), "Cancelar" + "Guardar". Falls back to `FreemiumLimitModal` if the server still answers 422 |
 | `useSidebarSession.ts` | `{ accountId, hasSidebar, isDesktop }` — the single place that decides whether the sidebar is on screen (`isDesktop` && `useIsWide` (1024px) && there is an account) |
 | `api.ts`, `types.ts` | `fetchAccount()`, `addChild()`, `acceptDisclaimer()`, `AccountApiError`; `Account`/`Child` shapes |
+
+## `src/features/reminders/` — dose reminders (spec 011)
+
+| File | Role |
+|---|---|
+| `RemindersCard.tsx`, `useReminders.ts` | The card on the home (both designs, under the children). States: `unsupported` / `ios-needs-install` / `denied` / `unavailable` (backend without VAPID keys) / `off` / `on`, always with the "es una ayuda, no una alarma garantizada" text. **The permission is requested only when the tutor taps "Activar recordatorios"** (FR-002). With `account.reminderDetail === null` the tap first opens `ReminderDetailDialog`; choosing then asks for the permission, subscribes, registers the device and PATCHes the choice |
+| `ReminderDetailDialog.tsx` | "Mostrar detalle" / "Texto genérico" with an example of each on the lock screen; real dialog (portal, Escape, focus trap). Its `onCancel` must be stable (`useCallback`) |
+| `notification.ts` | Pure functions the service worker uses: `parsePayload`, `buildNotification` (title "Toma programada", body with `formatTime`, `tag: dose-<id>`, "Tomada" action only with a token — never an imperative, Principio I), `targetUrl`, `focusOrOpen`, `markTaken` (POSTs the reminder's own token: no session in a service worker) |
+| `deviceSupport.ts`, `pushDevice.ts`, `api.ts` | Browser capability detection and VAPID key decoding; the subscription helpers (`subscribe`, `unsubscribeThisDevice`, `unsubscribeOnLogout` — called by `useLogout` before `signOut`, max 3 s); the endpoints |
+
+Tests stub the browser with `pushEnv.test-utils.ts` (jsdom has no service worker, PushManager or Notification). The E2E `e2e/recordatorios.spec.ts` stubs the permission and `PushManager` in the page and checks what reaches the backend; real delivery is covered by the backend's integration test.
 
 ## `src/features/consultations/` — child detail, consultations, doses
 

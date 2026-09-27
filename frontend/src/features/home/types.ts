@@ -22,4 +22,6 @@ export interface Account {
   // (specs/010-registro-aceptacion-aviso).
   disclaimerVersion: string
   disclaimerAccepted: boolean
+  // What dose reminders show; null until the tutor chooses on the first activation (specs/011).
+  reminderDetail: 'detailed' | 'generic' | null
 }

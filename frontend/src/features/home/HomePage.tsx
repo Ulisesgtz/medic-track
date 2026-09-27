@@ -11,6 +11,7 @@ import { AppShell } from './AppShell'
 import { useSidebarSession } from './useSidebarSession'
 import { Logo } from '../../shared/ui/Logo'
 import { WelcomeDisclaimer } from './WelcomeDisclaimer'
+import { RemindersCard } from '../reminders/RemindersCard'
 
 /**
  * The parent's home page: lists their children (FR-001), or an invitation to
@@ -174,6 +175,8 @@ export function HomePage() {
                 )}
               </div>
             )}
+
+            <RemindersCard account={account} />
           </div>
           {dialogs}
         </main>
@@ -234,6 +237,9 @@ export function HomePage() {
           {account?.plan === 'free' && (
             <p className="mt-4 text-center text-[13px] text-slate-500">El plan gratuito incluye un hijo.</p>
           )}
+          <div className="mt-6">
+            <RemindersCard account={account} />
+          </div>
         </div>
         {dialogs}
       </main>
