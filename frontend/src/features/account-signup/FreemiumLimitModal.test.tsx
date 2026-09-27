@@ -109,7 +109,6 @@ describe('FreemiumLimitModal', () => {
     unrelatedFocusedElement.focus()
 
     const openerRef = createRef<HTMLButtonElement>()
-    // @ts-expect-error test-only assignment to a ref created outside React
     openerRef.current = realOpener
 
     const { unmount } = render(

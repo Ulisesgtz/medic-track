@@ -231,3 +231,79 @@ func TestRepository_Create_ConnectionError(t *testing.T) {
 
 	require.Error(t, err)
 }
+
+func newLegacyAccount(email string) *account.Account {
+	return &account.Account{
+		FirstName: "Ana", LastName: "Gómez", Email: email, Plan: account.PlanFree,
+		Children: []account.Child{{FirstName: "Luis", LastName: "Gómez", BirthDate: time.Now().AddDate(-5, 0, 0)}},
+	}
+}
+
+func TestRepository_Create_DuplicateClerkUserIDIsItsOwnError(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+	clerkID := uniqueClerkUserID("dup")
+	first := newLegacyAccount(uniqueEmail("repo.dupclerk1"))
+	first.ClerkUserID = &clerkID
+	require.NoError(t, repo.Create(context.Background(), first))
+
+	second := newLegacyAccount(uniqueEmail("repo.dupclerk2"))
+	second.ClerkUserID = &clerkID
+	err := repo.Create(context.Background(), second)
+
+	require.ErrorIs(t, err, account.ErrClerkUserAlreadyLinked)
+	require.NotErrorIs(t, err, account.ErrEmailAlreadyExists)
+}
+
+func TestRepository_LinkByEmail_LinksALegacyAccountIgnoringCase(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+	email := uniqueEmail("Repo.Legacy")
+	legacy := newLegacyAccount(email)
+	require.NoError(t, repo.Create(context.Background(), legacy))
+	clerkID := uniqueClerkUserID("link")
+
+	linked, err := repo.LinkByEmail(context.Background(), clerkID, strings.ToLower(email))
+
+	require.NoError(t, err)
+	require.Equal(t, legacy.ID, linked.ID)
+	require.NotNil(t, linked.ClerkUserID)
+	require.Equal(t, clerkID, *linked.ClerkUserID)
+	require.Len(t, linked.Children, 1)
+}
+
+func TestRepository_LinkByEmail_NothingToLink(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+
+	_, err := repo.LinkByEmail(context.Background(), uniqueClerkUserID("none"), uniqueEmail("repo.nobody"))
+
+	require.ErrorIs(t, err, account.ErrAccountNotFound)
+}
+
+func TestRepository_LinkByEmail_NeverStealsAnAccountAlreadyLinkedToAnotherUser(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+	email := uniqueEmail("repo.taken")
+	ownerID := uniqueClerkUserID("owner")
+	owned := newLegacyAccount(email)
+	owned.ClerkUserID = &ownerID
+	require.NoError(t, repo.Create(context.Background(), owned))
+
+	_, err := repo.LinkByEmail(context.Background(), uniqueClerkUserID("intruder"), email)
+
+	require.ErrorIs(t, err, account.ErrAccountNotFound)
+}
+
+func TestRepository_LinkByEmail_ConnectionError(t *testing.T) {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Skip("DATABASE_URL not set; skipping test that requires a live database")
+	}
+	repo := account.NewRepository(closedPool(t, dsn))
+
+	_, err := repo.LinkByEmail(context.Background(), "user_x", "x@example.com")
+
+	require.Error(t, err)
+	require.NotErrorIs(t, err, account.ErrAccountNotFound)
+}

@@ -18,4 +18,8 @@ export interface Account {
   stateCode: string | null
   plan: string
   children: Child[]
+  // The version of the "Antes de empezar" notice to show, and whether this account already acknowledged it
+  // (specs/010-registro-aceptacion-aviso).
+  disclaimerVersion: string
+  disclaimerAccepted: boolean
 }

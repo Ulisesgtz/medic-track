@@ -1,24 +1,75 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AccountSignupPage } from './features/account-signup/AccountSignupPage'
+import { CompleteGoogleSignupPage } from './features/account-signup/CompleteGoogleSignupPage'
 import { HomePage } from './features/home/HomePage'
 import { ChildDetailPage } from './features/consultations/ChildDetailPage'
 import { ConsultationDetailPage } from './features/consultations/ConsultationDetailPage'
 import { NewConsultationPage } from './features/consultations/NewConsultationPage'
+import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage'
+import { LoginPage } from './features/auth/LoginPage'
+import { RequireSession } from './features/auth/RequireSession'
+import { useClearCacheOnUserChange } from './features/auth/useClearCacheOnUserChange'
+import { SsoCallbackPage } from './features/auth/SsoCallbackPage'
 import { MessagePage } from './shared/ui/MessagePage'
 
 const queryClient = new QueryClient()
 
+function SessionCacheGuard() {
+  useClearCacheOnUserChange()
+  return null
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <SessionCacheGuard />
       <BrowserRouter>
         <Routes>
           <Route path="/signup" element={<AccountSignupPage />} />
-          <Route path="/home" element={<HomePage />} />
-          <Route path="/children/:childId" element={<ChildDetailPage />} />
-          <Route path="/children/:childId/consultations/new" element={<NewConsultationPage />} />
-          <Route path="/consultations/:consultationId" element={<ConsultationDetailPage />} />
+          <Route
+            path="/registro/completar"
+            element={
+              <RequireSession>
+                <CompleteGoogleSignupPage />
+              </RequireSession>
+            }
+          />
+          <Route path="/sso-callback" element={<SsoCallbackPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/recuperar-contrasena" element={<ForgotPasswordPage />} />
+          <Route
+            path="/home"
+            element={
+              <RequireSession>
+                <HomePage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/children/:childId"
+            element={
+              <RequireSession>
+                <ChildDetailPage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/children/:childId/consultations/new"
+            element={
+              <RequireSession>
+                <NewConsultationPage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/consultations/:consultationId"
+            element={
+              <RequireSession>
+                <ConsultationDetailPage />
+              </RequireSession>
+            }
+          />
           <Route path="/" element={<Navigate to="/signup" replace />} />
           {/* "Ver planes" of the freemium pop-up lands here until the plans screen exists (BACKLOG). */}
           <Route

@@ -1,6 +1,10 @@
+import { Link } from 'react-router-dom'
 import { FormField as Field } from '../../shared/ui/FormField'
 import { Logo } from '../../shared/ui/Logo'
+import { EmailCodeStep } from './EmailCodeStep'
 import { GoogleSignupButton } from './GoogleSignupButton'
+import { PasswordField } from './PasswordField'
+import { Notice } from '../../shared/ui/Notice'
 import {
   BIRTH_DATE_MESSAGE,
   CHILD_NAME_MESSAGE,
@@ -40,13 +44,13 @@ const CHECKLIST = [
  * - The account also asks for the tutor's first/last name and (optionally)
  *   país/estado, and the child block has separate Nombre/Apellido plus
  *   optional talla/peso: the account model stores them.
- * - "Contraseña" is only validated (min. 8), never sent or stored: the
- *   authentication (Clerk or AWS Cognito) is a later feature (BACKLOG.md).
+ * - "Contraseña" (`PasswordField`: live rules, eye button) goes to Clerk only
+ *   (`signUp.password()`); PediTrack's own backend never receives it.
  * - "Registrarme con Google" (`GoogleSignupButton`) is not in the mock: the
- *   user asked for it; for now it only says it's coming soon.
+ *   user asked for it, and it starts the real Clerk OAuth flow.
  */
 export function SignupWeb({ form }: { form: SignupForm }) {
-  const { register, setValue, errors, onSubmit, countryCode, countries, states, isPending, serverError } = form
+  const { register, setValue, errors, onSubmit, countryCode, countries, states, isPending, serverNotice, step, password } = form
   const childErrors = errors.children?.[0]
 
   return (
@@ -79,6 +83,9 @@ export function SignupWeb({ form }: { form: SignupForm }) {
       </section>
 
       <section className="flex flex-1 items-center justify-center bg-surface px-6 py-12 lg:px-16">
+        {step === 'verify-email' ? (
+          <EmailCodeStep form={form} />
+        ) : (
         <form onSubmit={onSubmit} noValidate className="flex w-full max-w-[520px] flex-col gap-6">
           <div>
             <h2 className="text-3xl font-black tracking-tight text-ink">Crear cuenta</h2>
@@ -97,17 +104,12 @@ export function SignupWeb({ form }: { form: SignupForm }) {
             />
           </Field>
 
-          <Field id="password" text="Contraseña" error={errors.password ? PASSWORD_MESSAGE : undefined}>
-            <input
-              id="password"
-              type="password"
-              size={1}
-              autoComplete="new-password"
-              placeholder="Mínimo 8 caracteres"
-              className={`${accountField} ${border(!!errors.password, 'border-slate-300')}`}
-              {...register('password', passwordValidation)}
-            />
-          </Field>
+          <PasswordField
+            registration={register('password', passwordValidation)}
+            value={password ?? ''}
+            error={errors.password ? PASSWORD_MESSAGE : undefined}
+            inputClassName={`${accountField} ${border(!!errors.password, 'border-slate-300')}`}
+          />
 
           <div className="grid grid-cols-2 gap-4">
             <Field id="firstName" text="Tu nombre" error={nameError(errors.firstName, 'El nombre')}>
@@ -243,10 +245,15 @@ export function SignupWeb({ form }: { form: SignupForm }) {
             </div>
           </fieldset>
 
-          {serverError && (
-            <p role="alert" className="rounded-2xl bg-red-50 p-4 text-sm font-semibold text-red-800">
-              {serverError}
-            </p>
+          {/* Required by Clerk for bot protection on custom sign-up flows — must exist in the
+              DOM before signUp.password() runs (Clerk docs: "Add bot protection"). Invisible by
+              default; Clerk mounts its own widget into it only when a challenge is needed. */}
+          <div id="clerk-captcha" />
+
+          {serverNotice && (
+            <Notice tone={serverNotice.tone} action={serverNotice.action}>
+              {serverNotice.message}
+            </Notice>
           )}
 
           <button
@@ -259,10 +266,18 @@ export function SignupWeb({ form }: { form: SignupForm }) {
 
           <GoogleSignupButton />
 
+          <p className="text-[15px] text-slate-600">
+            ¿Ya tienes cuenta?{' '}
+            <Link to="/login" className="font-extrabold text-action hover:underline">
+              Inicia sesión
+            </Link>
+          </p>
+
           <p className="text-[13px] leading-relaxed text-slate-500">
             Al crear la cuenta aceptas que los datos se guardan para tu uso personal. No se comparten con terceros.
           </p>
         </form>
+        )}
       </section>
     </div>
   )

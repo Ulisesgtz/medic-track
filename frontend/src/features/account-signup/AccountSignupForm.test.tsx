@@ -47,7 +47,7 @@ async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText('Tu nombre'), 'Ana')
   await user.type(screen.getByLabelText('Tu apellido'), 'Gómez')
   await user.type(screen.getByLabelText('Correo'), 'ana@example.com')
-  await user.type(screen.getByLabelText('Contraseña'), 'secreto123')
+  await user.type(screen.getByLabelText('Contraseña'), 'Secreto123!')
   await user.type(byId('children.0.firstName'), 'Luis')
   await user.type(byId('children.0.lastName'), 'Gómez')
   await user.type(byId('children.0.birthDate'), '2020-01-15')
@@ -165,7 +165,7 @@ describe('AccountSignupForm', () => {
       await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
       expect(await screen.findByText('Escribe un correo válido.')).toBeInTheDocument()
-      expect(screen.getByText('La contraseña necesita al menos 8 caracteres.')).toBeInTheDocument()
+      expect(screen.getByText('La contraseña no cumple con las reglas.')).toBeInTheDocument()
       expect(screen.getByText('Escribe el nombre de tu hijo.')).toBeInTheDocument()
       expect(screen.getByText('Elige la fecha de nacimiento.')).toBeInTheDocument()
       expect(postCalls()).toHaveLength(0)
@@ -182,7 +182,7 @@ describe('AccountSignupForm', () => {
       await user.type(screen.getByLabelText('Correo'), 'no-es-correo')
       await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
-      expect(await screen.findByText('La contraseña necesita al menos 8 caracteres.')).toBeInTheDocument()
+      expect(await screen.findByText('La contraseña no cumple con las reglas.')).toBeInTheDocument()
       expect(screen.getByText('Escribe un correo válido.')).toBeInTheDocument()
       expect(postCalls()).toHaveLength(0)
     })
@@ -207,18 +207,18 @@ describe('AccountSignupForm', () => {
       expect(await screen.findByText('HOME PAGE')).toBeInTheDocument()
       const [, init] = postCalls()[0]
       const body = (init as RequestInit).body as string
-      expect(body).not.toContain('secreto123')
+      expect(body).not.toContain('Secreto123!')
       expect(JSON.parse(body)).not.toHaveProperty('password')
     })
 
-    it('"Registrarme con Google" says it is coming soon, without sending anything', async () => {
+    it('"Registrarme con Google" starts the Clerk SSO redirect, without touching PediTrack\'s own signup endpoint', async () => {
       const user = userEvent.setup()
       renderForm()
-      expect(screen.queryByRole('status')).not.toBeInTheDocument()
 
       await user.click(screen.getByRole('button', { name: 'Registrarme con Google' }))
 
-      expect(screen.getByRole('status')).toHaveTextContent('El registro con Google estará disponible pronto.')
+      // The redirect itself happens inside Clerk (mocked as a no-op here) —
+      // this app never calls its own POST /accounts nor navigates on click.
       expect(postCalls()).toHaveLength(0)
       expect(screen.queryByText('HOME PAGE')).not.toBeInTheDocument()
     })
@@ -297,7 +297,7 @@ describe('AccountSignupForm', () => {
       await user.type(screen.getByLabelText('Tu nombre'), 'María José')
       await user.type(screen.getByLabelText('Tu apellido'), "Núñez-O'Higgins")
       await user.type(screen.getByLabelText('Correo'), 'maria@example.com')
-      await user.type(screen.getByLabelText('Contraseña'), 'secreto123')
+      await user.type(screen.getByLabelText('Contraseña'), 'Secreto123!')
       await user.type(byId('children.0.firstName'), 'Iñaki')
       await user.type(byId('children.0.lastName'), 'Núñez')
       await user.type(byId('children.0.birthDate'), '2020-01-15')
@@ -320,7 +320,7 @@ describe('AccountSignupForm', () => {
       expect(postCalls()).toHaveLength(0)
     })
 
-    it('saves the account id, sends numeric height/weight and navigates to /home (FR-003)', async () => {
+    it('sends numeric height/weight and navigates to /home (FR-003)', async () => {
       const user = userEvent.setup()
       mockApi(() => ({ ok: true, json: async () => createdAccount }))
       renderForm()
@@ -331,12 +331,10 @@ describe('AccountSignupForm', () => {
       await user.click(screen.getByRole('button', { name: 'Crear cuenta' }))
 
       expect(await screen.findByText('HOME PAGE')).toBeInTheDocument()
-      expect(window.localStorage.getItem('peditrack.accountId')).toBe('account-123')
       const [, init] = postCalls()[0]
       expect(JSON.parse((init as RequestInit).body as string)).toEqual({
         firstName: 'Ana',
         lastName: 'Gómez',
-        email: 'ana@example.com',
         children: [{ firstName: 'Luis', lastName: 'Gómez', birthDate: '2020-01-15', height: 95.5, weight: 14.2 }],
       })
     })

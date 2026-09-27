@@ -1,8 +1,7 @@
-import { test, expect } from '@playwright/test'
 import path from 'node:path'
 import fs from 'node:fs'
 import os from 'node:os'
-import { designs, signUp } from './helpers'
+import { test, expect, designs, signUp } from './helpers'
 
 // Covers specs/004-detalle-consulta-hijo in both designs — the critical flow
 // named in the constitution: registrar consulta (foto → confirmación manual) →

@@ -1,9 +1,9 @@
 import { useCallback, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { formatAgeLong } from '../../shared/age'
 import { AppShell } from '../home/AppShell'
-import { fetchAccount } from '../home/api'
+import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { ConsultationForm } from './ConsultationForm'
 
@@ -17,18 +17,13 @@ export function NewConsultationPage() {
   const { childId } = useParams<{ childId: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { accountId, isDesktop } = useSidebarSession()
+  const { isDesktop } = useSidebarSession()
   const dirtyRef = useRef(false)
   const handleDirtyChange = useCallback((dirty: boolean) => {
     dirtyRef.current = dirty
   }, [])
 
-  const accountQuery = useQuery({
-    queryKey: ['account', accountId],
-    queryFn: () => fetchAccount(accountId!),
-    enabled: accountId !== null,
-    retry: false,
-  })
+  const accountQuery = useCurrentAccount()
   const child = accountQuery.data?.children.find((c) => c.id === childId)
   const childLabel = child ? `${child.firstName} ${child.lastName} · ${formatAgeLong(child.birthDate)}` : undefined
 

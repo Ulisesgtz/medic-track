@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { useAuth } from '@clerk/react'
 import { createPortal } from 'react-dom'
 import { useForm } from 'react-hook-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -37,6 +38,7 @@ const border = (invalid: boolean) => (invalid ? 'border-red-600' : 'border-slate
  * without being painted under the page.
  */
 export function AddChildModal({ accountId, onClose }: AddChildModalProps) {
+  const { getToken } = useAuth()
   const queryClient = useQueryClient()
   const dialogRef = useRef<HTMLDivElement>(null)
 
@@ -49,16 +51,16 @@ export function AddChildModal({ accountId, onClose }: AddChildModalProps) {
   })
 
   const mutation = useMutation({
-    mutationFn: (values: AddChildFormValues) =>
+    mutationFn: async (values: AddChildFormValues) =>
       addChild(accountId, {
         firstName: values.firstName,
         lastName: values.lastName,
         birthDate: values.birthDate,
         height: values.height ? Number(values.height) : undefined,
         weight: values.weight ? Number(values.weight) : undefined,
-      }),
+      }, await getToken()),
     onSuccess: (account) => {
-      queryClient.setQueryData(['account', accountId], account)
+      queryClient.setQueryData(['accounts', 'me'], account)
       onClose()
     },
   })

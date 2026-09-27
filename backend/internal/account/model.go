@@ -27,6 +27,13 @@ type Account struct {
 	Plan        Plan
 	CreatedAt   time.Time
 	Children    []Child
+	// ClerkUserID is the id of the Clerk user this account is linked to. Nil
+	// for an account created before authentication existed (specs/008),
+	// until its tutor's first post-authentication login links it.
+	ClerkUserID *string
+	// DisclaimerAccepted is whether the account has acknowledged CurrentDisclaimerVersion of the
+	// "Antes de empezar" notice (specs/010-registro-aceptacion-aviso). Filled by the repository's reads.
+	DisclaimerAccepted bool
 }
 
 // Child represents a child associated with an Account.

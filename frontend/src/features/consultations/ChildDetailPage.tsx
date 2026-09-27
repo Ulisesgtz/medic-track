@@ -1,11 +1,12 @@
 import { useParams, Link } from 'react-router-dom'
+import { useAuth } from '@clerk/react'
 import { useQuery } from '@tanstack/react-query'
 import { formatAgeLong } from '../../shared/age'
 import { formatDateShort, formatDayMonth } from '../../shared/date'
 import { useLocalDay } from '../../shared/useLocalDay'
 import { AppShell } from '../home/AppShell'
-import { fetchAccount } from '../home/api'
 import { useSidebarSession } from '../home/useSidebarSession'
+import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { fetchChildOverview, fetchConsultations, ConsultationApiError } from './api'
 import { ConsultationCard } from './ConsultationCard'
 import { SummaryCard } from './SummaryCard'
@@ -23,32 +24,29 @@ import { TodayDosesPanel } from './TodayDosesPanel'
  */
 export function ChildDetailPage() {
   const { childId } = useParams<{ childId: string }>()
-  const { accountId, isDesktop } = useSidebarSession()
+  const { isDesktop } = useSidebarSession()
 
-  // The child's own data (name, birth date) comes from the account the
-  // sidebar already loads — same query key, so no extra request. Without a
-  // saved account the header just falls back to the generic title.
-  const accountQuery = useQuery({
-    queryKey: ['account', accountId],
-    queryFn: () => fetchAccount(accountId!),
-    enabled: accountId !== null,
-    retry: false,
-  })
+  // The child's own data (name, birth date) comes from the same account
+  // query the sidebar already uses (`useCurrentAccount`, `GET /accounts/me`)
+  // — no separate request. If it hasn't resolved yet (or the child isn't
+  // in it), the header falls back to the generic title.
+  const accountQuery = useCurrentAccount()
   const child = accountQuery.data?.children.find((c) => c.id === childId)
 
   // "Today" is the parent's local day (it rolls over at midnight, even with the
   // app left open); only the client knows its time zone, so it sends the window.
   const today = useLocalDay()
+  const { getToken } = useAuth()
   const overviewQuery = useQuery({
     queryKey: ['overview', childId, today.from.toISOString()],
-    queryFn: () => fetchChildOverview(childId!, today.from, today.to),
+    queryFn: async () => fetchChildOverview(childId!, today.from, today.to, await getToken()),
     enabled: !!childId,
     retry: false,
   })
 
   const query = useQuery({
     queryKey: ['consultations', childId],
-    queryFn: () => fetchConsultations(childId!),
+    queryFn: async () => fetchConsultations(childId!, await getToken()),
     enabled: !!childId,
     retry: false,
   })
