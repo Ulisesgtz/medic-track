@@ -95,7 +95,7 @@ describe('ConsultationForm', () => {
   })
 
   describe('validation and saving', () => {
-    it('shows validation errors and "Completa los campos faltantes." when required fields are empty', async () => {
+    it('shows validation errors and says what is missing when required fields are empty', async () => {
       const user = userEvent.setup()
       renderForm()
 
@@ -108,7 +108,7 @@ describe('ConsultationForm', () => {
       expect(screen.getByText('Escribe cuántos días (ej. 7).')).toBeInTheDocument()
       expect(screen.getByText('Elige la hora de la primera toma.')).toBeInTheDocument()
       expect(screen.getByText('La foto de la receta es obligatoria')).toBeInTheDocument()
-      expect(screen.getByRole('status')).toHaveTextContent('Completa los campos faltantes.')
+      expect(screen.getByRole('status')).toHaveTextContent('Falta: la foto de la receta, el doctor, la fecha, el nombre del medicamento, cada cuántas horas, cuántos días, la hora de la primera toma.')
     })
 
     it('rejects submission without a photo (FR-004), telling so in the OCR panel', async () => {

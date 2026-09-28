@@ -65,7 +65,7 @@ for (const design of designs) {
 
       await card.getByRole('button', { name: 'Activar recordatorios' }).click()
       const dialog = page.getByRole('dialog', { name: '¿Qué muestran los avisos?' })
-      await expect(dialog).toContainText('Amoxicilina · 8:00 · Mateo')
+      await expect(dialog).toContainText('Amoxicilina · 08:00 · Mateo')
 
       const registered = page.waitForResponse((r) => r.url().endsWith('/reminder-devices') && r.request().method() === 'POST')
       await dialog.getByRole('button', { name: /Texto genérico/ }).click()

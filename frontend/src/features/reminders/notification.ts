@@ -67,7 +67,7 @@ export function targetUrl(p: ReminderPayload): string {
 
 interface WindowClientLike {
   url: string
-  focus(): Promise<unknown>
+  focus(): Promise<WindowClientLike | null | void>
   navigate?(url: string): Promise<unknown>
 }
 
@@ -76,14 +76,22 @@ interface ClientsLike {
   openWindow(url: string): Promise<unknown>
 }
 
-/** Brings an open window of the app to the target, or opens a new one. */
+/**
+ * Brings an open window of the app to the target, or opens a new one. Focus comes first — browsers
+ * only allow it while the tap is fresh — and a window that can't be navigated (one this worker doesn't
+ * control yet) falls back to a new window instead of doing nothing.
+ */
 export async function focusOrOpen(clients: ClientsLike, origin: string, path: string): Promise<void> {
   const windows = await clients.matchAll({ type: 'window', includeUncontrolled: true })
   const mine = windows.find((w) => w.url.startsWith(origin))
   if (mine?.navigate) {
-    await mine.navigate(origin + path)
-    await mine.focus()
-    return
+    try {
+      const focused = (await mine.focus()) || mine
+      await (focused.navigate ?? mine.navigate).call(focused, origin + path)
+      return
+    } catch {
+      // Fall through to a new window.
+    }
   }
   await clients.openWindow(origin + path)
 }

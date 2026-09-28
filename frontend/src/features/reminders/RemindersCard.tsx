@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { Account } from '../home/types'
 import { Notice } from '../../shared/ui/Notice'
 import type { ReminderDetail } from './api'
@@ -25,6 +25,8 @@ const MESSAGES: Record<Exclude<ReminderState, 'on' | 'off' | 'loading'>, string>
 export function RemindersCard({ account }: { account: Account | undefined }) {
   const { state, busy, error, activate, deactivate, changeDetail } = useReminders(account)
   const [dialog, setDialog] = useState<'activate' | 'change' | null>(null)
+  const activateButton = useRef<HTMLButtonElement>(null)
+  const changeButton = useRef<HTMLButtonElement>(null)
   // Stable: the dialog re-runs its focus setup when this changes identity.
   const closeDialog = useCallback(() => setDialog(null), [])
 
@@ -58,7 +60,7 @@ export function RemindersCard({ account }: { account: Account | undefined }) {
       {state === 'off' && (
         <>
           <p>Te avisamos en este dispositivo a la hora de cada toma que registraste, aunque la app esté cerrada.</p>
-          <button type="button" onClick={onActivate} disabled={busy} className={outlineButton}>
+          <button ref={activateButton} type="button" onClick={onActivate} disabled={busy} className={outlineButton}>
             {busy ? 'Activando…' : 'Activar recordatorios'}
           </button>
         </>
@@ -70,10 +72,11 @@ export function RemindersCard({ account }: { account: Account | undefined }) {
           <p>
             Los avisos muestran: <strong>{detail === 'detailed' ? 'el detalle de la toma' : 'un texto genérico'}</strong>.{' '}
             <button
+              ref={changeButton}
               type="button"
               onClick={() => setDialog('change')}
               disabled={busy}
-              className="cursor-pointer font-extrabold text-action underline underline-offset-2"
+              className="-my-3 inline-flex min-h-11 cursor-pointer items-center font-extrabold text-action underline underline-offset-2"
             >
               Cambiar
             </button>
@@ -99,6 +102,7 @@ export function RemindersCard({ account }: { account: Account | undefined }) {
           current={detail}
           onChoose={onChoose}
           onCancel={closeDialog}
+          opener={dialog === 'activate' ? activateButton : changeButton}
         />
       )}
     </section>

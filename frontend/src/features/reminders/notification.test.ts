@@ -86,7 +86,33 @@ describe('focusOrOpen', () => {
 
     expect(win.navigate).toHaveBeenCalledWith(`${origin}/consultations/c`)
     expect(win.focus).toHaveBeenCalled()
+    // Focus first: browsers only allow it while the tap is fresh.
+    expect(win.focus.mock.invocationCallOrder[0]).toBeLessThan(win.navigate.mock.invocationCallOrder[0])
     expect(clients.openWindow).not.toHaveBeenCalled()
+  })
+
+  it('navigates the client that focus() hands back', async () => {
+    const focused = { url: `${origin}/home`, focus: vi.fn(), navigate: vi.fn().mockResolvedValue(undefined) }
+    const win = { url: `${origin}/home`, focus: vi.fn().mockResolvedValue(focused), navigate: vi.fn() }
+    const clients = { matchAll: vi.fn().mockResolvedValue([win]), openWindow: vi.fn() }
+
+    await focusOrOpen(clients, origin, '/consultations/c')
+
+    expect(focused.navigate).toHaveBeenCalledWith(`${origin}/consultations/c`)
+    expect(win.navigate).not.toHaveBeenCalled()
+  })
+
+  it('opens a new window when the open one cannot be navigated', async () => {
+    const win = {
+      url: `${origin}/home`,
+      focus: vi.fn().mockResolvedValue(undefined),
+      navigate: vi.fn().mockRejectedValue(new TypeError('not controlled')),
+    }
+    const clients = { matchAll: vi.fn().mockResolvedValue([win]), openWindow: vi.fn().mockResolvedValue(null) }
+
+    await focusOrOpen(clients, origin, '/consultations/c')
+
+    expect(clients.openWindow).toHaveBeenCalledWith(`${origin}/consultations/c`)
   })
 
   it('opens a new window when none of the app is open', async () => {

@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 )
 
 // DetailMode is what a reminder shows: the medication and child, or a generic text.
@@ -64,11 +66,8 @@ var (
 	ErrInvalidActionToken = errors.New("invalid action token")
 )
 
-// FieldError is a request field that failed validation.
-type FieldError struct {
-	Field   string
-	Message string
-}
+// FieldError is a request field that failed validation (the API-wide shape, httpx).
+type FieldError = httpx.FieldError
 
 // ValidationErrors is every field that failed, returned together.
 type ValidationErrors []FieldError

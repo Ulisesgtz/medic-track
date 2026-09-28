@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
+import { formatTime } from '../../shared/date'
 import type { ReminderDetail } from './api'
 
 interface ReminderDetailDialogProps {
@@ -8,7 +9,15 @@ interface ReminderDetailDialogProps {
   current: ReminderDetail | null
   onChoose: (detail: ReminderDetail) => void
   onCancel: () => void
+  /**
+   * The button that opened the dialog; focus goes back to it on close. Passed in because Safari
+   * doesn't focus a button when it's clicked, so `document.activeElement` can't be trusted.
+   */
+  opener: RefObject<HTMLElement | null>
 }
+
+// The examples show the time exactly as a real reminder does (formatTime: "08:00").
+const EXAMPLE_TIME = formatTime(new Date(2026, 0, 1, 8, 0))
 
 /**
  * What the reminders show (specs/011, FR-008): asked the first time the account turns reminders
@@ -16,11 +25,11 @@ interface ReminderDetailDialogProps {
  * screen, where anyone can read it. A real dialog: rendered into <body>, Escape and the backdrop
  * cancel, focus starts on the first option and Tab stays inside.
  */
-export function ReminderDetailDialog({ childName, current, onChoose, onCancel }: ReminderDetailDialogProps) {
+export function ReminderDetailDialog({ childName, current, onChoose, onCancel, opener }: ReminderDetailDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const opener = document.activeElement as HTMLElement | null
+    const restoreTo = opener.current
     const focusables = () => Array.from(dialogRef.current?.querySelectorAll<HTMLElement>('button') ?? [])
     focusables()[0]?.focus()
 
@@ -44,21 +53,21 @@ export function ReminderDetailDialog({ childName, current, onChoose, onCancel }:
     document.addEventListener('keydown', handleKeyDown)
     return () => {
       document.removeEventListener('keydown', handleKeyDown)
-      opener?.focus()
+      restoreTo?.focus()
     }
-  }, [onCancel])
+  }, [onCancel, opener])
 
   const options: { value: ReminderDetail; label: string; example: string; note: string }[] = [
     {
       value: 'detailed',
       label: 'Mostrar detalle',
-      example: `Amoxicilina · 8:00 · ${childName}`,
+      example: `Amoxicilina · ${EXAMPLE_TIME} · ${childName}`,
       note: 'Cualquiera que vea tu pantalla bloqueada podrá leer el medicamento y el nombre.',
     },
     {
       value: 'generic',
       label: 'Texto genérico',
-      example: 'Hay una toma programada · 8:00',
+      example: `Hay una toma programada · ${EXAMPLE_TIME}`,
       note: 'No muestra el medicamento ni el nombre; lo ves al abrir la app.',
     },
   ]

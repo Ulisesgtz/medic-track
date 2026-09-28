@@ -219,3 +219,17 @@ func TestRepository_ConnectionErrors(t *testing.T) {
 	require.Error(t, err)
 	require.NotErrorIs(t, err, reminder.ErrInvalidActionToken)
 }
+
+func TestRepository_UpsertDevice_KeepsTheActivationOfAnActiveDeviceOfTheSameAccount(t *testing.T) {
+	pool := testPool(t)
+	repo := reminder.NewRepository(pool)
+	f := newFamily(t, pool, nil)
+	d := f.device(t, repo, uniqueEndpoint())
+	past := time.Now().Add(-2 * time.Hour).Truncate(time.Microsecond)
+	activatedAt(t, pool, d.ID, past)
+
+	again, created, err := repo.UpsertDevice(context.Background(), f.accountID, d.Endpoint, "k2", "a2")
+	require.NoError(t, err)
+	require.False(t, created)
+	require.True(t, past.Equal(again.ActivatedAt), "the app re-registers on every visit; that must not move the cutoff")
+}

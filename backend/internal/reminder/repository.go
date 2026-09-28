@@ -21,7 +21,8 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 
 // UpsertDevice turns reminders on for this browser (its endpoint). An endpoint already known —
 // for this account or another one — is updated and moved to accountID: a browser reminds one
-// account at a time (research.md R10). created is false when the row already existed.
+// account at a time (research.md R10). created is false when the row already existed. Its
+// activation time only moves when it was off or belonged to another account.
 func (r *Repository) UpsertDevice(ctx context.Context, accountID uuid.UUID, endpoint, p256dh, auth string) (Device, bool, error) {
 	d := Device{AccountID: accountID, Endpoint: endpoint, P256dh: p256dh, Auth: auth, Active: true}
 	var created bool
@@ -32,8 +33,13 @@ func (r *Repository) UpsertDevice(ctx context.Context, accountID uuid.UUID, endp
 			account_id = EXCLUDED.account_id,
 			p256dh = EXCLUDED.p256dh,
 			auth = EXCLUDED.auth,
+			-- Re-registering an active device of the same account (the app does it on every visit) keeps its
+			-- activation time; only a device turned back on, or moved to another account, starts over.
+			activated_at = CASE
+				WHEN reminder_devices.active AND reminder_devices.account_id = EXCLUDED.account_id THEN reminder_devices.activated_at
+				ELSE now()
+			END,
 			active = true,
-			activated_at = now(),
 			deactivated_at = NULL
 		RETURNING id, activated_at, (xmax = 0)
 	`, accountID, endpoint, p256dh, auth).Scan(&d.ID, &d.ActivatedAt, &created)

@@ -29,16 +29,28 @@ export function useReminders(account: Account | undefined) {
     staleTime: Infinity,
   })
 
+  const accountId = account?.id
   useEffect(() => {
-    if (support !== 'ready') return
+    if (support !== 'ready' || !accountId) return
     let cancelled = false
-    currentSubscription()
-      .then((s) => !cancelled && setSubscribed(s !== null && Notification.permission === 'granted'))
+    async function sync() {
+      const subscription = await currentSubscription()
+      if (!subscription || Notification.permission !== 'granted') return false
+      // A subscription already in this browser may have been registered by another tutor (whose session
+      // ended without our logout). Registering it again moves it to this account (the backend's upsert),
+      // so this browser never shows "on" while delivering someone else's reminders.
+      await registerDevice(accountId as string, subscription.toJSON(), await getToken())
+      return true
+    }
+    sync()
+      .then((on) => !cancelled && setSubscribed(on))
       .catch(() => !cancelled && setSubscribed(false))
     return () => {
       cancelled = true
     }
-  }, [support])
+    // getToken is left out on purpose: its identity isn't stable, and this must run once per account.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [support, accountId])
 
   let state: ReminderState
   if (support !== 'ready') state = support
@@ -57,17 +69,21 @@ export function useReminders(account: Account | undefined) {
     if (!account || !config.data?.vapidPublicKey) return
     setBusy(true)
     setError(null)
+    let subscription: PushSubscription | null = null
     try {
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
         if (permission === 'denied') setSupport('denied')
         return
       }
-      const subscription = await subscribe(config.data.vapidPublicKey)
-      await registerDevice(account.id, subscription.toJSON(), await getToken())
+      subscription = await subscribe(config.data.vapidPublicKey)
+      // The choice first: once the device is registered, its reminders say what the tutor chose.
       if (detail && detail !== account.reminderDetail) await saveDetail(detail)
+      await registerDevice(account.id, subscription.toJSON(), await getToken())
       setSubscribed(true)
     } catch {
+      // Never leave a subscription the backend doesn't have: the next visit would register it silently.
+      await subscription?.unsubscribe().catch(() => false)
       setError('No pudimos activar los recordatorios. Revisa tu conexión e inténtalo de nuevo.')
     } finally {
       setBusy(false)

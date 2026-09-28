@@ -7,6 +7,7 @@ import { MedicationFieldset } from './MedicationFieldset'
 import { parsePositiveInt } from './parsePositiveInt'
 import { useOcrSuggestion } from './useOcrSuggestion'
 import { createConsultation, ConsultationApiError, type CreateConsultationPayload } from './api'
+import { missingFieldsText } from './missingFields'
 
 export interface MedicationFormValues {
   name: string
@@ -458,7 +459,7 @@ export function ConsultationForm({
       ? mutation.error.message
       : 'Ocurrió un error al guardar la consulta. Intenta de nuevo.'
     : missing
-      ? 'Completa los campos faltantes.'
+      ? missingFieldsText(errors, photoMissing && !photoFile, fields.length)
       : ''
 
   // Not in the phone mock 04 (the web mock 14 has it inside the OCR group): kept because the model

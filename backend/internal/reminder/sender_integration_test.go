@@ -109,3 +109,9 @@ func TestWebPush_GoneAndFailures(t *testing.T) {
 	require.Error(t, err)
 	require.Equal(t, reminder.Failed, got)
 }
+
+func TestWebPushSender_DefaultClientHasATimeout(t *testing.T) {
+	client, ok := reminder.SenderClient(reminder.NewWebPushSender(realConfig(t), nil)).(*http.Client)
+	require.True(t, ok)
+	require.Equal(t, 10*time.Second, client.Timeout, "a push service that never answers must not hold the tick")
+}

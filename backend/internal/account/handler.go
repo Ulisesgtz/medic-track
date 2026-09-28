@@ -632,15 +632,11 @@ func freemiumLimitBody(limit, received int) map[string]any {
 // call site above invokes h.responder.WriteJSON directly and gets its own
 // distinct, correctly-attributed error_logs entry (see writeCreateAccountError).
 func validationErrorBody(errs []ValidationError, message string) map[string]any {
-	details := make([]map[string]string, 0, len(errs))
+	fields := make([]httpx.FieldError, 0, len(errs))
 	for _, e := range errs {
-		details = append(details, map[string]string{"field": e.Field, "message": e.Message})
+		fields = append(fields, httpx.FieldError{Field: e.Field, Message: e.Message})
 	}
-	return map[string]any{
-		"error":   "validation_error",
-		"message": message,
-		"details": details,
-	}
+	return httpx.ValidationBody(message, fields)
 }
 
 func toAccountResponse(acc *Account) accountResponse {

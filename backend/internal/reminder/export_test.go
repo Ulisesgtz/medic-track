@@ -21,3 +21,6 @@ func SignRawForTests(secret, raw string) string {
 	encoded := base64.RawURLEncoding.EncodeToString([]byte(raw))
 	return encoded + "." + base64.RawURLEncoding.EncodeToString(mac(secret, encoded))
 }
+
+// SenderClient exposes the HTTP client a WebPushSender posts with.
+func SenderClient(s *WebPushSender) any { return s.client }

@@ -236,9 +236,5 @@ func (h *Handler) accountID(w http.ResponseWriter, r *http.Request) (uuid.UUID, 
 }
 
 func validationBody(errs ValidationErrors) map[string]any {
-	details := make([]map[string]string, 0, len(errs))
-	for _, e := range errs {
-		details = append(details, map[string]string{"field": e.Field, "message": e.Message})
-	}
-	return map[string]any{"error": "validation_error", "message": "One or more fields are invalid", "details": details}
+	return httpx.ValidationBody("One or more fields are invalid", errs)
 }

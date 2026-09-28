@@ -112,7 +112,7 @@ for (const design of designs) {
       await expect(page.getByText('La fecha es obligatoria')).toBeVisible()
       await expect(page.getByText('La foto de la receta es obligatoria')).toBeVisible()
       await expect(page.getByText('Elige la hora de la primera toma.')).toBeVisible()
-      await expect(page.getByRole('status')).toContainText('Completa los campos faltantes.')
+      await expect(page.getByRole('status')).toContainText('Falta: la foto de la receta, el doctor')
       await expect(page).toHaveURL(/\/consultations\/new/)
     })
 

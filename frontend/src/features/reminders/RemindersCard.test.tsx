@@ -107,7 +107,7 @@ describe('RemindersCard', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Activar recordatorios' }))
     const dialog = screen.getByRole('dialog', { name: '¿Qué muestran los avisos?' })
-    expect(within(dialog).getByText('Amoxicilina · 8:00 · Mateo')).toBeInTheDocument()
+    expect(within(dialog).getByText('Amoxicilina · 08:00 · Mateo')).toBeInTheDocument()
     expect(env.requestPermission).not.toHaveBeenCalled()
 
     await userEvent.click(within(dialog).getByRole('button', { name: /Texto genérico/ }))
@@ -165,12 +165,45 @@ describe('RemindersCard', () => {
     expect(env.pushManager.subscribe).not.toHaveBeenCalled()
   })
 
-  it('says so when the device could not be registered', async () => {
-    stubPushEnv()
+  it('says so when the device could not be registered, and leaves no subscription behind', async () => {
+    const env = stubPushEnv()
     stubBackend({ 'POST /accounts/a1/reminder-devices': { status: 500 } })
     renderCard({ ...account, reminderDetail: 'generic' })
     await userEvent.click(await screen.findByRole('button', { name: 'Activar recordatorios' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos activar los recordatorios')
+    expect(env.subscription.unsubscribe).toHaveBeenCalled()
+    expect(screen.getByRole('button', { name: 'Activar recordatorios' })).toBeInTheDocument()
+  })
+
+  it('first activation saves the choice before registering the device; if saving fails nothing is registered', async () => {
+    const env = stubPushEnv()
+    const fetchMock = stubBackend({ 'PATCH /accounts/a1/reminder-settings': { status: 500 } })
+    renderCard()
+    await userEvent.click(await screen.findByRole('button', { name: 'Activar recordatorios' }))
+    await userEvent.click(screen.getByRole('button', { name: /Texto genérico/ }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos activar los recordatorios')
+    expect(callsTo(fetchMock, 'PATCH', '/reminder-settings')).toHaveLength(1)
+    expect(callsTo(fetchMock, 'POST', '/reminder-devices')).toHaveLength(0)
+    expect(env.subscription.unsubscribe).toHaveBeenCalled()
+  })
+
+  it('a subscription already in this browser is registered again for the account that is signed in', async () => {
+    stubPushEnv({ permission: 'granted', subscribed: true })
+    const fetchMock = stubBackend()
+    renderCard({ ...account, reminderDetail: 'generic' })
+
+    expect(await screen.findByText('Activos en este dispositivo.')).toBeInTheDocument()
+    const posts = callsTo(fetchMock, 'POST', '/accounts/a1/reminder-devices')
+    expect(posts).toHaveLength(1)
+    expect(JSON.parse(posts[0][1].body).endpoint).toBeTruthy()
+  })
+
+  it('shows off when the subscription already in this browser cannot be registered for this account', async () => {
+    stubPushEnv({ permission: 'granted', subscribed: true })
+    stubBackend({ 'POST /accounts/a1/reminder-devices': { status: 500 } })
+    renderCard({ ...account, reminderDetail: 'generic' })
+    expect(await screen.findByRole('button', { name: 'Activar recordatorios' })).toBeInTheDocument()
   })
 
   it('when on: change what they show, and turn them off', async () => {
@@ -222,6 +255,6 @@ describe('RemindersCard', () => {
     stubBackend()
     renderCard({ ...account, children: [] })
     await userEvent.click(await screen.findByRole('button', { name: 'Activar recordatorios' }))
-    expect(screen.getByText('Amoxicilina · 8:00 · tu hijo')).toBeInTheDocument()
+    expect(screen.getByText('Amoxicilina · 08:00 · tu hijo')).toBeInTheDocument()
   })
 })

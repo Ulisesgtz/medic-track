@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"time"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
 )
@@ -36,8 +37,16 @@ type WebPushSender struct {
 	client webpush.HTTPClient
 }
 
-// NewWebPushSender creates a sender. client may be nil (the library's default).
+// sendTimeout bounds each push: a push service that never answers must not hold the tick — and with it
+// every later reminder — forever.
+const sendTimeout = 10 * time.Second
+
+// NewWebPushSender creates a sender. With a nil client it uses one with sendTimeout (the library's own
+// default has no timeout at all).
 func NewWebPushSender(config Config, client webpush.HTTPClient) *WebPushSender {
+	if client == nil {
+		client = &http.Client{Timeout: sendTimeout}
+	}
 	return &WebPushSender{config: config, client: client}
 }
 

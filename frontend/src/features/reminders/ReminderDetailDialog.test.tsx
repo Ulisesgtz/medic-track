@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
+import { createRef } from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ReminderDetailDialog } from './ReminderDetailDialog'
@@ -6,13 +7,22 @@ import { ReminderDetailDialog } from './ReminderDetailDialog'
 function renderDialog(current: 'detailed' | 'generic' | null = null) {
   const onChoose = vi.fn()
   const onCancel = vi.fn()
-  render(
+  const opener = createRef<HTMLButtonElement>()
+  const view = render(
     <>
-      <button type="button">opener</button>
-      <ReminderDetailDialog childName="Mateo" current={current} onChoose={onChoose} onCancel={onCancel} />
+      <button ref={opener} type="button">
+        opener
+      </button>
+      <ReminderDetailDialog
+        childName="Mateo"
+        current={current}
+        onChoose={onChoose}
+        onCancel={onCancel}
+        opener={opener}
+      />
     </>,
   )
-  return { onChoose, onCancel }
+  return { onChoose, onCancel, opener, view }
 }
 
 describe('ReminderDetailDialog', () => {
@@ -20,8 +30,8 @@ describe('ReminderDetailDialog', () => {
     renderDialog()
     const dialog = screen.getByRole('dialog', { name: '¿Qué muestran los avisos?' })
     expect(dialog).toHaveAttribute('aria-modal', 'true')
-    expect(screen.getByText('Amoxicilina · 8:00 · Mateo')).toBeInTheDocument()
-    expect(screen.getByText('Hay una toma programada · 8:00')).toBeInTheDocument()
+    expect(screen.getByText('Amoxicilina · 08:00 · Mateo')).toBeInTheDocument()
+    expect(screen.getByText('Hay una toma programada · 08:00')).toBeInTheDocument()
     expect(screen.getByText(/pantalla bloqueada podrá leer/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Mostrar detalle/ })).toHaveFocus()
   })
@@ -51,6 +61,14 @@ describe('ReminderDetailDialog', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
     expect(onCancel).toHaveBeenCalledTimes(3)
+  })
+
+  it('closing gives focus back to the button that opened it, even when that button never got focus', () => {
+    const { opener, view } = renderDialog()
+    // Safari doesn't focus a clicked button: something else is active when the dialog closes.
+    document.body.focus()
+    view.rerender(<button ref={opener} type="button">opener</button>)
+    expect(opener.current).toHaveFocus()
   })
 
   it('Tab stays inside the dialog', () => {

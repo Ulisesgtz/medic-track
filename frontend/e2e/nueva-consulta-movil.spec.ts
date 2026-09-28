@@ -76,11 +76,11 @@ test.describe('Nueva consulta — diseño móvil (mock 04)', () => {
     await expect(page.getByRole('button', { name: 'Quitar medicamento' })).toHaveCount(0)
   })
 
-  test('guardar sin llenar nada avisa "Completa los campos faltantes." en rojo y pone el foco en el primer campo', async ({ page }) => {
+  test('guardar sin llenar nada dice en rojo qué falta y pone el foco en el primer campo', async ({ page }) => {
     await page.getByRole('button', { name: 'Guardar consulta' }).click()
 
     const status = page.getByRole('status')
-    await expect(status).toHaveText('Completa los campos faltantes.')
+    await expect(status).toHaveText('Falta: la foto de la receta, el doctor, la fecha, el nombre del medicamento, cada cuántas horas, cuántos días, la hora de la primera toma.')
     await expect(status).toHaveClass(/text-red-700/)
     await expect(page.getByLabel('Doctor')).toBeFocused()
   })

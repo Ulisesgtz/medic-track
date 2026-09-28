@@ -215,3 +215,22 @@ func TestBuildPayload_NeverImperative(t *testing.T) {
 		require.NotContains(t, strings.ToLower(string(raw)), word)
 	}
 }
+
+func TestService_Tick_OnlyDevicesActivatedNoLaterThanEachDose(t *testing.T) {
+	now := uniqueNow()
+	sender := &fakeSender{}
+	svc, repo := newService(t, sender, now)
+	pool := testPool(t)
+	f := newFamily(t, pool, nil)
+	early := f.device(t, repo, uniqueEndpoint())
+	activatedAt(t, pool, early.ID, now.Add(-time.Hour))
+	late := f.device(t, repo, uniqueEndpoint())
+	activatedAt(t, pool, late.ID, now.Add(-10*time.Minute))
+	_ = f.dose(t, pool, now.Add(-30*time.Minute), false) // before "late" was turned on
+	_ = f.dose(t, pool, now.Add(-time.Minute), false)    // after both
+
+	_, err := svc.Tick(context.Background())
+	require.NoError(t, err)
+	require.Len(t, sender.sentTo(early.ID), 2)
+	require.Len(t, sender.sentTo(late.ID), 1, "a dose already past when the device was turned on is not reminded there")
+}

@@ -137,20 +137,39 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 		return 0, err
 	}
 
-	var pushes []push
+	// The doses are already claimed: from here on a failure must only cost its own dose, never the
+	// rest of the batch. Devices are read once per account (activated as late as now) and each dose
+	// keeps those activated no later than itself.
+	var (
+		pushes       []push
+		skipped      int
+		devicesByAcc = map[uuid.UUID][]Device{}
+	)
 	for _, dose := range due {
-		devices, err := s.repo.ActiveDevicesFor(ctx, dose.AccountID, dose.ScheduledAt)
-		if err != nil {
-			return 0, err
+		devices, ok := devicesByAcc[dose.AccountID]
+		if !ok {
+			var err error
+			if devices, err = s.repo.ActiveDevicesFor(ctx, dose.AccountID, now); err != nil {
+				skipped++
+				continue
+			}
+			devicesByAcc[dose.AccountID] = devices
 		}
 		for _, device := range devices {
+			if device.ActivatedAt.After(dose.ScheduledAt) {
+				continue
+			}
 			token := SignActionToken(s.config.ActionSecret, dose.DoseID, device.ID, now.Add(actionTokenLifetime))
 			body, err := json.Marshal(buildPayload(dose, token))
 			if err != nil {
-				return 0, err
+				skipped++
+				continue
 			}
 			pushes = append(pushes, push{device: device, payload: body})
 		}
+	}
+	if skipped > 0 {
+		log.Printf("reminder: %d reminders could not be prepared", skipped)
 	}
 
 	var (
