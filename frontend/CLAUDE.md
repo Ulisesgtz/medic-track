@@ -150,6 +150,7 @@ Las pruebas E2E usan la instancia de **desarrollo** de Clerk de verdad (nada de 
 - `autenticacion.spec.ts` cubre login/logout con contraseña, el mensaje único de credenciales inválidas y que una sesión recibe 403 en los datos de otra cuenta (401 sin sesión).
 - Clerk limita las peticiones de la instancia de desarrollo (429 "Too Many Requests"), y ese límite lo comparten todas las corridas, locales y de CI. Toda llamada a su API (`clerkFetch`) y `signInAs` pasan por `retryWhileRateLimited` (`clerkApi.ts`): reintenta con espera creciente y solo por 429. En CI cada prueba tiene 60 s para dejar lugar a esas esperas.
 - Los avisos `[Clerk Testing] FAPI request failed … Test ended` al final de una prueba son ruido inofensivo.
+- **Los service workers van bloqueados en todas las E2E** (`serviceWorkers: 'block'` en `playwright.config.ts`): con el de la app (spec 011) controlando la página, en WebKit `page.route` deja de ver las peticiones a Clerk, el token de pruebas no llega y registro/login se quedan colgados (fallaban las 68 pruebas de WebKit en CI). `recordatorios.spec.ts` simula el registro del service worker junto con el permiso y la suscripción; no quitar el bloqueo para "probar el worker de verdad".
 
 ## Running tests
 

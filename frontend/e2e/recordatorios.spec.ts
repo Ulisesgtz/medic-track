@@ -8,10 +8,22 @@ import { test, expect, allowClerkOn, designs, seedAccount, sessionToken, signInA
 
 const API = 'http://localhost:8080'
 
-/** Stubs the permission prompt (always granted) and the push subscription of this page. */
+/**
+ * Stubs the permission prompt (always granted), the service worker registration and the push
+ * subscription of this page. Service workers are blocked in every E2E (playwright.config.ts: with one
+ * controlling the page, WebKit's page.route misses Clerk's requests and sign-in fails), so the
+ * registration the app waits for is a stand-in too.
+ */
 async function stubBrowserPush(page: Page) {
   await page.addInitScript(() => {
     if (typeof PushManager === 'undefined' || typeof Notification === 'undefined') return
+    const registration = { pushManager: PushManager.prototype } as unknown as ServiceWorkerRegistration
+    const container = navigator.serviceWorker ?? ({} as ServiceWorkerContainer)
+    Object.defineProperty(container, 'ready', { configurable: true, get: () => Promise.resolve(registration) })
+    container.getRegistration = async () => registration
+    if (!('serviceWorker' in navigator)) {
+      Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: container })
+    }
     let permission: NotificationPermission = 'default'
     Object.defineProperty(Notification, 'permission', { configurable: true, get: () => permission })
     Notification.requestPermission = async () => {

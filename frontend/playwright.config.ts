@@ -17,6 +17,10 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
+    // The app's service worker (spec 011) would control every page, and in WebKit Playwright's
+    // page.route no longer sees the requests of a controlled page — so @clerk/testing's token never
+    // reaches Clerk and signup/sign-in stall. e2e/recordatorios.spec.ts stubs the registration instead.
+    serviceWorkers: 'block',
   },
   webServer: {
     command: 'npm run dev',
