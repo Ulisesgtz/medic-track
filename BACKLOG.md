@@ -110,9 +110,10 @@ dejó pendientes (2026-09-21). No se construye nada de esto hasta que se respond
 
 ## Despliegue
 
-- **Dónde correr el backend y la base de datos** — decisión inclinada hacia **Railway** (Go + Postgres juntos,
-  ~5–20 USD/mes; conecta el repo de GitHub y despliega solo), conversado 2026-09-22 pero **no decidido en firme
-  todavía** — queda en pausa hasta terminar la homologación de pantallas (spec 007). Comparado contra:
+- **Dónde correr el backend y la base de datos** — **decidido 2026-09-28: Railway** (Go + Postgres juntos,
+  ~5–20 USD/mes; conecta el repo de GitHub y despliega solo). Primero un entorno de pruebas con subdominios
+  (`api.pedi-track.com` en Railway, `app.pedi-track.com` en Cloudflare Pages, CNAME en HostGator, llaves de desarrollo
+  de Clerk): guía en `DEPLOY.md`. Lo que sigue pendiente para producción está al final de esa guía. Se había comparado contra:
   Render (~13 USD/mes, cobra disco de Postgres por GB — relevante porque las fotos de receta se guardan como
   `bytea` directo en Postgres, ver más abajo), Fly.io (desde ~2 USD, sin región en México), un VPS propio
   (Hetzner/DigitalOcean, ~5–12 USD pero con mantenimiento manual), y AWS (App Runner/ECS + RDS — tendría sentido
