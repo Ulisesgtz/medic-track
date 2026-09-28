@@ -78,7 +78,7 @@ test.describe('Registro web (mock 11) — medidas del mock', () => {
     await expect(panel.getByRole('heading', { level: 1 })).toHaveText('La bitácora médica de tus hijos, en un solo lugar.')
     await expect(panel.getByText('Registra consultas, recetas y tomas de medicamento. La app registra datos, nunca los interpreta.')).toBeVisible()
     await expect(panel.getByRole('listitem')).toHaveText([
-      '✓El OCR de la receta corre en tu dispositivo.',
+      '✓Tu receta se lee en tu propio teléfono o computadora.',
       '✓Tu pediatra sigue siendo la única autoridad médica.',
       '✓El plan gratuito incluye un hijo.',
     ])

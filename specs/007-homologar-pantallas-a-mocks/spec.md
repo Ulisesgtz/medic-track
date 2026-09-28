@@ -35,6 +35,9 @@ otro; no hay clases responsivas `lg:` que combinen ambos.
 
 Decididas por el usuario:
 
+- **Sin la palabra "OCR" (2026-09-28)**: el primer punto de la lista del mock 11 ("El OCR de la receta corre en tu
+  dispositivo.") dice "Tu receta se lee en tu propio teléfono o computadora.", en el registro y en el login web: la
+  gente no sabe qué es un OCR.
 - **Contraseña solo validada**: el campo del mock 11 está en el registro (móvil 01 y web 11; mínimo 8 caracteres) pero **no se envía ni se guarda**: la autenticación será con Clerk o AWS Cognito (BACKLOG).
 - **Botón "Registrarme con Google"** (no está en el mock; lo pidió el usuario) en ambos registros, tras un separador "o". Sin proveedor de autenticación no puede funcionar aún: al tocarlo avisa "El registro con Google estará disponible pronto."
 - Se **conservan los campos actuales**: tutor y hijo con nombre y apellido separados, país/estado (opcionales),
