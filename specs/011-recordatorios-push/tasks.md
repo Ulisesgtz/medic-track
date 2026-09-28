@@ -186,7 +186,8 @@ Aplicación web existente: `backend/` (Go) y `frontend/` (React + Vite + TS). To
 - [X] T062 Cobertura >90% en backend (`go test ./internal/... -coverprofile`) y frontend (`npx vitest run --coverage`) — Principio VI
 - [X] T063 Revisar `error_logs` y el log del backend tras las pruebas: ningún `endpoint`, `p256dh`, `auth`, token de acción ni texto de aviso (FR-019, Principio II)
 - [X] T064 Mostrar al usuario capturas de la tarjeta de recordatorios y de la elección de texto a 390 y 1280 px (no hay mock; diseño con `design-tokens.md`) y ajustar lo que pida
-- [ ] T065 Ejecutar a mano `quickstart.md` con un dispositivo real (Android o iPhone con la app instalada y un túnel HTTPS) — requiere al usuario
+- [X] T065 Ejecutar a mano `quickstart.md` con un dispositivo real (Android o iPhone con la app instalada y un túnel HTTPS) — requiere al usuario
+  - Resultado (2026-09-28): iPhone con la app instalada en la pantalla de inicio, por un túnel HTTPS a la PC (DEPLOY.md). Dispositivo registrado en web.push.apple.com, modo "Mostrar detalle"; la toma de las 12:20 se reclamó a las 12:20:21 y el aviso llegó al teléfono (confirmado por el usuario). Falta repetirla en Android y en un navegador de escritorio.
 - [X] T066 E2E completo en los tres navegadores (`npx playwright test`) y PR de `feature/011-recordatorios-push` a `develop`
 
 ---
