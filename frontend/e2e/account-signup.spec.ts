@@ -23,7 +23,7 @@ for (const design of designs) {
       await expect(page.getByRole('heading', { level: 1 })).toHaveText('La bitácora médica de tus hijos, en un solo lugar.')
       await expect(page.getByRole('button', { name: 'Crear cuenta' })).toBeVisible()
       // Web mock 11 only: checklist + form title. Phone mock 01 only: its own subtitle.
-      const webOnly = page.getByText('El OCR de la receta corre en tu dispositivo.')
+      const webOnly = page.getByText('Tu receta se lee en tu propio teléfono o computadora.')
       const phoneOnly = page.getByText('Registra, nunca interpreta. Tu pediatra sigue siendo la única autoridad médica.')
       await expect(webOnly).toHaveCount(design.isWeb ? 1 : 0)
       await expect(phoneOnly).toHaveCount(design.isWeb ? 0 : 1)

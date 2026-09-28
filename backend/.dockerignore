@@ -1,0 +1,7 @@
+# Never in the image: local secrets and build leftovers.
+.env
+.env.*
+*.exe
+*.test
+coverage.out
+*.out

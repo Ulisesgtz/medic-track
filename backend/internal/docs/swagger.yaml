@@ -306,6 +306,12 @@ definitions:
       plan:
         example: free
         type: string
+      reminderDetail:
+        description: |-
+          ReminderDetail is what the dose reminders show, "detailed" or "generic"; null until the tutor
+          chooses on the first activation (specs/011-recordatorios-push).
+        example: generic
+        type: string
       stateCode:
         example: MX-JAL
         type: string
@@ -377,6 +383,12 @@ definitions:
         example: "2026-09-26"
         type: string
     type: object
+  internal_account.reminderSettingsRequest:
+    properties:
+      reminderDetail:
+        example: generic
+        type: string
+    type: object
   internal_catalog.countryResponse:
     properties:
       code:
@@ -439,6 +451,87 @@ definitions:
       taken:
         example: true
         type: boolean
+    type: object
+  internal_reminder.actionRequest:
+    properties:
+      token:
+        example: ZG9zZS4uLg.c2lnbmF0dXJl
+        type: string
+    type: object
+  internal_reminder.configResponse:
+    properties:
+      available:
+        example: true
+        type: boolean
+      vapidPublicKey:
+        example: BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U
+        type: string
+    type: object
+  internal_reminder.deviceKeysRequest:
+    properties:
+      auth:
+        example: tBHItJI5svbpez7KI4CCXg
+        type: string
+      p256dh:
+        example: BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM
+        type: string
+    type: object
+  internal_reminder.deviceResponse:
+    properties:
+      activatedAt:
+        example: "2026-09-27T18:04:05Z"
+        type: string
+      active:
+        example: true
+        type: boolean
+      id:
+        example: 5f0c2e7a-0000-0000-0000-000000000000
+        type: string
+    type: object
+  internal_reminder.errorDoc:
+    properties:
+      error:
+        example: reminders_unavailable
+        type: string
+      message:
+        example: Reminders are not available on this server
+        type: string
+    type: object
+  internal_reminder.fieldErrorDoc:
+    properties:
+      field:
+        example: endpoint
+        type: string
+      message:
+        example: is required
+        type: string
+    type: object
+  internal_reminder.registerDeviceRequest:
+    properties:
+      endpoint:
+        example: https://fcm.googleapis.com/fcm/send/abc123
+        type: string
+      keys:
+        $ref: '#/definitions/internal_reminder.deviceKeysRequest'
+    type: object
+  internal_reminder.removeDeviceRequest:
+    properties:
+      endpoint:
+        example: https://fcm.googleapis.com/fcm/send/abc123
+        type: string
+    type: object
+  internal_reminder.validationErrorDoc:
+    properties:
+      details:
+        items:
+          $ref: '#/definitions/internal_reminder.fieldErrorDoc'
+        type: array
+      error:
+        example: validation_error
+        type: string
+      message:
+        example: One or more fields are invalid
+        type: string
     type: object
 info:
   contact: {}
@@ -644,6 +737,151 @@ paths:
       security:
       - ClerkSession: []
       summary: Record that the tutor acknowledged the "Antes de empezar" notice
+      tags:
+      - accounts
+  /accounts/{accountId}/reminder-devices:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Stores this browser's push subscription for the account. Idempotent by endpoint: an
+        endpoint already known (for this or another account) is updated and moved to this
+        account — a browser reminds one account at a time.
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: The browser's PushSubscription (toJSON())
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_reminder.registerDeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Already known, reactivated
+          schema:
+            $ref: '#/definitions/internal_reminder.deviceResponse'
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_reminder.deviceResponse'
+        "400":
+          description: Missing keys, malformed JSON, or not a supported push service
+          schema:
+            $ref: '#/definitions/internal_reminder.validationErrorDoc'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+        "403":
+          description: The session does not own this account
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+        "404":
+          description: Malformed account id
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+        "503":
+          description: The server has no VAPID keys
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+      security:
+      - ClerkSession: []
+      summary: Turn reminders on for this browser
+      tags:
+      - reminders
+  /accounts/{accountId}/reminder-devices/remove:
+    post:
+      consumes:
+      - application/json
+      description: Idempotent. An endpoint that isn't this account's is left untouched
+        and not reported.
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: The browser's endpoint
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_reminder.removeDeviceRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Missing endpoint or malformed JSON
+          schema:
+            $ref: '#/definitions/internal_reminder.validationErrorDoc'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+        "403":
+          description: The session does not own this account
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+        "404":
+          description: Malformed account id
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+      security:
+      - ClerkSession: []
+      summary: Turn reminders off for this browser
+      tags:
+      - reminders
+  /accounts/{accountId}/reminder-settings:
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        "detailed" (medication, time and child) or "generic" ("Hay una toma programada").
+        Applies to every device of the account.
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: What reminders show
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_account.reminderSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_account.accountResponse'
+        "400":
+          description: Not \"detailed\" or \"generic\", or malformed JSON
+          schema:
+            $ref: '#/definitions/ValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/AccountNotFoundResponse'
+      security:
+      - ClerkSession: []
+      summary: Choose what dose reminders show
       tags:
       - accounts
   /accounts/me:
@@ -938,6 +1176,55 @@ paths:
       summary: Mark or unmark a dose as taken
       tags:
       - consultations
+  /reminders/actions/taken:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Public (no session). The token names one dose and the device that received it; it
+        only works while that device is on and belongs to the dose's account, and for 24 h.
+      parameters:
+      - description: The reminder's action token
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_reminder.actionRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Missing token or malformed JSON
+          schema:
+            $ref: '#/definitions/internal_reminder.validationErrorDoc'
+        "403":
+          description: Invalid, expired or no longer valid token
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+      summary: Mark a dose as taken from its reminder
+      tags:
+      - reminders
+  /reminders/config:
+    get:
+      description: |-
+        Whether this server can send reminders and the VAPID public key to subscribe with
+        (null when it can't).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_reminder.configResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+      security:
+      - ClerkSession: []
+      summary: What a browser needs to turn reminders on
+      tags:
+      - reminders
 securityDefinitions:
   ClerkSession:
     description: Clerk session token, sent as "Bearer <token>".

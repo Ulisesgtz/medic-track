@@ -110,13 +110,17 @@ dejó pendientes (2026-09-21). No se construye nada de esto hasta que se respond
 
 ## Despliegue
 
-- **Dónde correr el backend y la base de datos** — decisión inclinada hacia **Railway** (Go + Postgres juntos,
-  ~5–20 USD/mes; conecta el repo de GitHub y despliega solo), conversado 2026-09-22 pero **no decidido en firme
-  todavía** — queda en pausa hasta terminar la homologación de pantallas (spec 007). Comparado contra:
+- **Dónde correr el backend y la base de datos** — **decidido 2026-09-28: Railway** (Go + Postgres juntos,
+  ~5–20 USD/mes; conecta el repo de GitHub y despliega solo). Primero un entorno de pruebas con subdominios
+  (`api.pedi-track.com` en Railway, `app.pedi-track.com` en Cloudflare Pages, CNAME en HostGator, llaves de desarrollo
+  de Clerk): guía en `DEPLOY.md`. Lo que sigue pendiente para producción está al final de esa guía. **Por ahora (2026-09-28) las pruebas en el teléfono
+  van por un túnel HTTPS temporal a la PC** (`DEPLOY.md`, "Prueba con túnel"); el entorno en Railway se monta cuando el
+  ambiente esté listo para una instancia DEV desplegada. Se había comparado contra:
   Render (~13 USD/mes, cobra disco de Postgres por GB — relevante porque las fotos de receta se guardan como
   `bytea` directo en Postgres, ver más abajo), Fly.io (desde ~2 USD, sin región en México), un VPS propio
   (Hetzner/DigitalOcean, ~5–12 USD pero con mantenimiento manual), y AWS (App Runner/ECS + RDS — tendría sentido
   solo si se termina usando Cognito para el login, para quedar todo en una cuenta).
+- **Recordatorios push (spec 011)**: el proceso del backend tiene que estar encendido siempre (el envío corre dentro del API cada 30 s), así que el hosting no puede ser de los que duermen sin tráfico; configurar ahí `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` y `REMINDER_ACTION_SECRET` (las de producción, distintas de las locales). El frontend debe servirse por HTTPS (los avisos no funcionan sin él) y el service worker desde la raíz del dominio.
 - **Frontend (el PWA)**: **Cloudflare Pages** — gratis, sirve el PWA con su service worker, dominio
   `pedi-track.com` ya comprado (ver memoria `peditrack-dominio.md`) solo hay que apuntar el DNS. Alternativas
   equivalentes: Vercel, Netlify.

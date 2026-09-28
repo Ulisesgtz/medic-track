@@ -65,6 +65,13 @@ type accountResponse struct {
 	// DisclaimerAccepted whether this account already acknowledged it (specs/010-registro-aceptacion-aviso).
 	DisclaimerVersion  string `json:"disclaimerVersion" example:"2026-09-26"`
 	DisclaimerAccepted bool   `json:"disclaimerAccepted" example:"false"`
+	// ReminderDetail is what the dose reminders show, "detailed" or "generic"; null until the tutor
+	// chooses on the first activation (specs/011-recordatorios-push).
+	ReminderDetail *string `json:"reminderDetail" example:"generic"`
+}
+
+type reminderSettingsRequest struct {
+	ReminderDetail string `json:"reminderDetail" example:"generic"`
 }
 
 type acceptDisclaimerRequest struct {
@@ -532,6 +539,52 @@ func (h *Handler) AcceptDisclaimer(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// UpdateReminderSettings handles PATCH /accounts/{accountId}/reminder-settings
+// (specs/011-recordatorios-push/contracts/reminders-api.md).
+//
+//	@Summary		Choose what dose reminders show
+//	@Description	"detailed" (medication, time and child) or "generic" ("Hay una toma programada").
+//	@Description	Applies to every device of the account.
+//	@Tags			accounts
+//	@Accept			json
+//	@Produce		json
+//	@Param			accountId	path		string					true	"Account UUID"
+//	@Param			payload		body		reminderSettingsRequest	true	"What reminders show"
+//	@Success		200			{object}	accountResponse
+//	@Failure		400			{object}	validationErrorResponseDoc	"Not \"detailed\" or \"generic\", or malformed JSON"
+//	@Failure		404			{object}	accountNotFoundResponseDoc	"No account exists for this id"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	errorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	errorResponseDoc	"The session does not own this resource"
+//	@Router			/accounts/{accountId}/reminder-settings [patch]
+func (h *Handler) UpdateReminderSettings(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+
+	id, err := uuid.Parse(chi.URLParam(r, "accountId"))
+	if err != nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, accountNotFoundBody(), nil)
+		return
+	}
+	var req reminderSettingsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusBadRequest, "validation_error", "Malformed JSON body", &id)
+		return
+	}
+
+	acc, err := h.service.UpdateReminderDetail(r.Context(), id, req.ReminderDetail)
+	var validationErrs ValidationErrors
+	switch {
+	case errors.As(err, &validationErrs):
+		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody(validationErrs, "One or more fields are invalid"), &id)
+	case errors.Is(err, ErrAccountNotFound):
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, accountNotFoundBody(), nil)
+	case err != nil:
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not update the reminder settings", &id)
+	default:
+		h.responder.WriteJSON(r.Context(), w, http.StatusOK, toAccountResponse(acc), &id)
+	}
+}
+
 // writeAddChildError mirrors writeCreateAccountError's pattern of calling
 // h.responder directly from each case branch, for distinct error_logs
 // attribution per backend/CLAUDE.md.
@@ -579,15 +632,11 @@ func freemiumLimitBody(limit, received int) map[string]any {
 // call site above invokes h.responder.WriteJSON directly and gets its own
 // distinct, correctly-attributed error_logs entry (see writeCreateAccountError).
 func validationErrorBody(errs []ValidationError, message string) map[string]any {
-	details := make([]map[string]string, 0, len(errs))
+	fields := make([]httpx.FieldError, 0, len(errs))
 	for _, e := range errs {
-		details = append(details, map[string]string{"field": e.Field, "message": e.Message})
+		fields = append(fields, httpx.FieldError{Field: e.Field, Message: e.Message})
 	}
-	return map[string]any{
-		"error":   "validation_error",
-		"message": message,
-		"details": details,
-	}
+	return httpx.ValidationBody(message, fields)
 }
 
 func toAccountResponse(acc *Account) accountResponse {
@@ -614,5 +663,6 @@ func toAccountResponse(acc *Account) accountResponse {
 
 		DisclaimerVersion:  CurrentDisclaimerVersion,
 		DisclaimerAccepted: acc.DisclaimerAccepted,
+		ReminderDetail:     acc.ReminderDetail,
 	}
 }

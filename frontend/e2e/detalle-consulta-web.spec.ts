@@ -72,7 +72,7 @@ test.describe('Detalle de consulta — diseño web (mock 13)', () => {
     await expect(page.getByRole('heading', { level: 2, name: 'Síntomas registrados' })).toBeVisible()
     await expect(page.getByText('Fiebre y tos', { exact: true })).toBeVisible()
     await expect(page.getByRole('heading', { level: 2, name: 'Foto de la receta' })).toBeVisible()
-    await expect(page.getByText('Leída con OCR en el dispositivo. La imagen no salió de tu equipo.')).toBeVisible()
+    await expect(page.getByText('El texto se leyó en tu equipo; la foto se guarda solo en tu cuenta.')).toBeVisible()
 
     const treatment = page.getByText('Tratamiento activo').locator('..')
     await expect(treatment).toContainText('Amoxicilina')

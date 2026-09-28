@@ -9,6 +9,8 @@ Vite + React 19 + TypeScript. Auth: Clerk (`@clerk/react`). Forms: React Hook Fo
 | `src/App.tsx` | Router + QueryClientProvider (+ `useClearCacheOnUserChange`) — public: `/signup` → `AccountSignupPage`, `/login` → `LoginPage`, `/recuperar-contrasena` → `ForgotPasswordPage`, `/sso-callback` → `SsoCallbackPage`; behind `RequireSession`: `/registro/completar` → `CompleteGoogleSignupPage`, `/home` → `HomePage`, `/children/:childId` → `ChildDetailPage`, `/children/:childId/consultations/new` → `NewConsultationPage`, `/consultations/:consultationId` → `ConsultationDetailPage`, `/planes` → placeholder (`MessagePage`) |
 | `src/features/account-signup/` | The account + first child signup feature, and the plan-limit pop-up (see below) |
 | `src/features/home/` | The home page: children listing, "Agregar hijo" dialogs, the desktop sidebar, the `account_id`-in-`localStorage` session (see below) |
+| `src/features/reminders/` | Dose reminders by Web Push (spec 011) — see below |
+| `src/sw.ts` | The service worker (compiled by `vite-plugin-pwa`, `injectManifest`, no precache, registered by the plugin's `registerSW.js`): only wires `push`/`notificationclick` to `features/reminders/notification.ts`. Excluded from coverage for that reason |
 | `src/features/consultations/` | Child detail page, "Nueva consulta" page (with client-side OCR), consultation detail, dose marking (see below) |
 | `src/shared/catalog/` | Country/state catalog fetch hooks (`useCountries`, `useStates`) shared across features |
 | `src/shared/ui/` | Presentational pieces used by more than one feature: `Logo`, `AppHeader` (phone dark header: eyebrow, title, action), `FormField` (label + control + inline error), `MessagePage`, `useIsDesktop` (true from 900px, `matchMedia`-based — **the one rule that picks the web or the phone design**) and `useIsWide` (true from 1024px, `lg`: where the web mocks show the sidebar) |
@@ -19,7 +21,7 @@ Vite + React 19 + TypeScript. Auth: Clerk (`@clerk/react`). Forms: React Hook Fo
 | `src/shared/ui/Notice.tsx`, `src/shared/auth/clerkMessages.ts` | `Notice` is the block for feedback not tied to one field (`error` soft rose / `info` cyan / `success` mint, icon + dark ink text, `role="alert"` only for errors) — use it instead of ad-hoc red `<p>`s. `clerkNotice(error, fallback)` maps a Clerk error `code` to a Spanish message and tone (e.g. `session_exists` → info with a link to `/home`); unknown codes use the caller's Spanish fallback, Clerk's own `message` is never shown |
 | `src/shared/apiError.ts` | `ApiError<Kind>` base class (`kind`, `message`, optional `details`) — each feature's `api.ts` defines its own subclass with just the `Kind` union it needs |
 | `e2e/*.spec.ts`, `e2e/helpers.ts`, `e2e/clerkApi.ts`, `e2e/global.setup.ts` | Playwright E2E against the **real Clerk development instance** (see "E2E con Clerk"). **Every flow runs twice, at 390 px (phone) and 1280 px (web)** through `designs` in `helpers.ts`. Requires the backend running locally |
-| `vite.config.ts` | Includes the Tailwind v4 Vite plugin — don't remove it, the whole UI silently loses styling if it's dropped |
+| `vite.config.ts` | Includes the Tailwind v4 Vite plugin — don't remove it, the whole UI silently loses styling if it's dropped. Also the `/api` proxy to the local backend and `allowedHosts` for tunnel domains, used by `npm run dev:tunnel` / `preview:tunnel` (`--mode tunnel`, `.env.tunnel` sets `VITE_API_BASE_URL=/api`) to test on a phone — see DEPLOY.md |
 | `vitest.config.ts` | Coverage thresholds (>90%), `coverage.all: true` so untested files count |
 
 ## Web y móvil: dos diseños, nunca mezclados
@@ -110,6 +112,17 @@ Clerk API errors carry the useful code in `error.errors[0].code` (the top-level 
 | `useSidebarSession.ts` | `{ accountId, hasSidebar, isDesktop }` — the single place that decides whether the sidebar is on screen (`isDesktop` && `useIsWide` (1024px) && there is an account) |
 | `api.ts`, `types.ts` | `fetchAccount()`, `addChild()`, `acceptDisclaimer()`, `AccountApiError`; `Account`/`Child` shapes |
 
+## `src/features/reminders/` — dose reminders (spec 011)
+
+| File | Role |
+|---|---|
+| `RemindersCard.tsx`, `useReminders.ts` | The card on the home (both designs, under the children). States: `unsupported` / `ios-needs-install` / `denied` / `unavailable` (backend without VAPID keys) / `off` / `on`, always with the "es una ayuda, no una alarma garantizada" text. **The permission is requested only when the tutor taps "Activar recordatorios"** (FR-002). With `account.reminderDetail === null` the tap first opens `ReminderDetailDialog`; choosing then asks for the permission, subscribes, PATCHes the choice and registers the device (in that order; on any failure the new subscription is dropped). On load, a subscription already in the browser is registered again for the signed-in account (the backend moves it there and keeps its activation time), so a shared browser never shows "on" while delivering another tutor's reminders |
+| `ReminderDetailDialog.tsx` | "Mostrar detalle" / "Texto genérico" with an example of each on the lock screen; real dialog (portal, Escape, focus trap). Its `onCancel` must be stable (`useCallback`); focus goes back to the `opener` ref (as in `AddChildDialogs`). The examples' time goes through `formatTime`, like the real reminder |
+| `notification.ts` | Pure functions the service worker uses: `parsePayload`, `buildNotification` (title "Toma programada", body with `formatTime`, `tag: dose-<id>`, "Tomada" action only with a token — never an imperative, Principio I), `targetUrl`, `focusOrOpen`, `markTaken` (POSTs the reminder's own token: no session in a service worker) |
+| `deviceSupport.ts`, `pushDevice.ts`, `api.ts` | Browser capability detection and VAPID key decoding; the subscription helpers (`subscribe`, `unsubscribeThisDevice`, `unsubscribeOnLogout` — called by `useLogout` before `signOut`, max 3 s); the endpoints |
+
+Tests stub the browser with `pushEnv.test-utils.ts` (jsdom has no service worker, PushManager or Notification). The E2E `e2e/recordatorios.spec.ts` stubs the permission and `PushManager` in the page and checks what reaches the backend; real delivery is covered by the backend's integration test.
+
 ## `src/features/consultations/` — child detail, consultations, doses
 
 | File | Role |
@@ -137,6 +150,7 @@ Las pruebas E2E usan la instancia de **desarrollo** de Clerk de verdad (nada de 
 - `autenticacion.spec.ts` cubre login/logout con contraseña, el mensaje único de credenciales inválidas y que una sesión recibe 403 en los datos de otra cuenta (401 sin sesión).
 - Clerk limita las peticiones de la instancia de desarrollo (429 "Too Many Requests"), y ese límite lo comparten todas las corridas, locales y de CI. Toda llamada a su API (`clerkFetch`) y `signInAs` pasan por `retryWhileRateLimited` (`clerkApi.ts`): reintenta con espera creciente y solo por 429. En CI cada prueba tiene 60 s para dejar lugar a esas esperas.
 - Los avisos `[Clerk Testing] FAPI request failed … Test ended` al final de una prueba son ruido inofensivo.
+- **Los service workers van bloqueados en todas las E2E** (`serviceWorkers: 'block'` en `playwright.config.ts`): con el de la app (spec 011) controlando la página, en WebKit `page.route` deja de ver las peticiones a Clerk, el token de pruebas no llega y registro/login se quedan colgados (fallaban las 68 pruebas de WebKit en CI). `recordatorios.spec.ts` simula el registro del service worker junto con el permiso y la suscripción; no quitar el bloqueo para "probar el worker de verdad".
 
 ## Running tests
 

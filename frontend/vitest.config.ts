@@ -13,7 +13,15 @@ export default mergeConfig(
         reporter: ['text', 'html'],
         all: true,
         include: ['src/**/*.{ts,tsx}'],
-        exclude: ['src/setupTests.ts', 'src/main.tsx', 'src/**/*.test.{ts,tsx}', 'src/vite-env.d.ts'],
+        exclude: [
+          'src/setupTests.ts',
+          'src/main.tsx',
+          'src/**/*.test.{ts,tsx}',
+          'src/**/*.test-utils.ts',
+          'src/vite-env.d.ts',
+          // Only wires the service worker's events to features/reminders/notification.ts, which is tested.
+          'src/sw.ts',
+        ],
         thresholds: {
           lines: 90,
           functions: 90,

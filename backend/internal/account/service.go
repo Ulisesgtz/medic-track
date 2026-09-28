@@ -183,6 +183,16 @@ func (s *Service) AcceptDisclaimer(ctx context.Context, accountID uuid.UUID, ver
 	return s.repo.AcceptDisclaimer(ctx, accountID, version)
 }
 
+// UpdateReminderDetail sets what the account's dose reminders show: "detailed" (medication, time
+// and child) or "generic" (FR-008, specs/011-recordatorios-push). Any other value is a
+// validation error.
+func (s *Service) UpdateReminderDetail(ctx context.Context, accountID uuid.UUID, detail string) (*Account, error) {
+	if detail != "detailed" && detail != "generic" {
+		return nil, ValidationErrors{{Field: "reminderDetail", Message: "must be \"detailed\" or \"generic\""}}
+	}
+	return s.repo.UpdateReminderDetail(ctx, accountID, detail)
+}
+
 // validateChildFields validates a single child's fields (name format/length,
 // birth date, height/weight), with field names unprefixed (e.g. "firstName",
 // not "children[0].firstName"). validateCreateAccountInput wraps these with

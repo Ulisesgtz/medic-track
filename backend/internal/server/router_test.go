@@ -21,6 +21,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
+	"github.com/Ulisesgtz/medic-track/backend/internal/reminder"
 	"github.com/Ulisesgtz/medic-track/backend/internal/server"
 )
 
@@ -86,10 +87,13 @@ func newWorld(t *testing.T) *world {
 	w.doseA = c.Medications[0].Doses[0].ID
 
 	w.router = server.NewRouter(server.Deps{
-		Responder:      responder,
-		Catalog:        catalog.NewHandler(catalog.NewRepository(pool), responder),
-		Account:        account.NewHandler(account.NewService(accountRepo), responder),
-		Consultation:   consultation.NewHandler(consultationSvc, responder),
+		Responder:    responder,
+		Catalog:      catalog.NewHandler(catalog.NewRepository(pool), responder),
+		Account:      account.NewHandler(account.NewService(accountRepo), responder),
+		Consultation: consultation.NewHandler(consultationSvc, responder),
+		Reminder: reminder.NewHandler(reminder.NewService(reminder.NewRepository(pool), nil, reminder.Config{
+			VAPIDPublicKey: "test-public", VAPIDPrivateKey: "test-private", VAPIDSubject: "test@example.com", ActionSecret: "test-secret",
+		}), responder),
 		Ownership:      ownership.NewRepository(pool),
 		FrontendOrigin: "http://localhost:5173",
 		RequireSession: verifier.Middleware,
@@ -121,6 +125,9 @@ func (w *world) routes() []struct {
 		{"get account", http.MethodGet, "/accounts/" + w.accountA.String(), "", http.StatusOK},
 		{"add child", http.MethodPost, "/accounts/" + w.accountA.String() + "/children", `{}`, http.StatusBadRequest},
 		{"accept disclaimer", http.MethodPost, "/accounts/" + w.accountA.String() + "/disclaimer-acceptance", `{}`, http.StatusBadRequest},
+		{"reminder settings", http.MethodPatch, "/accounts/" + w.accountA.String() + "/reminder-settings", `{}`, http.StatusBadRequest},
+		{"register reminder device", http.MethodPost, "/accounts/" + w.accountA.String() + "/reminder-devices", `{}`, http.StatusBadRequest},
+		{"remove reminder device", http.MethodPost, "/accounts/" + w.accountA.String() + "/reminder-devices/remove", `{}`, http.StatusBadRequest},
 		{"list consultations", http.MethodGet, "/children/" + w.childA.String() + "/consultations", "", http.StatusOK},
 		{"child overview", http.MethodGet, "/children/" + w.childA.String() + "/overview" + window, "", http.StatusOK},
 		{"create consultation", http.MethodPost, "/children/" + w.childA.String() + "/consultations", `{}`, http.StatusBadRequest},
@@ -137,7 +144,7 @@ func TestRouter_EveryProtectedRouteNeedsASession(t *testing.T) {
 			require.Equal(t, http.StatusUnauthorized, w.do(t, rt.method, rt.path, "not-a-real-jwt", rt.body).Code)
 		})
 	}
-	for _, path := range []string{"/accounts/me"} {
+	for _, path := range []string{"/accounts/me", "/reminders/config"} {
 		require.Equal(t, http.StatusUnauthorized, w.do(t, http.MethodGet, path, "", "").Code, path)
 	}
 	require.Equal(t, http.StatusUnauthorized, w.do(t, http.MethodPost, "/accounts", "", `{}`).Code)
@@ -194,6 +201,15 @@ func TestRouter_MalformedIDsFallThroughToTheHandlersOwn404(t *testing.T) {
 	for _, path := range []string{"/accounts/not-a-uuid", "/children/not-a-uuid/consultations", "/consultations/not-a-uuid"} {
 		require.Equal(t, http.StatusNotFound, w.do(t, http.MethodGet, path, tokenA, "").Code, path)
 	}
+}
+
+// The reminder's "Tomada" action has no session by design; without a valid token it does nothing.
+func TestRouter_TheReminderActionIsPublicButNeedsItsToken(t *testing.T) {
+	w := newWorld(t)
+	require.Equal(t, http.StatusBadRequest, w.do(t, http.MethodPost, "/reminders/actions/taken", "", `{}`).Code)
+	rec := w.do(t, http.MethodPost, "/reminders/actions/taken", "", `{"token":"forged.token"}`)
+	require.Equal(t, http.StatusForbidden, rec.Code)
+	require.Contains(t, rec.Body.String(), `"invalid_action_token"`)
 }
 
 func TestRouter_TheCatalogStaysPublic(t *testing.T) {

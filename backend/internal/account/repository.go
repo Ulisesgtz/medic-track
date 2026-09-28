@@ -95,9 +95,9 @@ func mapInsertError(err error, context string) error {
 func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Account, error) {
 	acc := &Account{ID: id}
 	err := r.pool.QueryRow(ctx, `
-		SELECT first_name, last_name, email, country_code, state_code, plan, created_at, clerk_user_id
+		SELECT first_name, last_name, email, country_code, state_code, plan, created_at, clerk_user_id, reminder_detail
 		FROM accounts WHERE id = $1
-	`, id).Scan(&acc.FirstName, &acc.LastName, &acc.Email, &acc.CountryCode, &acc.StateCode, &acc.Plan, &acc.CreatedAt, &acc.ClerkUserID)
+	`, id).Scan(&acc.FirstName, &acc.LastName, &acc.Email, &acc.CountryCode, &acc.StateCode, &acc.Plan, &acc.CreatedAt, &acc.ClerkUserID, &acc.ReminderDetail)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrAccountNotFound
@@ -149,10 +149,10 @@ func (r *Repository) AddChildIfUnderLimit(ctx context.Context, accountID uuid.UU
 
 	acc := &Account{ID: accountID}
 	err = tx.QueryRow(ctx, `
-		SELECT first_name, last_name, email, country_code, state_code, plan, created_at, clerk_user_id
+		SELECT first_name, last_name, email, country_code, state_code, plan, created_at, clerk_user_id, reminder_detail
 		FROM accounts WHERE id = $1
 		FOR UPDATE
-	`, accountID).Scan(&acc.FirstName, &acc.LastName, &acc.Email, &acc.CountryCode, &acc.StateCode, &acc.Plan, &acc.CreatedAt, &acc.ClerkUserID)
+	`, accountID).Scan(&acc.FirstName, &acc.LastName, &acc.Email, &acc.CountryCode, &acc.StateCode, &acc.Plan, &acc.CreatedAt, &acc.ClerkUserID, &acc.ReminderDetail)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrAccountNotFound
@@ -223,9 +223,9 @@ func (r *Repository) GetByClerkUserID(ctx context.Context, clerkUserID string) (
 	var id uuid.UUID
 	acc := &Account{}
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, first_name, last_name, email, country_code, state_code, plan, created_at, clerk_user_id
+		SELECT id, first_name, last_name, email, country_code, state_code, plan, created_at, clerk_user_id, reminder_detail
 		FROM accounts WHERE clerk_user_id = $1
-	`, clerkUserID).Scan(&id, &acc.FirstName, &acc.LastName, &acc.Email, &acc.CountryCode, &acc.StateCode, &acc.Plan, &acc.CreatedAt, &acc.ClerkUserID)
+	`, clerkUserID).Scan(&id, &acc.FirstName, &acc.LastName, &acc.Email, &acc.CountryCode, &acc.StateCode, &acc.Plan, &acc.CreatedAt, &acc.ClerkUserID, &acc.ReminderDetail)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrAccountNotFound
@@ -339,4 +339,17 @@ func (r *Repository) AcceptDisclaimer(ctx context.Context, accountID uuid.UUID, 
 		return nil, fmt.Errorf("reading disclaimer acceptance: %w", err)
 	}
 	return acceptance, nil
+}
+
+// UpdateReminderDetail sets what the account's reminders show and returns the account. Returns
+// ErrAccountNotFound if no account exists for id.
+func (r *Repository) UpdateReminderDetail(ctx context.Context, id uuid.UUID, detail string) (*Account, error) {
+	tag, err := r.pool.Exec(ctx, `UPDATE accounts SET reminder_detail = $1 WHERE id = $2`, detail, id)
+	if err != nil {
+		return nil, fmt.Errorf("updating reminder detail: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return nil, ErrAccountNotFound
+	}
+	return r.GetByID(ctx, id)
 }

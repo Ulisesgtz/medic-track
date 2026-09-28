@@ -90,7 +90,7 @@ describe('AccountSignupForm', () => {
     it('does not use the web split screen: no checklist, no "Crear cuenta" heading', () => {
       renderForm()
 
-      expect(screen.queryByText('El OCR de la receta corre en tu dispositivo.')).not.toBeInTheDocument()
+      expect(screen.queryByText('Tu receta se lee en tu propio teléfono o computadora.')).not.toBeInTheDocument()
       expect(screen.queryByRole('heading', { name: 'Crear cuenta' })).not.toBeInTheDocument()
     })
   })
@@ -105,7 +105,7 @@ describe('AccountSignupForm', () => {
         screen.getByRole('heading', { level: 1, name: 'La bitácora médica de tus hijos, en un solo lugar.' }),
       ).toBeInTheDocument()
       for (const item of [
-        'El OCR de la receta corre en tu dispositivo.',
+        'Tu receta se lee en tu propio teléfono o computadora.',
         'Tu pediatra sigue siendo la única autoridad médica.',
         'El plan gratuito incluye un hijo.',
       ]) {

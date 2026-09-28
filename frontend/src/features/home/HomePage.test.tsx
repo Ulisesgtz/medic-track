@@ -278,8 +278,9 @@ describe('HomePage', () => {
       renderHome()
 
       expect(await screen.findByText('Mateo Morales')).toBeInTheDocument()
-      expect(screen.queryByText(/consulta/)).not.toBeInTheDocument()
-      expect(screen.queryByText(/tomas/)).not.toBeInTheDocument()
+      const card = screen.getByRole('link', { name: /Mateo Morales/ })
+      expect(within(card).queryByText(/consulta/)).not.toBeInTheDocument()
+      expect(within(card).queryByText(/tomas/)).not.toBeInTheDocument()
     })
 
     it('alternates the avatar colour between children (cyan, then mint)', async () => {

@@ -3,7 +3,7 @@ import { Logo } from '../../shared/ui/Logo'
 import { useIsDesktop } from '../../shared/ui/useIsDesktop'
 
 const CHECKLIST = [
-  'El OCR de la receta corre en tu dispositivo.',
+  'Tu receta se lee en tu propio teléfono o computadora.',
   'Tu pediatra sigue siendo la única autoridad médica.',
   'El plan gratuito incluye un hijo.',
 ]

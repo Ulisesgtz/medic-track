@@ -85,7 +85,7 @@ describe('ConsultationDetailPage', () => {
       expect(screen.getByText('15 enero 2026')).toBeInTheDocument()
       expect(await screen.findByRole('link', { name: '← Mateo Morales' })).toHaveAttribute('href', '/children/child-1')
       expect(screen.getByText('Foto de la receta')).toBeInTheDocument()
-      expect(screen.getByText('Leída con OCR en el dispositivo')).toBeInTheDocument()
+      expect(screen.getByText('Leída en tu equipo')).toBeInTheDocument()
       expect(screen.getByText('Síntomas registrados')).toBeInTheDocument()
       expect(screen.getByText('Tos y fiebre')).toBeInTheDocument()
       expect(screen.getByRole('heading', { level: 3, name: 'Amoxicilina 250 mg' })).toBeInTheDocument()
@@ -266,7 +266,7 @@ describe('ConsultationDetailPage', () => {
       expect(screen.getByRole('link', { name: '← Mateo Morales' })).toHaveAttribute('href', '/children/child-1')
       expect(screen.getByRole('link', { name: 'Nueva consulta' })).toHaveAttribute('href', '/children/child-1/consultations/new')
       expect(screen.getByRole('heading', { level: 2, name: 'Foto de la receta' })).toBeInTheDocument()
-      expect(screen.getByText('Leída con OCR en el dispositivo. La imagen no salió de tu equipo.')).toBeInTheDocument()
+      expect(screen.getByText('El texto se leyó en tu equipo; la foto se guarda solo en tu cuenta.')).toBeInTheDocument()
       const treatment = (await screen.findByText('Tratamiento activo')).parentElement!
       expect(within(treatment).getByText('Amoxicilina')).toBeInTheDocument()
       expect(within(treatment).getByText('termina el 19 ene')).toBeInTheDocument()

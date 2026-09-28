@@ -22,7 +22,7 @@ test.describe('Detalle de consulta — diseño móvil (mock 03)', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Dra. Laura Cázares' })).toBeVisible()
 
     await expect(page.getByText('Foto de la receta', { exact: true })).toBeVisible()
-    await expect(page.getByText('Leída con OCR en el dispositivo')).toBeVisible()
+    await expect(page.getByText('Leída en tu equipo')).toBeVisible()
     await expect(page.getByRole('heading', { level: 2, name: 'Síntomas registrados' })).toBeVisible()
     await expect(page.getByText('Fiebre y tos', { exact: true })).toBeVisible()
 

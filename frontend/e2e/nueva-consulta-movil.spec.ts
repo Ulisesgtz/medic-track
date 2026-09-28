@@ -4,7 +4,7 @@ import os from 'node:os'
 import { test, expect, seedChild } from './helpers'
 
 // "Nueva consulta", phone design (mock 04): dark header with "← Cancelar" and the
-// OCR panel, the "Sugerido por OCR" group, the medication cards and the save
+// OCR panel, the "Leído de tu receta" group, the medication cards and the save
 // button. Requires the backend running locally.
 
 function photo(): string {
@@ -36,7 +36,7 @@ test.describe('Nueva consulta — diseño móvil (mock 04)', () => {
     await expect(page.getByText('Leyendo receta')).toBeVisible()
     await expect(page.getByText('Listo')).toBeVisible({ timeout: 60_000 })
     await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100')
-    await expect(page.getByText('El procesamiento ocurre en tu teléfono. La foto no sale del dispositivo.')).toBeVisible()
+    await expect(page.getByText('El texto se lee en tu teléfono; la foto se guarda solo en tu cuenta.')).toBeVisible()
     // As in the mock the panel has no chooser row; changing the photo lives next to "← Cancelar".
     await expect(page.getByRole('button', { name: 'Seleccionar archivo' })).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Cambiar foto' })).toBeVisible()
@@ -53,8 +53,8 @@ test.describe('Nueva consulta — diseño móvil (mock 04)', () => {
     await expect(page.getByText('Listo')).toBeVisible({ timeout: 60_000 })
   })
 
-  test('el grupo "Sugerido por OCR" tiene Doctor y Fecha con borde brillante; Síntomas va aparte', async ({ page }) => {
-    const group = page.getByRole('group', { name: 'Sugerido por OCR · revisa y confirma' })
+  test('el grupo "Leído de tu receta" tiene Doctor y Fecha con borde brillante; Síntomas va aparte', async ({ page }) => {
+    const group = page.getByRole('group', { name: 'Leído de tu receta · revisa y confirma' })
     await expect(group.getByLabel('Doctor')).toHaveClass(/border-bright/)
     await expect(group.getByLabel('Fecha')).toHaveClass(/border-bright/)
     await expect(group.getByLabel('Síntomas')).toHaveCount(0)
@@ -76,11 +76,11 @@ test.describe('Nueva consulta — diseño móvil (mock 04)', () => {
     await expect(page.getByRole('button', { name: 'Quitar medicamento' })).toHaveCount(0)
   })
 
-  test('guardar sin llenar nada avisa "Completa los campos faltantes." en rojo y pone el foco en el primer campo', async ({ page }) => {
+  test('guardar sin llenar nada dice en rojo qué falta y pone el foco en el primer campo', async ({ page }) => {
     await page.getByRole('button', { name: 'Guardar consulta' }).click()
 
     const status = page.getByRole('status')
-    await expect(status).toHaveText('Completa los campos faltantes.')
+    await expect(status).toHaveText('Falta: la foto de la receta, el doctor, la fecha, el nombre del medicamento, cada cuántas horas, cuántos días, la hora de la primera toma.')
     await expect(status).toHaveClass(/text-red-700/)
     await expect(page.getByLabel('Doctor')).toBeFocused()
   })

@@ -19,6 +19,7 @@ const account: Account = {
   children: [],
   disclaimerVersion: '2026-09-26',
   disclaimerAccepted: false,
+  reminderDetail: null,
 }
 
 function renderBanner(value: Account | null = account) {

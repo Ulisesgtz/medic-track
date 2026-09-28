@@ -7,6 +7,7 @@ import { MedicationFieldset } from './MedicationFieldset'
 import { parsePositiveInt } from './parsePositiveInt'
 import { useOcrSuggestion } from './useOcrSuggestion'
 import { createConsultation, ConsultationApiError, type CreateConsultationPayload } from './api'
+import { missingFieldsText } from './missingFields'
 
 export interface MedicationFormValues {
   name: string
@@ -158,7 +159,7 @@ interface ConsultationFormProps {
 
 const MEDICATION_STAGGER_MS = 180
 
-// Mocks 04/14: every field of the "Sugerido por OCR" group carries the bright
+// Mocks 04/14: every field of the "Leído de tu receta" group carries the bright
 // border ("proposed by the OCR, confirm it"); the symptoms box is a plain field.
 const ocrField =
   'min-h-11 w-full min-w-0 rounded-xl border-2 border-bright bg-surface px-4 py-3 text-base text-ink focus:border-ink focus:outline-none'
@@ -170,7 +171,7 @@ const errorText = 'text-[13px] font-semibold text-red-700'
 /**
  * The "Nueva consulta" screen (FR-003, FR-004), built from mockups 04 (phone)
  * and 14 (desktop): "← Cancelar", the dark "Leyendo receta" panel, the
- * "Sugerido por OCR · revisa y confirma" group (doctor, date, symptoms), the
+ * "Leído de tu receta · revisa y confirma" group (doctor, date, symptoms), the
  * medication cards, "+ Otro medicamento" and "Guardar consulta".
  *
  * The mocks assume the photo was already taken; the form still needs a way to
@@ -401,8 +402,8 @@ export function ConsultationForm({
       )}
       <p className={`${gapTop} text-[13px] leading-relaxed text-[#a5f3fc]`}>
         {desktop
-          ? 'El procesamiento ocurre en tu equipo. La foto no se envía a ningún servidor.'
-          : 'El procesamiento ocurre en tu teléfono. La foto no sale del dispositivo.'}
+          ? 'El texto se lee en tu equipo; la foto se guarda solo en tu cuenta.'
+          : 'El texto se lee en tu teléfono; la foto se guarda solo en tu cuenta.'}
       </p>
       {showChooser && (
         <div className={gapTop}>
@@ -458,7 +459,7 @@ export function ConsultationForm({
       ? mutation.error.message
       : 'Ocurrió un error al guardar la consulta. Intenta de nuevo.'
     : missing
-      ? 'Completa los campos faltantes.'
+      ? missingFieldsText(errors, photoMissing && !photoFile, fields.length)
       : ''
 
   // Not in the phone mock 04 (the web mock 14 has it inside the OCR group): kept because the model
@@ -485,7 +486,7 @@ export function ConsultationForm({
       }`}
     >
       <legend className="text-xs font-extrabold tracking-[0.1em] text-action uppercase">
-        Sugerido por OCR · revisa y confirma
+        Leído de tu receta · revisa y confirma
       </legend>
       <div className={desktop ? 'grid gap-4 sm:grid-cols-2' : 'flex flex-col gap-3.5'}>
         <div className="flex min-w-0 flex-col gap-2">
