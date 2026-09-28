@@ -21,7 +21,7 @@ Vite + React 19 + TypeScript. Auth: Clerk (`@clerk/react`). Forms: React Hook Fo
 | `src/shared/ui/Notice.tsx`, `src/shared/auth/clerkMessages.ts` | `Notice` is the block for feedback not tied to one field (`error` soft rose / `info` cyan / `success` mint, icon + dark ink text, `role="alert"` only for errors) — use it instead of ad-hoc red `<p>`s. `clerkNotice(error, fallback)` maps a Clerk error `code` to a Spanish message and tone (e.g. `session_exists` → info with a link to `/home`); unknown codes use the caller's Spanish fallback, Clerk's own `message` is never shown |
 | `src/shared/apiError.ts` | `ApiError<Kind>` base class (`kind`, `message`, optional `details`) — each feature's `api.ts` defines its own subclass with just the `Kind` union it needs |
 | `e2e/*.spec.ts`, `e2e/helpers.ts`, `e2e/clerkApi.ts`, `e2e/global.setup.ts` | Playwright E2E against the **real Clerk development instance** (see "E2E con Clerk"). **Every flow runs twice, at 390 px (phone) and 1280 px (web)** through `designs` in `helpers.ts`. Requires the backend running locally |
-| `vite.config.ts` | Includes the Tailwind v4 Vite plugin — don't remove it, the whole UI silently loses styling if it's dropped |
+| `vite.config.ts` | Includes the Tailwind v4 Vite plugin — don't remove it, the whole UI silently loses styling if it's dropped. Also the `/api` proxy to the local backend and `allowedHosts` for tunnel domains, used by `npm run dev:tunnel` / `preview:tunnel` (`--mode tunnel`, `.env.tunnel` sets `VITE_API_BASE_URL=/api`) to test on a phone — see DEPLOY.md |
 | `vitest.config.ts` | Coverage thresholds (>90%), `coverage.all: true` so untested files count |
 
 ## Web y móvil: dos diseños, nunca mezclados

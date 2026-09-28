@@ -1,4 +1,45 @@
-# Despliegue de pruebas (staging)
+# Despliegue de pruebas
+
+Dos formas de probar PediTrack desde el teléfono:
+
+1. **Túnel HTTPS temporal hacia tu PC — lo que se usa ahora** (decidido 2026-09-28): para ir probando lo que se
+   desarrolla, sin hosting. Ver la sección siguiente.
+2. **Entorno de pruebas en Railway + Cloudflare Pages** — para cuando el ambiente esté listo para una instancia DEV
+   desplegada de verdad. Ver "Entorno de pruebas (staging)" más abajo.
+
+## Prueba con túnel (ahora)
+
+El teléfono solo llega al frontend que corre en tu PC, por un túnel HTTPS gratuito de Cloudflare
+(`cloudflared`, sin cuenta). El frontend reenvía `/api/*` al backend local (`vite.config.ts`), así que basta **un solo
+túnel** y no hay CORS.
+
+1. **Backend** corriendo en tu PC (`backend/`, con `DATABASE_URL` y `backend/.env.local`, que ya tiene
+   `CLERK_SECRET_KEY` y las claves de recordatorios).
+2. **Frontend**, en `frontend/`, una de dos:
+   - `npm run preview:tunnel` — compila como en producción y sirve en el puerto **4173**. **Úsalo para el teléfono**:
+     el service worker es el real (el de desarrollo es un módulo y algunos navegadores móviles no lo aceptan).
+     Después de cambiar código hay que volver a correrlo.
+   - `npm run dev:tunnel` — el de desarrollo (puerto **5173**), con recarga en vivo; bien para revisar pantallas.
+   Los dos usan `VITE_API_BASE_URL=/api` (`frontend/.env.tunnel`) y la llave de Clerk de `frontend/.env.local`.
+3. **Túnel**: `cloudflared tunnel --url http://localhost:4173` (o `5173`). Imprime una dirección
+   `https://<algo>.trycloudflare.com`: ábrela en el teléfono.
+4. **iPhone**: Safari → esa dirección → Compartir → **Agregar a inicio**, y abre la app desde el ícono (los recordatorios
+   solo funcionan así en iPhone). **Android**: Chrome, instalarla es opcional.
+
+Tener en cuenta:
+
+- **La dirección cambia cada vez** que reinicias `cloudflared`: hay que volver a instalar la app en el iPhone y volver
+  a activar los recordatorios. (Una dirección fija requiere cuenta — ngrok da una gratis — o el entorno de Railway.)
+- **Los recordatorios salen de tu PC**: el backend debe estar corriendo (y la PC encendida, sin suspenderse) a la hora
+  de la toma. El aviso llega al teléfono por el servicio de avisos del navegador aunque el túnel esté cerrado; lo que
+  necesita el túnel es tocar el aviso o "Tomada".
+- Clerk sigue en modo desarrollo y funciona con la dirección del túnel. Vite solo acepta los dominios de túnel
+  `*.trycloudflare.com` y `*.ngrok-free.app` (`allowedHosts`).
+- Todo lo que hagas en el teléfono va a tu base de datos local.
+
+---
+
+# Entorno de pruebas (staging)
 
 Entorno para probar PediTrack desde el teléfono, con HTTPS y el backend siempre encendido (los recordatorios de la
 spec 011 lo necesitan). **No es producción**: usa las llaves de *desarrollo* de Clerk y sale de una rama de trabajo, no

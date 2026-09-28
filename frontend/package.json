@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:tunnel": "vite --mode tunnel",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "preview:tunnel": "tsc -b && vite build --mode tunnel && vite preview --mode tunnel"
   },
   "dependencies": {
     "@clerk/react": "^6.16.1",
