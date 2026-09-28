@@ -147,7 +147,7 @@ export function ConsultationDetailPage() {
                   <h2 className={overline}>Foto de la receta</h2>
                   {photoImage('mt-4 h-[200px] w-full rounded-2xl')}
                   <p className="mt-4 text-[13px] leading-relaxed text-slate-500">
-                    Leída con OCR en el dispositivo. La imagen no salió de tu equipo.
+                    El texto se leyó en tu equipo; la foto se guarda solo en tu cuenta.
                   </p>
                   {seeFull('-mb-[11px] block w-fit')}
                 </div>
@@ -192,7 +192,7 @@ export function ConsultationDetailPage() {
             {photoImage('h-[78px] w-16 shrink-0 rounded-xl')}
             <div>
               <p className="text-[15px] font-extrabold text-ink">Foto de la receta</p>
-              <p className="mt-1 text-[13px] text-slate-500">Leída con OCR en el dispositivo</p>
+              <p className="mt-1 text-[13px] text-slate-500">Leída en tu equipo</p>
               {seeFull('-mt-1.5 -mb-3 inline-block')}
             </div>
           </div>

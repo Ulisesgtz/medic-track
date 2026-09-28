@@ -82,7 +82,7 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
 
     await expect(page.getByText(/^Para Mateo Morales · \d+ años?/)).toBeVisible()
     await expect(page.getByRole('link', { name: '← Cancelar' })).toBeVisible()
-    await expect(page.getByText('El procesamiento ocurre en tu equipo. La foto no se envía a ningún servidor.')).toBeVisible()
+    await expect(page.getByText('El texto se lee en tu equipo; la foto se guarda solo en tu cuenta.')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Seleccionar archivo' })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Cambiar foto' })).toHaveCount(0)
 
@@ -101,10 +101,10 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     await expect(page.getByText('Listo')).toBeVisible({ timeout: 60_000 })
   })
 
-  test('el grupo "Sugerido por OCR" lleva Doctor, Fecha y Síntomas; los campos de la fila del medicamento, sus placeholders', async ({ page }) => {
+  test('el grupo "Leído de tu receta" lleva Doctor, Fecha y Síntomas; los campos de la fila del medicamento, sus placeholders', async ({ page }) => {
     await open(page, 1280)
 
-    const group = page.getByRole('group', { name: 'Sugerido por OCR · revisa y confirma' })
+    const group = page.getByRole('group', { name: 'Leído de tu receta · revisa y confirma' })
     await expect(group.getByLabel('Doctor')).toHaveClass(/border-bright/)
     await expect(group.getByLabel('Fecha')).toHaveClass(/border-bright/)
     await expect(group.getByLabel('Síntomas')).toHaveAttribute('placeholder', 'Lo que observaste antes de la consulta')

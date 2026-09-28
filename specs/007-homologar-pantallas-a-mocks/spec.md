@@ -37,7 +37,13 @@ Decididas por el usuario:
 
 - **Sin la palabra "OCR" (2026-09-28)**: el primer punto de la lista del mock 11 ("El OCR de la receta corre en tu
   dispositivo.") dice "Tu receta se lee en tu propio teléfono o computadora.", en el registro y en el login web: la
-  gente no sabe qué es un OCR.
+  gente no sabe qué es un OCR. Por lo mismo, en Nueva consulta (mocks 04/14) el grupo dice "Leído de tu receta · revisa
+  y confirma" y en el detalle web (mock 13) "Leída en tu equipo".
+- **Lo que pasa con la foto, dicho con verdad (2026-09-28)**: los mocks 04/14/13 decían que la foto "no se envía a ningún
+  servidor" / "no sale del dispositivo" / "no salió de tu equipo". Es falso: solo la lectura del texto ocurre en el
+  dispositivo; la foto se guarda en la cuenta (spec 004). Ahora dicen "El texto se lee en tu teléfono/equipo; la foto se
+  guarda solo en tu cuenta." y "El texto se leyó en tu equipo; la foto se guarda solo en tu cuenta.", como el aviso
+  "Antes de empezar" (spec 009).
 - **Contraseña solo validada**: el campo del mock 11 está en el registro (móvil 01 y web 11; mínimo 8 caracteres) pero **no se envía ni se guarda**: la autenticación será con Clerk o AWS Cognito (BACKLOG).
 - **Botón "Registrarme con Google"** (no está en el mock; lo pidió el usuario) en ambos registros, tras un separador "o". Sin proveedor de autenticación no puede funcionar aún: al tocarlo avisa "El registro con Google estará disponible pronto."
 - Se **conservan los campos actuales**: tutor y hijo con nombre y apellido separados, país/estado (opcionales),

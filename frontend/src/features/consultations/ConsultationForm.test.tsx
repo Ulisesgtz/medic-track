@@ -71,8 +71,8 @@ describe('ConsultationForm', () => {
 
       expect(screen.getByRole('heading', { level: 1, name: 'Nueva consulta' })).toBeInTheDocument()
       expect(screen.getByRole('link', { name: '← Cancelar' })).toHaveAttribute('href', '/hijo')
-      expect(screen.getByText('El procesamiento ocurre en tu teléfono. La foto no sale del dispositivo.')).toBeInTheDocument()
-      expect(screen.getByText('Sugerido por OCR · revisa y confirma')).toBeInTheDocument()
+      expect(screen.getByText('El texto se lee en tu teléfono; la foto se guarda solo en tu cuenta.')).toBeInTheDocument()
+      expect(screen.getByText('Leído de tu receta · revisa y confirma')).toBeInTheDocument()
       expect(byId('medications.0.name')).toHaveAttribute('placeholder', 'Nombre y dosis')
       expect(byId('medications.0.frequencyHours')).toHaveAttribute('placeholder', 'c/8 h')
       expect(byId('medications.0.durationDays')).toHaveAttribute('placeholder', '7 días')
@@ -86,7 +86,7 @@ describe('ConsultationForm', () => {
       renderForm('desktop', { childLabel: 'Mateo Morales · 5 años 6 meses' })
 
       expect(screen.getByText('Para Mateo Morales · 5 años 6 meses')).toBeInTheDocument()
-      expect(screen.getByText('El procesamiento ocurre en tu equipo. La foto no se envía a ningún servidor.')).toBeInTheDocument()
+      expect(screen.getByText('El texto se lee en tu equipo; la foto se guarda solo en tu cuenta.')).toBeInTheDocument()
       expect(byId('medications.0.name')).toHaveAttribute('placeholder', 'Amoxicilina 250 mg')
       for (const text of ['Nombre y dosis', 'Frecuencia', 'Duración', 'Desde']) {
         expect(screen.getByText(text)).toBeInTheDocument()
@@ -592,7 +592,7 @@ describe('ConsultationForm', () => {
   it('phone: the OCR group has only Doctor and Fecha (mock 04); Síntomas is its own field below it', () => {
     renderForm('phone')
 
-    const group = screen.getByText('Sugerido por OCR · revisa y confirma').closest('fieldset')!
+    const group = screen.getByText('Leído de tu receta · revisa y confirma').closest('fieldset')!
     expect(within(group).getByLabelText('Doctor')).toBeInTheDocument()
     expect(within(group).getByLabelText('Fecha')).toBeInTheDocument()
     expect(within(group).queryByLabelText('Síntomas')).not.toBeInTheDocument()
@@ -602,7 +602,7 @@ describe('ConsultationForm', () => {
   it('exposes the symptoms box inside the OCR-suggestion group', () => {
     renderForm('desktop')
 
-    const group = screen.getByText('Sugerido por OCR · revisa y confirma').closest('fieldset')!
+    const group = screen.getByText('Leído de tu receta · revisa y confirma').closest('fieldset')!
     expect(within(group).getByLabelText('Síntomas')).toBeInTheDocument()
   })
 })

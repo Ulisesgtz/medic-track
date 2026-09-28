@@ -34,10 +34,10 @@ for (const design of designs) {
       await expect(page.getByRole('heading', { level: 1, name: 'Nueva consulta' })).toBeVisible()
       if (design.isWeb) {
         await expect(page.getByText(/^Para Luis Gómez · /)).toBeVisible()
-        await expect(page.getByText('El procesamiento ocurre en tu equipo. La foto no se envía a ningún servidor.')).toBeVisible()
+        await expect(page.getByText('El texto se lee en tu equipo; la foto se guarda solo en tu cuenta.')).toBeVisible()
       } else {
         await expect(page.getByRole('link', { name: '← Cancelar' })).toBeVisible()
-        await expect(page.getByText('El procesamiento ocurre en tu teléfono. La foto no sale del dispositivo.')).toBeVisible()
+        await expect(page.getByText('El texto se lee en tu teléfono; la foto se guarda solo en tu cuenta.')).toBeVisible()
       }
 
       await page.getByLabel('Doctor').fill('Dra. López')
