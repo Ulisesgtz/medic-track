@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { formatDayMonth, formatTime } from '../../shared/date'
 import { useDoseToggle } from './useDoseToggle'
 import { ProgressBar } from './ProgressBar'
+import { groupByPeriod } from './dayPeriods'
 import { DOSE_CHIP_STYLE, UNREGISTERED_LABEL, statusOf } from './doseStatus'
 import type { Dose, Medication } from './types'
 
@@ -66,7 +67,7 @@ interface MedicationCardProps {
 }
 
 /**
- * A medication with its schedule line and the chips of one day of doses.
+ * A medication with its schedule line and the chips of one day of doses, grouped by moment of the day (specs/015).
  * The mockups show a single row of chips: it is today's when the medication
  * has doses today, otherwise the nearest day with doses; a small day switcher
  * appears only when the treatment spans several days, so every dose stays
@@ -95,13 +96,19 @@ export function MedicationCard({ consultationId, medication, variant }: Medicati
       <p className="mt-1 text-sm font-semibold text-action">{schedule(medication)}</p>
       <ProgressBar doses={medication.doses} />
 
-      {chips.length > 0 && (
-        <div className="mt-4 flex flex-wrap gap-2.5">
-          {chips.map((dose) => (
-            <DoseChip key={dose.id} consultationId={consultationId} dose={dose} />
-          ))}
+      {/* specs/015: the day's doses by moment of the day (Mañana, Tarde, Noche); empty moments don't show. */}
+      {groupByPeriod(chips).map((group) => (
+        <div key={group.key} role="group" aria-label={group.label} className="mt-4">
+          <p aria-hidden="true" className="text-xs font-extrabold tracking-[0.1em] text-ink-soft uppercase">
+            {group.label}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2.5">
+            {group.doses.map((dose) => (
+              <DoseChip key={dose.id} consultationId={consultationId} dose={dose} />
+            ))}
+          </div>
         </div>
-      )}
+      ))}
 
       {days.length > 1 && (
         <div className="mt-3 flex items-center justify-between text-[13px] font-bold text-action">

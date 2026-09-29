@@ -36,9 +36,7 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
 
 ### B. Seguimiento del tratamiento (detalle de la consulta)
 
-- **B1. Tomas por momento del día** — en cada medicamento, las tomas del día se agrupan en **Mañana**, **Tarde** y
-  **Noche**; cada toma aparece solo en su grupo y los grupos vacíos no se muestran. Propuesta de rangos en la hora local
-  del padre: Mañana 05:00–11:59, Tarde 12:00–18:59, Noche 19:00–04:59 (la madrugada cuenta como noche).
+- **B1. Tomas por momento del día** — hecho en `specs/015-tomas-por-momento-del-dia/`.
 - **B2. Toma "sin registrar" automática** — hecho en `specs/013-tomas-sin-registrar/` (cambia a la siguiente toma de su
   medicamento; la última, a su hora + la frecuencia).
 - **B3. Barra de progreso por medicamento** — hecho en `specs/014-progreso-tomas/`.

@@ -79,6 +79,15 @@ test.describe('Detalle de consulta — diseño web (mock 13)', () => {
     await expect(treatment).toContainText(/termina el \d{1,2} \w{3}/)
   })
 
+  test('las tomas van agrupadas en Mañana, Tarde y Noche (specs/015)', async ({ page }) => {
+    const ids = await seedChild(page)
+    await open(page, 1280, ids)
+
+    await expect(page.getByRole('group', { name: 'Mañana' }).getByRole('button', { name: 'Toma de 08:00' })).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Tarde' }).getByRole('button', { name: 'Toma de 16:00' })).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Noche' }).getByRole('button', { name: 'Toma de 00:00' })).toBeVisible()
+  })
+
   test('la barra de progreso sube al marcar una toma, sin recargar (specs/014)', async ({ page }) => {
     const ids = await seedChild(page)
     await open(page, 1280, ids)
