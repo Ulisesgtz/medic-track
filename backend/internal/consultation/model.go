@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 )
 
 // Consultation represents a single medical visit for a child. Immutable
@@ -17,9 +19,20 @@ type Consultation struct {
 	DoctorName  string
 	ConsultDate time.Time
 	Photo       []byte
-	Symptoms    string
+	// Notes is the parent's free text before the visit ("notas previas a la
+	// consulta"); consultations saved before specs/012 keep their old
+	// symptoms text here.
+	Notes       string
 	CreatedAt   time.Time
 	Medications []Medication
+	// SymptomCodes are the catalog symptoms the parent marked, only when
+	// creating; a repeated code is stored once.
+	SymptomCodes []string
+	// Symptoms are the marked symptoms in catalog order, retired ones
+	// included — filled by Create and GetByID.
+	Symptoms []Symptom
+	// SymptomNames are the same names, filled only when listing (GetByChild).
+	SymptomNames []string
 	// ScheduleLocation is the time zone in which each medication's StartTime
 	// ("08:00") is read when generating doses — the parent's, so the dose
 	// instants are real. Nil means ConsultDate's own location (UTC).
@@ -28,6 +41,11 @@ type Consultation struct {
 	// medications themselves aren't loaded.
 	MedicationCount int
 }
+
+// Symptom is one catalog symptom marked on a consultation: something the
+// parent observed, never a diagnosis (specs/012, Principio I). The catalog's
+// own type, so both describe a symptom the same way.
+type Symptom = catalog.Symptom
 
 // Medication represents one medication prescribed within a Consultation.
 type Medication struct {

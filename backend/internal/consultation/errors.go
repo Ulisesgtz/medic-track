@@ -15,6 +15,10 @@ var (
 	// ErrDoseNotFound is returned when no dose exists for a given id, or it
 	// doesn't belong to the given consultation (FR-011).
 	ErrDoseNotFound = errors.New("dose not found")
+
+	// ErrSymptomNotAvailable is returned when a consultation names a symptom
+	// that isn't in the catalog or was retired from it (specs/012 FR-010).
+	ErrSymptomNotAvailable = errors.New("symptom not available")
 )
 
 // ValidationError describes a single field-level validation failure.

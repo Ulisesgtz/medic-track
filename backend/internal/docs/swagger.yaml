@@ -68,11 +68,17 @@ definitions:
         items:
           $ref: '#/definitions/MedicationResponse'
         type: array
+      notes:
+        example: Comió mariscos el domingo; la fiebre empezó el lunes
+        type: string
       photoBase64:
         type: string
       symptoms:
-        example: Tos y fiebre leve
-        type: string
+        description: Symptoms are the marked symptoms in catalog order, retired ones
+          included.
+        items:
+          $ref: '#/definitions/SymptomResponse'
+        type: array
     type: object
   ConsultationFieldError:
     properties:
@@ -125,9 +131,16 @@ definitions:
       medicationCount:
         example: 2
         type: integer
-      symptoms:
-        example: Tos y fiebre leve
+      notes:
+        example: Comió mariscos el domingo; la fiebre empezó el lunes
         type: string
+      symptomNames:
+        example:
+        - Fiebre
+        - Tos
+        items:
+          type: string
+        type: array
     type: object
   ConsultationValidationErrorResponse:
     properties:
@@ -253,6 +266,18 @@ definitions:
       taken:
         example: false
         type: boolean
+    type: object
+  SymptomResponse:
+    properties:
+      category:
+        example: General
+        type: string
+      code:
+        example: fever
+        type: string
+      name:
+        example: Fiebre
+        type: string
     type: object
   ValidationErrorResponse:
     properties:
@@ -419,11 +444,20 @@ definitions:
         items:
           $ref: '#/definitions/internal_consultation.createMedicationRequest'
         type: array
+      notes:
+        example: Comió mariscos el domingo; la fiebre empezó el lunes
+        type: string
       photoBase64:
         type: string
-      symptoms:
-        example: Tos y fiebre leve
-        type: string
+      symptomCodes:
+        description: SymptomCodes are catalog codes (GET /catalog/symptoms); optional,
+          duplicates ignored.
+        example:
+        - fever
+        - cough
+        items:
+          type: string
+        type: array
       utcOffsetMinutes:
         description: |-
           UTCOffsetMinutes is the parent's UTC offset, so "startTime" is read in
@@ -959,10 +993,31 @@ paths:
       summary: List states/provinces for a country
       tags:
       - catalog
+  /catalog/symptoms:
+    get:
+      description: |-
+        Active symptoms of the catalog, in order, grouped by their category title; used by the
+        "Nueva consulta" form (specs/012-sintomas-notas-consulta/contracts/symptoms-api.md).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/SymptomResponse'
+            type: array
+        "500":
+          description: Unexpected server error
+          schema:
+            $ref: '#/definitions/NotFoundResponse'
+      summary: List the symptoms a parent can mark
+      tags:
+      - catalog
   /children/{childId}/consultations:
     get:
-      description: Lists a child's medical consultations (date, doctor, symptoms and
-        medication count), most recent first (FR-001).
+      description: Lists a child's medical consultations (date, doctor, notes, marked
+        symptom names in catalog order and medication count), most recent first (FR-001).
       parameters:
       - description: Child UUID
         in: path
@@ -997,9 +1052,10 @@ paths:
       consumes:
       - application/json
       description: |-
-        Registers a consultation with its prescription photo, medications and symptoms
+        Registers a consultation with its prescription photo, medications, notes and marked symptoms
         (FR-003, FR-004). At least one medication is required (FR-015), and each one needs
         its startTime ("HH:MM"): all of its doses are generated at once from it (research.md).
+        Every symptomCodes entry must be an active catalog symptom, or 400 with details[].message "symptom_not_available" (specs/012).
       parameters:
       - description: Child UUID
         in: path
@@ -1097,7 +1153,7 @@ paths:
     get:
       description: |-
         Retrieves the prescription photo, doctor, date, medications (with their doses,
-        if any), and symptoms of a consultation (FR-013).
+        if any), notes and marked symptoms (catalog order, retired ones included) of a consultation (FR-013, specs/012).
       parameters:
       - description: Consultation UUID
         in: path

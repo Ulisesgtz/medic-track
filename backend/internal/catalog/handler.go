@@ -59,6 +59,43 @@ func (h *Handler) ListCountries(w http.ResponseWriter, r *http.Request) {
 	h.responder.WriteJSON(r.Context(), w, http.StatusOK, resp, nil)
 }
 
+// SymptomResponse is the JSON of one symptom, the same in the catalog and in a
+// consultation's detail (specs/012-sintomas-notas-consulta/contracts/symptoms-api.md).
+type SymptomResponse struct {
+	Code     string `json:"code" example:"fever"`
+	Name     string `json:"name" example:"Fiebre"`
+	Category string `json:"category" example:"General"`
+} // @name SymptomResponse
+
+// NewSymptomResponse converts a Symptom to its JSON shape.
+func NewSymptomResponse(s Symptom) SymptomResponse {
+	return SymptomResponse{Code: s.Code, Name: s.Name, Category: s.Category}
+}
+
+// ListSymptoms handles GET /catalog/symptoms.
+//
+//	@Summary	List the symptoms a parent can mark
+//	@Description	Active symptoms of the catalog, in order, grouped by their category title; used by the
+//	@Description	"Nueva consulta" form (specs/012-sintomas-notas-consulta/contracts/symptoms-api.md).
+//	@Tags		catalog
+//	@Produce	json
+//	@Success	200	{array}		SymptomResponse
+//	@Failure	500	{object}	notFoundResponseDoc	"Unexpected server error"
+//	@Router		/catalog/symptoms [get]
+func (h *Handler) ListSymptoms(w http.ResponseWriter, r *http.Request) {
+	symptoms, err := h.repo.ListSymptoms(r.Context())
+	if err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not load symptoms", nil)
+		return
+	}
+
+	resp := make([]SymptomResponse, 0, len(symptoms))
+	for _, s := range symptoms {
+		resp = append(resp, NewSymptomResponse(s))
+	}
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, resp, nil)
+}
+
 // ListStates handles GET /catalog/countries/{countryCode}/states.
 //
 //	@Summary	List states/provinces for a country

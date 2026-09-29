@@ -10,11 +10,24 @@ interface ConsultationCardProps {
   variant?: 'phone' | 'desktop'
 }
 
-/** "Fiebre y tos · 2 medicamentos"; a visit with no medication reads "sin receta". */
-function subtitle({ symptoms, medicationCount }: ConsultationSummary): string {
+const SHOWN_SYMPTOMS = 3
+
+/** "Fiebre, Tos, Vómito +2": up to three marked symptoms and how many more (specs/012 FR-015). */
+function symptomsSummary(names: string[]): string {
+  const shown = names.slice(0, SHOWN_SYMPTOMS).join(', ')
+  const rest = names.length - SHOWN_SYMPTOMS
+  return rest > 0 ? `${shown} +${rest}` : shown
+}
+
+/**
+ * "Fiebre, Tos · 2 medicamentos"; with no marked symptoms, the start of the notes (earlier consultations
+ * keep their old symptoms text there); a visit with no medication reads "sin receta".
+ */
+function subtitle({ symptomNames, notes, medicationCount }: ConsultationSummary): string {
   const meds =
     medicationCount === 0 ? 'sin receta' : `${medicationCount} ${medicationCount === 1 ? 'medicamento' : 'medicamentos'}`
-  return [symptoms.trim(), meds].filter(Boolean).join(' · ')
+  const lead = symptomNames.length > 0 ? symptomsSummary(symptomNames) : notes.trim()
+  return [lead, meds].filter(Boolean).join(' · ')
 }
 
 /** One consultation's card in the listing (FR-001), built from the mockups.

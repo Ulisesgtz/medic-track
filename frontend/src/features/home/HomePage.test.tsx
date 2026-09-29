@@ -222,7 +222,7 @@ describe('HomePage', () => {
       countryCode: null, stateCode: null, plan: 'free',
       children: [{ id: 'child-1', firstName: 'Mateo', lastName: 'Morales', birthDate: '2021-03-14', height: null, weight: null }],
     }
-    const consultation = (id: string) => ({ id, doctorName: 'Dra. López', consultDate: '2026-01-15', symptoms: '', medicationCount: 1 })
+    const consultation = (id: string) => ({ id, doctorName: 'Dra. López', consultDate: '2026-01-15', notes: '', symptomNames: [], medicationCount: 1 })
 
     beforeEach(() => window.localStorage.setItem('peditrack.accountId', 'account-chips'))
 

@@ -2,9 +2,13 @@ package catalog_test
 
 import (
 	"context"
+	"math/rand/v2"
 	"os"
+	"slices"
+	"strings"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 
@@ -98,6 +102,64 @@ func TestRepository_ConnectionErrors(t *testing.T) {
 
 	_, err = repo.ListStatesByCountry(context.Background(), "MX")
 	require.Error(t, err)
+
+	_, err = repo.ListSymptoms(context.Background())
+	require.Error(t, err)
+}
+
+func TestRepository_ListSymptoms_TheSeededCatalogInOrder(t *testing.T) {
+	repo := catalog.NewRepository(testPool(t))
+
+	symptoms, err := repo.ListSymptoms(context.Background())
+
+	require.NoError(t, err)
+	var seeded []catalog.Symptom
+	var codes []string
+	for _, s := range symptoms {
+		if !strings.HasPrefix(s.Code, "test_") { // rows other tests add and remove while running
+			seeded = append(seeded, s)
+			codes = append(codes, s.Code)
+		}
+	}
+	require.Equal(t, []string{
+		"fever", "fatigue", "irritability", "poor_appetite", "headache", "chills",
+		"cough", "runny_nose", "sneezing", "sore_throat", "difficulty_breathing", "wheezing",
+		"vomiting", "diarrhea", "stomach_ache", "nausea", "constipation",
+		"ear_pain", "red_eyes", "rash", "itching", "poor_sleep", "sleeping_more",
+	}, codes)
+	require.Equal(t, catalog.Symptom{Code: "fever", Name: "Fiebre", Category: "General"}, seeded[0])
+	require.Equal(t, catalog.Symptom{Code: "sleeping_more", Name: "Duerme más de lo normal", Category: "Sueño y ánimo"}, seeded[len(seeded)-1])
+}
+
+// A symptom added with SQL shows up in its place and a retired one disappears, without releasing the app (FR-006, FR-008).
+func TestRepository_ListSymptoms_FollowsTheCatalogTable(t *testing.T) {
+	pool := testPool(t)
+	repo := catalog.NewRepository(pool)
+	ctx := context.Background()
+	added := "test_added_" + uuid.NewString()[:8]
+	retired := "test_retired_" + uuid.NewString()[:8]
+	// Far after every seeded symptom (never one of the free slots the team may use), in an existing category.
+	base := 1_000_000 + rand.IntN(1_000_000_000)
+	_, err := pool.Exec(ctx, `INSERT INTO symptoms (code, name, category, sort_order, active) VALUES
+		($1, 'Agregado', 'General', $3, true), ($2, 'Retirado', 'General', $3 + 1, false)`, added, retired, base)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM symptoms WHERE code IN ($1, $2)`, added, retired)
+	})
+
+	symptoms, err := repo.ListSymptoms(ctx)
+
+	require.NoError(t, err)
+	codes := make([]string, 0, len(symptoms))
+	for _, s := range symptoms {
+		codes = append(codes, s.Code)
+		require.NotEqual(t, retired, s.Code)
+	}
+	// Added last by sort_order, it still joins its category: right after Escalofríos (the last seeded
+	// "General") and before Tos, never as a second "General" group at the end.
+	at := slices.Index(codes, added)
+	require.Equal(t, "chills", codes[at-1])
+	require.Equal(t, "cough", codes[at+1])
 }
 
 func TestRepository_ListStatesByCountry(t *testing.T) {

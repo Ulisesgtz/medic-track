@@ -14,7 +14,7 @@ Preguntas que se hicieron durante la homologación a los mocks (`specs/007-homol
 dejó pendientes (2026-09-21). No se construye nada de esto hasta que se responda.
 
 - **Editar consultas y medicamentos** — hoy son inmutables (spec 004, FR-014); solo se marcan las tomas, y desde 2026-09-20
-  "Desde" es obligatorio al crear. Si se quiere poder corregir una consulta ya guardada hay que decidir: qué se edita
+  "Primera toma" (antes "Desde") es obligatoria al crear. Si se quiere poder corregir una consulta ya guardada hay que decidir: qué se edita
   (solo nombre y dosis, o también frecuencia, duración y hora de inicio); qué pasa con las tomas ya marcadas si cambia el
   horario (regenerarlas y perder las marcas, o que el cambio solo aplique a las tomas futuras); si también se edita doctor,
   fecha y síntomas; si se permite borrar una consulta o un medicamento; y el diseño (los mocks no tienen esa pantalla).
@@ -105,7 +105,7 @@ Principio I: la app registra lo que el padre hace y lo que el médico indicó; n
 
 ## Backend
 
-- **Consultas anteriores sin hora de inicio** — desde 2026-09-20 "Desde" es obligatorio, pero las consultas guardadas
+- **Consultas anteriores sin hora de inicio** — desde 2026-09-20 "Primera toma" (antes "Desde") es obligatoria, pero las consultas guardadas
   antes (p. ej. la del Dr. Erick Rojas) tienen medicamentos sin `start_time`, sin tomas y sin tratamiento activo, y como
   las consultas son inmutables no se pueden completar. Si hace falta, permitir agregar la hora solo cuando falte (excepción
   a la inmutabilidad, endpoint nuevo, spec propia y un diseño que los mocks no tienen).

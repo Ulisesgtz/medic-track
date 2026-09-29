@@ -27,6 +27,40 @@ type querier interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
+// rowsQuerier is satisfied by both *pgxpool.Pool and pgx.Tx, for helpers that
+// read several rows inside a transaction or outside it.
+type rowsQuerier interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+}
+
+// symptomsOf returns the symptoms marked on a consultation, in catalog order
+// and including retired ones: a retired symptom is no longer offered, but the
+// consultations that have it keep showing it (specs/012 FR-008).
+func symptomsOf(ctx context.Context, q rowsQuerier, consultationID uuid.UUID) ([]Symptom, error) {
+	rows, err := q.Query(ctx, `
+		SELECT s.code, s.name, s.category
+		FROM consultation_symptoms cs JOIN symptoms s ON s.code = cs.symptom_code
+		WHERE cs.consultation_id = $1 ORDER BY s.sort_order
+	`, consultationID)
+	if err != nil {
+		return nil, fmt.Errorf("querying consultation symptoms: %w", err)
+	}
+	defer rows.Close()
+
+	symptoms := make([]Symptom, 0)
+	for rows.Next() {
+		var sym Symptom
+		if err := rows.Scan(&sym.Code, &sym.Name, &sym.Category); err != nil {
+			return nil, fmt.Errorf("scanning consultation symptom: %w", err)
+		}
+		symptoms = append(symptoms, sym)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating consultation symptoms: %w", err)
+	}
+	return symptoms, nil
+}
+
 // childExists reports whether a child with the given id exists — used to
 // distinguish "no consultations yet" from "no such child" (FR-001/FR-002).
 func childExists(ctx context.Context, q querier, childID uuid.UUID) (bool, error) {
@@ -50,8 +84,11 @@ func (r *Repository) GetByChild(ctx context.Context, childID uuid.UUID) ([]Consu
 	}
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT c.id, c.child_id, c.doctor_name, c.consult_date, c.symptoms, c.created_at,
-		       (SELECT count(*) FROM medications m WHERE m.consultation_id = c.id)
+		SELECT c.id, c.child_id, c.doctor_name, c.consult_date, c.notes, c.created_at,
+		       (SELECT count(*) FROM medications m WHERE m.consultation_id = c.id),
+		       COALESCE((SELECT array_agg(s.name ORDER BY s.sort_order)
+		                 FROM consultation_symptoms cs JOIN symptoms s ON s.code = cs.symptom_code
+		                 WHERE cs.consultation_id = c.id), '{}')
 		FROM consultations c WHERE c.child_id = $1 ORDER BY c.consult_date DESC
 	`, childID)
 	if err != nil {
@@ -62,7 +99,7 @@ func (r *Repository) GetByChild(ctx context.Context, childID uuid.UUID) ([]Consu
 	consultations := make([]Consultation, 0)
 	for rows.Next() {
 		var c Consultation
-		if err := rows.Scan(&c.ID, &c.ChildID, &c.DoctorName, &c.ConsultDate, &c.Symptoms, &c.CreatedAt, &c.MedicationCount); err != nil {
+		if err := rows.Scan(&c.ID, &c.ChildID, &c.DoctorName, &c.ConsultDate, &c.Notes, &c.CreatedAt, &c.MedicationCount, &c.SymptomNames); err != nil {
 			return nil, fmt.Errorf("scanning consultation: %w", err)
 		}
 		consultations = append(consultations, c)
@@ -95,13 +132,35 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, c *Consultat
 
 	c.ChildID = childID
 	err = tx.QueryRow(ctx, `
-		INSERT INTO consultations (child_id, doctor_name, consult_date, photo, symptoms)
+		INSERT INTO consultations (child_id, doctor_name, consult_date, photo, notes)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id, created_at
-	`, c.ChildID, c.DoctorName, c.ConsultDate, c.Photo, c.Symptoms,
+	`, c.ChildID, c.DoctorName, c.ConsultDate, c.Photo, c.Notes,
 	).Scan(&c.ID, &c.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("inserting consultation: %w", err)
+	}
+
+	c.Symptoms = []Symptom{}
+	if codes := uniqueCodes(c.SymptomCodes); len(codes) > 0 {
+		// The child's account comes from the database, never from the request, and only active catalog
+		// symptoms are accepted: fewer rows than (distinct) codes means one is unknown or retired, and the
+		// whole consultation is rolled back (specs/012 research R4).
+		tag, err := tx.Exec(ctx, `
+			INSERT INTO consultation_symptoms (consultation_id, child_id, account_id, symptom_code)
+			SELECT $1, ch.id, ch.account_id, s.code
+			FROM children ch JOIN symptoms s ON s.code = ANY($3) AND s.active
+			WHERE ch.id = $2
+		`, c.ID, c.ChildID, codes)
+		if err != nil {
+			return fmt.Errorf("inserting consultation symptoms: %w", err)
+		}
+		if tag.RowsAffected() != int64(len(codes)) {
+			return ErrSymptomNotAvailable
+		}
+		if c.Symptoms, err = symptomsOf(ctx, tx, c.ID); err != nil {
+			return err
+		}
 	}
 
 	for i := range c.Medications {
@@ -181,14 +240,18 @@ func generateDoseSchedule(consultDate time.Time, loc *time.Location, med *Medica
 func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Consultation, error) {
 	c := &Consultation{ID: id}
 	err := r.pool.QueryRow(ctx, `
-		SELECT child_id, doctor_name, consult_date, photo, symptoms, created_at
+		SELECT child_id, doctor_name, consult_date, photo, notes, created_at
 		FROM consultations WHERE id = $1
-	`, id).Scan(&c.ChildID, &c.DoctorName, &c.ConsultDate, &c.Photo, &c.Symptoms, &c.CreatedAt)
+	`, id).Scan(&c.ChildID, &c.DoctorName, &c.ConsultDate, &c.Photo, &c.Notes, &c.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrConsultationNotFound
 		}
 		return nil, fmt.Errorf("querying consultation: %w", err)
+	}
+
+	if c.Symptoms, err = symptomsOf(ctx, r.pool, id); err != nil {
+		return nil, err
 	}
 
 	medRows, err := r.pool.Query(ctx, `

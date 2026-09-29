@@ -9,6 +9,20 @@ vi.mock('tesseract.js', () => ({
   default: { recognize: vi.fn().mockResolvedValue({ data: { text: '' } }) },
 }))
 
+// The symptoms catalog (specs/012) is its own request; here it's fixed so every fetch the tests look at is the
+// form's own. SymptomPicker.test.tsx covers loading and failing.
+const catalog = vi.hoisted(() => ({
+  symptoms: [
+    { code: 'fever', name: 'Fiebre', category: 'General' },
+    { code: 'chills', name: 'Escalofríos', category: 'General' },
+    { code: 'cough', name: 'Tos', category: 'Respiratorio' },
+  ],
+}))
+vi.mock('../../shared/catalog/useCatalog', () => ({
+  SYMPTOMS_QUERY_KEY: ['catalog', 'symptoms'],
+  useSymptoms: () => ({ data: catalog.symptoms, isPending: false, isError: false }),
+}))
+
 type Variant = 'phone' | 'desktop'
 
 function renderForm(variant: Variant = 'phone', extra: Partial<Parameters<typeof ConsultationForm>[0]> = {}) {
@@ -78,7 +92,7 @@ describe('ConsultationForm', () => {
       expect(byId('medications.0.durationDays')).toHaveAttribute('placeholder', '7 días')
       expect(screen.getByRole('button', { name: '+ Otro medicamento' })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Guardar consulta' })).toBeInTheDocument()
-      expect(screen.getByText('Desde')).toBeInTheDocument()
+      expect(screen.getByText('Primera toma')).toBeInTheDocument()
       expect(screen.queryByText(/^Para /)).not.toBeInTheDocument()
     })
 
@@ -88,7 +102,7 @@ describe('ConsultationForm', () => {
       expect(screen.getByText('Para Mateo Morales · 5 años 6 meses')).toBeInTheDocument()
       expect(screen.getByText('El texto se lee en tu equipo; la foto se guarda solo en tu cuenta.')).toBeInTheDocument()
       expect(byId('medications.0.name')).toHaveAttribute('placeholder', 'Amoxicilina 250 mg')
-      for (const text of ['Nombre y dosis', 'Frecuencia', 'Duración', 'Desde']) {
+      for (const text of ['Nombre y dosis', 'Frecuencia', 'Duración', 'Primera toma']) {
         expect(screen.getByText(text)).toBeInTheDocument()
       }
     })
@@ -139,7 +153,7 @@ describe('ConsultationForm', () => {
       expect(screen.getByText('Escribe cuántos días (ej. 7).')).toBeInTheDocument()
     })
 
-    it.each(['phone', 'desktop'] as const)('%s: "Desde" is required — no "(opcional)", an error under it, and nothing is sent without it', async (variant) => {
+    it.each(['phone', 'desktop'] as const)('%s: "Primera toma" is required — no "(opcional)", an error under it, and nothing is sent without it', async (variant) => {
       const user = userEvent.setup()
       vi.stubGlobal('fetch', vi.fn())
       renderForm(variant)
@@ -180,7 +194,7 @@ describe('ConsultationForm', () => {
           ok: true,
           json: async () => ({
             id: 'consultation-1', childId: 'child-1', doctorName: 'Dra. López', consultDate: '2026-01-15',
-            photoBase64: 'Zm9v', symptoms: '', medications: [],
+            photoBase64: 'Zm9v', notes: '', symptoms: [], medications: [],
           }),
         }),
       )
@@ -323,15 +337,32 @@ describe('ConsultationForm', () => {
       expect(clickSpy).toHaveBeenCalled()
     })
 
-    it('web: the medication row is the mock\'s three columns, and a fourth one for "Desde" when the card has room (720px+)', () => {
+    it('web: the name takes the room, frequency and duration are narrow, and "Primera toma" is a fourth column when the card has room (720px+)', () => {
       renderForm('desktop')
 
       const grid = byId('medications.0.name').closest('.grid')!
-      expect(grid).toHaveClass('sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]')
-      expect(grid).toHaveClass('@min-[720px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]')
+      expect(grid).toHaveClass('sm:grid-cols-[minmax(0,1fr)_7rem_7rem]')
+      expect(grid).toHaveClass('@min-[720px]:grid-cols-[minmax(0,1fr)_7rem_7rem_10rem]')
       expect(byId('medications.0.name').closest('fieldset')).toHaveClass('@container')
-      // Narrow card: second row under "Frecuencia"; wide card: the fourth column.
-      expect(byId('medications.0.startTime').parentElement).toHaveClass('sm:col-start-2', '@min-[720px]:col-start-auto')
+      // Narrow card: second row under "Frecuencia" and "Duración"; wide card: the fourth column.
+      expect(byId('medications.0.startTime').parentElement).toHaveClass(
+        'sm:col-span-2',
+        'sm:col-start-2',
+        '@min-[720px]:col-span-1',
+        '@min-[720px]:col-start-auto',
+      )
+    })
+
+    it('phone: frequency and duration half the row each; "Primera toma" (label above) as wide as the frequency, and never wider than the card on iOS', () => {
+      renderForm('phone')
+
+      expect(byId('medications.0.frequencyHours').parentElement).toHaveClass('flex-1')
+      expect(byId('medications.0.durationDays').parentElement).toHaveClass('flex-1')
+      const time = screen.getByLabelText('Primera toma')
+      expect(time).toBe(byId('medications.0.startTime'))
+      expect(time).toHaveClass('w-full', 'appearance-none')
+      expect(time.parentElement).toHaveClass('w-[calc(50%-5px)]')
+      expect(time.previousElementSibling).toHaveTextContent('Primera toma')
     })
 
     it('phone: the doctor and date fields are semibold as in the mock; the web keeps medium', () => {
@@ -356,9 +387,12 @@ describe('ConsultationForm', () => {
       expect(byId('medications.0.name')).toHaveValue('Amoxicilina')
       expect(byId('medications.0.frequencyHours')).toHaveValue('c/8 h')
       expect(byId('medications.0.durationDays')).toHaveValue('5 días')
-      // Medication fields the OCR filled carry the bright "to review" border; the symptoms box doesn't.
+      // Medication fields the OCR filled carry the bright "to review" border; the notes box doesn't.
       expect(byId('medications.0.name')).toHaveClass('border-bright')
-      expect(byId('symptoms')).not.toHaveClass('border-bright')
+      expect(byId('notes')).not.toHaveClass('border-bright')
+      // The OCR never marks symptoms nor writes notes (specs/012 FR-017).
+      expect(byId('notes')).toHaveValue('')
+      expect(screen.queryByRole('button', { pressed: true })).not.toBeInTheDocument()
     })
 
     it('never overwrites fields the parent already filled in (FR-006, Principio I)', async () => {
@@ -589,20 +623,129 @@ describe('ConsultationForm', () => {
     })
   })
 
-  it('phone: the OCR group has only Doctor and Fecha (mock 04); Síntomas is its own field below it', () => {
-    renderForm('phone')
+  for (const variant of ['phone', 'desktop'] as const) {
+    it(`${variant}: symptoms and notes are their own section after the prescription group, before the medications (specs/012)`, () => {
+      renderForm(variant)
 
-    const group = screen.getByText('Leído de tu receta · revisa y confirma').closest('fieldset')!
-    expect(within(group).getByLabelText('Doctor')).toBeInTheDocument()
-    expect(within(group).getByLabelText('Fecha')).toBeInTheDocument()
-    expect(within(group).queryByLabelText('Síntomas')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Síntomas')).toBeInTheDocument()
+      const group = screen.getByText('Leído de tu receta · revisa y confirma').closest('fieldset')!
+      expect(within(group).getByLabelText('Doctor')).toBeInTheDocument()
+      expect(within(group).getByLabelText('Fecha')).toBeInTheDocument()
+      expect(within(group).queryByLabelText('Notas previas a la consulta')).not.toBeInTheDocument()
+      expect(within(group).queryByRole('button', { name: 'Fiebre' })).not.toBeInTheDocument()
+
+      const symptoms = screen.getByRole('group', { name: '¿Qué síntomas tuvo?' })
+      const notes = screen.getByLabelText('Notas previas a la consulta')
+      expect(group.compareDocumentPosition(symptoms) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(symptoms.compareDocumentPosition(notes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(notes.compareDocumentPosition(byId('medications.0.name')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    })
+  }
+
+  it('"Notas previas a la consulta" shows its example and is optional (specs/012 FR-012)', () => {
+    renderForm()
+
+    const notes = screen.getByLabelText('Notas previas a la consulta')
+    expect(notes).toHaveAttribute('placeholder', 'Qué comió antes, cómo se sentía, cómo fue cambiando desde que empezó…')
+    expect(notes).not.toBeRequired()
+    expect(screen.queryByLabelText('Síntomas')).not.toBeInTheDocument()
   })
 
-  it('exposes the symptoms box inside the OCR-suggestion group', () => {
-    renderForm('desktop')
+  describe('symptoms (specs/012)', () => {
+    function stubCreate(response: { ok: boolean; status?: number; body: unknown }, symptoms = catalog.symptoms) {
+      const fetchMock = vi.fn().mockImplementation(async (input: string) => {
+        if (String(input).endsWith('/catalog/symptoms')) return { ok: true, json: async () => symptoms }
+        return { ok: response.ok, status: response.status ?? 201, json: async () => response.body }
+      })
+      vi.stubGlobal('fetch', fetchMock)
+      return fetchMock
+    }
+    const created = {
+      id: 'consultation-1', childId: 'child-1', doctorName: 'Dra. López', consultDate: '2026-01-15',
+      photoBase64: 'Zm9v', notes: '', symptoms: [], medications: [],
+    }
+    const postBody = (fetchMock: ReturnType<typeof vi.fn>) => {
+      const call = fetchMock.mock.calls.find(([, init]) => init?.method === 'POST')!
+      return JSON.parse(call[1].body as string)
+    }
 
-    const group = screen.getByText('Leído de tu receta · revisa y confirma').closest('fieldset')!
-    expect(within(group).getByLabelText('Síntomas')).toBeInTheDocument()
+    it('sends the tapped symptoms as symptomCodes and the notes as notes', async () => {
+      const user = userEvent.setup()
+      const fetchMock = stubCreate({ ok: true, body: created })
+      const { onSuccess } = renderForm()
+
+      await fillValid(user)
+      await user.click(screen.getByRole('button', { name: 'Tos' }))
+      await user.click(screen.getByRole('button', { name: 'Fiebre' }))
+      await user.click(screen.getByRole('button', { name: 'Escalofríos' }))
+      await user.click(screen.getByRole('button', { name: 'Escalofríos' })) // tapped again: off
+      await user.type(screen.getByLabelText('Notas previas a la consulta'), 'Comió mariscos')
+      await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
+
+      await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('consultation-1'))
+      const body = postBody(fetchMock)
+      expect(body.symptomCodes).toEqual(['cough', 'fever'])
+      expect(body.notes).toBe('Comió mariscos')
+      expect(body).not.toHaveProperty('symptoms')
+    })
+
+    it('sends an empty list when no symptom was tapped (optional, FR-003)', async () => {
+      const user = userEvent.setup()
+      const fetchMock = stubCreate({ ok: true, body: created })
+      const { onSuccess } = renderForm()
+
+      await fillValid(user)
+      await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
+
+      await waitFor(() => expect(onSuccess).toHaveBeenCalled())
+      expect(postBody(fetchMock).symptomCodes).toEqual([])
+    })
+
+    it('a symptom retired meanwhile: says so in Spanish, drops it and keeps the rest of the form', async () => {
+      const user = userEvent.setup()
+      stubCreate(
+        {
+          ok: false,
+          status: 400,
+          body: {
+            error: 'validation_error',
+            message: 'One or more fields are invalid',
+            details: [{ field: 'symptomCodes', message: 'symptom_not_available' }],
+          },
+        },
+        catalog.symptoms.filter((symptom) => symptom.code !== 'chills'),
+      )
+      renderForm()
+
+      await fillValid(user)
+      await user.click(screen.getByRole('button', { name: 'Fiebre' }))
+      await user.click(screen.getByRole('button', { name: 'Escalofríos' }))
+      await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
+
+      expect(
+        await screen.findByText('Uno de los síntomas que elegiste ya no está disponible. Revisa la lista e intenta de nuevo.'),
+      ).toBeInTheDocument()
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Escalofríos' })).toHaveAttribute('aria-pressed', 'false'))
+      expect(screen.getByRole('button', { name: 'Fiebre' })).toHaveAttribute('aria-pressed', 'true')
+      expect(screen.getByLabelText('Doctor')).toHaveValue('Dra. López')
+    })
+
+    it('keeps the selection when the catalog cannot be reloaded after that error', async () => {
+      const user = userEvent.setup()
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockImplementation(async (input: string) => {
+          if (String(input).endsWith('/catalog/symptoms')) return { ok: false, status: 500, json: async () => ({}) }
+          return { ok: false, status: 400, json: async () => ({ details: [{ field: 'symptomCodes', message: 'symptom_not_available' }] }) }
+        }),
+      )
+      renderForm()
+
+      await fillValid(user)
+      await user.click(screen.getByRole('button', { name: 'Fiebre' }))
+      await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
+
+      expect(await screen.findByText(/ya no está disponible/)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Fiebre' })).toHaveAttribute('aria-pressed', 'true')
+    })
   })
 })

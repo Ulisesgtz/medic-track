@@ -30,10 +30,14 @@ interface MedicationFieldsetProps {
  * a white card with the "Medicamento N" badge, "Quitar", and the fields
  * "Nombre y dosis", frequency ("c/8 h"), duration ("7 días") and — an addition
  * to the mock, because doses can't be scheduled without it — the start time
- * "Desde", which is required: a consultation is immutable once saved, so a
+ * "Primera toma", which is required: a consultation is immutable once saved, so a
  * missing start time could never be filled in later (and without it no doses
  * or active treatment exist). Frequency and duration accept free text; the
- * first number in them is what's sent.
+ * first number in them is what's sent. On the web they hold a couple of digits
+ * ("c/12 h", "14 días"), so they have a fixed narrow width and the name takes
+ * the rest; on the phone frequency and duration take half the row each, as the
+ * mock 04, and "Primera toma" (label above) is as wide as the frequency, right
+ * under it.
  */
 export function MedicationFieldset({
   index,
@@ -81,7 +85,7 @@ export function MedicationFieldset({
       <div
         className={
           desktop
-            ? 'grid min-w-0 gap-4 sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)] @min-[720px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]'
+            ? 'grid min-w-0 gap-4 sm:grid-cols-[minmax(0,1fr)_7rem_7rem] @min-[720px]:grid-cols-[minmax(0,1fr)_7rem_7rem_10rem]'
             : 'flex min-w-0 flex-col gap-3.5'
         }
       >
@@ -100,7 +104,7 @@ export function MedicationFieldset({
         </div>
 
         <div className={desktop ? 'contents' : 'flex gap-2.5'}>
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div className={`flex min-w-0 flex-col gap-2 ${desktop ? '' : 'flex-1'}`}>
             <label htmlFor={id('frequencyHours')} className={desktop ? label : 'sr-only'}>
               Frecuencia
             </label>
@@ -114,7 +118,7 @@ export function MedicationFieldset({
             />
             {medErrors?.frequencyHours && <p className={error}>Escribe cada cuántas horas (ej. 8).</p>}
           </div>
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div className={`flex min-w-0 flex-col gap-2 ${desktop ? '' : 'flex-1'}`}>
             <label htmlFor={id('durationDays')} className={desktop ? label : 'sr-only'}>
               Duración
             </label>
@@ -130,10 +134,10 @@ export function MedicationFieldset({
           </div>
           {desktop && (
             // Not in the mock's row of three. With room (the card is 720px wide or more) it is a fourth
-            // column of the same row, the fields a bit shorter; otherwise it goes to a second row, under "Frecuencia".
-            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:col-start-2 @min-[720px]:col-start-auto">
+            // column of the same row; otherwise it goes to a second row, under "Frecuencia" and "Duración".
+            <div className="flex min-w-0 flex-col gap-2 sm:col-span-2 sm:col-start-2 @min-[720px]:col-span-1 @min-[720px]:col-start-auto">
               <label htmlFor={id('startTime')} className={label}>
-                Desde
+                Primera toma
               </label>
               <input
                 id={id('startTime')}
@@ -149,19 +153,20 @@ export function MedicationFieldset({
       </div>
 
       {!desktop && (
-        <div className="flex min-w-0 flex-col gap-2">
-          <div className="flex min-w-0 items-center gap-3">
-            <label htmlFor={id('startTime')} className="shrink-0 text-[13px] font-bold whitespace-nowrap text-ink-soft">
-              Desde
-            </label>
-            <input
-              id={id('startTime')}
-              type="time"
-              size={1}
-              className={`${plain} flex-1 text-[15px]`}
-              {...register(`medications.${index}.startTime`, { required: true })}
-            />
-          </div>
+        // Half the row minus half the 10px gap: exactly the width of the frequency field above.
+        <div className="flex w-[calc(50%-5px)] min-w-0 flex-col gap-2">
+          <label htmlFor={id('startTime')} className={label}>
+            Primera toma
+          </label>
+          <input
+            id={id('startTime')}
+            type="time"
+            size={1}
+            // iOS Safari draws time inputs with their own minimum width and ignores the box's: without
+            // appearance-none the field ran past the card's edge on the iPhone.
+            className={`${plain} appearance-none text-[15px] [&::-webkit-date-and-time-value]:text-left`}
+            {...register(`medications.${index}.startTime`, { required: true })}
+          />
           {medErrors?.startTime && <p className={error}>{START_TIME_MESSAGE}</p>}
         </div>
       )}

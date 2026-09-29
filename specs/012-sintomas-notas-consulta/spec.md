@@ -112,7 +112,7 @@ pero sí en una consulta anterior que lo tenía.
 - El mismo síntoma enviado dos veces en una consulta: se guarda una sola vez.
 - Un síntoma se retira mientras el padre tiene el formulario abierto y lo tenía seleccionado: al guardar se rechaza con
   un mensaje claro y el formulario conserva todo lo demás capturado para reintentar.
-- Notas muy largas: se mantiene el límite de longitud que hoy tiene el cuadro de síntomas.
+- Notas muy largas: se aceptan igual que hoy el cuadro de síntomas (sin límite propio nuevo).
 - La lectura de la receta (OCR) no toca los síntomas ni las notas: ni selecciona síntomas ni escribe en las notas.
 - Otra cuenta intenta leer los síntomas de una consulta ajena: se rechaza igual que el resto de la consulta (solo el
   dueño).
@@ -147,9 +147,9 @@ pero sí en una consulta anterior que lo tenía.
   español que diga qué pasó, sin crear la consulta.
 - **FR-011**: Los síntomas de una consulta DEBEN ser inmutables una vez creada, como el resto de la consulta (spec 004);
   no hay edición ni borrado.
-- **FR-012**: El cuadro de texto "Síntomas" DEBE llamarse "Notas previas a la consulta", ser opcional, conservar su
-  límite de longitud actual y mostrar como texto de ayuda: "Qué comió antes, cómo se sentía, cómo fue cambiando desde
-  que empezó…".
+- **FR-012**: El cuadro de texto "Síntomas" DEBE llamarse "Notas previas a la consulta", ser opcional, aceptar el mismo
+  largo que hoy (sin límite propio nuevo) y mostrar como texto de ayuda: "Qué comió antes, cómo se sentía, cómo fue
+  cambiando desde que empezó…".
 - **FR-013**: El texto de síntomas de las consultas registradas antes de esta funcionalidad DEBE conservarse íntegro y
   mostrarse como sus notas previas; esas consultas quedan sin síntomas seleccionados.
 - **FR-014**: El detalle de la consulta (móvil y web) DEBE mostrar los síntomas elegidos como pastillas de solo lectura,

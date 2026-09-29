@@ -50,7 +50,7 @@ func TestRepository_Create_WithDoses(t *testing.T) {
 		DoctorName:  "Dra. López",
 		ConsultDate: time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC),
 		Photo:       samplePhoto(),
-		Symptoms:    "Tos",
+		Notes:       "Tos",
 		Medications: []consultation.Medication{
 			{Name: "Amoxicilina", FrequencyHours: 8, DurationDays: 3, StartTime: strPtr("08:00")},
 		},
@@ -174,7 +174,7 @@ func TestRepository_GetByID_WithMedicationsAndDoses(t *testing.T) {
 	childID := createTestChild(t, pool)
 
 	created := &consultation.Consultation{
-		DoctorName: "Dra. López", ConsultDate: time.Now(), Photo: samplePhoto(), Symptoms: "Fiebre",
+		DoctorName: "Dra. López", ConsultDate: time.Now(), Photo: samplePhoto(), Notes: "Fiebre",
 		Medications: []consultation.Medication{
 			{Name: "Amoxicilina", FrequencyHours: 24, DurationDays: 1, StartTime: strPtr("08:00")},
 		},

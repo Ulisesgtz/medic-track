@@ -34,14 +34,16 @@ async function open(page: Page, width: number) {
 }
 
 test.describe('Nueva consulta — diseño web (mock 14)', () => {
-  for (const { width, titleX, panelW, nameW, freqX, freqW, sinceInRow } of [
-    // With room (the card is 720px or wider) "Desde" is a fourth column and the fields are a bit shorter than the
-    // mock's row of three (408/204/204); at 1024 px with the sidebar the card is narrower and the row is the mock's.
-    { width: 1440, titleX: 412, panelW: 896, nameW: 320, freqX: 772, freqW: 160, sinceInRow: true },
-    { width: 1280, titleX: 332, panelW: 896, nameW: 320, freqX: 692, freqW: 160, sinceInRow: true },
-    { width: 1024, titleX: 328, panelW: 648, nameW: 284, freqX: 652, freqW: 142, sinceInRow: false },
+  // Frequency and duration hold a couple of digits: a fixed 112 px (7rem) each, and the name takes the rest.
+  // With room (the card is 720px or wider) "Primera toma" is a fourth column of 160 px; at 1024 px with the sidebar
+  // the card is narrower and it goes under "Frecuencia" and "Duración" (both columns wide).
+  const freqW = 112
+  for (const { width, titleX, panelW, nameW, freqX, sinceW, sinceInRow } of [
+    { width: 1440, titleX: 412, panelW: 896, nameW: 416, freqX: 868, sinceW: 160, sinceInRow: true },
+    { width: 1280, titleX: 332, panelW: 896, nameW: 416, freqX: 788, sinceW: 160, sinceInRow: true },
+    { width: 1024, titleX: 328, panelW: 648, nameW: 344, freqX: 712, sinceW: 240, sinceInRow: false },
   ]) {
-    test(`a ${width} px: barra lateral, título, panel del OCR y la fila del medicamento (Desde ${sinceInRow ? 'en el mismo renglón' : 'debajo, como el mock de tres campos'})`, async ({ page, browserName }) => {
+    test(`a ${width} px: barra lateral, título, panel del OCR y la fila del medicamento (Primera toma ${sinceInRow ? 'en el mismo renglón' : 'debajo de frecuencia y duración'})`, async ({ page, browserName }) => {
       await open(page, width)
 
       expect(await box(page.locator('aside').first())).toMatchObject({ x: 0, w: 280 })
@@ -53,12 +55,12 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
       expect(await box(page.getByText('Frecuencia', { exact: true }))).toMatchObject({ x: freqX, w: freqW })
       expect(await box(page.getByText('Duración', { exact: true }))).toMatchObject({ w: freqW })
       const freq = await box(page.getByText('Frecuencia', { exact: true }))
-      const since = await box(page.getByText('Desde', { exact: true }))
+      const since = await box(page.getByText('Primera toma', { exact: true }))
       if (sinceInRow) {
         expect(since.y).toBe(freq.y)
-        expect(since).toMatchObject({ x: freqX + 2 * (freqW + 16), w: freqW })
+        expect(since).toMatchObject({ x: freqX + 2 * (freqW + 16), w: sinceW })
       } else {
-        expect(since.x).toBe(freq.x)
+        expect(since).toMatchObject({ x: freqX, w: sinceW })
         expect(since.y).toBeGreaterThan(freq.y)
       }
       if (browserName === 'chromium') {
@@ -101,19 +103,24 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     await expect(page.getByText('Listo')).toBeVisible({ timeout: 60_000 })
   })
 
-  test('el grupo "Leído de tu receta" lleva Doctor, Fecha y Síntomas; los campos de la fila del medicamento, sus placeholders', async ({ page }) => {
+  test('el grupo "Leído de tu receta" lleva Doctor y Fecha (síntomas y notas van aparte); los campos de la fila del medicamento, sus placeholders', async ({ page }) => {
     await open(page, 1280)
 
     const group = page.getByRole('group', { name: 'Leído de tu receta · revisa y confirma' })
     await expect(group.getByLabel('Doctor')).toHaveClass(/border-bright/)
     await expect(group.getByLabel('Fecha')).toHaveClass(/border-bright/)
-    await expect(group.getByLabel('Síntomas')).toHaveAttribute('placeholder', 'Lo que observaste antes de la consulta')
+    await expect(group.getByLabel('Notas previas a la consulta')).toHaveCount(0)
+    await expect(page.getByLabel('Notas previas a la consulta')).toHaveAttribute(
+      'placeholder',
+      'Qué comió antes, cómo se sentía, cómo fue cambiando desde que empezó…',
+    )
+    await expect(page.getByRole('group', { name: '¿Qué síntomas tuvo?' }).getByRole('button')).toHaveCount(23)
     await expect(page.locator('#medications\\.0\\.name')).toHaveAttribute('placeholder', 'Amoxicilina 250 mg')
     await expect(page.locator('#medications\\.0\\.frequencyHours')).toHaveAttribute('placeholder', 'c/8 h')
     await expect(page.locator('#medications\\.0\\.durationDays')).toHaveAttribute('placeholder', '7 días')
-    // "Desde" is not in the mock's row: with room it is a fourth column of the same row.
+    // "Primera toma" is not in the mock's row: with room it is a fourth column of the same row.
     const freq = await box(page.getByText('Frecuencia', { exact: true }))
-    const since = await box(page.getByText('Desde', { exact: true }))
+    const since = await box(page.getByText('Primera toma', { exact: true }))
     expect(since.y).toBe(freq.y)
     expect(since.x).toBeGreaterThan(freq.x)
   })
@@ -156,13 +163,27 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     await page.locator('#medications\\.0\\.frequencyHours').fill('c/8 h')
     await page.locator('#medications\\.0\\.durationDays').fill('7 días')
     await page.locator('#medications\\.0\\.startTime').fill('08:00')
-    await page.getByLabel('Síntomas').fill('Fiebre y tos')
+    await page.getByRole('button', { name: 'Tos' }).click()
+    await page.getByRole('button', { name: 'Fiebre' }).click()
+    await page.getByRole('button', { name: 'Escalofríos' }).click()
+    await page.getByRole('button', { name: 'Escalofríos' }).click() // tapped again: off
+    await expect(page.getByRole('button', { name: 'Fiebre' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('button', { name: 'Escalofríos' })).toHaveAttribute('aria-pressed', 'false')
+    await page.getByLabel('Notas previas a la consulta').fill('Comió poco desde el domingo')
 
     await page.getByRole('button', { name: 'Guardar consulta' }).click()
 
     await expect(page).toHaveURL(/\/consultations\/(?!new)/)
     await expect(page.getByRole('heading', { level: 1, name: 'Dra. Laura Cázares' })).toBeVisible()
-    await expect(page.getByText('Fiebre y tos')).toBeVisible()
+    // specs/012: the marked symptoms as pills in catalog order, then the notes.
+    const symptoms = page.getByRole('main').getByRole('list').filter({ hasText: 'Fiebre' })
+    await expect(symptoms.getByRole('listitem')).toHaveText(['Fiebre', 'Tos'])
+    await expect(page.getByRole('heading', { level: 2, name: 'Notas previas a la consulta' })).toBeVisible()
+    await expect(page.getByText('Comió poco desde el domingo')).toBeVisible()
+
+    // And the child's list sums them up.
+    await page.getByRole('main').getByRole('link', { name: /^← / }).click()
+    await expect(page.getByRole('main').getByRole('link', { name: /Dra. Laura Cázares/ })).toContainText('Fiebre, Tos · 1 medicamento')
   })
 
   test('"← Cancelar" vuelve al hijo, y con algo capturado pide confirmar antes de descartarlo', async ({ page }) => {

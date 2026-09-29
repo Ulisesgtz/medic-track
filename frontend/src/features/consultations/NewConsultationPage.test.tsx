@@ -41,7 +41,7 @@ function renderPage() {
 
 const saved = {
   id: 'c-9', childId: 'k1', doctorName: 'Dra. López', consultDate: '2026-01-15',
-  photoBase64: 'Zm9v', symptoms: '', medications: [],
+  photoBase64: 'Zm9v', notes: '', symptoms: [], medications: [],
 }
 
 function mockApi() {

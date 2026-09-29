@@ -26,8 +26,8 @@ const account = {
 }
 
 const consultations = [
-  { id: 'c2', doctorName: 'Dra. Laura Cázares', consultDate: '2026-09-12', symptoms: 'Fiebre y tos', medicationCount: 2 },
-  { id: 'c0', doctorName: 'Dr. Iván Robles', consultDate: '2024-08-02', symptoms: 'Control de peso', medicationCount: 0 },
+  { id: 'c2', doctorName: 'Dra. Laura Cázares', consultDate: '2026-09-12', notes: 'Fiebre y tos', symptomNames: [], medicationCount: 2 },
+  { id: 'c0', doctorName: 'Dr. Iván Robles', consultDate: '2024-08-02', notes: 'Control de peso', symptomNames: [], medicationCount: 0 },
 ]
 
 const dose = (id: string, hour: number, name: string, taken: boolean, consultationId = 'c2') => ({

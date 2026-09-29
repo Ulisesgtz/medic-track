@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 )
 
@@ -46,11 +47,12 @@ type medicationResponse struct {
 } // @name MedicationResponse
 
 type consultationSummaryResponse struct {
-	ID              string `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
-	DoctorName      string `json:"doctorName" example:"Dra. López"`
-	ConsultDate     string `json:"consultDate" example:"2026-01-15"`
-	Symptoms        string `json:"symptoms" example:"Tos y fiebre leve"`
-	MedicationCount int    `json:"medicationCount" example:"2"`
+	ID              string   `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	DoctorName      string   `json:"doctorName" example:"Dra. López"`
+	ConsultDate     string   `json:"consultDate" example:"2026-01-15"`
+	Notes           string   `json:"notes" example:"Comió mariscos el domingo; la fiebre empezó el lunes"`
+	SymptomNames    []string `json:"symptomNames" example:"Fiebre,Tos"`
+	MedicationCount int      `json:"medicationCount" example:"2"`
 } // @name ConsultationSummaryResponse
 
 type consultationListResponse struct {
@@ -59,13 +61,15 @@ type consultationListResponse struct {
 } // @name ConsultationListResponse
 
 type consultationDetailResponse struct {
-	ID          string               `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
-	ChildID     string               `json:"childId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
-	DoctorName  string               `json:"doctorName" example:"Dra. López"`
-	ConsultDate string               `json:"consultDate" example:"2026-01-15"`
-	PhotoBase64 string               `json:"photoBase64"`
-	Symptoms    string               `json:"symptoms" example:"Tos y fiebre leve"`
-	Medications []medicationResponse `json:"medications"`
+	ID          string `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	ChildID     string `json:"childId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	DoctorName  string `json:"doctorName" example:"Dra. López"`
+	ConsultDate string `json:"consultDate" example:"2026-01-15"`
+	PhotoBase64 string `json:"photoBase64"`
+	Notes       string `json:"notes" example:"Comió mariscos el domingo; la fiebre empezó el lunes"`
+	// Symptoms are the marked symptoms in catalog order, retired ones included.
+	Symptoms    []catalog.SymptomResponse `json:"symptoms"`
+	Medications []medicationResponse      `json:"medications"`
 } // @name ConsultationDetailResponse
 
 // sessionErrorResponseDoc documents the 401/403 bodies every endpoint here can
@@ -105,7 +109,7 @@ type fieldErrorDoc struct {
 // (specs/004-detalle-consulta-hijo/contracts/get-consultations.md).
 //
 //	@Summary		List a child's consultations
-//	@Description	Lists a child's medical consultations (date, doctor, symptoms and medication count), most recent first (FR-001).
+//	@Description	Lists a child's medical consultations (date, doctor, notes, marked symptom names in catalog order and medication count), most recent first (FR-001).
 //	@Tags			consultations
 //	@Produce		json
 //	@Param			childId	path		string	true	"Child UUID"
@@ -138,7 +142,8 @@ func (h *Handler) ListConsultations(w http.ResponseWriter, r *http.Request) {
 			ID:              c.ID.String(),
 			DoctorName:      c.DoctorName,
 			ConsultDate:     c.ConsultDate.Format("2006-01-02"),
-			Symptoms:        c.Symptoms,
+			Notes:           c.Notes,
+			SymptomNames:    c.SymptomNames, // [] when none: the query COALESCEs to an empty array,
 			MedicationCount: c.MedicationCount,
 		})
 	}
@@ -253,11 +258,16 @@ type createMedicationRequest struct {
 }
 
 type createConsultationRequest struct {
-	DoctorName  string                    `json:"doctorName" example:"Dra. López"`
-	ConsultDate string                    `json:"consultDate" example:"2026-01-15"`
-	PhotoBase64 string                    `json:"photoBase64"`
-	Symptoms    string                    `json:"symptoms" example:"Tos y fiebre leve"`
-	Medications []createMedicationRequest `json:"medications"`
+	DoctorName  string `json:"doctorName" example:"Dra. López"`
+	ConsultDate string `json:"consultDate" example:"2026-01-15"`
+	PhotoBase64 string `json:"photoBase64"`
+	Notes       string `json:"notes" example:"Comió mariscos el domingo; la fiebre empezó el lunes"`
+	// SymptomCodes are catalog codes (GET /catalog/symptoms); optional, duplicates ignored.
+	SymptomCodes []string                  `json:"symptomCodes" example:"fever,cough"`
+	Medications  []createMedicationRequest `json:"medications"`
+	// LegacySymptoms is the free text's name before specs/012 ("symptoms": "..."), still accepted as the
+	// notes so a tab on an older bundle doesn't lose what the parent wrote while both versions coexist.
+	LegacySymptoms json.RawMessage `json:"symptoms,omitempty" swaggerignore:"true"`
 	// UTCOffsetMinutes is the parent's UTC offset, so "startTime" is read in
 	// their own time zone. Optional: 0 (default) means UTC.
 	UTCOffsetMinutes int `json:"utcOffsetMinutes" example:"-360"`
@@ -267,9 +277,10 @@ type createConsultationRequest struct {
 // (specs/004-detalle-consulta-hijo/contracts/post-consultations.md).
 //
 //	@Summary		Register a new medical consultation
-//	@Description	Registers a consultation with its prescription photo, medications and symptoms
+//	@Description	Registers a consultation with its prescription photo, medications, notes and marked symptoms
 //	@Description	(FR-003, FR-004). At least one medication is required (FR-015), and each one needs
 //	@Description	its startTime ("HH:MM"): all of its doses are generated at once from it (research.md).
+//	@Description	Every symptomCodes entry must be an active catalog symptom, or 400 with details[].message "symptom_not_available" (specs/012).
 //	@Tags			consultations
 //	@Accept			json
 //	@Produce		json
@@ -324,10 +335,11 @@ func (h *Handler) CreateConsultation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	input := CreateConsultationInput{
-		DoctorName:  req.DoctorName,
-		ConsultDate: consultDate,
-		Photo:       photo,
-		Symptoms:    req.Symptoms,
+		DoctorName:   req.DoctorName,
+		ConsultDate:  consultDate,
+		Photo:        photo,
+		Notes:        notesOf(req),
+		SymptomCodes: req.SymptomCodes,
 
 		UTCOffsetMinutes: req.UTCOffsetMinutes,
 	}
@@ -349,11 +361,29 @@ func (h *Handler) CreateConsultation(w http.ResponseWriter, r *http.Request) {
 	h.responder.WriteJSON(r.Context(), w, http.StatusCreated, toConsultationDetailResponse(c), nil)
 }
 
+// notesOf returns the request's notes, or — from a client older than specs/012 — its "symptoms" text.
+// Anything else under "symptoms" (the new list shape is "symptomCodes") is ignored.
+func notesOf(req createConsultationRequest) string {
+	if req.Notes != "" || len(req.LegacySymptoms) == 0 {
+		return req.Notes
+	}
+	var legacy string
+	if err := json.Unmarshal(req.LegacySymptoms, &legacy); err != nil {
+		return ""
+	}
+	return legacy
+}
+
 func (h *Handler) writeCreateConsultationError(ctx context.Context, w http.ResponseWriter, err error) {
 	var validationErrs ValidationErrors
 	switch {
 	case errors.As(err, &validationErrs):
 		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationErrorBody(validationErrs, "One or more fields are invalid"), nil)
+	case errors.Is(err, ErrSymptomNotAvailable):
+		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationErrorBody(ValidationErrors{{
+			Field:   "symptomCodes",
+			Message: "symptom_not_available",
+		}}, "One or more fields are invalid"), nil)
 	case errors.Is(err, ErrChildNotFound):
 		h.responder.WriteJSON(ctx, w, http.StatusNotFound, childNotFoundBody(), nil)
 	default:
@@ -366,7 +396,7 @@ func (h *Handler) writeCreateConsultationError(ctx context.Context, w http.Respo
 //
 //	@Summary		Get a consultation's full detail
 //	@Description	Retrieves the prescription photo, doctor, date, medications (with their doses,
-//	@Description	if any), and symptoms of a consultation (FR-013).
+//	@Description	if any), notes and marked symptoms (catalog order, retired ones included) of a consultation (FR-013, specs/012).
 //	@Tags			consultations
 //	@Produce		json
 //	@Param			consultationId	path		string	true	"Consultation UUID"
@@ -505,13 +535,18 @@ func toConsultationDetailResponse(c *Consultation) consultationDetailResponse {
 			Doses:          doses,
 		})
 	}
+	symptoms := make([]catalog.SymptomResponse, 0, len(c.Symptoms))
+	for _, sym := range c.Symptoms {
+		symptoms = append(symptoms, catalog.NewSymptomResponse(sym))
+	}
 	return consultationDetailResponse{
 		ID:          c.ID.String(),
 		ChildID:     c.ChildID.String(),
 		DoctorName:  c.DoctorName,
 		ConsultDate: c.ConsultDate.Format("2006-01-02"),
 		PhotoBase64: base64.StdEncoding.EncodeToString(c.Photo),
-		Symptoms:    c.Symptoms,
+		Notes:       c.Notes,
+		Symptoms:    symptoms,
 		Medications: medications,
 	}
 }

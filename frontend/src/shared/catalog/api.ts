@@ -10,6 +10,22 @@ export interface CatalogState {
   name: string
 }
 
+/** A symptom a parent can mark on a consultation (specs/012): what they observed, never a diagnosis. */
+export interface Symptom {
+  code: string
+  name: string
+  category: string
+}
+
+/** The active symptoms, in catalog order (specs/012 contracts/symptoms-api.md §1). */
+export async function fetchSymptoms(): Promise<Symptom[]> {
+  const res = await fetch(`${API_BASE_URL}/catalog/symptoms`)
+  if (!res.ok) {
+    throw new Error(`Failed to fetch symptoms: ${res.status}`)
+  }
+  return res.json()
+}
+
 export async function fetchCountries(): Promise<CatalogCountry[]> {
   const res = await fetch(`${API_BASE_URL}/catalog/countries`)
   if (!res.ok) {

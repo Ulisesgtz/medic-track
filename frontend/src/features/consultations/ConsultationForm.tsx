@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@clerk/react'
 import { Link } from 'react-router-dom'
-import { useForm, useFieldArray, type Path } from 'react-hook-form'
-import { useMutation } from '@tanstack/react-query'
+import { Controller, useForm, useFieldArray, type Path } from 'react-hook-form'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { fetchSymptoms } from '../../shared/catalog/api'
+import { SYMPTOMS_QUERY_KEY } from '../../shared/catalog/useCatalog'
 import { MedicationFieldset } from './MedicationFieldset'
 import { parsePositiveInt } from './parsePositiveInt'
 import { useOcrSuggestion } from './useOcrSuggestion'
 import { createConsultation, ConsultationApiError, type CreateConsultationPayload } from './api'
 import { missingFieldsText } from './missingFields'
+import { SymptomPicker } from './SymptomPicker'
 
 export interface MedicationFormValues {
   name: string
@@ -19,7 +22,10 @@ export interface MedicationFormValues {
 export interface ConsultationFormValues {
   doctorName: string
   consultDate: string
-  symptoms: string
+  /** "Notas previas a la consulta" (specs/012). */
+  notes: string
+  /** Codes of the symptoms the parent tapped (specs/012). */
+  symptomCodes: string[]
   medications: MedicationFormValues[]
 }
 
@@ -160,7 +166,7 @@ interface ConsultationFormProps {
 const MEDICATION_STAGGER_MS = 180
 
 // Mocks 04/14: every field of the "Leído de tu receta" group carries the bright
-// border ("proposed by the OCR, confirm it"); the symptoms box is a plain field.
+// border ("proposed by the OCR, confirm it"); the notes box is a plain field.
 const ocrField =
   'min-h-11 w-full min-w-0 rounded-xl border-2 border-bright bg-surface px-4 py-3 text-base text-ink focus:border-ink focus:outline-none'
 const plainField =
@@ -171,8 +177,8 @@ const errorText = 'text-[13px] font-semibold text-red-700'
 /**
  * The "Nueva consulta" screen (FR-003, FR-004), built from mockups 04 (phone)
  * and 14 (desktop): "← Cancelar", the dark "Leyendo receta" panel, the
- * "Leído de tu receta · revisa y confirma" group (doctor, date, symptoms), the
- * medication cards, "+ Otro medicamento" and "Guardar consulta".
+ * "Leído de tu receta · revisa y confirma" group (doctor, date), the symptoms
+ * and "Notas previas a la consulta" (specs/012), the medication cards, "+ Otro medicamento" and "Guardar consulta".
  *
  * The mocks assume the photo was already taken; the form still needs a way to
  * choose it, so the OCR panel shows a "Seleccionar archivo" button until a
@@ -209,7 +215,8 @@ export function ConsultationForm({
     defaultValues: {
       doctorName: '',
       consultDate: '',
-      symptoms: '',
+      notes: '',
+      symptomCodes: [],
       medications: [emptyMedication],
     },
   })
@@ -222,6 +229,7 @@ export function ConsultationForm({
   }, [dirty, onDirtyChange])
 
   const { getToken } = useAuth()
+  const queryClient = useQueryClient()
   const mutation = useMutation({
     mutationFn: async ({ values, photo }: { values: ConsultationFormValues; photo: File }) => {
       const photoBase64 = await fileToBase64(photo)
@@ -229,7 +237,8 @@ export function ConsultationForm({
         doctorName: values.doctorName,
         consultDate: values.consultDate,
         photoBase64,
-        symptoms: values.symptoms,
+        notes: values.notes,
+        symptomCodes: values.symptomCodes,
         medications: values.medications.map((m) => ({
           name: m.name,
           frequencyHours: parsePositiveInt(m.frequencyHours) ?? 0,
@@ -242,6 +251,18 @@ export function ConsultationForm({
       return createConsultation(childId, payload, await getToken())
     },
     onSuccess: (consultation) => onSuccess(consultation.id),
+    onError: async (error) => {
+      if (!(error instanceof ConsultationApiError) || error.kind !== 'symptom_not_available') return
+      // A chosen symptom was retired meanwhile: reload the catalog and drop what it no longer offers,
+      // keeping everything else the parent entered.
+      try {
+        const fresh = await queryClient.fetchQuery({ queryKey: SYMPTOMS_QUERY_KEY, queryFn: fetchSymptoms, staleTime: 0 })
+        const offered = new Set(fresh.map((symptom) => symptom.code))
+        setValue('symptomCodes', getValues('symptomCodes').filter((code) => offered.has(code)))
+      } catch {
+        // The picker shows its own notice when the catalog can't load.
+      }
+    },
   })
 
   async function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -455,27 +476,41 @@ export function ConsultationForm({
 
   const missing = submitCount > 0 && (Object.keys(errors).length > 0 || (photoMissing && !photoFile))
   const statusText = mutation.isError
-    ? mutation.error instanceof ConsultationApiError
+    ? mutation.error instanceof ConsultationApiError && mutation.error.kind === 'symptom_not_available'
+      ? 'Uno de los síntomas que elegiste ya no está disponible. Revisa la lista e intenta de nuevo.'
+      : mutation.error instanceof ConsultationApiError
       ? mutation.error.message
       : 'Ocurrió un error al guardar la consulta. Intenta de nuevo.'
     : missing
       ? missingFieldsText(errors, photoMissing && !photoFile, fields.length)
       : ''
 
-  // Not in the phone mock 04 (the web mock 14 has it inside the OCR group): kept because the model
-  // stores it, as its own field below the group on the phone so the group stays as the mock.
-  const symptomsField = (
-    <div className="flex min-w-0 flex-col gap-2">
-      <label htmlFor="symptoms" className={label}>
-        Síntomas
-      </label>
-      <textarea
-        id="symptoms"
-        rows={3}
-        placeholder="Lo que observaste antes de la consulta"
-        className={plainField}
-        {...register('symptoms')}
+  // specs/012: what the parent observed, in its own section after the prescription group in both designs —
+  // the prescription never carries symptoms and the OCR never fills them (FR-017). The web mock 14 had the
+  // free-text box inside the OCR group (deviation noted in specs/007).
+  const symptomsSection = (
+    <div
+      className={`flex min-w-0 flex-col rounded-3xl border-[1.5px] border-slate-200 bg-surface ${
+        desktop ? 'gap-5 p-6' : 'gap-4 p-5'
+      }`}
+    >
+      <Controller
+        control={control}
+        name="symptomCodes"
+        render={({ field }) => <SymptomPicker value={field.value} onChange={field.onChange} variant={variant} />}
       />
+      <div className="flex min-w-0 flex-col gap-2">
+        <label htmlFor="notes" className={label}>
+          Notas previas a la consulta
+        </label>
+        <textarea
+          id="notes"
+          rows={3}
+          placeholder="Qué comió antes, cómo se sentía, cómo fue cambiando desde que empezó…"
+          className={plainField}
+          {...register('notes')}
+        />
+      </div>
     </div>
   )
 
@@ -510,7 +545,6 @@ export function ConsultationForm({
           {errors.consultDate && <p className={errorText}>La fecha es obligatoria</p>}
         </div>
       </div>
-      {desktop && symptomsField}
     </fieldset>
   )
 
@@ -582,6 +616,7 @@ export function ConsultationForm({
         {ocrPanel}
         <form onSubmit={onSubmit} noValidate className="flex min-w-0 flex-col gap-5">
           {ocrGroup}
+          {symptomsSection}
           {medications}
           <div className="flex flex-wrap items-center justify-between gap-4">
             {addButton}
@@ -605,7 +640,7 @@ export function ConsultationForm({
       </header>
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5 px-6 pt-6">
         {ocrGroup}
-        {symptomsField}
+        {symptomsSection}
         {medications}
         {addButton}
         {saveButton}

@@ -1,9 +1,16 @@
-// Mirrors contracts/get-consultations.md's response shape.
+import type { Symptom } from '../../shared/catalog/api'
+
+export type { Symptom }
+
+// Mirrors contracts/get-consultations.md's response shape (+ specs/012: notes, symptomNames).
 export interface ConsultationSummary {
   id: string
   doctorName: string
   consultDate: string
-  symptoms: string
+  /** "Notas previas a la consulta" — the old free-text symptoms of earlier consultations. */
+  notes: string
+  /** The marked symptoms' names, in catalog order ([] when none). */
+  symptomNames: string[]
   medicationCount: number
 }
 
@@ -29,7 +36,9 @@ export interface ConsultationDetail {
   doctorName: string
   consultDate: string
   photoBase64: string
-  symptoms: string
+  notes: string
+  /** The marked symptoms in catalog order, retired ones included ([] when none). */
+  symptoms: Symptom[]
   medications: Medication[]
 }
 

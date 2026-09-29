@@ -176,7 +176,7 @@ export async function seedChild(
       doctorName: 'Dra. Laura Cázares',
       consultDate: today,
       photoBase64: PNG_BASE64,
-      symptoms: 'Fiebre y tos',
+      notes: 'Fiebre y tos',
       utcOffsetMinutes: -now.getTimezoneOffset() || 0,
       medications: [{ name: 'Amoxicilina', frequencyHours: 8, durationDays, startTime: '00:00' }],
     })

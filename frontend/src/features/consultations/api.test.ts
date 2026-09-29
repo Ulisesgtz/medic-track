@@ -43,7 +43,7 @@ describe('createConsultation', () => {
   })
 
   it('returns the created consultation on success', async () => {
-    const created = { id: 'c1', childId: 'child-1', doctorName: 'Dra. López', consultDate: '2026-01-15', photoBase64: 'Zm9v', symptoms: '', medications: [] }
+    const created = { id: 'c1', childId: 'child-1', doctorName: 'Dra. López', consultDate: '2026-01-15', photoBase64: 'Zm9v', notes: '', symptoms: [], medications: [] }
     vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => created } as Response)
 
     expect(await createConsultation('child-1', { doctorName: 'Dra. López', consultDate: '2026-01-15', photoBase64: 'Zm9v', utcOffsetMinutes: 0, medications: [medicationPayload] }, 'tok')).toEqual(created)
@@ -64,6 +64,22 @@ describe('createConsultation', () => {
     expect(err.details).toEqual([{ field: 'doctorName', message: 'required' }])
   })
 
+  it('sends the notes and the marked symptoms (specs/012)', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => ({}) } as Response)
+
+    await createConsultation('child-1', { doctorName: 'X', consultDate: '2026-01-15', photoBase64: 'x', utcOffsetMinutes: 0, notes: 'Comió mariscos', symptomCodes: ['fever'], medications: [medicationPayload] }, 'tok')
+
+    const body = JSON.parse(vi.mocked(fetch).mock.calls[0][1]!.body as string)
+    expect(body).toMatchObject({ notes: 'Comió mariscos', symptomCodes: ['fever'] })
+  })
+
+  it('throws symptom_not_available when a chosen symptom was retired (specs/012 FR-010)', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({ message: 'One or more fields are invalid', details: [{ field: 'symptomCodes', message: 'symptom_not_available' }] }) } as Response)
+
+    const err = await createConsultation('child-1', { doctorName: 'X', consultDate: '2026-01-15', photoBase64: 'x', utcOffsetMinutes: 0, symptomCodes: ['chills'], medications: [medicationPayload] }, 'tok').catch((e) => e)
+    expect(err.kind).toBe('symptom_not_available')
+  })
+
   it('throws unknown for an unexpected status code', async () => {
     vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) } as Response)
 
@@ -81,7 +97,7 @@ describe('fetchConsultationDetail', () => {
   })
 
   it('returns the detail on success', async () => {
-    const detail = { id: 'c1', childId: 'child-1', doctorName: 'X', consultDate: '2026-01-15', photoBase64: 'x', symptoms: '', medications: [] }
+    const detail = { id: 'c1', childId: 'child-1', doctorName: 'X', consultDate: '2026-01-15', photoBase64: 'x', notes: '', symptoms: [], medications: [] }
     vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => detail } as Response)
 
     expect(await fetchConsultationDetail('c1', 'tok')).toEqual(detail)

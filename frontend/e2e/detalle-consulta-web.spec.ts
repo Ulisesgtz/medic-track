@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test'
 import { test, expect, apiPost, seedChild } from './helpers'
 
 // Consultation detail, web design (mock 13): the children sidebar, a header row with the
-// back link, the date, the doctor and "Nueva consulta", medications and symptoms on the
+// back link, the date, the doctor and "Nueva consulta", medications, symptoms and notes on the
 // left, the photo and the active treatment on the right. The positions below were measured
 // on the mock at each width (Chromium; other engines draw fonts with other metrics, so
 // only positions and widths are asserted everywhere). Requires the backend running locally.
@@ -68,8 +68,8 @@ test.describe('Detalle de consulta — diseño web (mock 13)', () => {
     await expect(page.getByRole('link', { name: 'Nueva consulta' })).toBeVisible()
     await expect(page.getByRole('heading', { level: 2, name: 'Medicamentos' })).toBeVisible()
     await expect(page.getByRole('heading', { level: 3, name: 'Amoxicilina' })).toBeVisible()
-    await expect(page.getByText('Cada 8 horas · 7 días · desde 00:00')).toBeVisible()
-    await expect(page.getByRole('heading', { level: 2, name: 'Síntomas registrados' })).toBeVisible()
+    await expect(page.getByText('Cada 8 horas · 7 días · primera toma 00:00')).toBeVisible()
+    await expect(page.getByRole('heading', { level: 2, name: 'Notas previas a la consulta' })).toBeVisible()
     await expect(page.getByText('Fiebre y tos', { exact: true })).toBeVisible()
     await expect(page.getByRole('heading', { level: 2, name: 'Foto de la receta' })).toBeVisible()
     await expect(page.getByText('El texto se leyó en tu equipo; la foto se guarda solo en tu cuenta.')).toBeVisible()
@@ -128,7 +128,7 @@ test.describe('Detalle de consulta — diseño web (mock 13)', () => {
       doctorName: 'Dr. Iván Robles',
       consultDate: '2026-01-10',
       photoBase64: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-      symptoms: 'Control',
+      notes: 'Control',
       utcOffsetMinutes: 0,
       medications: [{ name: 'Vitamina D', frequencyHours: 24, durationDays: 2, startTime: '08:00' }],
     })

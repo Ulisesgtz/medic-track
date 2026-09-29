@@ -89,7 +89,7 @@ func TestHandler_CreateConsultation_Success(t *testing.T) {
 		"doctorName":  "Dra. López",
 		"consultDate": "2026-01-15",
 		"photoBase64": photo,
-		"symptoms":    "Tos",
+		"notes":       "Tos",
 		"medications": []map[string]any{validMedicationPayload()},
 	})
 
