@@ -353,14 +353,15 @@ describe('ConsultationForm', () => {
       )
     })
 
-    it('phone: every row spans the card — frequency and duration half each, "Primera toma" with its label above', () => {
+    it('phone: frequency and duration half the row each; "Primera toma" (label above) as wide as the frequency, and never wider than the card on iOS', () => {
       renderForm('phone')
 
       expect(byId('medications.0.frequencyHours').parentElement).toHaveClass('flex-1')
       expect(byId('medications.0.durationDays').parentElement).toHaveClass('flex-1')
       const time = screen.getByLabelText('Primera toma')
       expect(time).toBe(byId('medications.0.startTime'))
-      expect(time).toHaveClass('w-full')
+      expect(time).toHaveClass('w-full', 'appearance-none')
+      expect(time.parentElement).toHaveClass('w-[calc(50%-5px)]')
       expect(time.previousElementSibling).toHaveTextContent('Primera toma')
     })
 

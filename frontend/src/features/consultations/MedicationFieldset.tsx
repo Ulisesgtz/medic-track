@@ -35,9 +35,9 @@ interface MedicationFieldsetProps {
  * or active treatment exist). Frequency and duration accept free text; the
  * first number in them is what's sent. On the web they hold a couple of digits
  * ("c/12 h", "14 días"), so they have a fixed narrow width and the name takes
- * the rest; on the phone every row spans the card (frequency and duration half
- * each, as the mock 04, and "Primera toma" with its label above), so nothing is
- * left hanging.
+ * the rest; on the phone frequency and duration take half the row each, as the
+ * mock 04, and "Primera toma" (label above) is as wide as the frequency, right
+ * under it.
  */
 export function MedicationFieldset({
   index,
@@ -153,7 +153,8 @@ export function MedicationFieldset({
       </div>
 
       {!desktop && (
-        <div className="flex min-w-0 flex-col gap-2">
+        // Half the row minus half the 10px gap: exactly the width of the frequency field above.
+        <div className="flex w-[calc(50%-5px)] min-w-0 flex-col gap-2">
           <label htmlFor={id('startTime')} className={label}>
             Primera toma
           </label>
@@ -161,7 +162,9 @@ export function MedicationFieldset({
             id={id('startTime')}
             type="time"
             size={1}
-            className={`${plain} text-[15px]`}
+            // iOS Safari draws time inputs with their own minimum width and ignores the box's: without
+            // appearance-none the field ran past the card's edge on the iPhone.
+            className={`${plain} appearance-none text-[15px] [&::-webkit-date-and-time-value]:text-left`}
             {...register(`medications.${index}.startTime`, { required: true })}
           />
           {medErrors?.startTime && <p className={error}>{START_TIME_MESSAGE}</p>}
