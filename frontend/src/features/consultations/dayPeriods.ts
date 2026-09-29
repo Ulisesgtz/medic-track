@@ -3,7 +3,10 @@
 
 export type DayPeriod = 'morning' | 'afternoon' | 'night'
 
-/** The one place the ranges live (minutes since local midnight, start inclusive). Night wraps past midnight. */
+/**
+ * The one place the ranges live: each moment starts at `from` (minutes since local midnight) and lasts until the next
+ * one starts. The last one (Noche) wraps past midnight and runs until the first one (Mañana) starts again.
+ */
 export const PERIODS: { key: DayPeriod; label: string; from: number }[] = [
   { key: 'morning', label: 'Mañana', from: 5 * 60 },
   { key: 'afternoon', label: 'Tarde', from: 12 * 60 },
@@ -15,11 +18,12 @@ const minutesOfDay = (iso: string) => {
   return d.getHours() * 60 + d.getMinutes()
 }
 
-/** Mañana 05:00–11:59, Tarde 12:00–18:59, Noche 19:00–04:59. */
+/** Mañana 05:00–11:59, Tarde 12:00–18:59, Noche 19:00–04:59 (read from PERIODS). */
 export function periodOf(iso: string): DayPeriod {
   const minutes = minutesOfDay(iso)
-  if (minutes >= 19 * 60 || minutes < 5 * 60) return 'night'
-  return minutes >= 12 * 60 ? 'afternoon' : 'morning'
+  // The latest moment that has already started; before the first one of the day starts it is still last night.
+  const started = [...PERIODS].reverse().find((period) => minutes >= period.from)
+  return (started ?? PERIODS[PERIODS.length - 1]).key
 }
 
 interface HasTime {

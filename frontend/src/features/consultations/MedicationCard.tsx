@@ -32,7 +32,7 @@ function DoseChip({ consultationId, dose }: { consultationId: string; dose: Dose
       aria-describedby={unregistered ? stateId : undefined}
       disabled={mutation.isPending}
       onClick={() => mutation.mutate(!dose.taken)}
-      className={`flex min-h-11 min-w-[76px] flex-1 cursor-pointer flex-col items-center justify-center rounded-xl text-sm font-extrabold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+      className={`flex min-h-11 min-w-[76px] max-w-40 flex-1 cursor-pointer flex-col items-center justify-center rounded-xl text-sm font-extrabold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
         unregistered ? 'py-1.5 leading-tight' : 'py-3'
       } ${DOSE_CHIP_STYLE[status]}`}
     >
@@ -98,7 +98,7 @@ export function MedicationCard({ consultationId, medication, variant }: Medicati
 
       {/* specs/015: the day's doses by moment of the day (Mañana, Tarde, Noche); empty moments don't show. */}
       {groupByPeriod(chips).map((group) => (
-        <div key={group.key} role="group" aria-label={group.label} className="mt-4">
+        <div key={group.key} role="group" aria-label={`${group.label}, ${medication.name}`} className="mt-4">
           <p aria-hidden="true" className="text-xs font-extrabold tracking-[0.1em] text-ink-soft uppercase">
             {group.label}
           </p>

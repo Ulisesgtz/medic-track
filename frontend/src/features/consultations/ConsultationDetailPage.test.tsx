@@ -167,11 +167,11 @@ describe('ConsultationDetailPage', () => {
       )
       renderPage()
 
-      const morning = await screen.findByRole('group', { name: 'Mañana' })
+      const morning = await screen.findByRole('group', { name: 'Mañana, Amoxicilina' })
       expect(within(morning).getByRole('button', { name: 'Toma de 08:00' })).toBeInTheDocument()
-      expect(within(screen.getByRole('group', { name: 'Tarde' })).getByRole('button', { name: 'Toma de 16:00' })).toBeInTheDocument()
-      expect(within(screen.getByRole('group', { name: 'Noche' })).getByRole('button', { name: 'Toma de 00:00' })).toBeInTheDocument()
-      expect(screen.getAllByRole('group').map((g) => g.getAttribute('aria-label'))).toEqual(['Mañana', 'Tarde', 'Noche'])
+      expect(within(screen.getByRole('group', { name: 'Tarde, Amoxicilina' })).getByRole('button', { name: 'Toma de 16:00' })).toBeInTheDocument()
+      expect(within(screen.getByRole('group', { name: 'Noche, Amoxicilina' })).getByRole('button', { name: 'Toma de 00:00' })).toBeInTheDocument()
+      expect(screen.getAllByRole('group').map((g) => g.getAttribute('aria-label'))).toEqual(['Mañana, Amoxicilina', 'Tarde, Amoxicilina', 'Noche, Amoxicilina'])
 
       await user.click(within(morning).getByRole('button', { name: 'Toma de 08:00' }))
       await waitFor(() => expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === 'PATCH')).toBe(true))
@@ -188,9 +188,9 @@ describe('ConsultationDetailPage', () => {
       )
       renderPage()
 
-      await screen.findByRole('group', { name: 'Mañana' })
-      expect(screen.queryByRole('group', { name: 'Tarde' })).not.toBeInTheDocument()
-      expect(screen.queryByRole('group', { name: 'Noche' })).not.toBeInTheDocument()
+      await screen.findByRole('group', { name: 'Mañana, Amoxicilina' })
+      expect(screen.queryByRole('group', { name: 'Tarde, Amoxicilina' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('group', { name: 'Noche, Amoxicilina' })).not.toBeInTheDocument()
     })
 
     it('shows the medication progress above its doses and updates it when a dose is marked (specs/014)', async () => {
