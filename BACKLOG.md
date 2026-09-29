@@ -23,47 +23,16 @@ dejó pendientes (2026-09-21). No se construye nada de esto hasta que se respond
 
 ## Próximo a trabajar (decidido 2026-09-28)
 
-El usuario va a empezar con estos. Propuesta de agrupación en specs: **A** (síntomas y notas, independiente) y **B**
+El usuario va a empezar con estos. Propuesta de agrupación en specs: **A** (síntomas y notas, independiente — hecho) y **B**
 (seguimiento del tratamiento: B1–B6, que comparten el estado de cada toma y la pantalla de la consulta). Ninguno tiene
 mock todavía: cada pantalla necesita su diseño móvil y web antes de construirse (regla de `CLAUDE.md`). Todo respeta el
 Principio I: la app registra lo que el padre hace y lo que el médico indicó; nunca sugiere, diagnostica ni decide dosis.
 
-### A. Síntomas seleccionables y "Notas previas a la consulta" (Nueva consulta)
+### A. Síntomas seleccionables y "Notas previas a la consulta" — hecho
 
-- En "Nueva consulta", los síntomas se eligen tocando **chips** (botones tipo pastilla que se prenden/apagan, como los
-  filtros de la imagen de referencia del 2026-09-28), agrupados por categoría — no un drop-down. Varios a la vez;
-  cada chip es un botón con `aria-pressed` y área táctil de 44 px.
-- El cuadro de texto "Síntomas" pasa a llamarse **"Notas previas a la consulta"**, con el ejemplo
-  *"Qué comió antes, cómo se sentía, cómo fue cambiando desde que empezó…"*. Sigue siendo opcional.
-- Los chips describen **lo que el padre ve**, nunca un diagnóstico (se dice "dolor de oído", no "otitis"). Sin
-  sugerencias de gravedad ni "acude al médico si…".
-- Catálogo inicial (investigación 2026-09-28: en consulta pediátrica ~38 % de los motivos son respiratorios y ~10 %
-  digestivos — Secretaría de Salud/IMSS; tos ~61 % y fiebre ~43 % de las visitas en temporada de influenza — PMC4012523):
-
-  | Categoría | Síntomas (chips) |
-  |---|---|
-  | General | Fiebre, Cansancio o decaimiento, Irritabilidad o llanto, Poco apetito, Dolor de cabeza, Escalofríos |
-  | Respiratorio | Tos, Mocos o nariz tapada, Estornudos, Dolor de garganta, Dificultad para respirar, Silbido al respirar |
-  | Digestivo | Vómito, Diarrea, Dolor de estómago, Náuseas, Estreñimiento |
-  | Oídos y ojos | Dolor de oído, Ojos rojos o con lagañas |
-  | Piel | Salpullido o ronchas, Comezón |
-  | Sueño y ánimo | Duerme mal, Duerme más de lo normal |
-
-  Dos tablas en el backend (no en el frontend, para poder agregar síntomas sin publicar la app):
-  - **`symptoms`** — el catálogo, como `countries`: `code` (texto estable, PK, p. ej. `fever`), `name` (español, lo
-    que se muestra), `category`, `sort_order`, `active` (un síntoma retirado deja de ofrecerse pero las consultas que
-    lo usaron lo siguen mostrando). Sembrado por migración con la tabla de arriba.
-  - **`consultation_symptoms`** — la relación **usuario / hijo / síntoma** de cada consulta: `consultation_id`,
-    `child_id`, `account_id`, `symptom_code`, `created_at`; PK (`consultation_id`, `symptom_code`). `child_id` y
-    `account_id` se guardan también para consultar directo "qué síntomas tuvo este hijo" o "esta cuenta" sin pasar por
-    consultas, y la base garantiza que coincidan con la consulta: llaves foráneas compuestas a `consultations (id,
-    child_id)` y `children (id, account_id)` (requiere `UNIQUE (id, child_id)` y `UNIQUE (id, account_id)` en esas
-    tablas), más índices por `child_id` y por `account_id`. Se escribe al crear la consulta y es inmutable como ella.
-  El texto que hoy se guarda en `consultations.symptoms` pasa a ser las notas (migración que renombra la columna a
-  `notes`; las consultas viejas conservan su texto como nota). El listado de consultas y el detalle muestran los chips
-  elegidos.
-- Pendiente de decidir: si se permite "Otro" con texto libre (o si para eso ya están las notas — recomendación: las
-  notas).
+Entregado en `specs/012-sintomas-notas-consulta/` (PR #10, mergeado a `develop` el 2026-09-29), con el catálogo de 23
+síntomas, la relación usuario / hijo / síntoma y el cambio de "Desde" a "Primera toma". Pendiente de decidir, sin
+cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
 
 ### B. Seguimiento del tratamiento (detalle de la consulta)
 
@@ -97,6 +66,23 @@ Principio I: la app registra lo que el padre hace y lo que el médico indicó; n
 - Depende de: B2 define el estado de las tomas que usan B3, B4, B5 y B6; B6 afecta a los recordatorios (spec 011: una
   toma cancelada no se avisa).
 
+## La app instalada: actualizar datos y versión (anotado 2026-09-29, sin fecha)
+
+- **Jalar hacia abajo para actualizar** — la PWA instalada en la pantalla de inicio se abre sin la barra del navegador y
+  pierde su gesto de "jalar para actualizar" (en iPhone no hay forma de activarlo; Android Chrome también lo quita en apps
+  instaladas). Hoy los datos se vuelven a pedir solos al regresar a la app (TanStack Query, al recuperar el foco), pero no
+  hay forma de pedirlos a mano. Propuesta: gesto propio **solo en el diseño móvil**, una vez en `AppShell` para todas las
+  pantallas con sesión (home, detalle del hijo, detalle de consulta): al jalar estando hasta arriba aparece un indicador y
+  al soltar se vuelven a pedir los datos (invalidar las consultas de TanStack), **sin recargar la página** — así no se
+  pierde lo capturado (p. ej. la foto ya elegida en "Nueva consulta"). Sin librería (unas 60 líneas con eventos táctiles);
+  respetar `prefers-reduced-motion` y no interferir con el rebote de iOS.
+- **Aviso de versión nueva** — al publicar una versión, quien tiene la app instalada sigue con la anterior hasta cerrarla
+  y abrirla de nuevo, y "jalar para actualizar" no lo resolvería (trae datos, no código). Propuesta: detectar que hay una
+  versión nueva (el service worker de la spec 011 se actualiza, o un archivo de versión que se compara al volver a la
+  app) y mostrar un aviso discreto "Hay una versión nueva · Actualizar" que recarga; nunca recargar solo si hay un
+  formulario con datos. Relacionado: la compatibilidad de la API entre versiones (spec 012 aceptó el campo viejo
+  `symptoms` por esto).
+
 ## Prioridad alta
 
 - **Homologar todas las pantallas a los mocks** — hecho en `specs/007-homologar-pantallas-a-mocks/`
@@ -111,6 +97,17 @@ Principio I: la app registra lo que el padre hace y lo que el médico indicó; n
   a la inmutabilidad, endpoint nuevo, spec propia y un diseño que los mocks no tienen).
 
 
+- **Errores de procesos en segundo plano en `error_logs`** (anotado 2026-09-29) — hoy `error_logs` solo guarda las
+  respuestas HTTP 4xx/5xx (spec 002, vía `httpx.Responder`). Lo que falla en el proceso de recordatorios (spec 011: el
+  ticker de 30 s, una toma que no se pudo preparar, un aviso que no se pudo entregar) solo se imprime en la consola del
+  servidor (`log.Printf` en `internal/reminder/scheduler.go` y `service.go`). Propuesta: registrarlo también en
+  `error_logs` con su propio "endpoint" (p. ej. `job:reminders`), cuenta cuando se conozca y sin el `endpoint` del
+  dispositivo, las claves ni el token (nunca en logs, spec 011). Decidir si un 404/410 del servicio de avisos (dispositivo
+  dado de baja, algo normal) cuenta como error o no.
+- **Revisión automática de Swagger en CI** (anotado 2026-09-29) — nada verifica que `backend/internal/docs/` esté al día
+  con los handlers; depende de correr `swag init` a mano después de cada cambio. Propuesta: un paso en el job de backend
+  de `.github/workflows/ci.yml` que regenere la documentación y falle si hay diferencias (`swag init … && git diff
+  --exit-code backend/internal/docs`), con un mensaje que diga el comando para regenerarla.
 - **Consulta/listado del log de errores** — endpoint o interfaz para leer las entradas de
   `error_logs` (creado por `specs/002-registro-log-errores/`). Esa funcionalidad excluyó
   explícitamente la lectura (FR-007) — solo implementa el registro (escritura).

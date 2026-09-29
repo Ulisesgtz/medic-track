@@ -51,7 +51,7 @@ Every handler constructor now takes a `*httpx.Responder` (built once in `cmd/api
 
 ## API docs (Swagger)
 
-Every handler in `internal/account/handler.go` and `internal/catalog/handler.go` carries `@Summary`/`@Param`/`@Success`/`@Failure`/`@Router` doc comments (swaggo/swag syntax) directly above the function. The Swagger UI is served at `http://localhost:8080/swagger/index.html` when the API is running (`go run ./cmd/api`) — use it to explore endpoints, payload/response shapes, and to try requests live against your local DB.
+Every handler (`account`, `catalog`, `consultation`, `reminder` — every route registered in `internal/server/router.go` has its `@Router`) carries `@Summary`/`@Param`/`@Success`/`@Failure`/`@Router` doc comments (swaggo/swag syntax) directly above the function. The Swagger UI is served at `http://localhost:8080/swagger/index.html` when the API is running (`go run ./cmd/api`) — use it to explore endpoints, payload/response shapes, and to try requests live against your local DB.
 
 **After changing any handler's request/response types or doc comments**, regenerate the docs:
 
