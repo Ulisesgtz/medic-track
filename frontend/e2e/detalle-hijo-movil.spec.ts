@@ -7,7 +7,8 @@ test.describe('Detalle del hijo — diseño móvil (mock 02)', () => {
   test.use({ viewport: { width: 390, height: 844 } })
 
   test('muestra el encabezado, el bloque de tomas de hoy y la lista de consultas', async ({ page }) => {
-    const { childId } = await seedChild(page)
+    // One daily dose at 00:00: "por marcar" all day, whatever time the suite runs (specs/013).
+    const { childId } = await seedChild(page, { frequencyHours: 24 })
     await page.goto(`/children/${childId}`)
 
     await expect(page.getByRole('link', { name: '← Tus hijos' })).toBeVisible()
@@ -15,7 +16,7 @@ test.describe('Detalle del hijo — diseño móvil (mock 02)', () => {
     await expect(page.getByText(/· 14 mar 2021$/)).toBeVisible()
 
     const block = page.getByRole('region', { name: 'Tomas de hoy' })
-    await expect(block).toContainText('3 sin marcar · Amoxicilina')
+    await expect(block).toContainText('1 sin marcar · Amoxicilina')
     await expect(block.getByRole('button', { name: 'Marcar tomas' })).toBeVisible()
 
     await expect(page.getByRole('heading', { level: 2, name: 'Consultas' })).toBeVisible()
@@ -27,7 +28,7 @@ test.describe('Detalle del hijo — diseño móvil (mock 02)', () => {
   })
 
   test('"Marcar tomas" marca todas las de hoy, el bloque pasa a verde y se conserva al recargar', async ({ page }) => {
-    const { childId } = await seedChild(page)
+    const { childId } = await seedChild(page, { frequencyHours: 24 })
     await page.goto(`/children/${childId}`)
     const block = page.getByRole('region', { name: 'Tomas de hoy' })
 

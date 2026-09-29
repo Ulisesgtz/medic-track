@@ -1,5 +1,6 @@
 import { formatTime } from '../../shared/date'
 import { useDoseToggle } from './useDoseToggle'
+import { DOSE_CHIP_STYLE, UNREGISTERED_LABEL } from './doseStatus'
 import type { OverviewDose } from './types'
 
 interface DoseRowProps {
@@ -10,11 +11,16 @@ interface DoseRowProps {
  * One of today's doses: "16:00 Amoxicilina" and a chip that marks it taken
  * (or, if it already is, unmarks it — same freedom as the consultation
  * detail, FR-016 of specs/004). Amber = "the parent hasn't marked it",
- * never a medical alert (Principio I).
+ * never a medical alert (Principio I). A dose "sin registrar" (specs/013)
+ * says so on its chip, still marks it when tapped.
  */
 function DoseRow({ dose }: DoseRowProps) {
   const time = formatTime(dose.scheduledAt)
   const mutation = useDoseToggle(dose.consultationId, dose.id)
+  const unregistered = dose.status === 'unregistered'
+  const label = dose.taken ? 'Tomada' : unregistered ? UNREGISTERED_LABEL : 'Marcar'
+  const style = dose.taken ? DOSE_CHIP_STYLE.taken : unregistered ? DOSE_CHIP_STYLE.unregistered : DOSE_CHIP_STYLE.due
+  const stateId = `today-dose-${dose.id}-state`
 
   return (
     <li className="flex min-h-11 items-center justify-between gap-3">
@@ -27,20 +33,22 @@ function DoseRow({ dose }: DoseRowProps) {
         // (a name that also changed would be announced twice, contradicting itself).
         aria-pressed={dose.taken}
         aria-label={`Toma de ${time} ${dose.medicationName}`}
+        aria-describedby={unregistered ? stateId : undefined}
         disabled={mutation.isPending}
         onClick={() => mutation.mutate(!dose.taken)}
         className="flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 [&:focus-visible>span]:ring-2 [&:focus-visible>span]:ring-action [&:focus-visible>span]:ring-offset-2"
       >
         <span
           aria-hidden="true"
-          className={`inline-flex items-center justify-center rounded-[10px] px-3 py-2 text-[13px] font-extrabold transition-colors duration-200 ${
-            dose.taken
-              ? 'bg-confirmed text-white'
-              : 'border-[1.5px] border-pending bg-pending-soft text-[#92400e]'
-          }`}
+          className={`inline-flex items-center justify-center rounded-[10px] px-3 py-2 text-[13px] font-extrabold transition-colors duration-200 ${style}`}
         >
-          {dose.taken ? 'Tomada' : 'Marcar'}
+          {label}
         </span>
+        {unregistered && (
+          <span id={stateId} className="sr-only">
+            {UNREGISTERED_LABEL}
+          </span>
+        )}
       </button>
     </li>
   )

@@ -35,6 +35,9 @@ type doseResponse struct {
 	ID          string `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
 	ScheduledAt string `json:"scheduledAt" example:"2026-01-15T08:00:00Z"`
 	Taken       bool   `json:"taken" example:"false"`
+	// Status is derived by the server with its own clock (specs/013): pending, due ("por marcar"), taken or
+	// unregistered ("sin registrar": the next dose of its medication came and it isn't marked).
+	Status string `json:"status" enums:"pending,due,taken,unregistered" example:"due"`
 } // @name DoseResponse
 
 type medicationResponse struct {
@@ -160,6 +163,8 @@ type overviewDoseResponse struct {
 	MedicationName string `json:"medicationName" example:"Amoxicilina"`
 	ScheduledAt    string `json:"scheduledAt" example:"2026-01-15T14:00:00Z"`
 	Taken          bool   `json:"taken" example:"false"`
+	// Status as in DoseResponse (specs/013).
+	Status string `json:"status" enums:"pending,due,taken,unregistered" example:"due"`
 } // @name OverviewDoseResponse
 
 type activeTreatmentResponse struct {
@@ -237,6 +242,7 @@ func (h *Handler) GetChildOverview(w http.ResponseWriter, r *http.Request) {
 			MedicationName: d.MedicationName,
 			ScheduledAt:    d.ScheduledAt.Format(time.RFC3339),
 			Taken:          d.Taken,
+			Status:         string(d.Status),
 		})
 	}
 	resp := childOverviewResponse{ChildID: childID.String(), Doses: doses}
@@ -516,6 +522,7 @@ func toDoseResponse(d *Dose) doseResponse {
 		ID:          d.ID.String(),
 		ScheduledAt: d.ScheduledAt.Format(time.RFC3339),
 		Taken:       d.Taken,
+		Status:      string(d.Status),
 	}
 }
 

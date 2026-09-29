@@ -39,8 +39,8 @@ function stubApi(account: unknown, { consultations = [], doses = [] }: { consult
   )
 }
 
-const dose = (taken: boolean) => ({
-  id: `d-${Math.random()}`, consultationId: 'c1', medicationName: 'Amoxicilina', scheduledAt: '2026-01-15T14:00:00Z', taken,
+const dose = (taken: boolean, status = taken ? 'taken' : 'due') => ({
+  id: `d-${Math.random()}`, consultationId: 'c1', medicationName: 'Amoxicilina', scheduledAt: '2026-01-15T14:00:00Z', taken, status,
 })
 
 describe('HomePage', () => {
@@ -249,6 +249,20 @@ describe('HomePage', () => {
 
       expect(await screen.findByText('2 consultas')).toBeInTheDocument()
       expect(await screen.findByText('2 tomas hoy')).toBeInTheDocument()
+    })
+
+    it('does not count doses "sin registrar" in "N tomas hoy" (specs/013)', async () => {
+      stubApi(account, { consultations: [consultation('c1')], doses: [dose(false), dose(false, 'unregistered'), dose(true)] })
+      renderHome()
+
+      expect(await screen.findByText('1 toma hoy')).toBeInTheDocument()
+    })
+
+    it('shows "Sin tomas pendientes" when only doses "sin registrar" are left', async () => {
+      stubApi(account, { consultations: [consultation('c1')], doses: [dose(false, 'unregistered')] })
+      renderHome()
+
+      expect(await screen.findByText('Sin tomas pendientes')).toBeInTheDocument()
     })
 
     it('uses the singular for one consultation and one dose', async () => {

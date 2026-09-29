@@ -14,11 +14,13 @@ import (
 // Repository persists Consultation, Medication and Dose records.
 type Repository struct {
 	pool *pgxpool.Pool
+	// now is the clock each dose's Status is read with (specs/013): the server's, so every device sees the same.
+	now func() time.Time
 }
 
 // NewRepository creates a consultation Repository backed by the given pool.
 func NewRepository(pool *pgxpool.Pool) *Repository {
-	return &Repository{pool: pool}
+	return &Repository{pool: pool, now: time.Now}
 }
 
 // querier is satisfied by both *pgxpool.Pool and pgx.Tx, so helpers like
@@ -180,8 +182,9 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, c *Consultat
 		if loc == nil {
 			loc = c.ConsultDate.Location()
 		}
+		now := r.now()
 		for _, scheduledAt := range generateDoseSchedule(c.ConsultDate, loc, med) {
-			dose := Dose{MedicationID: med.ID, ScheduledAt: scheduledAt}
+			dose := Dose{MedicationID: med.ID, ScheduledAt: scheduledAt, Status: StatusAt(scheduledAt, false, med.FrequencyHours, now)}
 			err = tx.QueryRow(ctx, `
 				INSERT INTO doses (medication_id, scheduled_at)
 				VALUES ($1, $2)
@@ -276,6 +279,7 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Consultation, 
 		return nil, fmt.Errorf("iterating medications: %w", err)
 	}
 
+	now := r.now()
 	for i := range c.Medications {
 		med := &c.Medications[i]
 		doseRows, err := r.pool.Query(ctx, `
@@ -291,6 +295,7 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Consultation, 
 				doseRows.Close()
 				return nil, fmt.Errorf("scanning dose: %w", err)
 			}
+			dose.Status = StatusAt(dose.ScheduledAt, dose.Taken, med.FrequencyHours, now)
 			med.Doses = append(med.Doses, dose)
 		}
 		if err := doseRows.Err(); err != nil {
@@ -308,21 +313,26 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Consultation, 
 // consultationID via medications' consultation_id, so a doseID that exists
 // but belongs to a different consultation is correctly treated as not found
 // — matching ErrDoseNotFound's own contract. Returns ErrDoseNotFound if no
-// matching dose exists.
+// matching dose exists. The returned Status is read after the change, so
+// unmarking a dose whose next one already came gives "unregistered" (specs/013).
 func (r *Repository) UpdateDoseStatus(ctx context.Context, consultationID, id uuid.UUID, taken bool) (*Dose, error) {
 	dose := &Dose{ID: id, Taken: taken}
+	var frequencyHours int
 	err := r.pool.QueryRow(ctx, `
 		UPDATE doses SET taken = $1
-		WHERE id = $2
-		  AND medication_id IN (SELECT id FROM medications WHERE consultation_id = $3)
-		RETURNING medication_id, scheduled_at, created_at
-	`, taken, id, consultationID).Scan(&dose.MedicationID, &dose.ScheduledAt, &dose.CreatedAt)
+		FROM medications m
+		WHERE doses.id = $2
+		  AND m.id = doses.medication_id
+		  AND m.consultation_id = $3
+		RETURNING doses.medication_id, doses.scheduled_at, doses.created_at, m.frequency_hours
+	`, taken, id, consultationID).Scan(&dose.MedicationID, &dose.ScheduledAt, &dose.CreatedAt, &frequencyHours)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrDoseNotFound
 		}
 		return nil, fmt.Errorf("updating dose: %w", err)
 	}
+	dose.Status = StatusAt(dose.ScheduledAt, dose.Taken, frequencyHours, r.now())
 	return dose, nil
 }
 
@@ -340,7 +350,7 @@ func (r *Repository) GetOverview(ctx context.Context, childID uuid.UUID, from, t
 	}
 
 	doseRows, err := r.pool.Query(ctx, `
-		SELECT d.id, m.consultation_id, m.name, d.scheduled_at, d.taken
+		SELECT d.id, m.consultation_id, m.name, d.scheduled_at, d.taken, m.frequency_hours
 		FROM doses d
 		JOIN medications m ON m.id = d.medication_id
 		JOIN consultations c ON c.id = m.consultation_id
@@ -355,9 +365,11 @@ func (r *Repository) GetOverview(ctx context.Context, childID uuid.UUID, from, t
 	overview := &ChildOverview{Doses: make([]DoseOverview, 0)}
 	for doseRows.Next() {
 		var d DoseOverview
-		if err := doseRows.Scan(&d.ID, &d.ConsultationID, &d.MedicationName, &d.ScheduledAt, &d.Taken); err != nil {
+		var frequencyHours int
+		if err := doseRows.Scan(&d.ID, &d.ConsultationID, &d.MedicationName, &d.ScheduledAt, &d.Taken, &frequencyHours); err != nil {
 			return nil, fmt.Errorf("scanning dose: %w", err)
 		}
+		d.Status = StatusAt(d.ScheduledAt, d.Taken, frequencyHours, now)
 		overview.Doses = append(overview.Doses, d)
 	}
 	if err := doseRows.Err(); err != nil {

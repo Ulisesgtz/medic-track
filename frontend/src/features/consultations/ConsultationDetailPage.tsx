@@ -12,6 +12,7 @@ import { sniffImageMimeType } from './imageMime'
 import { MedicationCard } from './MedicationCard'
 import { PhotoViewer } from './PhotoViewer'
 import { SymptomChips } from './SymptomChips'
+import { DOSE_REFETCH_MS } from './doseStatus'
 
 const overline = 'text-xs font-extrabold uppercase tracking-[0.1em] text-ink-soft'
 
@@ -33,6 +34,8 @@ export function ConsultationDetailPage() {
     queryFn: async () => fetchConsultationDetail(consultationId!, await getToken()),
     enabled: !!consultationId,
     retry: false,
+    // specs/013: a dose turns "sin registrar" on its own; asking again every minute shows it without reloading.
+    refetchInterval: DOSE_REFETCH_MS,
   })
   const childId = query.data?.childId
 
@@ -47,6 +50,7 @@ export function ConsultationDetailPage() {
     queryFn: async () => fetchChildOverview(childId!, today.from, today.to, await getToken()),
     enabled: !!childId && isDesktop,
     retry: false,
+    refetchInterval: DOSE_REFETCH_MS,
   })
 
   if (query.isPending) {

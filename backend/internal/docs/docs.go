@@ -1281,6 +1281,17 @@ const docTemplate = `{
                     "type": "string",
                     "example": "2026-01-15T08:00:00Z"
                 },
+                "status": {
+                    "description": "Status is derived by the server with its own clock (specs/013): pending, due (\"por marcar\"), taken or\nunregistered (\"sin registrar\": the next dose of its medication came and it isn't marked).",
+                    "type": "string",
+                    "enum": [
+                        "pending",
+                        "due",
+                        "taken",
+                        "unregistered"
+                    ],
+                    "example": "due"
+                },
                 "taken": {
                     "type": "boolean",
                     "example": false
@@ -1409,6 +1420,17 @@ const docTemplate = `{
                 "scheduledAt": {
                     "type": "string",
                     "example": "2026-01-15T14:00:00Z"
+                },
+                "status": {
+                    "description": "Status as in DoseResponse (specs/013).",
+                    "type": "string",
+                    "enum": [
+                        "pending",
+                        "due",
+                        "taken",
+                        "unregistered"
+                    ],
+                    "example": "due"
                 },
                 "taken": {
                     "type": "boolean",

@@ -39,12 +39,8 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
 - **B1. Tomas por momento del día** — en cada medicamento, las tomas del día se agrupan en **Mañana**, **Tarde** y
   **Noche**; cada toma aparece solo en su grupo y los grupos vacíos no se muestran. Propuesta de rangos en la hora local
   del padre: Mañana 05:00–11:59, Tarde 12:00–18:59, Noche 19:00–04:59 (la madrugada cuenta como noche).
-- **B2. Toma "sin registrar" automática** — si pasó el aviso de una toma y el padre no la marcó, la toma pasa sola a un
-  tercer estado. Hoy una toma solo es tomada/no tomada (`doses.taken`); se necesita `pendiente → tomada | sin
-  registrar`. **Ojo Principio I**: la app no sabe si no se dio, solo que nadie la marcó, así que el texto debe ser "Sin
-  registrar", no "No tomada", y el padre la puede seguir marcando como tomada después. Pendiente de decidir cuándo
-  cambia: al llegar la siguiente toma, o X horas después de la hora programada (recomendación: a la siguiente toma, o
-  12 h si es la última).
+- **B2. Toma "sin registrar" automática** — hecho en `specs/013-tomas-sin-registrar/` (cambia a la siguiente toma de su
+  medicamento; la última, a su hora + la frecuencia).
 - **B3. Barra de progreso por medicamento** — arriba de cada medicamento, "N / total tomas" con una barra. Total = tomas
   programadas (ej. cada 8 h por 3 días = 9 tomas; *nota: el ejemplo del pedido decía 24, que sería cada 3 h o 8 días —
   la cuenta sale del horario registrado*). Cuenta solo las marcadas como tomadas; se ve también cuántas quedaron sin

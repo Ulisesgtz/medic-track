@@ -38,9 +38,9 @@ function consultation(overrides: Record<string, unknown> = {}) {
       {
         id: 'm1', name: 'Amoxicilina 250 mg', frequencyHours: 8, durationDays: 3, startTime: '08:00',
         doses: [
-          { id: 'd1', scheduledAt: at(8), taken: true },
-          { id: 'd2', scheduledAt: at(16), taken: false },
-          { id: 'd3', scheduledAt: at(23), taken: false },
+          { id: 'd1', scheduledAt: at(8), taken: true, status: 'taken' },
+          { id: 'd2', scheduledAt: at(16), taken: false, status: 'pending' },
+          { id: 'd3', scheduledAt: at(23), taken: false, status: 'pending' },
         ],
       },
     ],
@@ -51,7 +51,7 @@ function consultation(overrides: Record<string, unknown> = {}) {
 function stubApi(detail: unknown, overview: unknown = { childId: 'child-1', doses: [], activeTreatment: null }) {
   const fetchMock = vi.fn().mockImplementation(async (input: string, init?: RequestInit) => {
     const url = String(input)
-    if (init?.method === 'PATCH') return { ok: true, json: async () => ({ id: 'd2', scheduledAt: '', taken: true }) }
+    if (init?.method === 'PATCH') return { ok: true, json: async () => ({ id: 'd2', scheduledAt: '', taken: true, status: 'taken' }) }
     if (url.includes('/overview')) return { ok: true, json: async () => overview }
     if (url.includes('/accounts/')) return { ok: true, json: async () => account }
     return { ok: true, json: async () => detail }
@@ -148,7 +148,41 @@ describe('ConsultationDetailPage', () => {
       expect(taken).toHaveClass('bg-confirmed')
       const later = screen.getByRole('button', { name: 'Toma de 16:00' })
       expect(later).toHaveAttribute('aria-pressed', 'false')
-      expect(later).toHaveClass('bg-slate-100') // 16:00 is after the mocked "now" (12:00)
+      expect(later).toHaveClass('bg-slate-100') // the server says it hasn't come yet
+    })
+
+    it('shows a dose "sin registrar" with a dashed border and those words, announced as its description (specs/013)', async () => {
+      stubApi(
+        consultation({
+          medications: [{
+            id: 'm1', name: 'Amoxicilina', frequencyHours: 8, durationDays: 1, startTime: '08:00',
+            doses: [{ id: 'd1', scheduledAt: at(8), taken: false, status: 'unregistered' }],
+          }],
+        }),
+      )
+      renderPage()
+
+      const chip = await screen.findByRole('button', { name: 'Toma de 08:00' })
+      expect(chip).toHaveClass('border-dashed', 'border-slate-400')
+      expect(chip).not.toHaveClass('bg-pending-soft')
+      expect(chip).toHaveAttribute('aria-pressed', 'false')
+      expect(chip).toHaveTextContent('sin registrar')
+      expect(chip).toHaveAccessibleDescription('Sin registrar')
+      expect(chip).toHaveAccessibleName('Toma de 08:00')
+    })
+
+    it('follows the server, not the phone clock: a dose the server says has not come stays grey even if it is past locally', async () => {
+      stubApi(
+        consultation({
+          medications: [{
+            id: 'm1', name: 'Amoxicilina', frequencyHours: 8, durationDays: 1, startTime: '08:00',
+            doses: [{ id: 'd1', scheduledAt: at(9), taken: false, status: 'pending' }],
+          }],
+        }),
+      )
+      renderPage()
+
+      expect(await screen.findByRole('button', { name: 'Toma de 09:00' })).toHaveClass('bg-slate-100')
     })
 
     it('shows a dose whose time already passed without being marked in amber', async () => {
@@ -156,7 +190,7 @@ describe('ConsultationDetailPage', () => {
         consultation({
           medications: [{
             id: 'm1', name: 'Amoxicilina', frequencyHours: 8, durationDays: 1, startTime: '08:00',
-            doses: [{ id: 'd1', scheduledAt: at(9), taken: false }],
+            doses: [{ id: 'd1', scheduledAt: at(9), taken: false, status: 'due' }],
           }],
         }),
       )
@@ -189,10 +223,10 @@ describe('ConsultationDetailPage', () => {
           medications: [{
             id: 'm1', name: 'Amoxicilina', frequencyHours: 12, durationDays: 3, startTime: '08:00',
             doses: [
-              { id: 'a', scheduledAt: at(8, 13), taken: true },
-              { id: 'b', scheduledAt: at(20, 13), taken: true },
-              { id: 'c', scheduledAt: at(8, 17), taken: false },
-              { id: 'd', scheduledAt: at(20, 17), taken: false },
+              { id: 'a', scheduledAt: at(8, 13), taken: true, status: 'taken' },
+              { id: 'b', scheduledAt: at(20, 13), taken: true, status: 'taken' },
+              { id: 'c', scheduledAt: at(8, 17), taken: false, status: 'pending' },
+              { id: 'd', scheduledAt: at(20, 17), taken: false, status: 'pending' },
             ],
           }],
         }),
@@ -219,8 +253,8 @@ describe('ConsultationDetailPage', () => {
           medications: [{
             id: 'm1', name: 'Amoxicilina', frequencyHours: 8, durationDays: 2, startTime: '08:00',
             doses: [
-              { id: 'a', scheduledAt: at(8), taken: false },
-              { id: 'b', scheduledAt: at(8, 16), taken: false },
+              { id: 'a', scheduledAt: at(8), taken: false, status: 'due' },
+              { id: 'b', scheduledAt: at(8, 16), taken: false, status: 'pending' },
             ],
           }],
         }),

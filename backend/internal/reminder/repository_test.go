@@ -106,6 +106,27 @@ func TestRepository_ClaimDueDoses_OnlyTheDueOnesAndOnlyOnce(t *testing.T) {
 	require.Empty(t, again, "a claimed dose is never claimed again")
 }
 
+// A dose already "sin registrar" — its medication's next dose came — is never reminded, even inside the window
+// (specs/013 FR-010): with a medication every hour, a dose 70 min late is past its next one.
+func TestRepository_ClaimDueDoses_NeverADoseAlreadyUnregistered(t *testing.T) {
+	pool := testPool(t)
+	repo := reminder.NewRepository(pool)
+	now := uniqueNow()
+	f := newFamily(t, pool, nil)
+	_, err := pool.Exec(context.Background(), `UPDATE medications SET frequency_hours = 1 WHERE id = $1`, f.medicationID)
+	require.NoError(t, err)
+	device := f.device(t, repo, uniqueEndpoint())
+	activatedAt(t, pool, device.ID, now.Add(-3*time.Hour))
+
+	_ = f.dose(t, pool, now.Add(-70*time.Minute), false) // its next dose came 10 min ago
+	_ = f.dose(t, pool, now.Add(-60*time.Minute), false) // exactly at its next dose: already unregistered
+	due := f.dose(t, pool, now.Add(-30*time.Minute), false)
+
+	claimed, err := repo.ClaimDueDoses(context.Background(), now, 2*time.Hour)
+	require.NoError(t, err)
+	require.Equal(t, []uuid.UUID{due}, claimedIDs(claimed))
+}
+
 func TestRepository_ClaimDueDoses_NeedsADeviceActivatedBeforeTheDose(t *testing.T) {
 	pool := testPool(t)
 	repo := reminder.NewRepository(pool)

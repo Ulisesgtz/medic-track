@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ChildDetailPage } from './ChildDetailPage'
+import type { DoseStatus } from './types'
 
 function renderPage(childId = 'child-1') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -30,8 +31,15 @@ const consultations = [
   { id: 'c0', doctorName: 'Dr. Iván Robles', consultDate: '2024-08-02', notes: 'Control de peso', symptomNames: [], medicationCount: 0 },
 ]
 
-const dose = (id: string, hour: number, name: string, taken: boolean, consultationId = 'c2') => ({
-  id, consultationId, medicationName: name, scheduledAt: new Date(2026, 8, 16, hour).toISOString(), taken,
+const dose = (
+  id: string,
+  hour: number,
+  name: string,
+  taken: boolean,
+  consultationId = 'c2',
+  status: DoseStatus = taken ? 'taken' : 'due',
+) => ({
+  id, consultationId, medicationName: name, scheduledAt: new Date(2026, 8, 16, hour).toISOString(), taken, status,
 })
 
 const emptyOverview = { childId: 'child-1', doses: [], activeTreatment: null }
@@ -45,7 +53,7 @@ function stubApi({
 }: { list?: unknown[]; overview?: unknown; overviewOk?: boolean; listStatus?: number } = {}) {
   const fetchMock = vi.fn().mockImplementation(async (input: string, init?: RequestInit) => {
     const url = String(input)
-    if (init?.method === 'PATCH') return { ok: true, json: async () => ({ id: 'd', scheduledAt: '', taken: true }) }
+    if (init?.method === 'PATCH') return { ok: true, json: async () => ({ id: 'd', scheduledAt: '', taken: true, status: 'taken' }) }
     if (url.includes('/overview')) return { ok: overviewOk, status: overviewOk ? 200 : 500, json: async () => overview }
     if (url.includes('/accounts/')) return { ok: true, json: async () => account }
     if (listStatus !== 200) return { ok: false, status: listStatus, json: async () => ({ message: 'nope' }) }
@@ -158,6 +166,47 @@ describe('ChildDetailPage', () => {
       expect(within(block).getByRole('button', { name: 'Marcar tomas' })).toBeInTheDocument()
     })
 
+    it('counts doses "sin registrar" apart, and "Marcar tomas" leaves them alone (specs/013)', async () => {
+      const user = userEvent.setup()
+      const fetchMock = stubApi({
+        overview: {
+          childId: 'child-1',
+          doses: [dose('d1', 0, 'Amoxicilina', false, 'c2', 'unregistered'), dose('d2', 16, 'Amoxicilina', false)],
+          activeTreatment: null,
+        },
+      })
+      renderPage()
+
+      const block = (await screen.findByText('1 sin marcar · 1 sin registrar · Amoxicilina')).closest('div')!
+      expect(block).toHaveClass('bg-pending')
+      await user.click(within(block).getByRole('button', { name: 'Marcar tomas' }))
+
+      await waitFor(() => {
+        const patches = fetchMock.mock.calls.filter(([, init]) => init?.method === 'PATCH')
+        expect(patches.map(([url]) => String(url))).toEqual([expect.stringContaining('/doses/d2')])
+      })
+    })
+
+    it('with only doses "sin registrar" left: nothing to mark, how many, and no button', async () => {
+      stubApi({
+        overview: {
+          childId: 'child-1',
+          doses: [
+            dose('d1', 0, 'Amoxicilina', false, 'c2', 'unregistered'),
+            dose('d2', 8, 'Amoxicilina', false, 'c2', 'unregistered'),
+            dose('d3', 16, 'Amoxicilina', true),
+          ],
+          activeTreatment: null,
+        },
+      })
+      renderPage()
+
+      const block = (await screen.findByText('Sin tomas pendientes')).closest('div')!
+      expect(block).toHaveClass('bg-confirmed-soft')
+      expect(within(block).getByText('2 sin registrar')).toBeInTheDocument()
+      expect(within(block).queryByRole('button', { name: 'Marcar tomas' })).not.toBeInTheDocument()
+    })
+
     it('lists every unmarked medication in the block', async () => {
       stubApi({ overview: { childId: 'child-1', doses: [dose('d2', 16, 'Amoxicilina', false), dose('d3', 21, 'Paracetamol', false)], activeTreatment: null } })
       renderPage()
@@ -226,6 +275,30 @@ describe('ChildDetailPage', () => {
       expect(screen.getByRole('link', { name: 'Nueva consulta' })).toHaveAttribute('href', '/children/child-1/consultations/new')
       expect(screen.queryByRole('link', { name: '← Tus hijos' })).not.toBeInTheDocument()
       expect(screen.getByRole('navigation', { name: 'Tus hijos' })).toBeInTheDocument()
+    })
+
+    it('the web summary and panel tell doses "sin registrar" apart (specs/013)', async () => {
+      useWeb()
+      useSession()
+      stubApi({ overview: {
+        childId: 'child-1',
+        doses: [dose('d1', 0, 'Amoxicilina', false, 'c2', 'unregistered'), dose('d2', 16, 'Amoxicilina', false)],
+        activeTreatment: null,
+      } })
+      const { unmount } = renderPage()
+
+      expect(await screen.findByText('sin marcar · 1 sin registrar')).toBeInTheDocument()
+      const panel = screen.getByRole('region', { name: 'Tomas de hoy' })
+      const old = within(panel).getByRole('button', { name: /Toma de 00:00/ })
+      expect(old).toHaveTextContent('Sin registrar')
+      expect(old).toHaveAccessibleDescription('Sin registrar')
+      expect(old.firstElementChild).toHaveClass('border-dashed')
+      expect(within(panel).getByRole('button', { name: /Toma de 16:00/ })).toHaveTextContent('Marcar')
+      unmount()
+
+      stubApi({ overview: { childId: 'child-1', doses: [dose('d1', 0, 'Amoxicilina', false, 'c2', 'unregistered')], activeTreatment: null } })
+      renderPage()
+      expect(await screen.findByText('nada por marcar · 1 sin registrar')).toBeInTheDocument()
     })
 
     it("shows today's unmarked doses, the consultation count since the first one, and the running treatment", async () => {

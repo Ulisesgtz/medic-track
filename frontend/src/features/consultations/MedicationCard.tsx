@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { formatDayMonth, formatTime } from '../../shared/date'
 import { useDoseToggle } from './useDoseToggle'
+import { DOSE_CHIP_STYLE, UNREGISTERED_LABEL } from './doseStatus'
 import type { Dose, Medication } from './types'
 
 const dayKey = (instant: string) => {
@@ -9,32 +10,43 @@ const dayKey = (instant: string) => {
 }
 
 /**
- * One dose as a time chip (mockups 03/13): "08:00 ✓" taken (green), amber when
- * its time passed without being marked, grey while it hasn't come yet. Always
- * enabled — the parent can correct a dose of any time. A toggle: fixed name
- * ("Toma de 08:00"), the state only in aria-pressed.
+ * One dose as a time chip (mockups 03/13), by the status the server sends (specs/013): "08:00 ✓" taken (green), amber
+ * while it's "por marcar", grey while it hasn't come, and "sin registrar" — dashed border and those words under the
+ * time — once the next dose of its medication came unmarked. Always enabled: the parent can mark or correct any dose.
+ * A toggle: fixed name ("Toma de 08:00"), marked only in aria-pressed; "sin registrar" is its description.
  */
-function DoseChip({ consultationId, dose, now }: { consultationId: string; dose: Dose; now: number }) {
+function DoseChip({ consultationId, dose }: { consultationId: string; dose: Dose }) {
   const mutation = useDoseToggle(consultationId, dose.id)
   const time = formatTime(dose.scheduledAt)
-  const isFuture = new Date(dose.scheduledAt).getTime() > now
-  const style = dose.taken
-    ? 'bg-confirmed text-white'
-    : isFuture
-      ? 'bg-slate-100 text-slate-600'
-      : 'border-[1.5px] border-pending bg-pending-soft text-[#92400e]'
+  const unregistered = dose.status === 'unregistered'
+  const stateId = `dose-${dose.id}-state`
 
   return (
     <button
       type="button"
       aria-pressed={dose.taken}
       aria-label={`Toma de ${time}`}
+      aria-describedby={unregistered ? stateId : undefined}
       disabled={mutation.isPending}
       onClick={() => mutation.mutate(!dose.taken)}
-      className={`min-h-11 min-w-[76px] flex-1 cursor-pointer rounded-xl py-3 text-sm font-extrabold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${style}`}
+      className={`flex min-h-11 min-w-[76px] flex-1 cursor-pointer flex-col items-center justify-center rounded-xl text-sm font-extrabold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+        unregistered ? 'py-1.5 leading-tight' : 'py-3'
+      } ${DOSE_CHIP_STYLE[dose.status]}`}
     >
-      {time}
-      {dose.taken ? ' ✓' : ''}
+      <span>
+        {time}
+        {dose.taken ? ' ✓' : ''}
+      </span>
+      {unregistered && (
+        <>
+          <span aria-hidden="true" className="text-[11px] font-bold text-slate-600">
+            sin registrar
+          </span>
+          <span id={stateId} className="sr-only">
+            {UNREGISTERED_LABEL}
+          </span>
+        </>
+      )}
     </button>
   )
 }
@@ -83,7 +95,7 @@ export function MedicationCard({ consultationId, medication, variant }: Medicati
       {chips.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2.5">
           {chips.map((dose) => (
-            <DoseChip key={dose.id} consultationId={consultationId} dose={dose} now={now} />
+            <DoseChip key={dose.id} consultationId={consultationId} dose={dose} />
           ))}
         </div>
       )}
