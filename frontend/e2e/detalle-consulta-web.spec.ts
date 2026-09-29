@@ -79,6 +79,18 @@ test.describe('Detalle de consulta — diseño web (mock 13)', () => {
     await expect(treatment).toContainText(/termina el \d{1,2} \w{3}/)
   })
 
+  test('la barra de progreso sube al marcar una toma, sin recargar (specs/014)', async ({ page }) => {
+    const ids = await seedChild(page)
+    await open(page, 1280, ids)
+    const bar = page.getByRole('progressbar', { name: 'Progreso de las tomas' })
+    await expect(page.getByText('0 / 3 tomas')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Toma de 16:00' }).click()
+
+    await expect(page.getByText('1 / 3 tomas')).toBeVisible()
+    await expect(bar).toHaveAttribute('aria-valuenow', '1')
+  })
+
   test('cada chip alterna entre marcada y sin marcar y se conserva al recargar', async ({ page }) => {
     const ids = await seedChild(page)
     await open(page, 1280, ids)

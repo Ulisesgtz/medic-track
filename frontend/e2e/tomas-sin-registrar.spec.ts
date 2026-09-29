@@ -41,7 +41,12 @@ for (const design of designs) {
       await expect(page.getByRole('button', { name: 'Toma de 08:00' })).toHaveClass(/bg-pending-soft/)
       await expect(page.getByRole('button', { name: 'Toma de 16:00' })).toHaveClass(/bg-slate-100/)
 
+      // specs/014: the dose "sin registrar" is told apart in the progress and does not count.
+      await expect(page.getByText('0 / 3 tomas · 1 sin registrar')).toBeVisible()
+      await expect(page.getByRole('progressbar', { name: 'Progreso de las tomas' })).toHaveAttribute('aria-valuenow', '0')
+
       await old.click()
+      await expect(page.getByText('1 / 3 tomas', { exact: true })).toBeVisible()
       await expect(old).toHaveAttribute('aria-pressed', 'true')
       await expect(old).toHaveText('00:00 ✓')
 
