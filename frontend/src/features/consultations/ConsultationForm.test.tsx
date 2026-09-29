@@ -353,13 +353,15 @@ describe('ConsultationForm', () => {
       )
     })
 
-    it('phone: frequency and duration are narrow (a couple of digits), the first dose time too', () => {
+    it('phone: every row spans the card — frequency and duration half each, "Primera toma" with its label above', () => {
       renderForm('phone')
 
-      expect(byId('medications.0.frequencyHours').parentElement).toHaveClass('w-28')
-      expect(byId('medications.0.durationDays').parentElement).toHaveClass('w-28')
-      expect(byId('medications.0.startTime')).toHaveClass('w-40')
-      expect(screen.getByLabelText('Primera toma')).toBe(byId('medications.0.startTime'))
+      expect(byId('medications.0.frequencyHours').parentElement).toHaveClass('flex-1')
+      expect(byId('medications.0.durationDays').parentElement).toHaveClass('flex-1')
+      const time = screen.getByLabelText('Primera toma')
+      expect(time).toBe(byId('medications.0.startTime'))
+      expect(time).toHaveClass('w-full')
+      expect(time.previousElementSibling).toHaveTextContent('Primera toma')
     })
 
     it('phone: the doctor and date fields are semibold as in the mock; the web keeps medium', () => {

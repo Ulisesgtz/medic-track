@@ -51,8 +51,9 @@ Decididas por el usuario:
   "Agregar hijo" (el mock tiene "Nombre completo").
 - **"Primera toma"** (hora de inicio; se llamaba "Desde" hasta el 2026-09-29, poco claro) en cada medicamento de "Nueva
   consulta", **obligatoria**; el detalle dice "Cada 8 horas · 3 días · primera toma 08:00". Frecuencia y duración llevan
-  uno o dos dígitos, así que tienen un ancho fijo angosto (112 px) en ambos diseños y el nombre toma el resto (2026-09-29,
-  a pedido del usuario; en web cambia la proporción 2fr/1fr/1fr del mock 14). Obligatoria desde el 2026-09-20 porque una consulta es inmutable,
+  uno o dos dígitos, así que en web tienen un ancho fijo angosto (112 px) y el nombre toma el resto (2026-09-29, a pedido del
+  usuario; cambia la proporción 2fr/1fr/1fr del mock 14). En móvil se quedan a media fila cada una, como el mock 04, y
+  "Primera toma" lleva su etiqueta arriba y va a todo el ancho: con campos angostos las filas quedaban descuadradas. Obligatoria desde el 2026-09-20 porque una consulta es inmutable,
   así que una hora omitida no se podría completar después y sin ella no hay tomas ni tratamiento activo. El backend también
   la exige; las consultas anteriores sin hora se quedan como están.
 

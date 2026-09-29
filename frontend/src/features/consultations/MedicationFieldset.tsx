@@ -33,8 +33,11 @@ interface MedicationFieldsetProps {
  * "Primera toma", which is required: a consultation is immutable once saved, so a
  * missing start time could never be filled in later (and without it no doses
  * or active treatment exist). Frequency and duration accept free text; the
- * first number in them is what's sent. They hold a couple of digits ("c/12 h",
- * "14 días"), so they have a fixed narrow width and the name takes the rest.
+ * first number in them is what's sent. On the web they hold a couple of digits
+ * ("c/12 h", "14 días"), so they have a fixed narrow width and the name takes
+ * the rest; on the phone every row spans the card (frequency and duration half
+ * each, as the mock 04, and "Primera toma" with its label above), so nothing is
+ * left hanging.
  */
 export function MedicationFieldset({
   index,
@@ -101,7 +104,7 @@ export function MedicationFieldset({
         </div>
 
         <div className={desktop ? 'contents' : 'flex gap-2.5'}>
-          <div className={`flex min-w-0 flex-col gap-2 ${desktop ? '' : 'w-28'}`}>
+          <div className={`flex min-w-0 flex-col gap-2 ${desktop ? '' : 'flex-1'}`}>
             <label htmlFor={id('frequencyHours')} className={desktop ? label : 'sr-only'}>
               Frecuencia
             </label>
@@ -115,7 +118,7 @@ export function MedicationFieldset({
             />
             {medErrors?.frequencyHours && <p className={error}>Escribe cada cuántas horas (ej. 8).</p>}
           </div>
-          <div className={`flex min-w-0 flex-col gap-2 ${desktop ? '' : 'w-28'}`}>
+          <div className={`flex min-w-0 flex-col gap-2 ${desktop ? '' : 'flex-1'}`}>
             <label htmlFor={id('durationDays')} className={desktop ? label : 'sr-only'}>
               Duración
             </label>
@@ -151,18 +154,16 @@ export function MedicationFieldset({
 
       {!desktop && (
         <div className="flex min-w-0 flex-col gap-2">
-          <div className="flex min-w-0 items-center gap-3">
-            <label htmlFor={id('startTime')} className="shrink-0 text-[13px] font-bold whitespace-nowrap text-ink-soft">
-              Primera toma
-            </label>
-            <input
-              id={id('startTime')}
-              type="time"
-              size={1}
-              className={`${plain} w-40 text-[15px]`}
-              {...register(`medications.${index}.startTime`, { required: true })}
-            />
-          </div>
+          <label htmlFor={id('startTime')} className={label}>
+            Primera toma
+          </label>
+          <input
+            id={id('startTime')}
+            type="time"
+            size={1}
+            className={`${plain} text-[15px]`}
+            {...register(`medications.${index}.startTime`, { required: true })}
+          />
           {medErrors?.startTime && <p className={error}>{START_TIME_MESSAGE}</p>}
         </div>
       )}
