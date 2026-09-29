@@ -39,6 +39,15 @@ test.describe('Detalle de consulta — diseño móvil (mock 03)', () => {
     await expect(page.getByRole('link', { name: 'Nueva consulta' })).toHaveCount(0)
   })
 
+  test('las tomas van agrupadas en Mañana, Tarde y Noche (specs/015)', async ({ page }) => {
+    const { consultationId } = await seedChild(page)
+    await page.goto(`/consultations/${consultationId}`)
+
+    await expect(page.getByRole('group', { name: 'Mañana' }).getByRole('button', { name: 'Toma de 08:00' })).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Tarde' }).getByRole('button', { name: 'Toma de 16:00' })).toBeVisible()
+    await expect(page.getByRole('group', { name: 'Noche' }).getByRole('button', { name: 'Toma de 00:00' })).toBeVisible()
+  })
+
   test('la barra de progreso sube al marcar una toma, sin recargar (specs/014)', async ({ page }) => {
     const { consultationId } = await seedChild(page)
     await page.goto(`/consultations/${consultationId}`)

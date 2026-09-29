@@ -151,6 +151,48 @@ describe('ConsultationDetailPage', () => {
       expect(later).toHaveClass('bg-slate-100') // the server says it hasn't come yet
     })
 
+    it('groups the doses of the day by moment of the day, skipping the empty ones, and marking still works (specs/015)', async () => {
+      const user = userEvent.setup()
+      stubApi(
+        consultation({
+          medications: [{
+            id: 'm1', name: 'Amoxicilina', frequencyHours: 8, durationDays: 1, startTime: '00:00',
+            doses: [
+              { id: 'd1', scheduledAt: at(0), taken: false, status: 'pending' },
+              { id: 'd2', scheduledAt: at(8), taken: false, status: 'pending' },
+              { id: 'd3', scheduledAt: at(16), taken: false, status: 'pending' },
+            ],
+          }],
+        }),
+      )
+      renderPage()
+
+      const morning = await screen.findByRole('group', { name: 'Mañana, Amoxicilina' })
+      expect(within(morning).getByRole('button', { name: 'Toma de 08:00' })).toBeInTheDocument()
+      expect(within(screen.getByRole('group', { name: 'Tarde, Amoxicilina' })).getByRole('button', { name: 'Toma de 16:00' })).toBeInTheDocument()
+      expect(within(screen.getByRole('group', { name: 'Noche, Amoxicilina' })).getByRole('button', { name: 'Toma de 00:00' })).toBeInTheDocument()
+      expect(screen.getAllByRole('group').map((g) => g.getAttribute('aria-label'))).toEqual(['Mañana, Amoxicilina', 'Tarde, Amoxicilina', 'Noche, Amoxicilina'])
+
+      await user.click(within(morning).getByRole('button', { name: 'Toma de 08:00' }))
+      await waitFor(() => expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === 'PATCH')).toBe(true))
+    })
+
+    it('shows only the moments that have doses', async () => {
+      stubApi(
+        consultation({
+          medications: [{
+            id: 'm1', name: 'Amoxicilina', frequencyHours: 24, durationDays: 1, startTime: '09:00',
+            doses: [{ id: 'd1', scheduledAt: at(9), taken: false, status: 'due' }],
+          }],
+        }),
+      )
+      renderPage()
+
+      await screen.findByRole('group', { name: 'Mañana, Amoxicilina' })
+      expect(screen.queryByRole('group', { name: 'Tarde, Amoxicilina' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('group', { name: 'Noche, Amoxicilina' })).not.toBeInTheDocument()
+    })
+
     it('shows the medication progress above its doses and updates it when a dose is marked (specs/014)', async () => {
       const user = userEvent.setup()
       let taken = false
