@@ -42,7 +42,7 @@ function DoseChip({ consultationId, dose, now }: { consultationId: string; dose:
 function schedule({ frequencyHours, durationDays, startTime }: Medication): string {
   const every = frequencyHours === 1 ? 'Cada hora' : `Cada ${frequencyHours} horas`
   const days = durationDays === 1 ? '1 día' : `${durationDays} días`
-  return [every, days, startTime ? `desde ${startTime}` : null].filter(Boolean).join(' · ')
+  return [every, days, startTime ? `primera toma ${startTime}` : null].filter(Boolean).join(' · ')
 }
 
 interface MedicationCardProps {

@@ -92,7 +92,7 @@ describe('ConsultationForm', () => {
       expect(byId('medications.0.durationDays')).toHaveAttribute('placeholder', '7 días')
       expect(screen.getByRole('button', { name: '+ Otro medicamento' })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Guardar consulta' })).toBeInTheDocument()
-      expect(screen.getByText('Desde')).toBeInTheDocument()
+      expect(screen.getByText('Primera toma')).toBeInTheDocument()
       expect(screen.queryByText(/^Para /)).not.toBeInTheDocument()
     })
 
@@ -102,7 +102,7 @@ describe('ConsultationForm', () => {
       expect(screen.getByText('Para Mateo Morales · 5 años 6 meses')).toBeInTheDocument()
       expect(screen.getByText('El texto se lee en tu equipo; la foto se guarda solo en tu cuenta.')).toBeInTheDocument()
       expect(byId('medications.0.name')).toHaveAttribute('placeholder', 'Amoxicilina 250 mg')
-      for (const text of ['Nombre y dosis', 'Frecuencia', 'Duración', 'Desde']) {
+      for (const text of ['Nombre y dosis', 'Frecuencia', 'Duración', 'Primera toma']) {
         expect(screen.getByText(text)).toBeInTheDocument()
       }
     })
@@ -153,7 +153,7 @@ describe('ConsultationForm', () => {
       expect(screen.getByText('Escribe cuántos días (ej. 7).')).toBeInTheDocument()
     })
 
-    it.each(['phone', 'desktop'] as const)('%s: "Desde" is required — no "(opcional)", an error under it, and nothing is sent without it', async (variant) => {
+    it.each(['phone', 'desktop'] as const)('%s: "Primera toma" is required — no "(opcional)", an error under it, and nothing is sent without it', async (variant) => {
       const user = userEvent.setup()
       vi.stubGlobal('fetch', vi.fn())
       renderForm(variant)
@@ -337,15 +337,29 @@ describe('ConsultationForm', () => {
       expect(clickSpy).toHaveBeenCalled()
     })
 
-    it('web: the medication row is the mock\'s three columns, and a fourth one for "Desde" when the card has room (720px+)', () => {
+    it('web: the name takes the room, frequency and duration are narrow, and "Primera toma" is a fourth column when the card has room (720px+)', () => {
       renderForm('desktop')
 
       const grid = byId('medications.0.name').closest('.grid')!
-      expect(grid).toHaveClass('sm:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)]')
-      expect(grid).toHaveClass('@min-[720px]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]')
+      expect(grid).toHaveClass('sm:grid-cols-[minmax(0,1fr)_7rem_7rem]')
+      expect(grid).toHaveClass('@min-[720px]:grid-cols-[minmax(0,1fr)_7rem_7rem_10rem]')
       expect(byId('medications.0.name').closest('fieldset')).toHaveClass('@container')
-      // Narrow card: second row under "Frecuencia"; wide card: the fourth column.
-      expect(byId('medications.0.startTime').parentElement).toHaveClass('sm:col-start-2', '@min-[720px]:col-start-auto')
+      // Narrow card: second row under "Frecuencia" and "Duración"; wide card: the fourth column.
+      expect(byId('medications.0.startTime').parentElement).toHaveClass(
+        'sm:col-span-2',
+        'sm:col-start-2',
+        '@min-[720px]:col-span-1',
+        '@min-[720px]:col-start-auto',
+      )
+    })
+
+    it('phone: frequency and duration are narrow (a couple of digits), the first dose time too', () => {
+      renderForm('phone')
+
+      expect(byId('medications.0.frequencyHours').parentElement).toHaveClass('w-28')
+      expect(byId('medications.0.durationDays').parentElement).toHaveClass('w-28')
+      expect(byId('medications.0.startTime')).toHaveClass('w-40')
+      expect(screen.getByLabelText('Primera toma')).toBe(byId('medications.0.startTime'))
     })
 
     it('phone: the doctor and date fields are semibold as in the mock; the web keeps medium', () => {

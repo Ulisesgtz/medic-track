@@ -95,7 +95,7 @@ describe('ConsultationDetailPage', () => {
       expect(screen.getByRole('heading', { level: 2, name: 'Notas previas a la consulta' })).toBeInTheDocument()
       expect(screen.getByText('Comió poco el domingo')).toBeInTheDocument()
       expect(screen.getByRole('heading', { level: 3, name: 'Amoxicilina 250 mg' })).toBeInTheDocument()
-      expect(screen.getByText('Cada 8 horas · 3 días · desde 08:00')).toBeInTheDocument()
+      expect(screen.getByText('Cada 8 horas · 3 días · primera toma 08:00')).toBeInTheDocument()
     })
 
     it('is a centered column of at most 430px, as the mock', async () => {

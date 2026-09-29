@@ -34,14 +34,16 @@ async function open(page: Page, width: number) {
 }
 
 test.describe('Nueva consulta — diseño web (mock 14)', () => {
-  for (const { width, titleX, panelW, nameW, freqX, freqW, sinceInRow } of [
-    // With room (the card is 720px or wider) "Desde" is a fourth column and the fields are a bit shorter than the
-    // mock's row of three (408/204/204); at 1024 px with the sidebar the card is narrower and the row is the mock's.
-    { width: 1440, titleX: 412, panelW: 896, nameW: 320, freqX: 772, freqW: 160, sinceInRow: true },
-    { width: 1280, titleX: 332, panelW: 896, nameW: 320, freqX: 692, freqW: 160, sinceInRow: true },
-    { width: 1024, titleX: 328, panelW: 648, nameW: 284, freqX: 652, freqW: 142, sinceInRow: false },
+  // Frequency and duration hold a couple of digits: a fixed 112 px (7rem) each, and the name takes the rest.
+  // With room (the card is 720px or wider) "Primera toma" is a fourth column of 160 px; at 1024 px with the sidebar
+  // the card is narrower and it goes under "Frecuencia" and "Duración" (both columns wide).
+  const freqW = 112
+  for (const { width, titleX, panelW, nameW, freqX, sinceW, sinceInRow } of [
+    { width: 1440, titleX: 412, panelW: 896, nameW: 416, freqX: 868, sinceW: 160, sinceInRow: true },
+    { width: 1280, titleX: 332, panelW: 896, nameW: 416, freqX: 788, sinceW: 160, sinceInRow: true },
+    { width: 1024, titleX: 328, panelW: 648, nameW: 344, freqX: 712, sinceW: 240, sinceInRow: false },
   ]) {
-    test(`a ${width} px: barra lateral, título, panel del OCR y la fila del medicamento (Desde ${sinceInRow ? 'en el mismo renglón' : 'debajo, como el mock de tres campos'})`, async ({ page, browserName }) => {
+    test(`a ${width} px: barra lateral, título, panel del OCR y la fila del medicamento (Primera toma ${sinceInRow ? 'en el mismo renglón' : 'debajo de frecuencia y duración'})`, async ({ page, browserName }) => {
       await open(page, width)
 
       expect(await box(page.locator('aside').first())).toMatchObject({ x: 0, w: 280 })
@@ -53,12 +55,12 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
       expect(await box(page.getByText('Frecuencia', { exact: true }))).toMatchObject({ x: freqX, w: freqW })
       expect(await box(page.getByText('Duración', { exact: true }))).toMatchObject({ w: freqW })
       const freq = await box(page.getByText('Frecuencia', { exact: true }))
-      const since = await box(page.getByText('Desde', { exact: true }))
+      const since = await box(page.getByText('Primera toma', { exact: true }))
       if (sinceInRow) {
         expect(since.y).toBe(freq.y)
-        expect(since).toMatchObject({ x: freqX + 2 * (freqW + 16), w: freqW })
+        expect(since).toMatchObject({ x: freqX + 2 * (freqW + 16), w: sinceW })
       } else {
-        expect(since.x).toBe(freq.x)
+        expect(since).toMatchObject({ x: freqX, w: sinceW })
         expect(since.y).toBeGreaterThan(freq.y)
       }
       if (browserName === 'chromium') {
@@ -116,9 +118,9 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     await expect(page.locator('#medications\\.0\\.name')).toHaveAttribute('placeholder', 'Amoxicilina 250 mg')
     await expect(page.locator('#medications\\.0\\.frequencyHours')).toHaveAttribute('placeholder', 'c/8 h')
     await expect(page.locator('#medications\\.0\\.durationDays')).toHaveAttribute('placeholder', '7 días')
-    // "Desde" is not in the mock's row: with room it is a fourth column of the same row.
+    // "Primera toma" is not in the mock's row: with room it is a fourth column of the same row.
     const freq = await box(page.getByText('Frecuencia', { exact: true }))
-    const since = await box(page.getByText('Desde', { exact: true }))
+    const since = await box(page.getByText('Primera toma', { exact: true }))
     expect(since.y).toBe(freq.y)
     expect(since.x).toBeGreaterThan(freq.x)
   })

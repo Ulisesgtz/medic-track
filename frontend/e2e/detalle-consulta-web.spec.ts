@@ -68,7 +68,7 @@ test.describe('Detalle de consulta — diseño web (mock 13)', () => {
     await expect(page.getByRole('link', { name: 'Nueva consulta' })).toBeVisible()
     await expect(page.getByRole('heading', { level: 2, name: 'Medicamentos' })).toBeVisible()
     await expect(page.getByRole('heading', { level: 3, name: 'Amoxicilina' })).toBeVisible()
-    await expect(page.getByText('Cada 8 horas · 7 días · desde 00:00')).toBeVisible()
+    await expect(page.getByText('Cada 8 horas · 7 días · primera toma 00:00')).toBeVisible()
     await expect(page.getByRole('heading', { level: 2, name: 'Notas previas a la consulta' })).toBeVisible()
     await expect(page.getByText('Fiebre y tos', { exact: true })).toBeVisible()
     await expect(page.getByRole('heading', { level: 2, name: 'Foto de la receta' })).toBeVisible()

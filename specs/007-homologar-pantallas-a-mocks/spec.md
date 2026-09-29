@@ -49,8 +49,11 @@ Decididas por el usuario:
 - Se **conservan los campos actuales**: tutor y hijo con nombre y apellido separados, país/estado (opcionales),
   talla/peso (opcionales) — el mock 01/11 tiene "Correo, Contraseña, Nombre y apellido, Fecha". En ambos registros quedan dentro del orden del mock: Correo, Contraseña, luego Tu nombre/Tu apellido y País/Estado, y el bloque "Hijo 1 · Gratis" (en móvil, columna de máx. 430 px como el mock; Talla y Peso en dos columnas). Igual en el modal
   "Agregar hijo" (el mock tiene "Nombre completo").
-- **"Desde"** (hora de inicio) en cada medicamento de "Nueva consulta", **obligatorio** (2026-09-20: una consulta es inmutable,
-  así que una hora omitida no se podría completar después y sin ella no hay tomas ni tratamiento activo). El backend también
+- **"Primera toma"** (hora de inicio; se llamaba "Desde" hasta el 2026-09-29, poco claro) en cada medicamento de "Nueva
+  consulta", **obligatoria**; el detalle dice "Cada 8 horas · 3 días · primera toma 08:00". Frecuencia y duración llevan
+  uno o dos dígitos, así que tienen un ancho fijo angosto (112 px) en ambos diseños y el nombre toma el resto (2026-09-29,
+  a pedido del usuario; en web cambia la proporción 2fr/1fr/1fr del mock 14). Obligatoria desde el 2026-09-20 porque una consulta es inmutable,
+  así que una hora omitida no se podría completar después y sin ella no hay tomas ni tratamiento activo. El backend también
   la exige; las consultas anteriores sin hora se quedan como están.
 
 Por límites de datos o del producto:
@@ -90,10 +93,9 @@ Por límites de datos o del producto:
 - **Nueva consulta web (14)**: medido elemento por elemento a 1440, 1280, 1024 y 1000 px: encabezado ("← Cancelar", título y
   "Para Mateo Morales · 5 años 6 meses"), panel del OCR (137 px, separaciones de 16 px), grupo "Sugerido por OCR" (con
   Síntomas, que en web sí está en el mock) y la fila de tres campos del medicamento (2fr/1fr/1fr) coinciden en posición,
-  tamaño, tipografía y color; bajo 1024 px, como el mock, sin barra lateral y con márgenes de 24 px. Diferencias: "Desde" (cuando la
-  tarjeta mide 720 px o más va como cuarta columna del mismo renglón y los campos son más cortos: Nombre y dosis 320 px y
-  Frecuencia/Duración/Desde 160 px, en vez de 408/204/204; con la tarjeta más angosta, p. ej. a 1024 px con la barra lateral,
-  la fila es la del mock y "Desde" queda debajo de "Frecuencia"), "Cambiar foto", el
+  tamaño, tipografía y color; bajo 1024 px, como el mock, sin barra lateral y con márgenes de 24 px. Diferencias: la fila del
+  medicamento (desde 2026-09-29 Frecuencia y Duración miden 112 px fijos y Nombre y dosis toma el resto; "Primera toma"
+  va como cuarta columna de 160 px cuando la tarjeta mide 720 px o más, y si no, debajo de Frecuencia y Duración), "Cambiar foto", el
   estado inicial del panel (sin foto, con "Seleccionar archivo"), el área táctil de 44 px de "← Cancelar" y que al guardar
   se abre el detalle de la consulta (el mock muestra "Consulta guardada ✓").
 - **Home web y pop-up del plan gratuito (15)**: medido a 1440, 1280, 1024 y 1000 px, cerrado y con el pop-up abierto (barra
@@ -117,7 +119,7 @@ Por límites de datos o del producto:
   Columna centrada de máx. 430 px.
 - **Nueva consulta móvil (04)**: medido elemento por elemento a 430 px; cabecera (286 px), panel del OCR, grupo
   "Sugerido por OCR" y tarjeta de medicamento (nombre y dosis, c/8 h, 7 días) en la misma posición, con las mismas
-  medidas y `font-semibold` en Doctor y Fecha. Diferencias: "Cambiar foto", "Síntomas" y "Desde"
+  medidas y `font-semibold` en Doctor y Fecha. Diferencias: "Cambiar foto", "Síntomas" y "Primera toma"
   (extras decididos), etiquetas solo para lector de pantalla en los campos del medicamento, el estado inicial
   del panel (sin foto) y que al guardar se abre el detalle de la consulta (el mock muestra "Consulta guardada ✓").
   Columna centrada de máx. 430 px.

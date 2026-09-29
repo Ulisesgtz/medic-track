@@ -53,7 +53,7 @@ for (const design of designs) {
       // FR-003/FR-013: saving navigates straight to the new consultation's detail.
       await expect(page).toHaveURL(/\/consultations\/(?!new)/)
       await expect(page.getByRole('heading', { name: 'Amoxicilina' })).toBeVisible()
-      await expect(page.getByText('Cada 8 horas · 3 días · desde 08:00')).toBeVisible()
+      await expect(page.getByText('Cada 8 horas · 3 días · primera toma 08:00')).toBeVisible()
 
       // The treatment spans 3 days, so the day switcher is there: every dose stays reachable.
       const chips = page.getByRole('button', { name: /^Toma de / })
@@ -116,7 +116,7 @@ for (const design of designs) {
       await expect(page).toHaveURL(/\/consultations\/new/)
     })
 
-    test('"Desde" es obligatorio: sin hora de inicio no se guarda (y ya no dice "opcional")', async ({ page }) => {
+    test('"Primera toma" es obligatoria: sin hora de inicio no se guarda (y ya no dice "opcional")', async ({ page }) => {
       await signUp(page)
       await page.getByRole('main').getByText('Luis Gómez').click()
       await page.getByRole('link', { name: design.isWeb ? 'Nueva consulta' : '+ Nueva' }).click()
