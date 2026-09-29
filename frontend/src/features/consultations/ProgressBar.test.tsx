@@ -20,6 +20,9 @@ describe('ProgressBar (specs/014)', () => {
     expect(bar).toHaveAttribute('aria-valuemax', '9')
     expect(bar).toHaveAttribute('aria-valuenow', '3')
     expect(bar).toHaveAttribute('aria-valuetext', '3 de 9 tomas registradas')
+    expect(bar).toHaveClass('bg-slate-300')
+    // The visible text is hidden from assistive technology: the bar already says it.
+    expect(screen.getByText('3 / 9 tomas')).toHaveAttribute('aria-hidden', 'true')
     expect((bar.firstElementChild as HTMLElement).style.width).toBe('33%')
   })
 
@@ -28,6 +31,8 @@ describe('ProgressBar (specs/014)', () => {
 
     expect(screen.getByText(/1 \/ 4 tomas/)).toHaveTextContent('1 / 4 tomas · 2 sin registrar')
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1')
+    // The visible line is aria-hidden, so the bar itself says the unregistered doses.
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuetext', '1 de 4 tomas registradas, 2 sin registrar')
   })
 
   it('has no mention of unregistered doses when there are none, and is full when all are marked', () => {

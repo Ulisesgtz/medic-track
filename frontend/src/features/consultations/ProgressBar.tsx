@@ -13,7 +13,8 @@ export function ProgressBar({ doses }: { doses: Dose[] }) {
 
   return (
     <div className="mt-3">
-      <p className="text-[13px] font-bold text-ink-soft">
+      {/* The bar below carries the same numbers for a screen reader (aria-valuetext): read only once. */}
+      <p aria-hidden="true" className="text-[13px] font-bold text-ink-soft">
         {progressText(progress)}
         {progress.unregistered > 0 && (
           <span className="font-semibold text-slate-600">{unregisteredSuffix(progress.unregistered)}</span>
@@ -25,8 +26,9 @@ export function ProgressBar({ doses }: { doses: Dose[] }) {
         aria-valuemin={0}
         aria-valuemax={progress.total}
         aria-valuenow={progress.taken}
-        aria-valuetext={`${progress.taken} de ${progress.total} ${progress.total === 1 ? 'toma registrada' : 'tomas registradas'}`}
-        className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-200"
+        aria-valuetext={`${progress.taken} de ${progress.total} ${progress.total === 1 ? 'toma registrada' : 'tomas registradas'}${progress.unregistered > 0 ? `, ${progress.unregistered} sin registrar` : ''}`}
+        // slate-300 track: slate-200 was ~1.2:1 on the white card, the empty bar almost vanished.
+        className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-300"
       >
         <div
           className="h-full rounded-full bg-confirmed transition-[width] duration-300 motion-reduce:transition-none"

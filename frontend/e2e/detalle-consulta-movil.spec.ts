@@ -50,7 +50,7 @@ test.describe('Detalle de consulta — diseño móvil (mock 03)', () => {
 
     await expect(page.getByText('1 / 3 tomas')).toBeVisible()
     await expect(bar).toHaveAttribute('aria-valuenow', '1')
-    await expect(bar).toHaveAttribute('aria-valuetext', '1 de 3 tomas registradas')
+    await expect(bar).toHaveAttribute('aria-valuetext', /^1 de 3 tomas registradas/)
   })
 
   test('cada chip alterna entre marcada y sin marcar, y se conserva al recargar', async ({ page }) => {
