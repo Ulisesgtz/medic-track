@@ -59,8 +59,13 @@ Por límites de datos o del producto:
   **"Seleccionar archivo"** (hace falta un modo de elegir la foto) y pasa al progreso al elegirla. En móvil, ya
   elegida la foto, el panel es exactamente el del mock (sin fila del selector ni nombre del archivo) y **"Cambiar
   foto"** va en la fila superior, a la derecha de "← Cancelar" (en web, al extremo derecho del encabezado, igual sin costo de espacio).
-- El mock 04 no tiene "Síntomas" en móvil; se conserva el campo (el modelo lo guarda): en móvil va como campo propio
-  bajo el grupo "Sugerido por OCR" (que queda idéntico al mock, solo Doctor y Fecha); en web (mock 14) va dentro del grupo.
+- **Síntomas y notas (spec 012, 2026-09-29)**: los mocks 04/14 no tienen síntomas para elegir. En ambos diseños hay una
+  sección propia después del grupo "Leído de tu receta" y antes de los medicamentos: "¿Qué síntomas tuvo?" (chips por
+  categoría, sin mock, diseñados con los tokens) y "Notas previas a la consulta" (el antiguo cuadro "Síntomas"). En web
+  esto **saca el cuadro del grupo de la receta, donde lo dibujaba el mock 14**: la receta no trae síntomas y la lectura
+  nunca los llenó. En los detalles (mocks 03/13), "Síntomas registrados" pasa a ser "Síntomas" (pastillas) y "Notas
+  previas a la consulta"; en web van juntas en la tarjeta bajo los medicamentos. El grupo de la receta queda como el
+  mock: solo Doctor y Fecha.
 - El detalle de consulta muestra **una fila de chips por día**, con "← Día anterior / Día siguiente →" cuando
   el tratamiento dura varios días (el mock enseña una sola fila fija); así toda toma queda alcanzable.
 - El mock 02 muestra una consulta "sin receta"; el backend exige al menos un medicamento por consulta, así que

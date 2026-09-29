@@ -23,7 +23,20 @@ func newTestRouter(t *testing.T) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/catalog/countries", h.ListCountries)
 	r.Get("/catalog/countries/{countryCode}/states", h.ListStates)
+	r.Get("/catalog/symptoms", h.ListSymptoms)
 	return r
+}
+
+func TestHandler_ListSymptoms(t *testing.T) {
+	router := newTestRouter(t)
+
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/catalog/symptoms", nil))
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	var body []map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, map[string]string{"code": "fever", "name": "Fiebre", "category": "General"}, body[0])
 }
 
 func TestHandler_ListCountries(t *testing.T) {
@@ -49,6 +62,13 @@ func TestHandler_InternalErrors(t *testing.T) {
 	r := chi.NewRouter()
 	r.Get("/catalog/countries", h.ListCountries)
 	r.Get("/catalog/countries/{countryCode}/states", h.ListStates)
+	r.Get("/catalog/symptoms", h.ListSymptoms)
+
+	t.Run("ListSymptoms", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/catalog/symptoms", nil))
+		require.Equal(t, http.StatusInternalServerError, rec.Code)
+	})
 
 	t.Run("ListCountries", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/catalog/countries", nil)

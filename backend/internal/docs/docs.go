@@ -615,6 +615,35 @@ const docTemplate = `{
                 }
             }
         },
+        "/catalog/symptoms": {
+            "get": {
+                "description": "Active symptoms of the catalog, in order, grouped by their category title; used by the\n\"Nueva consulta\" form (specs/012-sintomas-notas-consulta/contracts/symptoms-api.md).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "summary": "List the symptoms a parent can mark",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/CatalogSymptomResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected server error",
+                        "schema": {
+                            "$ref": "#/definitions/NotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/children/{childId}/consultations": {
             "get": {
                 "security": [
@@ -622,7 +651,7 @@ const docTemplate = `{
                         "ClerkSession": []
                     }
                 ],
-                "description": "Lists a child's medical consultations (date, doctor, symptoms and medication count), most recent first (FR-001).",
+                "description": "Lists a child's medical consultations (date, doctor, notes, marked symptom names in catalog order and medication count), most recent first (FR-001).",
                 "produces": [
                     "application/json"
                 ],
@@ -672,7 +701,7 @@ const docTemplate = `{
                         "ClerkSession": []
                     }
                 ],
-                "description": "Registers a consultation with its prescription photo, medications and symptoms\n(FR-003, FR-004). At least one medication is required (FR-015), and each one needs\nits startTime (\"HH:MM\"): all of its doses are generated at once from it (research.md).",
+                "description": "Registers a consultation with its prescription photo, medications, notes and marked symptoms\n(FR-003, FR-004). At least one medication is required (FR-015), and each one needs\nits startTime (\"HH:MM\"): all of its doses are generated at once from it (research.md).\nEvery symptomCodes entry must be an active catalog symptom, or 400 with details[].message \"symptom_not_available\" (specs/012).",
                 "consumes": [
                     "application/json"
                 ],
@@ -816,7 +845,7 @@ const docTemplate = `{
                         "ClerkSession": []
                     }
                 ],
-                "description": "Retrieves the prescription photo, doctor, date, medications (with their doses,\nif any), and symptoms of a consultation (FR-013).",
+                "description": "Retrieves the prescription photo, doctor, date, medications (with their doses,\nif any), notes and marked symptoms (catalog order, retired ones included) of a consultation (FR-013, specs/012).",
                 "produces": [
                     "application/json"
                 ],
@@ -1048,6 +1077,23 @@ const docTemplate = `{
                 }
             }
         },
+        "CatalogSymptomResponse": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "example": "General"
+                },
+                "code": {
+                    "type": "string",
+                    "example": "fever"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Fiebre"
+                }
+            }
+        },
         "ChildNotFoundResponse": {
             "type": "object",
             "properties": {
@@ -1104,12 +1150,18 @@ const docTemplate = `{
                         "$ref": "#/definitions/MedicationResponse"
                     }
                 },
+                "notes": {
+                    "type": "string",
+                    "example": "Comió mariscos el domingo; la fiebre empezó el lunes"
+                },
                 "photoBase64": {
                     "type": "string"
                 },
                 "symptoms": {
-                    "type": "string",
-                    "example": "Tos y fiebre leve"
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ConsultationSymptomResponse"
+                    }
                 }
             }
         },
@@ -1186,9 +1238,36 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 2
                 },
-                "symptoms": {
+                "notes": {
                     "type": "string",
-                    "example": "Tos y fiebre leve"
+                    "example": "Comió mariscos el domingo; la fiebre empezó el lunes"
+                },
+                "symptomNames": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "Fiebre",
+                        "Tos"
+                    ]
+                }
+            }
+        },
+        "ConsultationSymptomResponse": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "example": "General"
+                },
+                "code": {
+                    "type": "string",
+                    "example": "fever"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Fiebre"
                 }
             }
         },
@@ -1597,12 +1676,23 @@ const docTemplate = `{
                         "$ref": "#/definitions/internal_consultation.createMedicationRequest"
                     }
                 },
+                "notes": {
+                    "type": "string",
+                    "example": "Comió mariscos el domingo; la fiebre empezó el lunes"
+                },
                 "photoBase64": {
                     "type": "string"
                 },
-                "symptoms": {
-                    "type": "string",
-                    "example": "Tos y fiebre leve"
+                "symptomCodes": {
+                    "description": "SymptomCodes are catalog codes (GET /catalog/symptoms); optional, duplicates ignored.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "fever",
+                        "cough"
+                    ]
                 },
                 "utcOffsetMinutes": {
                     "description": "UTCOffsetMinutes is the parent's UTC offset, so \"startTime\" is read in\ntheir own time zone. Optional: 0 (default) means UTC.",

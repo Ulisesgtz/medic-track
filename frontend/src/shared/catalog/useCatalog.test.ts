@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
-import { useCountries, useStates } from './useCatalog'
+import { useCountries, useStates, useSymptoms } from './useCatalog'
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -32,6 +32,16 @@ describe('useCatalog', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     expect(result.current.data).toEqual(mockCountries)
+  })
+
+  it('useSymptoms returns the symptoms catalog', async () => {
+    const symptoms = [{ code: 'fever', name: 'Fiebre', category: 'General' }]
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => symptoms } as Response)
+
+    const { result } = renderHook(() => useSymptoms(), { wrapper: createWrapper() })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data).toEqual(symptoms)
   })
 
   it('useStates is disabled until a country code is provided', () => {

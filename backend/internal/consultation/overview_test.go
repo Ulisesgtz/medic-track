@@ -23,7 +23,7 @@ func today() time.Time {
 
 func createOverviewConsultation(t *testing.T, repo *consultation.Repository, childID uuid.UUID, date time.Time, meds ...consultation.Medication) *consultation.Consultation {
 	t.Helper()
-	c := &consultation.Consultation{DoctorName: "Dra. López", ConsultDate: date, Photo: samplePhoto(), Symptoms: "Tos", Medications: meds}
+	c := &consultation.Consultation{DoctorName: "Dra. López", ConsultDate: date, Photo: samplePhoto(), Notes: "Tos", Medications: meds}
 	require.NoError(t, repo.Create(context.Background(), childID, c))
 	return c
 }
@@ -123,7 +123,7 @@ func TestRepository_Create_ReadsStartTimeInTheParentsTimeZone(t *testing.T) {
 	require.True(t, time.Date(2026, 1, 15, 14, 0, 0, 0, time.UTC).Equal(c.Medications[0].Doses[0].ScheduledAt))
 }
 
-func TestRepository_GetByChild_IncludesSymptomsAndMedicationCount(t *testing.T) {
+func TestRepository_GetByChild_IncludesNotesAndMedicationCount(t *testing.T) {
 	pool := testPool(t)
 	repo := consultation.NewRepository(pool)
 	childID := createTestChild(t, pool)
@@ -136,7 +136,7 @@ func TestRepository_GetByChild_IncludesSymptomsAndMedicationCount(t *testing.T) 
 
 	require.NoError(t, err)
 	require.Len(t, got, 1)
-	require.Equal(t, "Tos", got[0].Symptoms)
+	require.Equal(t, "Tos", got[0].Notes)
 	require.Equal(t, 2, got[0].MedicationCount)
 }
 
@@ -207,7 +207,7 @@ func TestHandler_GetChildOverview_Success(t *testing.T) {
 		"doctorName":       "Dra. López",
 		"consultDate":      today().Format("2006-01-02"),
 		"photoBase64":      base64.StdEncoding.EncodeToString([]byte("fake-jpeg")),
-		"symptoms":         "Tos",
+		"notes":            "Tos",
 		"utcOffsetMinutes": 0,
 		"medications":      []map[string]any{validMedicationPayload()},
 	})
@@ -238,12 +238,12 @@ func TestHandler_GetChildOverview_Success(t *testing.T) {
 	listRec := doGet(t, router, "/children/"+childID.String()+"/consultations")
 	var list struct {
 		Consultations []struct {
-			Symptoms        string `json:"symptoms"`
+			Notes           string `json:"notes"`
 			MedicationCount int    `json:"medicationCount"`
 		} `json:"consultations"`
 	}
 	require.NoError(t, json.Unmarshal(listRec.Body.Bytes(), &list))
-	require.Equal(t, "Tos", list.Consultations[0].Symptoms)
+	require.Equal(t, "Tos", list.Consultations[0].Notes)
 	require.Equal(t, 1, list.Consultations[0].MedicationCount)
 }
 

@@ -11,15 +11,16 @@ import { fetchChildOverview, fetchConsultationDetail, ConsultationApiError } fro
 import { sniffImageMimeType } from './imageMime'
 import { MedicationCard } from './MedicationCard'
 import { PhotoViewer } from './PhotoViewer'
+import { SymptomChips } from './SymptomChips'
 
 const overline = 'text-xs font-extrabold uppercase tracking-[0.1em] text-ink-soft'
 
 /**
  * Detail of a single consultation (FR-013), built from the delivered
  * mockups: on the phone (03) the dark header, the prescription photo card,
- * the symptoms and the medications with their dose chips; with the desktop
- * web design (13, with the sidebar when there is an account) the header row with "Nueva consulta", medications and symptoms
- * on the left, the photo and the active treatment on the right.
+ * the marked symptoms, the "notas previas a la consulta" (specs/012) and the medications with their dose
+ * chips; with the desktop web design (13, with the sidebar when there is an account) the header row with
+ * "Nueva consulta", medications, symptoms and notes on the left, the photo and the active treatment on the right.
  */
 export function ConsultationDetailPage() {
   const { consultationId } = useParams<{ consultationId: string }>()
@@ -76,6 +77,7 @@ export function ConsultationDetailPage() {
   const backLabel = child ? `← ${child.firstName} ${child.lastName}` : '← Volver al reporte de consultas'
   const date = formatDateLong(consultation.consultDate)
   const treatment = overviewQuery.data?.activeTreatment
+  const hasSymptoms = consultation.symptoms.length > 0
 
   const photoImage = (className: string) => (
     <button
@@ -134,10 +136,22 @@ export function ConsultationDetailPage() {
               <div className="flex min-w-0 flex-col gap-4">
                 <h2 className={overline}>Medicamentos</h2>
                 {medications}
-                {consultation.symptoms && (
-                  <div className="min-w-0 rounded-3xl bg-surface p-6 shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
-                    <h2 className={overline}>Síntomas registrados</h2>
-                    <p className="mt-3 text-base leading-relaxed text-[#1f3d44]">{consultation.symptoms}</p>
+                {(hasSymptoms || consultation.notes) && (
+                  <div className="flex min-w-0 flex-col gap-5 rounded-3xl bg-surface p-6 shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
+                    {hasSymptoms && (
+                      <div>
+                        <h2 className={overline}>Síntomas</h2>
+                        <div className="mt-3">
+                          <SymptomChips symptoms={consultation.symptoms} />
+                        </div>
+                      </div>
+                    )}
+                    {consultation.notes && (
+                      <div>
+                        <h2 className={overline}>Notas previas a la consulta</h2>
+                        <p className="mt-3 text-base leading-relaxed whitespace-pre-line text-[#1f3d44]">{consultation.notes}</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -198,10 +212,19 @@ export function ConsultationDetailPage() {
           </div>
         </section>
 
-        {consultation.symptoms && (
+        {hasSymptoms && (
           <section className="px-6 pt-7">
-            <h2 className={overline}>Síntomas registrados</h2>
-            <p className="mt-2.5 text-base leading-relaxed text-[#1f3d44]">{consultation.symptoms}</p>
+            <h2 className={overline}>Síntomas</h2>
+            <div className="mt-2.5">
+              <SymptomChips symptoms={consultation.symptoms} />
+            </div>
+          </section>
+        )}
+
+        {consultation.notes && (
+          <section className="px-6 pt-7">
+            <h2 className={overline}>Notas previas a la consulta</h2>
+            <p className="mt-2.5 text-base leading-relaxed whitespace-pre-line text-[#1f3d44]">{consultation.notes}</p>
           </section>
         )}
 

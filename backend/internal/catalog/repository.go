@@ -46,6 +46,26 @@ func (r *Repository) CountryExists(ctx context.Context, countryCode string) (boo
 	return exists, nil
 }
 
+// ListSymptoms returns the symptoms still offered (active), in catalog order.
+// Retired symptoms are left out here but still read from each consultation.
+func (r *Repository) ListSymptoms(ctx context.Context) ([]Symptom, error) {
+	rows, err := r.pool.Query(ctx, `SELECT code, name, category FROM symptoms WHERE active ORDER BY sort_order`)
+	if err != nil {
+		return nil, fmt.Errorf("querying symptoms: %w", err)
+	}
+	defer rows.Close()
+
+	var symptoms []Symptom
+	for rows.Next() {
+		var s Symptom
+		if err := rows.Scan(&s.Code, &s.Name, &s.Category); err != nil {
+			return nil, fmt.Errorf("scanning symptom: %w", err)
+		}
+		symptoms = append(symptoms, s)
+	}
+	return symptoms, rows.Err()
+}
+
 // ListStatesByCountry returns every state belonging to countryCode, ordered by name.
 func (r *Repository) ListStatesByCountry(ctx context.Context, countryCode string) ([]State, error) {
 	rows, err := r.pool.Query(ctx,

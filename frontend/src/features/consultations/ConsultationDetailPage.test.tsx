@@ -7,7 +7,7 @@ import { ConsultationDetailPage } from './ConsultationDetailPage'
 
 function renderPage(consultationId = 'c1') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  render(
+  return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[`/consultations/${consultationId}`]}>
         <Routes>
@@ -29,7 +29,11 @@ const account = {
 function consultation(overrides: Record<string, unknown> = {}) {
   return {
     id: 'c1', childId: 'child-1', doctorName: 'Dra. López', consultDate: '2026-01-15',
-    photoBase64: 'Zm9v', symptoms: 'Tos y fiebre',
+    photoBase64: 'Zm9v', notes: 'Comió poco el domingo',
+    symptoms: [
+      { code: 'fever', name: 'Fiebre', category: 'General' },
+      { code: 'cough', name: 'Tos', category: 'Respiratorio' },
+    ],
     medications: [
       {
         id: 'm1', name: 'Amoxicilina 250 mg', frequencyHours: 8, durationDays: 3, startTime: '08:00',
@@ -77,7 +81,7 @@ describe('ConsultationDetailPage', () => {
   })
 
   describe('on the phone (mock 03)', () => {
-    it('renders the header, photo card, symptoms and the medication with its schedule (FR-013)', async () => {
+    it('renders the header, photo card, symptoms, notes and the medication with its schedule (FR-013)', async () => {
       stubApi(consultation())
       renderPage()
 
@@ -86,8 +90,10 @@ describe('ConsultationDetailPage', () => {
       expect(await screen.findByRole('link', { name: '← Mateo Morales' })).toHaveAttribute('href', '/children/child-1')
       expect(screen.getByText('Foto de la receta')).toBeInTheDocument()
       expect(screen.getByText('Leída en tu equipo')).toBeInTheDocument()
-      expect(screen.getByText('Síntomas registrados')).toBeInTheDocument()
-      expect(screen.getByText('Tos y fiebre')).toBeInTheDocument()
+      const symptoms = screen.getByRole('heading', { level: 2, name: 'Síntomas' }).parentElement!
+      expect(within(symptoms).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Fiebre', 'Tos'])
+      expect(screen.getByRole('heading', { level: 2, name: 'Notas previas a la consulta' })).toBeInTheDocument()
+      expect(screen.getByText('Comió poco el domingo')).toBeInTheDocument()
       expect(screen.getByRole('heading', { level: 3, name: 'Amoxicilina 250 mg' })).toBeInTheDocument()
       expect(screen.getByText('Cada 8 horas · 3 días · desde 08:00')).toBeInTheDocument()
     })
@@ -113,12 +119,23 @@ describe('ConsultationDetailPage', () => {
       expect(await screen.findByRole('link', { name: '← Volver al reporte de consultas' })).toBeInTheDocument()
     })
 
-    it('omits the symptoms section when there are none', async () => {
-      stubApi(consultation({ symptoms: '' }))
+    it('omits the symptoms and notes sections when there are none', async () => {
+      stubApi(consultation({ symptoms: [], notes: '' }))
       renderPage()
 
       await screen.findByRole('heading', { level: 1, name: 'Dra. López' })
-      expect(screen.queryByText('Síntomas registrados')).not.toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Síntomas' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Notas previas a la consulta' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('list')).not.toBeInTheDocument()
+    })
+
+    it("shows an earlier consultation's old symptoms text, whole, as its notes (FR-013)", async () => {
+      stubApi(consultation({ symptoms: [], notes: 'Fiebre y tos desde el lunes' }))
+      renderPage()
+
+      expect(await screen.findByText('Fiebre y tos desde el lunes')).toBeInTheDocument()
+      expect(screen.getByRole('heading', { level: 2, name: 'Notas previas a la consulta' })).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Síntomas' })).not.toBeInTheDocument()
     })
 
     it("shows the day's doses as time chips: taken, missed (amber) and not yet due (grey)", async () => {
@@ -273,6 +290,36 @@ describe('ConsultationDetailPage', () => {
       expect(screen.getByRole('navigation', { name: 'Tus hijos' })).toBeInTheDocument()
     })
 
+    it('shows the symptoms and the notes in one card on the left, and each only when it has something', async () => {
+      useDesktop()
+      stubApi(consultation())
+      const { unmount } = renderPage()
+
+      const card = (await screen.findByRole('heading', { level: 2, name: 'Síntomas' })).parentElement!.parentElement!
+      expect(within(card).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Fiebre', 'Tos'])
+      expect(within(card).getByText('Comió poco el domingo')).toBeInTheDocument()
+      unmount()
+
+      stubApi(consultation({ notes: '' }))
+      renderPage()
+      expect(await screen.findByRole('heading', { level: 2, name: 'Síntomas' })).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Notas previas a la consulta' })).not.toBeInTheDocument()
+    })
+
+    it('shows only the notes when a consultation has no symptoms, and no card when it has neither', async () => {
+      useDesktop()
+      stubApi(consultation({ symptoms: [] }))
+      const { unmount } = renderPage()
+      expect(await screen.findByRole('heading', { level: 2, name: 'Notas previas a la consulta' })).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Síntomas' })).not.toBeInTheDocument()
+      unmount()
+
+      stubApi(consultation({ symptoms: [], notes: '' }))
+      renderPage()
+      await screen.findByRole('heading', { level: 1, name: 'Dra. López' })
+      expect(screen.queryByRole('heading', { name: 'Notas previas a la consulta' })).not.toBeInTheDocument()
+    })
+
     it('says there is no active treatment when nothing is left ahead', async () => {
       useDesktop()
       stubApi(consultation())
@@ -302,7 +349,7 @@ describe('ConsultationDetailPage', () => {
 
   describe('photo viewer', () => {
     function stubConsultation() {
-      stubApi(consultation({ symptoms: '', medications: [] }))
+      stubApi(consultation({ symptoms: [], notes: '', medications: [] }))
     }
 
     it('opens the photo in an in-app viewer from "Ver completa" (a data: URL in a new tab renders blank)', async () => {

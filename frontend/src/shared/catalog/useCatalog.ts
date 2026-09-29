@@ -1,5 +1,20 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchCountries, fetchStates } from './api'
+import { fetchCountries, fetchStates, fetchSymptoms } from './api'
+
+/** Key of the symptoms catalog; invalidated when the server says a chosen symptom was retired. */
+export const SYMPTOMS_QUERY_KEY = ['catalog', 'symptoms'] as const
+
+/**
+ * The symptoms offered in "Nueva consulta" (specs/012). Maintained on the server, so a symptom added or
+ * retired there shows up on the next load, without a new release of the app.
+ */
+export function useSymptoms() {
+  return useQuery({
+    queryKey: SYMPTOMS_QUERY_KEY,
+    queryFn: fetchSymptoms,
+    staleTime: 10 * 60 * 1000,
+  })
+}
 
 /** Fetches the list of countries for the country selector. */
 export function useCountries() {

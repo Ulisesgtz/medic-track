@@ -51,6 +51,7 @@ func NewRouter(d Deps) *chi.Mux {
 
 	r.Get("/catalog/countries", d.Catalog.ListCountries)
 	r.Get("/catalog/countries/{countryCode}/states", d.Catalog.ListStates)
+	r.Get("/catalog/symptoms", d.Catalog.ListSymptoms)
 
 	// The "Tomada" button of a reminder, sent by the service worker, which has no session: the
 	// signed action token is the only thing it accepts, and it names a single dose (specs/011).

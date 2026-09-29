@@ -8,7 +8,7 @@ export type { ValidationErrorDetail }
 
 /** Discriminated error thrown by this feature's api functions. */
 export class ConsultationApiError extends ApiError<
-  'child_not_found' | 'consultation_not_found' | 'dose_not_found' | 'validation_error' | 'unknown'
+  'child_not_found' | 'consultation_not_found' | 'dose_not_found' | 'validation_error' | 'symptom_not_available' | 'unknown'
 > {}
 
 // contracts/get-consultations.md
@@ -52,7 +52,9 @@ export interface CreateConsultationPayload {
   doctorName: string
   consultDate: string
   photoBase64: string
-  symptoms?: string
+  notes?: string
+  /** Catalog codes of the marked symptoms (specs/012). */
+  symptomCodes?: string[]
   medications: CreateMedicationPayload[]
   /** The parent's UTC offset, so each medication's start time is read in their own time zone. */
   utcOffsetMinutes: number
@@ -76,6 +78,10 @@ export async function createConsultation(
   }
   if (res.status === 404 || res.status === 403) {
     throw new ConsultationApiError('child_not_found', body.message ?? 'Child not found')
+  }
+  if (res.status === 400 && body.details?.some((d: ValidationErrorDetail) => d.message === 'symptom_not_available')) {
+    // A chosen symptom was retired from the catalog meanwhile (specs/012 FR-010).
+    throw new ConsultationApiError('symptom_not_available', body.message ?? 'Symptom not available', body.details)
   }
   if (res.status === 400) {
     throw new ConsultationApiError('validation_error', body.message ?? 'Validation error', body.details)

@@ -215,4 +215,5 @@ func TestRouter_TheReminderActionIsPublicButNeedsItsToken(t *testing.T) {
 func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 	w := newWorld(t)
 	require.Equal(t, http.StatusOK, w.do(t, http.MethodGet, "/catalog/countries", "", "").Code)
+	require.Equal(t, http.StatusOK, w.do(t, http.MethodGet, "/catalog/symptoms", "", "").Code)
 }

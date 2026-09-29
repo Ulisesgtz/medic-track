@@ -101,13 +101,18 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     await expect(page.getByText('Listo')).toBeVisible({ timeout: 60_000 })
   })
 
-  test('el grupo "Leído de tu receta" lleva Doctor, Fecha y Síntomas; los campos de la fila del medicamento, sus placeholders', async ({ page }) => {
+  test('el grupo "Leído de tu receta" lleva Doctor y Fecha (síntomas y notas van aparte); los campos de la fila del medicamento, sus placeholders', async ({ page }) => {
     await open(page, 1280)
 
     const group = page.getByRole('group', { name: 'Leído de tu receta · revisa y confirma' })
     await expect(group.getByLabel('Doctor')).toHaveClass(/border-bright/)
     await expect(group.getByLabel('Fecha')).toHaveClass(/border-bright/)
-    await expect(group.getByLabel('Síntomas')).toHaveAttribute('placeholder', 'Lo que observaste antes de la consulta')
+    await expect(group.getByLabel('Notas previas a la consulta')).toHaveCount(0)
+    await expect(page.getByLabel('Notas previas a la consulta')).toHaveAttribute(
+      'placeholder',
+      'Qué comió antes, cómo se sentía, cómo fue cambiando desde que empezó…',
+    )
+    await expect(page.getByRole('group', { name: '¿Qué síntomas tuvo?' }).getByRole('button')).toHaveCount(23)
     await expect(page.locator('#medications\\.0\\.name')).toHaveAttribute('placeholder', 'Amoxicilina 250 mg')
     await expect(page.locator('#medications\\.0\\.frequencyHours')).toHaveAttribute('placeholder', 'c/8 h')
     await expect(page.locator('#medications\\.0\\.durationDays')).toHaveAttribute('placeholder', '7 días')
@@ -156,13 +161,27 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     await page.locator('#medications\\.0\\.frequencyHours').fill('c/8 h')
     await page.locator('#medications\\.0\\.durationDays').fill('7 días')
     await page.locator('#medications\\.0\\.startTime').fill('08:00')
-    await page.getByLabel('Síntomas').fill('Fiebre y tos')
+    await page.getByRole('button', { name: 'Tos' }).click()
+    await page.getByRole('button', { name: 'Fiebre' }).click()
+    await page.getByRole('button', { name: 'Escalofríos' }).click()
+    await page.getByRole('button', { name: 'Escalofríos' }).click() // tapped again: off
+    await expect(page.getByRole('button', { name: 'Fiebre' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('button', { name: 'Escalofríos' })).toHaveAttribute('aria-pressed', 'false')
+    await page.getByLabel('Notas previas a la consulta').fill('Comió poco desde el domingo')
 
     await page.getByRole('button', { name: 'Guardar consulta' }).click()
 
     await expect(page).toHaveURL(/\/consultations\/(?!new)/)
     await expect(page.getByRole('heading', { level: 1, name: 'Dra. Laura Cázares' })).toBeVisible()
-    await expect(page.getByText('Fiebre y tos')).toBeVisible()
+    // specs/012: the marked symptoms as pills in catalog order, then the notes.
+    const symptoms = page.getByRole('main').getByRole('list').filter({ hasText: 'Fiebre' })
+    await expect(symptoms.getByRole('listitem')).toHaveText(['Fiebre', 'Tos'])
+    await expect(page.getByRole('heading', { level: 2, name: 'Notas previas a la consulta' })).toBeVisible()
+    await expect(page.getByText('Comió poco desde el domingo')).toBeVisible()
+
+    // And the child's list sums them up.
+    await page.getByRole('main').getByRole('link', { name: /^← / }).click()
+    await expect(page.getByRole('main').getByRole('link', { name: /Dra. Laura Cázares/ })).toContainText('Fiebre, Tos · 1 medicamento')
   })
 
   test('"← Cancelar" vuelve al hijo, y con algo capturado pide confirmar antes de descartarlo', async ({ page }) => {

@@ -1,5 +1,6 @@
-// Package catalog exposes read-only access to the country/state reference data
-// used by the account signup form's country and state selectors.
+// Package catalog exposes read-only access to reference data: the countries
+// and states of the account signup form, and the symptoms a parent can mark on
+// a consultation (specs/012).
 package catalog
 
 // Country represents an entry in the countries catalog.
@@ -13,4 +14,12 @@ type State struct {
 	Code        string
 	CountryCode string
 	Name        string
+}
+
+// Symptom is an active entry of the symptoms catalog: something a parent can
+// observe, never a diagnosis (Principio I). Category is its group's title.
+type Symptom struct {
+	Code     string
+	Name     string
+	Category string
 }
