@@ -39,7 +39,7 @@ type CreateConsultationInput struct {
 	Photo       []byte
 	Notes       string
 	// SymptomCodes are the catalog symptoms the parent marked (specs/012);
-	// empty is valid. Duplicates are ignored.
+	// empty is valid. A repeated code is stored once (the repository).
 	SymptomCodes []string
 	Medications  []CreateMedicationInput
 	// UTCOffsetMinutes is the parent's UTC offset (e.g. -360 for Mexico City
@@ -93,7 +93,7 @@ func (s *Service) CreateConsultation(ctx context.Context, childID uuid.UUID, inp
 		ConsultDate:      input.ConsultDate,
 		Photo:            input.Photo,
 		Notes:            input.Notes,
-		SymptomCodes:     uniqueCodes(input.SymptomCodes),
+		SymptomCodes:     input.SymptomCodes,
 		ScheduleLocation: time.FixedZone("client", input.UTCOffsetMinutes*60),
 	}
 	for _, m := range input.Medications {
@@ -172,7 +172,7 @@ func validateCreateConsultationInput(input CreateConsultationInput) ValidationEr
 }
 
 // uniqueCodes drops repeated symptom codes, keeping the first occurrence's
-// order: a symptom is stored once per consultation.
+// order: a symptom is stored once per consultation (Repository.Create).
 func uniqueCodes(codes []string) []string {
 	seen := make(map[string]bool, len(codes))
 	unique := make([]string, 0, len(codes))

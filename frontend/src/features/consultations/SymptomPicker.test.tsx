@@ -71,6 +71,15 @@ describe('SymptomPicker', () => {
     }
   })
 
+  it('keeps one group per category even if its symptoms are not together in the list', async () => {
+    stubCatalog({ ok: true, body: [...catalog, { code: 'headache', name: 'Dolor de cabeza', category: 'General' }] })
+    renderPicker()
+
+    const general = await screen.findByRole('group', { name: 'General' })
+    expect(within(general).getAllByRole('button').map((b) => b.textContent)).toEqual(['Fiebre', 'Escalofríos', 'Dolor de cabeza'])
+    expect(screen.getAllByRole('group', { name: 'General' })).toHaveLength(1)
+  })
+
   it('a tap selects a symptom and another tap unselects it; the name never changes', async () => {
     const onChange = vi.fn()
     const user = userEvent.setup()

@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 )
 
@@ -60,23 +61,16 @@ type consultationListResponse struct {
 } // @name ConsultationListResponse
 
 type consultationDetailResponse struct {
-	ID          string               `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
-	ChildID     string               `json:"childId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
-	DoctorName  string               `json:"doctorName" example:"Dra. López"`
-	ConsultDate string               `json:"consultDate" example:"2026-01-15"`
-	PhotoBase64 string               `json:"photoBase64"`
-	Notes       string               `json:"notes" example:"Comió mariscos el domingo; la fiebre empezó el lunes"`
-	Symptoms    []symptomResponse    `json:"symptoms"`
-	Medications []medicationResponse `json:"medications"`
+	ID          string `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	ChildID     string `json:"childId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	DoctorName  string `json:"doctorName" example:"Dra. López"`
+	ConsultDate string `json:"consultDate" example:"2026-01-15"`
+	PhotoBase64 string `json:"photoBase64"`
+	Notes       string `json:"notes" example:"Comió mariscos el domingo; la fiebre empezó el lunes"`
+	// Symptoms are the marked symptoms in catalog order, retired ones included.
+	Symptoms    []catalog.SymptomResponse `json:"symptoms"`
+	Medications []medicationResponse      `json:"medications"`
 } // @name ConsultationDetailResponse
-
-// symptomResponse is one symptom marked on a consultation, in catalog order
-// (specs/012-sintomas-notas-consulta/contracts/symptoms-api.md).
-type symptomResponse struct {
-	Code     string `json:"code" example:"fever"`
-	Name     string `json:"name" example:"Fiebre"`
-	Category string `json:"category" example:"General"`
-} // @name ConsultationSymptomResponse
 
 // sessionErrorResponseDoc documents the 401/403 bodies every endpoint here can
 // answer (missing/invalid session, or a resource the session doesn't own).
@@ -271,6 +265,9 @@ type createConsultationRequest struct {
 	// SymptomCodes are catalog codes (GET /catalog/symptoms); optional, duplicates ignored.
 	SymptomCodes []string                  `json:"symptomCodes" example:"fever,cough"`
 	Medications  []createMedicationRequest `json:"medications"`
+	// LegacySymptoms is the free text's name before specs/012 ("symptoms": "..."), still accepted as the
+	// notes so a tab on an older bundle doesn't lose what the parent wrote while both versions coexist.
+	LegacySymptoms json.RawMessage `json:"symptoms,omitempty" swaggerignore:"true"`
 	// UTCOffsetMinutes is the parent's UTC offset, so "startTime" is read in
 	// their own time zone. Optional: 0 (default) means UTC.
 	UTCOffsetMinutes int `json:"utcOffsetMinutes" example:"-360"`
@@ -341,7 +338,7 @@ func (h *Handler) CreateConsultation(w http.ResponseWriter, r *http.Request) {
 		DoctorName:   req.DoctorName,
 		ConsultDate:  consultDate,
 		Photo:        photo,
-		Notes:        req.Notes,
+		Notes:        notesOf(req),
 		SymptomCodes: req.SymptomCodes,
 
 		UTCOffsetMinutes: req.UTCOffsetMinutes,
@@ -362,6 +359,19 @@ func (h *Handler) CreateConsultation(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.responder.WriteJSON(r.Context(), w, http.StatusCreated, toConsultationDetailResponse(c), nil)
+}
+
+// notesOf returns the request's notes, or — from a client older than specs/012 — its "symptoms" text.
+// Anything else under "symptoms" (the new list shape is "symptomCodes") is ignored.
+func notesOf(req createConsultationRequest) string {
+	if req.Notes != "" || len(req.LegacySymptoms) == 0 {
+		return req.Notes
+	}
+	var legacy string
+	if err := json.Unmarshal(req.LegacySymptoms, &legacy); err != nil {
+		return ""
+	}
+	return legacy
 }
 
 func (h *Handler) writeCreateConsultationError(ctx context.Context, w http.ResponseWriter, err error) {
@@ -525,9 +535,9 @@ func toConsultationDetailResponse(c *Consultation) consultationDetailResponse {
 			Doses:          doses,
 		})
 	}
-	symptoms := make([]symptomResponse, 0, len(c.Symptoms))
+	symptoms := make([]catalog.SymptomResponse, 0, len(c.Symptoms))
 	for _, sym := range c.Symptoms {
-		symptoms = append(symptoms, symptomResponse{Code: sym.Code, Name: sym.Name, Category: sym.Category})
+		symptoms = append(symptoms, catalog.NewSymptomResponse(sym))
 	}
 	return consultationDetailResponse{
 		ID:          c.ID.String(),

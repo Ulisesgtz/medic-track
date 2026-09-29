@@ -78,8 +78,10 @@ endpoint aparte para agregar síntomas — rompería la inmutabilidad (FR-011).
 - El campo de texto `symptoms` de las respuestas y del `POST` pasa a llamarse `notes`, y `symptoms` pasa a ser la lista.
 
 **Justificación**: el listado solo necesita nombres; el detalle muestra pastillas y puede necesitar la categoría. Una
-sola consulta por pantalla. Renombrar el campo evita que "symptoms" signifique dos cosas; el frontend y el backend se
-publican juntos (misma PWA), así que no hay clientes viejos que romper.
+sola consulta por pantalla. Renombrar el campo evita que "symptoms" signifique dos cosas. El frontend y el backend **no** se publican
+juntos (Cloudflare Pages y Railway, `DEPLOY.md`), así que el `POST` sigue aceptando `symptoms` (texto) como las notas
+mientras conviven versiones (revisión del PR #10); una pestaña vieja abierta en el detalle necesita recargar, y sin
+precaché en el service worker la recarga ya trae la versión nueva.
 
 **Alternativas**: mantener `symptoms` como texto y llamar a la lista `symptomList` — deja el nombre equivocado para
 siempre; que el frontend cruce códigos contra el catálogo — no funciona con síntomas retirados (el catálogo ya no los

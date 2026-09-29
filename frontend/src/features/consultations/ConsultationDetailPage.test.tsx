@@ -119,8 +119,8 @@ describe('ConsultationDetailPage', () => {
       expect(await screen.findByRole('link', { name: '← Volver al reporte de consultas' })).toBeInTheDocument()
     })
 
-    it('omits the symptoms and notes sections when there are none', async () => {
-      stubApi(consultation({ symptoms: [], notes: '' }))
+    it('omits the symptoms and notes sections when there are none (notes of only spaces count as none)', async () => {
+      stubApi(consultation({ symptoms: [], notes: '  \n ' }))
       renderPage()
 
       await screen.findByRole('heading', { level: 1, name: 'Dra. López' })
@@ -314,7 +314,7 @@ describe('ConsultationDetailPage', () => {
       expect(screen.queryByRole('heading', { name: 'Síntomas' })).not.toBeInTheDocument()
       unmount()
 
-      stubApi(consultation({ symptoms: [], notes: '' }))
+      stubApi(consultation({ symptoms: [], notes: ' \n ' }))
       renderPage()
       await screen.findByRole('heading', { level: 1, name: 'Dra. López' })
       expect(screen.queryByRole('heading', { name: 'Notas previas a la consulta' })).not.toBeInTheDocument()

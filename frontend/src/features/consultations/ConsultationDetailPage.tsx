@@ -78,6 +78,8 @@ export function ConsultationDetailPage() {
   const date = formatDateLong(consultation.consultDate)
   const treatment = overviewQuery.data?.activeTreatment
   const hasSymptoms = consultation.symptoms.length > 0
+  // Notes made only of spaces or line breaks count as none, as in the list card.
+  const hasNotes = consultation.notes.trim() !== ''
 
   const photoImage = (className: string) => (
     <button
@@ -136,7 +138,7 @@ export function ConsultationDetailPage() {
               <div className="flex min-w-0 flex-col gap-4">
                 <h2 className={overline}>Medicamentos</h2>
                 {medications}
-                {(hasSymptoms || consultation.notes) && (
+                {(hasSymptoms || hasNotes) && (
                   <div className="flex min-w-0 flex-col gap-5 rounded-3xl bg-surface p-6 shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
                     {hasSymptoms && (
                       <div>
@@ -146,7 +148,7 @@ export function ConsultationDetailPage() {
                         </div>
                       </div>
                     )}
-                    {consultation.notes && (
+                    {hasNotes && (
                       <div>
                         <h2 className={overline}>Notas previas a la consulta</h2>
                         <p className="mt-3 text-base leading-relaxed whitespace-pre-line text-[#1f3d44]">{consultation.notes}</p>
@@ -221,7 +223,7 @@ export function ConsultationDetailPage() {
           </section>
         )}
 
-        {consultation.notes && (
+        {hasNotes && (
           <section className="px-6 pt-7">
             <h2 className={overline}>Notas previas a la consulta</h2>
             <p className="mt-2.5 text-base leading-relaxed whitespace-pre-line text-[#1f3d44]">{consultation.notes}</p>

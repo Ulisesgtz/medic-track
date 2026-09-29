@@ -2,7 +2,9 @@ package catalog_test
 
 import (
 	"context"
+	"math/rand/v2"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 
@@ -136,8 +138,10 @@ func TestRepository_ListSymptoms_FollowsTheCatalogTable(t *testing.T) {
 	ctx := context.Background()
 	added := "test_added_" + uuid.NewString()[:8]
 	retired := "test_retired_" + uuid.NewString()[:8]
+	// Far after every seeded symptom (never one of the free slots the team may use), in an existing category.
+	base := 1_000_000 + rand.IntN(1_000_000_000)
 	_, err := pool.Exec(ctx, `INSERT INTO symptoms (code, name, category, sort_order, active) VALUES
-		($1, 'Agregado', 'General', 15, true), ($2, 'Retirado', 'General', 16, false)`, added, retired)
+		($1, 'Agregado', 'General', $3, true), ($2, 'Retirado', 'General', $3 + 1, false)`, added, retired, base)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		_, _ = pool.Exec(context.Background(), `DELETE FROM symptoms WHERE code IN ($1, $2)`, added, retired)
@@ -146,12 +150,16 @@ func TestRepository_ListSymptoms_FollowsTheCatalogTable(t *testing.T) {
 	symptoms, err := repo.ListSymptoms(ctx)
 
 	require.NoError(t, err)
-	require.Equal(t, "fever", symptoms[0].Code)
-	require.Equal(t, added, symptoms[1].Code) // sort_order 15: between Fiebre (10) and Cansancio (20)
-	require.Equal(t, "fatigue", symptoms[2].Code)
+	codes := make([]string, 0, len(symptoms))
 	for _, s := range symptoms {
+		codes = append(codes, s.Code)
 		require.NotEqual(t, retired, s.Code)
 	}
+	// Added last by sort_order, it still joins its category: right after Escalofríos (the last seeded
+	// "General") and before Tos, never as a second "General" group at the end.
+	at := slices.Index(codes, added)
+	require.Equal(t, "chills", codes[at-1])
+	require.Equal(t, "cough", codes[at+1])
 }
 
 func TestRepository_ListStatesByCountry(t *testing.T) {

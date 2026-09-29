@@ -119,11 +119,28 @@ func TestRepository_SymptomsAreReadInCatalogOrderWithTheNotes(t *testing.T) {
 	}
 }
 
+// The repository itself stores a repeated code once — it doesn't rely on its caller (review of PR #10).
+func TestRepository_Create_ARepeatedCodeIsStoredOnce(t *testing.T) {
+	pool := testPool(t)
+	repo := consultation.NewRepository(pool)
+	c := &consultation.Consultation{
+		DoctorName: "Dra. López", ConsultDate: time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC), Photo: samplePhoto(),
+		SymptomCodes: []string{"fever", "fever", "cough"},
+	}
+
+	require.NoError(t, repo.Create(context.Background(), createTestChild(t, pool), c))
+
+	require.Equal(t, []string{"fever", "cough"}, []string{c.Symptoms[0].Code, c.Symptoms[1].Code})
+	require.Len(t, c.Symptoms, 2)
+}
+
 func TestRepository_GetByID_NoSymptomsIsAnEmptyList(t *testing.T) {
 	pool := testPool(t)
 	svc := consultation.NewService(consultation.NewRepository(pool))
 	c, err := svc.CreateConsultation(context.Background(), createTestChild(t, pool), consultationInput())
 	require.NoError(t, err)
+	require.NotNil(t, c.Symptoms, "created without symptoms: an empty list, not nil")
+	require.Empty(t, c.Symptoms)
 
 	got, err := svc.GetConsultation(context.Background(), c.ID)
 
@@ -234,6 +251,23 @@ func TestHandler_CreateConsultation_WithSymptoms(t *testing.T) {
 			require.Equal(t, []string{"Fiebre", "Tos"}, c.SymptomNames)
 		}
 	}
+
+	// A tab still on a bundle older than specs/012 sends its text as "symptoms": it is kept as the notes.
+	legacy := body()
+	delete(legacy, "notes")
+	legacy["symptoms"] = "Fiebre desde el lunes"
+	rec = doPostPath(t, router, path, legacy)
+	require.Equal(t, http.StatusCreated, rec.Code)
+	require.Contains(t, rec.Body.String(), `"notes":"Fiebre desde el lunes"`)
+	// "notes" wins when both come, and a "symptoms" that isn't text is ignored.
+	legacy["notes"] = "Nota nueva"
+	rec = doPostPath(t, router, path, legacy)
+	require.Contains(t, rec.Body.String(), `"notes":"Nota nueva"`)
+	delete(legacy, "notes")
+	legacy["symptoms"] = []string{"fever"}
+	rec = doPostPath(t, router, path, legacy)
+	require.Equal(t, http.StatusCreated, rec.Code)
+	require.Contains(t, rec.Body.String(), `"notes":""`)
 
 	rec = doPostPath(t, router, path, body("fever", "not_a_symptom"))
 	require.Equal(t, http.StatusBadRequest, rec.Code)

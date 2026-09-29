@@ -140,7 +140,7 @@ con un mensaje claro.
 - [X] T038 [P] Actualizar mapas: `CLAUDE.md` (feature 012 en "Current features"), `backend/CLAUDE.md` (migración `0012`, `GET /catalog/symptoms`, `consultation_symptoms` y cómo mantener el catálogo con SQL), `frontend/CLAUDE.md` (`SymptomPicker`, `SymptomChips`, `useSymptoms`, `notes`)
 - [X] T039 Cobertura y calidad: `cd backend && gofmt -l ./internal && go vet ./... && go test ./... -cover` (>90%) y `cd frontend && npx tsc --noEmit -p tsconfig.app.json && npx eslint . && npx vitest run --coverage` (>90%)
 - [X] T040 E2E completos afectados en los tres navegadores (`detalle-consulta-hijo`, `detalle-consulta-movil`, `detalle-consulta-web`, `nueva-consulta-movil`, `nueva-consulta-web`) y validación manual de quickstart.md §1–§5
-- [ ] T041 Commit(s), push de `feature/012-sintomas-notas-consulta` y PR a `develop`; code review del PR
+- [X] T041 Commit(s), push de `feature/012-sintomas-notas-consulta` y PR a `develop`; code review del PR
 
 ---
 

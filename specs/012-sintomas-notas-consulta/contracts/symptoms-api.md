@@ -5,7 +5,7 @@
 
 ## 1. `GET /catalog/symptoms` (nuevo, público)
 
-Los síntomas **activos** del catálogo, en su orden (R1, R2). Sin sesión, como `/catalog/countries`.
+Los síntomas **activos** del catálogo (R1, R2), cada categoría junta: las categorías en el orden de su primer síntoma y, dentro de cada una, por `sort_order` — un síntoma agregado después a una categoría existente se suma a ella, no abre un segundo grupo. Sin sesión, como `/catalog/countries`.
 
 ### 200 OK
 
@@ -32,7 +32,7 @@ Cambios en el request:
 
 - `symptomCodes`: opcional (ausente, `null` o `[]` = sin síntomas). Los duplicados se ignoran. Cada código debe existir
   y estar activo.
-- `symptoms` (texto) deja de aceptarse: el texto libre va en `notes`.
+- `symptoms` (texto) es el nombre anterior de `notes`: **se sigue aceptando** como las notas cuando `notes` no viene, para que una pestaña con la versión anterior de la app no pierda lo escrito mientras conviven las dos versiones (revisión del PR #10). Si vienen ambos gana `notes`; un `symptoms` que no es texto se ignora. Los clientes nuevos mandan solo `notes`.
 - El resto del request no cambia.
 
 ### 201 Created

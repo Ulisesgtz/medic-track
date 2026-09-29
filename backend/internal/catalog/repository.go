@@ -46,10 +46,15 @@ func (r *Repository) CountryExists(ctx context.Context, countryCode string) (boo
 	return exists, nil
 }
 
-// ListSymptoms returns the symptoms still offered (active), in catalog order.
-// Retired symptoms are left out here but still read from each consultation.
+// ListSymptoms returns the symptoms still offered (active), each category's together: categories in the
+// order of their first symptom, symptoms by sort_order within it — so a symptom added later to an existing
+// category joins it instead of starting a second group. Retired symptoms are left out here but still read
+// from each consultation.
 func (r *Repository) ListSymptoms(ctx context.Context) ([]Symptom, error) {
-	rows, err := r.pool.Query(ctx, `SELECT code, name, category FROM symptoms WHERE active ORDER BY sort_order`)
+	rows, err := r.pool.Query(ctx, `
+		SELECT code, name, category FROM symptoms WHERE active
+		ORDER BY min(sort_order) OVER (PARTITION BY category), sort_order
+	`)
 	if err != nil {
 		return nil, fmt.Errorf("querying symptoms: %w", err)
 	}

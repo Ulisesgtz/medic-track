@@ -59,11 +59,18 @@ func (h *Handler) ListCountries(w http.ResponseWriter, r *http.Request) {
 	h.responder.WriteJSON(r.Context(), w, http.StatusOK, resp, nil)
 }
 
-type symptomResponse struct {
+// SymptomResponse is the JSON of one symptom, the same in the catalog and in a
+// consultation's detail (specs/012-sintomas-notas-consulta/contracts/symptoms-api.md).
+type SymptomResponse struct {
 	Code     string `json:"code" example:"fever"`
 	Name     string `json:"name" example:"Fiebre"`
 	Category string `json:"category" example:"General"`
-} // @name CatalogSymptomResponse
+} // @name SymptomResponse
+
+// NewSymptomResponse converts a Symptom to its JSON shape.
+func NewSymptomResponse(s Symptom) SymptomResponse {
+	return SymptomResponse{Code: s.Code, Name: s.Name, Category: s.Category}
+}
 
 // ListSymptoms handles GET /catalog/symptoms.
 //
@@ -72,7 +79,7 @@ type symptomResponse struct {
 //	@Description	"Nueva consulta" form (specs/012-sintomas-notas-consulta/contracts/symptoms-api.md).
 //	@Tags		catalog
 //	@Produce	json
-//	@Success	200	{array}		symptomResponse
+//	@Success	200	{array}		SymptomResponse
 //	@Failure	500	{object}	notFoundResponseDoc	"Unexpected server error"
 //	@Router		/catalog/symptoms [get]
 func (h *Handler) ListSymptoms(w http.ResponseWriter, r *http.Request) {
@@ -82,9 +89,9 @@ func (h *Handler) ListSymptoms(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := make([]symptomResponse, 0, len(symptoms))
+	resp := make([]SymptomResponse, 0, len(symptoms))
 	for _, s := range symptoms {
-		resp = append(resp, symptomResponse{Code: s.Code, Name: s.Name, Category: s.Category})
+		resp = append(resp, NewSymptomResponse(s))
 	}
 	h.responder.WriteJSON(r.Context(), w, http.StatusOK, resp, nil)
 }

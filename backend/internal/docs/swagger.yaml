@@ -29,18 +29,6 @@ definitions:
         example: 0
         type: integer
     type: object
-  CatalogSymptomResponse:
-    properties:
-      category:
-        example: General
-        type: string
-      code:
-        example: fever
-        type: string
-      name:
-        example: Fiebre
-        type: string
-    type: object
   ChildNotFoundResponse:
     properties:
       error:
@@ -86,8 +74,10 @@ definitions:
       photoBase64:
         type: string
       symptoms:
+        description: Symptoms are the marked symptoms in catalog order, retired ones
+          included.
         items:
-          $ref: '#/definitions/ConsultationSymptomResponse'
+          $ref: '#/definitions/SymptomResponse'
         type: array
     type: object
   ConsultationFieldError:
@@ -151,18 +141,6 @@ definitions:
         items:
           type: string
         type: array
-    type: object
-  ConsultationSymptomResponse:
-    properties:
-      category:
-        example: General
-        type: string
-      code:
-        example: fever
-        type: string
-      name:
-        example: Fiebre
-        type: string
     type: object
   ConsultationValidationErrorResponse:
     properties:
@@ -288,6 +266,18 @@ definitions:
       taken:
         example: false
         type: boolean
+    type: object
+  SymptomResponse:
+    properties:
+      category:
+        example: General
+        type: string
+      code:
+        example: fever
+        type: string
+      name:
+        example: Fiebre
+        type: string
     type: object
   ValidationErrorResponse:
     properties:
@@ -1015,7 +1005,7 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/CatalogSymptomResponse'
+              $ref: '#/definitions/SymptomResponse'
             type: array
         "500":
           description: Unexpected server error

@@ -141,25 +141,26 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, c *Consultat
 		return fmt.Errorf("inserting consultation: %w", err)
 	}
 
-	if len(c.SymptomCodes) > 0 {
+	c.Symptoms = []Symptom{}
+	if codes := uniqueCodes(c.SymptomCodes); len(codes) > 0 {
 		// The child's account comes from the database, never from the request, and only active catalog
-		// symptoms are accepted: fewer rows than codes means one is unknown or retired, and the whole
-		// consultation is rolled back (specs/012 research R4).
+		// symptoms are accepted: fewer rows than (distinct) codes means one is unknown or retired, and the
+		// whole consultation is rolled back (specs/012 research R4).
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO consultation_symptoms (consultation_id, child_id, account_id, symptom_code)
 			SELECT $1, ch.id, ch.account_id, s.code
 			FROM children ch JOIN symptoms s ON s.code = ANY($3) AND s.active
 			WHERE ch.id = $2
-		`, c.ID, c.ChildID, c.SymptomCodes)
+		`, c.ID, c.ChildID, codes)
 		if err != nil {
 			return fmt.Errorf("inserting consultation symptoms: %w", err)
 		}
-		if tag.RowsAffected() != int64(len(c.SymptomCodes)) {
+		if tag.RowsAffected() != int64(len(codes)) {
 			return ErrSymptomNotAvailable
 		}
-	}
-	if c.Symptoms, err = symptomsOf(ctx, tx, c.ID); err != nil {
-		return err
+		if c.Symptoms, err = symptomsOf(ctx, tx, c.ID); err != nil {
+			return err
+		}
 	}
 
 	for i := range c.Medications {

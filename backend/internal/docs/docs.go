@@ -631,7 +631,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/CatalogSymptomResponse"
+                                "$ref": "#/definitions/SymptomResponse"
                             }
                         }
                     },
@@ -1077,23 +1077,6 @@ const docTemplate = `{
                 }
             }
         },
-        "CatalogSymptomResponse": {
-            "type": "object",
-            "properties": {
-                "category": {
-                    "type": "string",
-                    "example": "General"
-                },
-                "code": {
-                    "type": "string",
-                    "example": "fever"
-                },
-                "name": {
-                    "type": "string",
-                    "example": "Fiebre"
-                }
-            }
-        },
         "ChildNotFoundResponse": {
             "type": "object",
             "properties": {
@@ -1158,9 +1141,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "symptoms": {
+                    "description": "Symptoms are the marked symptoms in catalog order, retired ones included.",
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/ConsultationSymptomResponse"
+                        "$ref": "#/definitions/SymptomResponse"
                     }
                 }
             }
@@ -1251,23 +1235,6 @@ const docTemplate = `{
                         "Fiebre",
                         "Tos"
                     ]
-                }
-            }
-        },
-        "ConsultationSymptomResponse": {
-            "type": "object",
-            "properties": {
-                "category": {
-                    "type": "string",
-                    "example": "General"
-                },
-                "code": {
-                    "type": "string",
-                    "example": "fever"
-                },
-                "name": {
-                    "type": "string",
-                    "example": "Fiebre"
                 }
             }
         },
@@ -1446,6 +1413,23 @@ const docTemplate = `{
                 "taken": {
                     "type": "boolean",
                     "example": false
+                }
+            }
+        },
+        "SymptomResponse": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "example": "General"
+                },
+                "code": {
+                    "type": "string",
+                    "example": "fever"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Fiebre"
                 }
             }
         },

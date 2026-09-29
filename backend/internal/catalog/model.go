@@ -16,8 +16,9 @@ type State struct {
 	Name        string
 }
 
-// Symptom is an active entry of the symptoms catalog: something a parent can
-// observe, never a diagnosis (Principio I). Category is its group's title.
+// Symptom is an entry of the symptoms catalog: something a parent can observe,
+// never a diagnosis (Principio I). Category is its group's title. Also what a
+// consultation carries for each symptom marked on it (specs/012).
 type Symptom struct {
 	Code     string
 	Name     string

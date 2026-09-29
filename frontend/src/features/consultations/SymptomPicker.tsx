@@ -10,15 +10,19 @@ interface SymptomPickerProps {
   variant: 'phone' | 'desktop'
 }
 
-/** Consecutive symptoms of the same category, in catalog order. */
+/**
+ * One group per category, in the order each category first appears, its symptoms in catalog order. The server
+ * already sends each category's symptoms together; grouping by name (not by consecutive runs) keeps a single
+ * group even if it didn't.
+ */
 function groupByCategory(symptoms: Symptom[]): { category: string; symptoms: Symptom[] }[] {
-  const groups: { category: string; symptoms: Symptom[] }[] = []
+  const groups = new Map<string, Symptom[]>()
   for (const symptom of symptoms) {
-    const last = groups[groups.length - 1]
-    if (last && last.category === symptom.category) last.symptoms.push(symptom)
-    else groups.push({ category: symptom.category, symptoms: [symptom] })
+    const group = groups.get(symptom.category)
+    if (group) group.push(symptom)
+    else groups.set(symptom.category, [symptom])
   }
-  return groups
+  return [...groups].map(([category, list]) => ({ category, symptoms: list }))
 }
 
 const chip =
