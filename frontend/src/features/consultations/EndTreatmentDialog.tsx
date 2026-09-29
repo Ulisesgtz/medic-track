@@ -20,6 +20,11 @@ interface EndTreatmentDialogProps {
 export function EndTreatmentDialog({ medicationName, busy, error, onConfirm, onCancel, opener }: EndTreatmentDialogProps) {
   const cancelRef = useRef<HTMLButtonElement>(null)
   const confirmRef = useRef<HTMLButtonElement>(null)
+  // While the request runs nothing closes the dialog (Escape and the backdrop included): the outcome must be seen.
+  const busyRef = useRef(busy)
+  useEffect(() => {
+    busyRef.current = busy
+  })
 
   useEffect(() => {
     const restoreTo = opener.current
@@ -27,7 +32,7 @@ export function EndTreatmentDialog({ medicationName, busy, error, onConfirm, onC
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        onCancel()
+        if (!busyRef.current) onCancel()
         return
       }
       if (event.key !== 'Tab') return
@@ -48,7 +53,7 @@ export function EndTreatmentDialog({ medicationName, busy, error, onConfirm, onC
   }, [onCancel, opener])
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4" onClick={onCancel}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4" onClick={() => !busy && onCancel()}>
       <div
         role="dialog"
         aria-modal="true"

@@ -342,12 +342,13 @@ func (r *Repository) UpdateDoseStatus(ctx context.Context, consultationID, id uu
 // result. ErrMedicationNotFound if it doesn't exist or isn't of this consultation; ErrNothingToEnd if it has no doses
 // left ahead and wasn't ended.
 func (r *Repository) EndTreatment(ctx context.Context, consultationID, medicationID uuid.UUID) (*Medication, error) {
+	now := r.now() // one reading: the doses counted ahead are the ones canceled by the moment stored
 	var endedAt *time.Time
 	var ahead int
 	err := r.pool.QueryRow(ctx, `
 		SELECT m.ended_at, (SELECT count(*) FROM doses d WHERE d.medication_id = m.id AND d.scheduled_at > $3)
 		FROM medications m WHERE m.id = $1 AND m.consultation_id = $2
-	`, medicationID, consultationID, r.now()).Scan(&endedAt, &ahead)
+	`, medicationID, consultationID, now).Scan(&endedAt, &ahead)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrMedicationNotFound
@@ -360,7 +361,7 @@ func (r *Repository) EndTreatment(ctx context.Context, consultationID, medicatio
 		}
 		if _, err := r.pool.Exec(ctx, `
 			UPDATE medications SET ended_at = $3 WHERE id = $1 AND consultation_id = $2 AND ended_at IS NULL
-		`, medicationID, consultationID, r.now()); err != nil {
+		`, medicationID, consultationID, now); err != nil {
 			return nil, fmt.Errorf("ending treatment: %w", err)
 		}
 	}

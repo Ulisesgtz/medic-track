@@ -8,7 +8,7 @@ function renderDialog(props: Partial<Parameters<typeof EndTreatmentDialog>[0]> =
   const onConfirm = vi.fn()
   const onCancel = vi.fn()
   const opener = createRef<HTMLButtonElement>()
-  render(
+  const view = render(
     <>
       <button ref={opener} type="button">
         opener
@@ -24,7 +24,13 @@ function renderDialog(props: Partial<Parameters<typeof EndTreatmentDialog>[0]> =
       />
     </>,
   )
-  return { onConfirm, onCancel, opener }
+  const hideDialog = () =>
+    view.rerender(
+      <button ref={opener} type="button">
+        opener
+      </button>,
+    )
+  return { onConfirm, onCancel, opener, hideDialog }
 }
 
 describe('EndTreatmentDialog (specs/016)', () => {
@@ -67,15 +73,24 @@ describe('EndTreatmentDialog (specs/016)', () => {
     fireEvent.keyDown(document, { key: 'a' })
   })
 
-  it('shows the busy state and an error, and gives the focus back to the opener when it closes', () => {
-    const { opener } = renderDialog({ busy: true, error: 'No pudimos finalizar el tratamiento. Inténtalo de nuevo.' })
+  it('while ending, nothing closes it: not the buttons, Escape nor the backdrop; the error shows', async () => {
+    const { onCancel } = renderDialog({ busy: true, error: 'No pudimos finalizar el tratamiento. Inténtalo de nuevo.' })
 
     expect(screen.getByRole('button', { name: 'Finalizando…' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled()
     expect(screen.getByRole('alert')).toHaveTextContent('No pudimos finalizar el tratamiento')
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await userEvent.click(screen.getByRole('dialog').parentElement!)
+    expect(onCancel).not.toHaveBeenCalled()
+  })
 
-    document.body.focus()
-    screen.getByRole('dialog').remove()
-    expect(opener.current).toBeInTheDocument()
+  it('gives the focus back to the button that opened it when it closes', () => {
+    const { opener, hideDialog } = renderDialog()
+    const button = opener.current!
+    expect(button).not.toHaveFocus() // the dialog took it
+
+    hideDialog()
+
+    expect(button).toHaveFocus()
   })
 })

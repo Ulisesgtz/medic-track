@@ -8,7 +8,7 @@ export type { ValidationErrorDetail }
 
 /** Discriminated error thrown by this feature's api functions. */
 export class ConsultationApiError extends ApiError<
-  'child_not_found' | 'consultation_not_found' | 'dose_not_found' | 'validation_error' | 'symptom_not_available' | 'unknown'
+  'child_not_found' | 'consultation_not_found' | 'dose_not_found' | 'medication_not_found' | 'validation_error' | 'symptom_not_available' | 'unknown'
 > {}
 
 // contracts/get-consultations.md
@@ -116,7 +116,7 @@ export async function endTreatment(consultationId: string, medicationId: string,
     return body as Medication
   }
   if (res.status === 404 || res.status === 403) {
-    throw new ConsultationApiError('consultation_not_found', body.message ?? 'Medication not found')
+    throw new ConsultationApiError('medication_not_found', body.message ?? 'Medication not found')
   }
   if (res.status === 400) {
     throw new ConsultationApiError('validation_error', body.message ?? 'Nothing to end', body.details)
