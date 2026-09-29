@@ -12,7 +12,7 @@ describe('useDoseToggle', () => {
   it('marks the dose and refreshes both the consultation detail and the child overview', async () => {
     vi.stubGlobal(
       'fetch',
-      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 'd1', scheduledAt: '2026-01-15T08:00:00Z', taken: true }) }),
+      vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 'd1', scheduledAt: '2026-01-15T08:00:00Z', taken: true, status: 'taken' }) }),
     )
     const queryClient = new QueryClient()
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries')

@@ -172,6 +172,17 @@ definitions:
       scheduledAt:
         example: "2026-01-15T08:00:00Z"
         type: string
+      status:
+        description: |-
+          Status is derived by the server with its own clock (specs/013): pending, due ("por marcar"), taken or
+          unregistered ("sin registrar": the next dose of its medication came and it isn't marked).
+        enum:
+        - pending
+        - due
+        - taken
+        - unregistered
+        example: due
+        type: string
       taken:
         example: false
         type: boolean
@@ -262,6 +273,15 @@ definitions:
         type: string
       scheduledAt:
         example: "2026-01-15T14:00:00Z"
+        type: string
+      status:
+        description: Status as in DoseResponse (specs/013).
+        enum:
+        - pending
+        - due
+        - taken
+        - unregistered
+        example: due
         type: string
       taken:
         example: false

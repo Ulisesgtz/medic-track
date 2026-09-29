@@ -14,11 +14,18 @@ export interface ConsultationSummary {
   medicationCount: number
 }
 
+/**
+ * specs/013: pending (its time hasn't come), due ("por marcar"), taken, or unregistered ("sin registrar": the next dose
+ * of its medication came and nobody marked it). Computed by the server with its own clock.
+ */
+export type DoseStatus = 'pending' | 'due' | 'taken' | 'unregistered'
+
 // Mirrors contracts/get-consultation-detail.md's response shape.
 export interface Dose {
   id: string
   scheduledAt: string
   taken: boolean
+  status: DoseStatus
 }
 
 export interface Medication {
@@ -49,6 +56,7 @@ export interface OverviewDose {
   medicationName: string
   scheduledAt: string
   taken: boolean
+  status: DoseStatus
 }
 
 export interface ActiveTreatment {

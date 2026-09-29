@@ -127,7 +127,7 @@ export async function apiPost(request: APIRequestContext, token: string, path: s
   return res.json()
 }
 
-const PNG_BASE64 =
+export const PNG_BASE64 =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
 
 /**
@@ -163,7 +163,11 @@ export async function seedAccount(
  */
 export async function seedChild(
   page: Page,
-  { withConsultation = true, durationDays = 1 }: { withConsultation?: boolean; durationDays?: number } = {},
+  {
+    withConsultation = true,
+    durationDays = 1,
+    frequencyHours = 8,
+  }: { withConsultation?: boolean; durationDays?: number; frequencyHours?: number } = {},
 ) {
   const { account, token, email } = await seedAccount(page, [{ firstName: 'Mateo', lastName: 'Morales', birthDate: '2021-03-14' }])
   const request = page.context().request
@@ -178,7 +182,7 @@ export async function seedChild(
       photoBase64: PNG_BASE64,
       notes: 'Fiebre y tos',
       utcOffsetMinutes: -now.getTimezoneOffset() || 0,
-      medications: [{ name: 'Amoxicilina', frequencyHours: 8, durationDays, startTime: '00:00' }],
+      medications: [{ name: 'Amoxicilina', frequencyHours, durationDays, startTime: '00:00' }],
     })
     consultationId = created.id
   }

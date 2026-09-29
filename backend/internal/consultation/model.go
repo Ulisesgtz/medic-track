@@ -68,6 +68,8 @@ type Dose struct {
 	ScheduledAt  time.Time
 	Taken        bool
 	CreatedAt    time.Time
+	// Status is derived when read (specs/013): pending, due, taken or unregistered.
+	Status DoseStatus
 }
 
 // DoseOverview is one dose of any of a child's consultations, joined with its
@@ -78,6 +80,8 @@ type DoseOverview struct {
 	MedicationName string
 	ScheduledAt    time.Time
 	Taken          bool
+	// Status is derived when read (specs/013).
+	Status DoseStatus
 }
 
 // ActiveTreatment is the medication whose last scheduled dose is furthest in

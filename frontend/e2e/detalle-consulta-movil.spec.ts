@@ -42,21 +42,22 @@ test.describe('Detalle de consulta — diseño móvil (mock 03)', () => {
   test('cada chip alterna entre marcada y sin marcar, y se conserva al recargar', async ({ page }) => {
     const { consultationId } = await seedChild(page)
     await page.goto(`/consultations/${consultationId}`)
-    const chip = page.getByRole('button', { name: 'Toma de 00:00' })
+    // 16:00: never "sin registrar" during its own day (its next dose is at midnight), whatever time the suite runs.
+    const chip = page.getByRole('button', { name: 'Toma de 16:00' })
     await expect(chip).toHaveAttribute('aria-pressed', 'false')
 
     await chip.click()
     await expect(chip).toHaveAttribute('aria-pressed', 'true')
-    await expect(chip).toHaveText('00:00 ✓')
+    await expect(chip).toHaveText('16:00 ✓')
     await expect(chip).toHaveClass(/bg-confirmed/)
 
     await page.reload()
-    await expect(page.getByRole('button', { name: 'Toma de 00:00' })).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByRole('button', { name: 'Toma de 16:00' })).toHaveAttribute('aria-pressed', 'true')
 
     // Always enabled: the parent can correct a dose of any time.
-    await page.getByRole('button', { name: 'Toma de 00:00' }).click()
-    await expect(page.getByRole('button', { name: 'Toma de 00:00' })).toHaveAttribute('aria-pressed', 'false')
-    await expect(page.getByRole('button', { name: 'Toma de 00:00' })).toHaveText('00:00')
+    await page.getByRole('button', { name: 'Toma de 16:00' }).click()
+    await expect(page.getByRole('button', { name: 'Toma de 16:00' })).toHaveAttribute('aria-pressed', 'false')
+    await expect(page.getByRole('button', { name: 'Toma de 16:00' })).toHaveText('16:00')
   })
 
   test('"Ver completa" y la miniatura abren la foto en un visor y se cierra con Cerrar o Escape', async ({ page }) => {

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { formatAgeLong } from '../../shared/age'
 import { useLocalDay } from '../../shared/useLocalDay'
 import { fetchChildOverview, fetchConsultations } from '../consultations/api'
+import { isUnmarked } from '../consultations/doseStatus'
 import type { Child } from './types'
 
 interface ChildCardProps {
@@ -38,7 +39,8 @@ function ChildStatusChips({ childId }: { childId: string }) {
   })
 
   const count = consultations.data?.length
-  const unmarked = overview.data?.doses.filter((d) => !d.taken).length
+  // specs/013: doses "sin registrar" don't count here — only what's still in time to mark.
+  const unmarked = overview.data?.doses.filter(isUnmarked).length
 
   // The row keeps its height while loading (or if a request fails) so the list doesn't jump.
   return (

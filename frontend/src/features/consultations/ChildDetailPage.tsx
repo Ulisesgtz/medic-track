@@ -12,6 +12,7 @@ import { ConsultationCard } from './ConsultationCard'
 import { SummaryCard } from './SummaryCard'
 import { TodayDosesBlock } from './TodayDosesBlock'
 import { TodayDosesPanel } from './TodayDosesPanel'
+import { DOSE_REFETCH_MS, isUnmarked, isUnregistered, unregisteredText } from './doseStatus'
 
 /**
  * A child's detail page: their consultations (FR-001) with an empty state
@@ -42,6 +43,8 @@ export function ChildDetailPage() {
     queryFn: async () => fetchChildOverview(childId!, today.from, today.to, await getToken()),
     enabled: !!childId,
     retry: false,
+    // specs/013: a dose turns "sin registrar" on its own; asking again every minute shows it without reloading.
+    refetchInterval: DOSE_REFETCH_MS,
   })
 
   const query = useQuery({
@@ -84,7 +87,9 @@ export function ChildDetailPage() {
   const overviewStatus = overviewQuery.isPending ? 'loading' : overviewQuery.isError ? 'error' : 'ready'
   const overview = overviewQuery.data
   const todayDoses = overview?.doses ?? []
-  const unmarked = todayDoses.filter((d) => !d.taken).length
+  const unmarked = todayDoses.filter(isUnmarked).length
+  const unregistered = todayDoses.filter(isUnregistered).length
+  const unregisteredSuffix = unregistered > 0 ? ` · ${unregisteredText(unregistered)}` : ''
   const treatment = overview?.activeTreatment ?? null
   const sinceYear = consultations
     .reduce<string | null>((min, c) => (min === null || c.consultDate < min ? c.consultDate : min), null)
@@ -132,7 +137,9 @@ export function ChildDetailPage() {
               ) : todayDoses.length === 0 ? (
                 <SummaryCard label="Tomas de hoy" value="0" sub="sin tomas hoy" />
               ) : unmarked > 0 ? (
-                <SummaryCard tone="pending" label="Tomas de hoy" value={String(unmarked)} sub="sin marcar" />
+                <SummaryCard tone="pending" label="Tomas de hoy" value={String(unmarked)} sub={`sin marcar${unregisteredSuffix}`} />
+              ) : unregistered > 0 ? (
+                <SummaryCard tone="confirmed" label="Tomas de hoy" value="0" sub={`nada por marcar${unregisteredSuffix}`} />
               ) : (
                 <SummaryCard tone="confirmed" label="Tomas de hoy" value="0" sub="todas marcadas" />
               )}
