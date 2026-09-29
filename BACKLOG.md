@@ -21,6 +21,82 @@ dejó pendientes (2026-09-21). No se construye nada de esto hasta que se respond
   Requiere endpoint nuevo y su spec. Recomendación que se dio: editar solo nombre, frecuencia, duración y hora de cada
   medicamento, regenerando sus tomas con un aviso de que se pierden las marcas.
 
+## Próximo a trabajar (decidido 2026-09-28)
+
+El usuario va a empezar con estos. Propuesta de agrupación en specs: **A** (síntomas y notas, independiente) y **B**
+(seguimiento del tratamiento: B1–B6, que comparten el estado de cada toma y la pantalla de la consulta). Ninguno tiene
+mock todavía: cada pantalla necesita su diseño móvil y web antes de construirse (regla de `CLAUDE.md`). Todo respeta el
+Principio I: la app registra lo que el padre hace y lo que el médico indicó; nunca sugiere, diagnostica ni decide dosis.
+
+### A. Síntomas seleccionables y "Notas previas a la consulta" (Nueva consulta)
+
+- En "Nueva consulta", los síntomas se eligen tocando **chips** (botones tipo pastilla que se prenden/apagan, como los
+  filtros de la imagen de referencia del 2026-09-28), agrupados por categoría — no un drop-down. Varios a la vez;
+  cada chip es un botón con `aria-pressed` y área táctil de 44 px.
+- El cuadro de texto "Síntomas" pasa a llamarse **"Notas previas a la consulta"**, con el ejemplo
+  *"Qué comió antes, cómo se sentía, cómo fue cambiando desde que empezó…"*. Sigue siendo opcional.
+- Los chips describen **lo que el padre ve**, nunca un diagnóstico (se dice "dolor de oído", no "otitis"). Sin
+  sugerencias de gravedad ni "acude al médico si…".
+- Catálogo inicial (investigación 2026-09-28: en consulta pediátrica ~38 % de los motivos son respiratorios y ~10 %
+  digestivos — Secretaría de Salud/IMSS; tos ~61 % y fiebre ~43 % de las visitas en temporada de influenza — PMC4012523):
+
+  | Categoría | Síntomas (chips) |
+  |---|---|
+  | General | Fiebre, Cansancio o decaimiento, Irritabilidad o llanto, Poco apetito, Dolor de cabeza, Escalofríos |
+  | Respiratorio | Tos, Mocos o nariz tapada, Estornudos, Dolor de garganta, Dificultad para respirar, Silbido al respirar |
+  | Digestivo | Vómito, Diarrea, Dolor de estómago, Náuseas, Estreñimiento |
+  | Oídos y ojos | Dolor de oído, Ojos rojos o con lagañas |
+  | Piel | Salpullido o ronchas, Comezón |
+  | Sueño y ánimo | Duerme mal, Duerme más de lo normal |
+
+  Dos tablas en el backend (no en el frontend, para poder agregar síntomas sin publicar la app):
+  - **`symptoms`** — el catálogo, como `countries`: `code` (texto estable, PK, p. ej. `fever`), `name` (español, lo
+    que se muestra), `category`, `sort_order`, `active` (un síntoma retirado deja de ofrecerse pero las consultas que
+    lo usaron lo siguen mostrando). Sembrado por migración con la tabla de arriba.
+  - **`consultation_symptoms`** — la relación **usuario / hijo / síntoma** de cada consulta: `consultation_id`,
+    `child_id`, `account_id`, `symptom_code`, `created_at`; PK (`consultation_id`, `symptom_code`). `child_id` y
+    `account_id` se guardan también para consultar directo "qué síntomas tuvo este hijo" o "esta cuenta" sin pasar por
+    consultas, y la base garantiza que coincidan con la consulta: llaves foráneas compuestas a `consultations (id,
+    child_id)` y `children (id, account_id)` (requiere `UNIQUE (id, child_id)` y `UNIQUE (id, account_id)` en esas
+    tablas), más índices por `child_id` y por `account_id`. Se escribe al crear la consulta y es inmutable como ella.
+  El texto que hoy se guarda en `consultations.symptoms` pasa a ser las notas (migración que renombra la columna a
+  `notes`; las consultas viejas conservan su texto como nota). El listado de consultas y el detalle muestran los chips
+  elegidos.
+- Pendiente de decidir: si se permite "Otro" con texto libre (o si para eso ya están las notas — recomendación: las
+  notas).
+
+### B. Seguimiento del tratamiento (detalle de la consulta)
+
+- **B1. Tomas por momento del día** — en cada medicamento, las tomas del día se agrupan en **Mañana**, **Tarde** y
+  **Noche**; cada toma aparece solo en su grupo y los grupos vacíos no se muestran. Propuesta de rangos en la hora local
+  del padre: Mañana 05:00–11:59, Tarde 12:00–18:59, Noche 19:00–04:59 (la madrugada cuenta como noche).
+- **B2. Toma "sin registrar" automática** — si pasó el aviso de una toma y el padre no la marcó, la toma pasa sola a un
+  tercer estado. Hoy una toma solo es tomada/no tomada (`doses.taken`); se necesita `pendiente → tomada | sin
+  registrar`. **Ojo Principio I**: la app no sabe si no se dio, solo que nadie la marcó, así que el texto debe ser "Sin
+  registrar", no "No tomada", y el padre la puede seguir marcando como tomada después. Pendiente de decidir cuándo
+  cambia: al llegar la siguiente toma, o X horas después de la hora programada (recomendación: a la siguiente toma, o
+  12 h si es la última).
+- **B3. Barra de progreso por medicamento** — arriba de cada medicamento, "N / total tomas" con una barra. Total = tomas
+  programadas (ej. cada 8 h por 3 días = 9 tomas; *nota: el ejemplo del pedido decía 24, que sería cada 3 h o 8 días —
+  la cuenta sale del horario registrado*). Cuenta solo las marcadas como tomadas; se ve también cuántas quedaron sin
+  registrar.
+- **B4. Calendario del tratamiento** — **un solo calendario** por consulta (no uno por medicamento) con el rango de
+  cada medicamento de inicio a fin, **un color por medicamento** con su leyenda. Colores nuevos en `design-tokens.md`:
+  distinguibles entre sí, contraste ≥ 3:1 contra el fondo, sin rojo (no hay alerta médica) y sin el ámbar, que ya
+  significa "pendiente de marcar". Al tocar un día se ven las tomas de ese día.
+- **B5. Fecha de fin cuando hay tomas sin registrar** — el pedido es que la fecha de fin se recorra sola. **Choca con el
+  Principio I**: recorrer el tratamiento es decidir reponer las tomas perdidas, y eso lo indica el médico (en algunos
+  medicamentos se reponen y en otros no). Opciones a decidir: (a) la fecha de fin no se mueve y el calendario marca los
+  días con tomas sin registrar; (b) un botón "Recorrer tratamiento" que el padre usa si su médico se lo indicó, que
+  agrega las tomas al final y queda registrado quién lo decidió. Recomendación: (b), nunca automático.
+- **B6. "Finalizar tratamiento"** — botón en cada medicamento para terminarlo antes. Pide confirmación, guarda cuándo
+  se terminó y cuántas tomas se dieron (ej. "Terminado el 30 sep · 6 de 9 tomas"), las tomas que faltaban dejan de
+  avisarse y se muestran como canceladas (no se borran). Es una excepción a la inmutabilidad de la consulta (spec 004,
+  FR-014): endpoint nuevo, solo dueño, sin opción de "deshacer" salvo que se decida. Texto neutral, sin consejo
+  médico.
+- Depende de: B2 define el estado de las tomas que usan B3, B4, B5 y B6; B6 afecta a los recordatorios (spec 011: una
+  toma cancelada no se avisa).
+
 ## Prioridad alta
 
 - **Homologar todas las pantallas a los mocks** — hecho en `specs/007-homologar-pantallas-a-mocks/`
@@ -74,11 +150,6 @@ dejó pendientes (2026-09-21). No se construye nada de esto hasta que se respond
   004 exige al menos un medicamento (FR-015) y la foto de la receta (FR-004), así que hoy ese estado no se
   alcanza. Si el producto decide permitir consultas sin receta (control de peso, revisión), hay que relajar esas
   dos reglas en el backend y en el formulario.
-- **Pop-up freemium al tocar "Agregar hijo" en el home** — hoy, con plan gratuito y un hijo ya
-  registrado, el botón abre el formulario y el límite solo lo detecta el servidor al guardar
-  (comportamiento de `specs/003-home-listado-hijos/`). En el registro el pop-up sale al tocar el botón.
-  Mejora acordada pero no construida: si `plan === 'free'` y ya hay 1 hijo, abrir directo
-  `FreemiumLimitModal` (home y barra lateral), dejando la validación del servidor como respaldo.
 - **Pantalla de planes de pago** — hoy `/planes` muestra un aviso "Estamos preparando los planes" (`MessagePage`) para que "Ver planes" no caiga en una pantalla en blanco. El modal de límite freemium (franja ámbar) es el punto de entrada
   visual ya establecido; la pantalla de planes debe continuarlo. Ver `specs/005-identidad-visual-front-end/spec.md`,
   "Adiciones Futuras Previstas".
