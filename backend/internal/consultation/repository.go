@@ -133,6 +133,7 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, c *Consultat
 	}
 
 	c.ChildID = childID
+	now := r.now() // one reading for every dose's status in this response
 	err = tx.QueryRow(ctx, `
 		INSERT INTO consultations (child_id, doctor_name, consult_date, photo, notes)
 		VALUES ($1, $2, $3, $4, $5)
@@ -182,7 +183,6 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, c *Consultat
 		if loc == nil {
 			loc = c.ConsultDate.Location()
 		}
-		now := r.now()
 		for _, scheduledAt := range generateDoseSchedule(c.ConsultDate, loc, med) {
 			dose := Dose{MedicationID: med.ID, ScheduledAt: scheduledAt, Status: StatusAt(scheduledAt, false, med.FrequencyHours, now)}
 			err = tx.QueryRow(ctx, `

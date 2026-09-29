@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { formatAgeLong } from '../../shared/age'
 import { useLocalDay } from '../../shared/useLocalDay'
 import { fetchChildOverview, fetchConsultations } from '../consultations/api'
-import { DOSE_REFETCH_MS, isUnmarked } from '../consultations/doseStatus'
+import { isUnmarked } from '../consultations/doseStatus'
 import type { Child } from './types'
 
 interface ChildCardProps {
@@ -36,7 +36,6 @@ function ChildStatusChips({ childId }: { childId: string }) {
     queryKey: ['overview', childId, today.from.toISOString()],
     queryFn: async () => fetchChildOverview(childId, today.from, today.to, await getToken()),
     retry: false,
-    refetchInterval: DOSE_REFETCH_MS,
   })
 
   const count = consultations.data?.length

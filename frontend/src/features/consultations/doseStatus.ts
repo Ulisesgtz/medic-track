@@ -20,17 +20,30 @@ export const DOSE_CHIP_STYLE: Record<DoseStatus, string> = {
   unregistered: 'border-[1.5px] border-dashed border-slate-400 bg-surface text-slate-700',
 }
 
-interface HasStatus {
-  status: DoseStatus
+interface DoseLike {
+  status?: DoseStatus
+  taken: boolean
+  scheduledAt: string
+}
+
+/**
+ * The status the server sent. Only if it is missing (a backend from before specs/013 answering a newer frontend,
+ * while both versions coexist) it falls back to what the phone can tell: taken, or pending/due by the time.
+ */
+export function statusOf(dose: DoseLike): DoseStatus {
+  if (dose.status) return dose.status
+  if (dose.taken) return 'taken'
+  return new Date(dose.scheduledAt).getTime() > Date.now() ? 'pending' : 'due'
 }
 
 /** "Sin marcar": not marked and still in time (pending or due). What "Marcar tomas" marks. */
-export function isUnmarked(dose: HasStatus): boolean {
-  return dose.status === 'pending' || dose.status === 'due'
+export function isUnmarked(dose: DoseLike): boolean {
+  const status = statusOf(dose)
+  return status === 'pending' || status === 'due'
 }
 
-export function isUnregistered(dose: HasStatus): boolean {
-  return dose.status === 'unregistered'
+export function isUnregistered(dose: DoseLike): boolean {
+  return statusOf(dose) === 'unregistered'
 }
 
 /** "1 sin registrar" / "3 sin registrar". */

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { formatDayMonth, formatTime } from '../../shared/date'
 import { useDoseToggle } from './useDoseToggle'
-import { DOSE_CHIP_STYLE, UNREGISTERED_LABEL } from './doseStatus'
+import { DOSE_CHIP_STYLE, UNREGISTERED_LABEL, statusOf } from './doseStatus'
 import type { Dose, Medication } from './types'
 
 const dayKey = (instant: string) => {
@@ -18,7 +18,8 @@ const dayKey = (instant: string) => {
 function DoseChip({ consultationId, dose }: { consultationId: string; dose: Dose }) {
   const mutation = useDoseToggle(consultationId, dose.id)
   const time = formatTime(dose.scheduledAt)
-  const unregistered = dose.status === 'unregistered'
+  const status = statusOf(dose)
+  const unregistered = status === 'unregistered'
   const stateId = `dose-${dose.id}-state`
 
   return (
@@ -31,7 +32,7 @@ function DoseChip({ consultationId, dose }: { consultationId: string; dose: Dose
       onClick={() => mutation.mutate(!dose.taken)}
       className={`flex min-h-11 min-w-[76px] flex-1 cursor-pointer flex-col items-center justify-center rounded-xl text-sm font-extrabold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
         unregistered ? 'py-1.5 leading-tight' : 'py-3'
-      } ${DOSE_CHIP_STYLE[dose.status]}`}
+      } ${DOSE_CHIP_STYLE[status]}`}
     >
       <span>
         {time}
@@ -39,7 +40,7 @@ function DoseChip({ consultationId, dose }: { consultationId: string; dose: Dose
       </span>
       {unregistered && (
         <>
-          <span aria-hidden="true" className="text-[11px] font-bold text-slate-600">
+          <span aria-hidden="true" className="text-xs font-bold text-slate-600">
             sin registrar
           </span>
           <span id={stateId} className="sr-only">

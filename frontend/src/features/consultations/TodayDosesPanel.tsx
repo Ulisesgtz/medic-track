@@ -1,6 +1,6 @@
 import { formatTime } from '../../shared/date'
 import { useDoseToggle } from './useDoseToggle'
-import { DOSE_CHIP_STYLE, UNREGISTERED_LABEL } from './doseStatus'
+import { DOSE_CHIP_STYLE, UNREGISTERED_LABEL, isUnregistered } from './doseStatus'
 import type { OverviewDose } from './types'
 
 interface DoseRowProps {
@@ -17,7 +17,7 @@ interface DoseRowProps {
 function DoseRow({ dose }: DoseRowProps) {
   const time = formatTime(dose.scheduledAt)
   const mutation = useDoseToggle(dose.consultationId, dose.id)
-  const unregistered = dose.status === 'unregistered'
+  const unregistered = isUnregistered(dose)
   const label = dose.taken ? 'Tomada' : unregistered ? UNREGISTERED_LABEL : 'Marcar'
   const style = dose.taken ? DOSE_CHIP_STYLE.taken : unregistered ? DOSE_CHIP_STYLE.unregistered : DOSE_CHIP_STYLE.due
   const stateId = `today-dose-${dose.id}-state`
