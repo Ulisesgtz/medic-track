@@ -6,6 +6,9 @@ import type { DoseStatus } from './types'
 /** Screens that show doses ask for them again every minute while visible, so a dose turns "sin registrar" on its own. */
 export const DOSE_REFETCH_MS = 60_000
 
+/** specs/016: a dose the parent's early end of the treatment made unnecessary. Neutral: it says what happened. */
+export const CANCELED_LABEL = 'Cancelada'
+
 /** Only ever this — never "no tomada" or "olvidada": nobody marked it, that's all the app knows (Principio I). */
 export const UNREGISTERED_LABEL = 'Sin registrar'
 
@@ -18,6 +21,8 @@ export const DOSE_CHIP_STYLE: Record<DoseStatus, string> = {
   due: 'border-[1.5px] border-pending bg-pending-soft text-[#92400e]',
   pending: 'bg-slate-100 text-slate-600',
   unregistered: 'border-[1.5px] border-dashed border-slate-400 bg-surface text-slate-700',
+  // specs/016: the treatment was ended before this dose's time; it is kept, not marked, not markable.
+  canceled: 'border-[1.5px] border-dashed border-slate-300 bg-surface text-slate-500',
 }
 
 interface DoseLike {

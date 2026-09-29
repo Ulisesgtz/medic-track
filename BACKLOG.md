@@ -49,11 +49,7 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
   medicamentos se reponen y en otros no). Opciones a decidir: (a) la fecha de fin no se mueve y el calendario marca los
   días con tomas sin registrar; (b) un botón "Recorrer tratamiento" que el padre usa si su médico se lo indicó, que
   agrega las tomas al final y queda registrado quién lo decidió. Recomendación: (b), nunca automático.
-- **B6. "Finalizar tratamiento"** — botón en cada medicamento para terminarlo antes. Pide confirmación, guarda cuándo
-  se terminó y cuántas tomas se dieron (ej. "Terminado el 30 sep · 6 de 9 tomas"), las tomas que faltaban dejan de
-  avisarse y se muestran como canceladas (no se borran). Es una excepción a la inmutabilidad de la consulta (spec 004,
-  FR-014): endpoint nuevo, solo dueño, sin opción de "deshacer" salvo que se decida. Texto neutral, sin consejo
-  médico.
+- **B6. "Finalizar tratamiento"** — hecho en `specs/016-finalizar-tratamiento/`.
 - Depende de: B2 define el estado de las tomas que usan B3, B4, B5 y B6; B6 afecta a los recordatorios (spec 011: una
   toma cancelada no se avisa).
 

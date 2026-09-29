@@ -1,6 +1,6 @@
 import { ApiError, type ValidationErrorDetail } from '../../shared/apiError'
 import { withAuthHeader } from '../../shared/auth/withAuthHeader'
-import type { ChildOverview, ConsultationDetail, ConsultationSummary, Dose } from './types'
+import type { ChildOverview, ConsultationDetail, ConsultationSummary, Dose, Medication } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 
@@ -104,6 +104,26 @@ export async function fetchConsultationDetail(consultationId: string, token: str
 }
 
 // contracts/patch-dose.md
+// specs/016 contracts/medication-end.md — ends one medication's treatment early (irreversible, idempotent).
+export async function endTreatment(consultationId: string, medicationId: string, token: string | null): Promise<Medication> {
+  const res = await fetch(`${API_BASE_URL}/consultations/${consultationId}/medications/${medicationId}/end`, {
+    method: 'POST',
+    headers: withAuthHeader(token),
+  })
+  const body = await res.json()
+
+  if (res.ok) {
+    return body as Medication
+  }
+  if (res.status === 404 || res.status === 403) {
+    throw new ConsultationApiError('consultation_not_found', body.message ?? 'Medication not found')
+  }
+  if (res.status === 400) {
+    throw new ConsultationApiError('validation_error', body.message ?? 'Nothing to end', body.details)
+  }
+  throw new ConsultationApiError('unknown', body.message ?? 'Unexpected error ending the treatment')
+}
+
 export async function updateDoseStatus(
   consultationId: string,
   doseId: string,

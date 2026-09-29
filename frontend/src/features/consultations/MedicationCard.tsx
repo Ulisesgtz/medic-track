@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { formatDayMonth, formatTime } from '../../shared/date'
 import { useDoseToggle } from './useDoseToggle'
 import { ProgressBar } from './ProgressBar'
 import { groupByPeriod } from './dayPeriods'
-import { DOSE_CHIP_STYLE, UNREGISTERED_LABEL, statusOf } from './doseStatus'
+import { EndTreatmentDialog } from './EndTreatmentDialog'
+import { useEndTreatment } from './useEndTreatment'
+import { medicationProgress } from './progress'
+import { CANCELED_LABEL, DOSE_CHIP_STYLE, UNREGISTERED_LABEL, statusOf } from './doseStatus'
 import type { Dose, Medication } from './types'
 
 const dayKey = (instant: string) => {
@@ -22,6 +25,7 @@ function DoseChip({ consultationId, dose }: { consultationId: string; dose: Dose
   const time = formatTime(dose.scheduledAt)
   const status = statusOf(dose)
   const unregistered = status === 'unregistered'
+  const canceled = status === 'canceled'
   const stateId = `dose-${dose.id}-state`
 
   return (
@@ -29,24 +33,24 @@ function DoseChip({ consultationId, dose }: { consultationId: string; dose: Dose
       type="button"
       aria-pressed={dose.taken}
       aria-label={`Toma de ${time}`}
-      aria-describedby={unregistered ? stateId : undefined}
-      disabled={mutation.isPending}
+      aria-describedby={unregistered || canceled ? stateId : undefined}
+      disabled={mutation.isPending || canceled}
       onClick={() => mutation.mutate(!dose.taken)}
       className={`flex min-h-11 min-w-[76px] max-w-40 flex-1 cursor-pointer flex-col items-center justify-center rounded-xl text-sm font-extrabold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
-        unregistered ? 'py-1.5 leading-tight' : 'py-3'
-      } ${DOSE_CHIP_STYLE[status]}`}
+        unregistered || canceled ? 'py-1.5 leading-tight' : 'py-3'
+      } ${canceled ? 'disabled:opacity-100' : ''} ${DOSE_CHIP_STYLE[status]}`}
     >
-      <span>
+      <span className={canceled ? 'line-through' : undefined}>
         {time}
         {dose.taken ? ' ✓' : ''}
       </span>
-      {unregistered && (
+      {(unregistered || canceled) && (
         <>
           <span aria-hidden="true" className="text-xs font-bold text-slate-600">
-            sin registrar
+            {canceled ? 'cancelada' : 'sin registrar'}
           </span>
           <span id={stateId} className="sr-only">
-            {UNREGISTERED_LABEL}
+            {canceled ? CANCELED_LABEL : UNREGISTERED_LABEL}
           </span>
         </>
       )}
@@ -84,6 +88,15 @@ export function MedicationCard({ consultationId, medication, variant }: Medicati
   const chips = medication.doses.filter((d) => dayKey(d.scheduledAt) === selected)
   const dayLabel = selected === todayKey ? 'Hoy' : chips[0] ? formatDayMonth(chips[0].scheduledAt) : ''
 
+  // specs/016: ending the treatment early. Offered while it runs and has doses still ahead; afterwards the card says
+  // when it ended and how many of the doses that corresponded were marked.
+  const [confirming, setConfirming] = useState(false)
+  const endButton = useRef<HTMLButtonElement>(null)
+  const endMutation = useEndTreatment(consultationId, medication.id)
+  const closeConfirm = useCallback(() => setConfirming(false), [setConfirming])
+  const canEnd = !medication.endedAt && medication.doses.some((d) => d.status === 'pending')
+  const progress = medicationProgress(medication.doses)
+
   return (
     <article
       className={`min-w-0 rounded-3xl bg-surface shadow-[0_8px_20px_rgba(4,37,43,0.07)] ${
@@ -109,6 +122,37 @@ export function MedicationCard({ consultationId, medication, variant }: Medicati
           </div>
         </div>
       ))}
+
+      {medication.endedAt ? (
+        <p className="mt-4 text-[13px] font-bold text-ink-soft">
+          Terminado el {formatDayMonth(medication.endedAt)} · {progress.taken} de {progress.total}{' '}
+          {progress.total === 1 ? 'toma' : 'tomas'}
+        </p>
+      ) : (
+        canEnd && (
+          <button
+            ref={endButton}
+            type="button"
+            onClick={() => {
+              endMutation.reset()
+              setConfirming(true)
+            }}
+            className="mt-4 min-h-11 cursor-pointer rounded-2xl border-2 border-action px-5 py-2.5 text-[15px] font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+          >
+            Finalizar tratamiento
+          </button>
+        )
+      )}
+      {confirming && (
+        <EndTreatmentDialog
+          medicationName={medication.name}
+          busy={endMutation.isPending}
+          error={endMutation.isError ? 'No pudimos finalizar el tratamiento. Inténtalo de nuevo.' : null}
+          onConfirm={() => endMutation.mutate(undefined, { onSuccess: closeConfirm })}
+          onCancel={closeConfirm}
+          opener={endButton}
+        />
+      )}
 
       {days.length > 1 && (
         <div className="mt-3 flex items-center justify-between text-[13px] font-bold text-action">

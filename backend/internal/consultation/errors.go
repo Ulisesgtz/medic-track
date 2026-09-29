@@ -19,6 +19,13 @@ var (
 	// ErrSymptomNotAvailable is returned when a consultation names a symptom
 	// that isn't in the catalog or was retired from it (specs/012 FR-010).
 	ErrSymptomNotAvailable = errors.New("symptom not available")
+
+	// ErrMedicationNotFound is returned when no medication exists for a given id, or it doesn't belong to the given
+	// consultation (specs/016).
+	ErrMedicationNotFound = errors.New("medication not found")
+
+	// ErrNothingToEnd is returned when a medication has no doses left ahead: there is no treatment to end.
+	ErrNothingToEnd = errors.New("nothing to end")
 )
 
 // ValidationError describes a single field-level validation failure.

@@ -116,6 +116,11 @@ func (s *Service) GetConsultation(ctx context.Context, id uuid.UUID) (*Consultat
 	return s.repo.GetByID(ctx, id)
 }
 
+// EndTreatment ends a medication early, once (specs/016).
+func (s *Service) EndTreatment(ctx context.Context, consultationID, medicationID uuid.UUID) (*Medication, error) {
+	return s.repo.EndTreatment(ctx, consultationID, medicationID)
+}
+
 // MarkDose sets a dose's taken status, with no restriction based on its
 // scheduled date or the treatment's duration (FR-011, FR-016). The update
 // is scoped to consultationID — a doseID that exists but belongs to a

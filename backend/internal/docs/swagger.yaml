@@ -181,6 +181,7 @@ definitions:
         - due
         - taken
         - unregistered
+        - canceled
         example: due
         type: string
       taken:
@@ -229,6 +230,15 @@ definitions:
         example: 2
         type: integer
     type: object
+  MedicationNotFoundResponse:
+    properties:
+      error:
+        example: medication_not_found
+        type: string
+      message:
+        example: Medication not found
+        type: string
+    type: object
   MedicationResponse:
     properties:
       doses:
@@ -238,6 +248,11 @@ definitions:
       durationDays:
         example: 5
         type: integer
+      endedAt:
+        description: EndedAt is when the parent ended the treatment early (specs/016);
+          null while it runs.
+        example: "2026-09-30T14:02:00Z"
+        type: string
       frequencyHours:
         example: 8
         type: integer
@@ -281,6 +296,7 @@ definitions:
         - due
         - taken
         - unregistered
+        - canceled
         example: due
         type: string
       taken:
@@ -1250,6 +1266,51 @@ paths:
       security:
       - ClerkSession: []
       summary: Mark or unmark a dose as taken
+      tags:
+      - consultations
+  /consultations/{consultationId}/medications/{medicationId}/end:
+    post:
+      description: |-
+        Records when the parent ended the treatment (irreversible). No dose is deleted: the ones whose
+        time hadn't come turn "canceled" and stop being reminded. Idempotent: ending it again returns the
+        same result (specs/016).
+      parameters:
+      - description: Consultation UUID
+        in: path
+        name: consultationId
+        required: true
+        type: string
+      - description: Medication UUID
+        in: path
+        name: medicationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/MedicationResponse'
+        "400":
+          description: 'Nothing left to end (details: nothing_to_end)'
+          schema:
+            $ref: '#/definitions/ConsultationValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "404":
+          description: No such medication in this consultation
+          schema:
+            $ref: '#/definitions/MedicationNotFoundResponse'
+      security:
+      - ClerkSession: []
+      summary: End a medication's treatment early
       tags:
       - consultations
   /reminders/actions/taken:

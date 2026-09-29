@@ -193,6 +193,97 @@ describe('ConsultationDetailPage', () => {
       expect(screen.queryByRole('group', { name: 'Noche, Amoxicilina' })).not.toBeInTheDocument()
     })
 
+    describe('ending the treatment early (specs/016)', () => {
+      const ended = (endedAt: string | null, doses: unknown[]) =>
+        consultation({
+          medications: [{ id: 'm1', name: 'Amoxicilina', frequencyHours: 8, durationDays: 3, startTime: '08:00', endedAt, doses }],
+        })
+
+      it('offers "Finalizar tratamiento" while doses are ahead; Cancelar changes nothing', async () => {
+        const user = userEvent.setup()
+        const fetchMock = stubApi(consultation())
+        renderPage()
+
+        await user.click(await screen.findByRole('button', { name: 'Finalizar tratamiento' }))
+        expect(screen.getByRole('dialog', { name: '¿Finalizar el tratamiento de Amoxicilina 250 mg?' })).toBeInTheDocument()
+        await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+        expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/end'))).toBe(false)
+        expect(screen.getByRole('button', { name: 'Finalizar tratamiento' })).toHaveFocus()
+      })
+
+      it('confirming calls the endpoint and closes the dialog', async () => {
+        const user = userEvent.setup()
+        const fetchMock = vi.fn().mockImplementation(async (input: string, init?: RequestInit) => {
+          const url = String(input)
+          if (url.endsWith('/end')) return { ok: true, json: async () => ({ id: 'm1', endedAt: '2026-01-15T12:00:00Z', doses: [] }) }
+          if (url.includes('/overview')) return { ok: true, json: async () => ({ childId: 'child-1', doses: [], activeTreatment: null }) }
+          if (url.includes('/accounts/')) return { ok: true, json: async () => account }
+          void init
+          return { ok: true, json: async () => consultation() }
+        })
+        vi.stubGlobal('fetch', fetchMock)
+        renderPage()
+
+        await user.click(await screen.findByRole('button', { name: 'Finalizar tratamiento' }))
+        await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Finalizar tratamiento' }))
+
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+        const call = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/end'))!
+        expect(String(call[0])).toContain('/consultations/c1/medications/m1/end')
+        expect(call[1].method).toBe('POST')
+      })
+
+      it('a failure says so in Spanish and keeps the dialog open', async () => {
+        const user = userEvent.setup()
+        vi.stubGlobal(
+          'fetch',
+          vi.fn().mockImplementation(async (input: string) => {
+            const url = String(input)
+            if (url.endsWith('/end')) return { ok: false, status: 500, json: async () => ({}) }
+            if (url.includes('/overview')) return { ok: true, json: async () => ({ childId: 'child-1', doses: [], activeTreatment: null }) }
+            if (url.includes('/accounts/')) return { ok: true, json: async () => account }
+            return { ok: true, json: async () => consultation() }
+          }),
+        )
+        renderPage()
+
+        await user.click(await screen.findByRole('button', { name: 'Finalizar tratamiento' }))
+        await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Finalizar tratamiento' }))
+
+        expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos finalizar el tratamiento')
+        expect(screen.getByRole('dialog')).toBeInTheDocument()
+      })
+
+      it('an ended treatment says when and how many of the doses that corresponded were marked, with canceled doses unmarkable', async () => {
+        stubApi(
+          ended('2026-01-15T12:00:00Z', [
+            { id: 'd1', scheduledAt: at(8), taken: true, status: 'taken' },
+            { id: 'd2', scheduledAt: at(16), taken: false, status: 'canceled' },
+            { id: 'd3', scheduledAt: at(23), taken: false, status: 'canceled' },
+          ]),
+        )
+        renderPage()
+
+        expect(await screen.findByText('Terminado el 15 ene · 1 de 1 toma')).toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Finalizar tratamiento' })).not.toBeInTheDocument()
+        const canceled = screen.getByRole('button', { name: 'Toma de 16:00' })
+        expect(canceled).toBeDisabled()
+        expect(canceled).toHaveAccessibleDescription('Cancelada')
+        expect(canceled).toHaveClass('border-dashed', 'disabled:opacity-100')
+        expect(screen.getByText('1 / 1 toma')).toBeInTheDocument() // the bar leaves the canceled ones out
+      })
+
+      it('offers nothing when no dose is left ahead', async () => {
+        stubApi(ended(null, [{ id: 'd1', scheduledAt: at(8), taken: false, status: 'unregistered' }]))
+        renderPage()
+
+        await screen.findByRole('button', { name: 'Toma de 08:00' })
+        expect(screen.queryByRole('button', { name: 'Finalizar tratamiento' })).not.toBeInTheDocument()
+      })
+    })
+
     it('shows the medication progress above its doses and updates it when a dose is marked (specs/014)', async () => {
       const user = userEvent.setup()
       let taken = false

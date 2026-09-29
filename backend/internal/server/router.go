@@ -80,6 +80,7 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(ownsChild).Post("/children/{childId}/consultations", d.Consultation.CreateConsultation)
 		r.With(ownsConsultation).Get("/consultations/{consultationId}", d.Consultation.GetConsultation)
 		r.With(ownsConsultation).Patch("/consultations/{consultationId}/doses/{doseId}", d.Consultation.UpdateDose)
+		r.With(ownsConsultation).Post("/consultations/{consultationId}/medications/{medicationId}/end", d.Consultation.EndTreatment)
 	})
 
 	return r

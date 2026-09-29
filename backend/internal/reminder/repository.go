@@ -93,6 +93,8 @@ func (r *Repository) ClaimDueDoses(ctx context.Context, now time.Time, window ti
 			  AND d.scheduled_at > $1 - make_interval(secs => $2)
 			  -- Never a dose already "sin registrar": its medication's next dose came (specs/013).
 			  AND d.scheduled_at + make_interval(hours => m.frequency_hours) > $1
+			  -- Never a dose canceled by ending the treatment early (specs/016).
+			  AND (m.ended_at IS NULL OR d.scheduled_at <= m.ended_at)
 			  AND EXISTS (
 				SELECT 1 FROM reminder_devices rd
 				WHERE rd.account_id = ch.account_id AND rd.active AND rd.activated_at <= d.scheduled_at

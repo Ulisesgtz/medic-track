@@ -17,7 +17,7 @@ describe('doseStatus (specs/013)', () => {
     const style = DOSE_CHIP_STYLE.unregistered
     expect(style).toContain('border-dashed')
     expect(style).not.toMatch(/red|rose|pending/)
-    expect(new Set(Object.values(DOSE_CHIP_STYLE)).size).toBe(4)
+    expect(new Set(Object.values(DOSE_CHIP_STYLE)).size).toBe(5)
   })
 
   it('without a status from the server (an older backend) it falls back to taken, pending or due', () => {

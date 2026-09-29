@@ -63,6 +63,7 @@ Por límites de datos o del producto:
   **"Seleccionar archivo"** (hace falta un modo de elegir la foto) y pasa al progreso al elegirla. En móvil, ya
   elegida la foto, el panel es exactamente el del mock (sin fila del selector ni nombre del archivo) y **"Cambiar
   foto"** va en la fila superior, a la derecha de "← Cancelar" (en web, al extremo derecho del encabezado, igual sin costo de espacio).
+- **Finalizar tratamiento (spec 016, 2026-09-30)**: botón de contorno, diálogo de confirmación, línea "Terminado el …" y chip de toma cancelada en el detalle de la consulta, sin mock, con los tokens de diseño.
 - **Tomas por momento del día (spec 015, 2026-09-29)**: en el detalle de la consulta las tomas del día van en grupos Mañana/Tarde/Noche en vez de una sola fila de chips (los mocks 03/13 dibujan una fila); sin mock.
 - **Barra de progreso (spec 014, 2026-09-29)**: adición sin mock en el detalle de la consulta (móvil y web), entre el nombre del medicamento y su horario.
 - **Chip "sin registrar" (spec 013, 2026-09-29)**: los mocks 02/03/13 y el tablero solo tienen tomada, por marcar y pendiente. El cuarto estado es nuevo, sin mock: borde punteado `slate-400`, la hora y "sin registrar" debajo, sin rojo ni ámbar.
