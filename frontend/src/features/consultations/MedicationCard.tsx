@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { formatDayMonth, formatTime } from '../../shared/date'
 import { useDoseToggle } from './useDoseToggle'
+import { ProgressBar } from './ProgressBar'
 import { DOSE_CHIP_STYLE, UNREGISTERED_LABEL, statusOf } from './doseStatus'
 import type { Dose, Medication } from './types'
 
@@ -92,6 +93,7 @@ export function MedicationCard({ consultationId, medication, variant }: Medicati
         {medication.name}
       </h3>
       <p className="mt-1 text-sm font-semibold text-action">{schedule(medication)}</p>
+      <ProgressBar doses={medication.doses} />
 
       {chips.length > 0 && (
         <div className="mt-4 flex flex-wrap gap-2.5">

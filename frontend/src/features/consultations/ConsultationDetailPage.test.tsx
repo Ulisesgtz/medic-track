@@ -151,6 +151,36 @@ describe('ConsultationDetailPage', () => {
       expect(later).toHaveClass('bg-slate-100') // the server says it hasn't come yet
     })
 
+    it('shows the medication progress above its doses and updates it when a dose is marked (specs/014)', async () => {
+      const user = userEvent.setup()
+      let taken = false
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockImplementation(async (input: string, init?: RequestInit) => {
+          const url = String(input)
+          if (init?.method === 'PATCH') {
+            taken = true
+            return { ok: true, json: async () => ({ id: 'd2', scheduledAt: '', taken: true, status: 'taken' }) }
+          }
+          if (url.includes('/overview')) return { ok: true, json: async () => ({ childId: 'child-1', doses: [], activeTreatment: null }) }
+          if (url.includes('/accounts/')) return { ok: true, json: async () => account }
+          const base = consultation()
+          base.medications[0].doses[1] = { id: 'd2', scheduledAt: at(16), taken, status: taken ? 'taken' : 'pending' }
+          return { ok: true, json: async () => base }
+        }),
+      )
+      renderPage()
+
+      const bar = await screen.findByRole('progressbar', { name: 'Progreso de las tomas' })
+      expect(screen.getByText('1 / 3 tomas')).toBeInTheDocument()
+      expect(bar).toHaveAttribute('aria-valuenow', '1')
+
+      await user.click(screen.getByRole('button', { name: 'Toma de 16:00' }))
+
+      expect(await screen.findByText('2 / 3 tomas')).toBeInTheDocument()
+      expect(screen.getByRole('progressbar', { name: 'Progreso de las tomas' })).toHaveAttribute('aria-valuenow', '2')
+    })
+
     it('shows a dose "sin registrar" with a dashed border and those words, announced as its description (specs/013)', async () => {
       stubApi(
         consultation({

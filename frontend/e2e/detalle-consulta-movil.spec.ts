@@ -39,6 +39,20 @@ test.describe('Detalle de consulta — diseño móvil (mock 03)', () => {
     await expect(page.getByRole('link', { name: 'Nueva consulta' })).toHaveCount(0)
   })
 
+  test('la barra de progreso sube al marcar una toma, sin recargar (specs/014)', async ({ page }) => {
+    const { consultationId } = await seedChild(page)
+    await page.goto(`/consultations/${consultationId}`)
+    const bar = page.getByRole('progressbar', { name: 'Progreso de las tomas' })
+    await expect(page.getByText('0 / 3 tomas')).toBeVisible()
+    await expect(bar).toHaveAttribute('aria-valuenow', '0')
+
+    await page.getByRole('button', { name: 'Toma de 16:00' }).click()
+
+    await expect(page.getByText('1 / 3 tomas')).toBeVisible()
+    await expect(bar).toHaveAttribute('aria-valuenow', '1')
+    await expect(bar).toHaveAttribute('aria-valuetext', /^1 de 3 tomas registradas/)
+  })
+
   test('cada chip alterna entre marcada y sin marcar, y se conserva al recargar', async ({ page }) => {
     const { consultationId } = await seedChild(page)
     await page.goto(`/consultations/${consultationId}`)

@@ -63,6 +63,7 @@ Por límites de datos o del producto:
   **"Seleccionar archivo"** (hace falta un modo de elegir la foto) y pasa al progreso al elegirla. En móvil, ya
   elegida la foto, el panel es exactamente el del mock (sin fila del selector ni nombre del archivo) y **"Cambiar
   foto"** va en la fila superior, a la derecha de "← Cancelar" (en web, al extremo derecho del encabezado, igual sin costo de espacio).
+- **Barra de progreso (spec 014, 2026-09-29)**: adición sin mock en el detalle de la consulta (móvil y web), entre el nombre del medicamento y su horario.
 - **Chip "sin registrar" (spec 013, 2026-09-29)**: los mocks 02/03/13 y el tablero solo tienen tomada, por marcar y pendiente. El cuarto estado es nuevo, sin mock: borde punteado `slate-400`, la hora y "sin registrar" debajo, sin rojo ni ámbar.
 - **Síntomas y notas (spec 012, 2026-09-29)**: los mocks 04/14 no tienen síntomas para elegir. En ambos diseños hay una
   sección propia después del grupo "Leído de tu receta" y antes de los medicamentos: "¿Qué síntomas tuvo?" (chips por

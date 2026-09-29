@@ -41,10 +41,7 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
   del padre: Mañana 05:00–11:59, Tarde 12:00–18:59, Noche 19:00–04:59 (la madrugada cuenta como noche).
 - **B2. Toma "sin registrar" automática** — hecho en `specs/013-tomas-sin-registrar/` (cambia a la siguiente toma de su
   medicamento; la última, a su hora + la frecuencia).
-- **B3. Barra de progreso por medicamento** — arriba de cada medicamento, "N / total tomas" con una barra. Total = tomas
-  programadas (ej. cada 8 h por 3 días = 9 tomas; *nota: el ejemplo del pedido decía 24, que sería cada 3 h o 8 días —
-  la cuenta sale del horario registrado*). Cuenta solo las marcadas como tomadas; se ve también cuántas quedaron sin
-  registrar.
+- **B3. Barra de progreso por medicamento** — hecho en `specs/014-progreso-tomas/`.
 - **B4. Calendario del tratamiento** — **un solo calendario** por consulta (no uno por medicamento) con el rango de
   cada medicamento de inicio a fin, **un color por medicamento** con su leyenda. Colores nuevos en `design-tokens.md`:
   distinguibles entre sí, contraste ≥ 3:1 contra el fondo, sin rojo (no hay alerta médica) y sin el ámbar, que ya
