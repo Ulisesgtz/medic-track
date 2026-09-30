@@ -84,7 +84,7 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
   a la inmutabilidad, endpoint nuevo, spec propia y un diseño que los mocks no tienen).
 
 
-- **Errores de procesos en segundo plano en `error_logs`** (anotado 2026-09-29) — hoy `error_logs` solo guarda las
+- **Errores de procesos en segundo plano en `error_logs`** — hecho en `specs/018-errores-procesos-segundo-plano/` (anotado 2026-09-29) — hoy `error_logs` solo guarda las
   respuestas HTTP 4xx/5xx (spec 002, vía `httpx.Responder`). Lo que falla en el proceso de recordatorios (spec 011: el
   ticker de 30 s, una toma que no se pudo preparar, un aviso que no se pudo entregar) solo se imprime en la consola del
   servidor (`log.Printf` en `internal/reminder/scheduler.go` y `service.go`). Propuesta: registrarlo también en

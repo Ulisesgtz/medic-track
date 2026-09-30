@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/url"
 	"strings"
@@ -30,13 +31,28 @@ var pushServiceHosts = []string{
 	"notify.windows.com",
 }
 
+// The kinds of failure the ticker reports (specs/018): each is grouped apart in error_logs.
+const (
+	failureTick    = "tick"
+	failurePrepare = "prepare"
+	failureDeliver = "deliver"
+)
+
+// FailureReporter records what fails in the ticker in error_logs (satisfied by *jobreport.Reporter). The messages are
+// fixed sentences with counts: never an error from a third party, an address, a key or a token.
+type FailureReporter interface {
+	Report(kind, message string, accountID *uuid.UUID)
+	Recovered(kind string)
+}
+
 // Service turns reminders on and off per device, sends the due reminders and handles the
 // "Tomada" action.
 type Service struct {
-	repo   *Repository
-	sender Sender
-	config Config
-	now    func() time.Time
+	repo     *Repository
+	sender   Sender
+	config   Config
+	now      func() time.Time
+	reporter FailureReporter // optional
 	// allowLocalEndpoints lets tests use an http://127.0.0.1 push service. Never set in production.
 	allowLocalEndpoints bool
 }
@@ -44,6 +60,38 @@ type Service struct {
 // NewService creates a reminder Service.
 func NewService(repo *Repository, sender Sender, config Config) *Service {
 	return &Service{repo: repo, sender: sender, config: config, now: time.Now}
+}
+
+// SetReporter makes the ticker's failures also go to error_logs. Without one they only reach the console.
+func (s *Service) SetReporter(r FailureReporter) { s.reporter = r }
+
+// reportFailure records a failure — unless the server is shutting down, which cancels the cycle and is not a failure.
+func (s *Service) reportFailure(ctx context.Context, kind, message string, accounts accountSet) {
+	if s.reporter == nil || ctx.Err() != nil {
+		return
+	}
+	s.reporter.Report(kind, message, accounts.single())
+}
+
+func (s *Service) recovered(kind string) {
+	if s.reporter != nil {
+		s.reporter.Recovered(kind)
+	}
+}
+
+// accountSet collects the accounts a cycle's failures belong to: the row names the account only when it is just one.
+type accountSet map[uuid.UUID]struct{}
+
+func (a accountSet) add(id uuid.UUID) { a[id] = struct{}{} }
+
+func (a accountSet) single() *uuid.UUID {
+	if len(a) != 1 {
+		return nil
+	}
+	for id := range a {
+		return &id
+	}
+	return nil
 }
 
 // Available reports whether reminders can be turned on (the server has its VAPID keys).
@@ -134,8 +182,10 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 	now := s.now()
 	due, err := s.repo.ClaimDueDoses(ctx, now, remindWindow)
 	if err != nil {
+		s.reportFailure(ctx, failureTick, "reminder tick failed: could not read the due doses", accountSet{})
 		return 0, err
 	}
+	s.recovered(failureTick)
 
 	// The doses are already claimed: from here on a failure must only cost its own dose, never the
 	// rest of the batch. Devices are read once per account (activated as late as now) and each dose
@@ -143,6 +193,7 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 	var (
 		pushes       []push
 		skipped      int
+		skippedFor   = accountSet{}
 		devicesByAcc = map[uuid.UUID][]Device{}
 	)
 	for _, dose := range due {
@@ -151,6 +202,7 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 			var err error
 			if devices, err = s.repo.ActiveDevicesFor(ctx, dose.AccountID, now); err != nil {
 				skipped++
+				skippedFor.add(dose.AccountID)
 				continue
 			}
 			devicesByAcc[dose.AccountID] = devices
@@ -163,6 +215,7 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 			body, err := json.Marshal(buildPayload(dose, token))
 			if err != nil {
 				skipped++
+				skippedFor.add(dose.AccountID)
 				continue
 			}
 			pushes = append(pushes, push{device: device, payload: body})
@@ -170,6 +223,9 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 	}
 	if skipped > 0 {
 		log.Printf("reminder: %d reminders could not be prepared", skipped)
+		s.reportFailure(ctx, failurePrepare, fmt.Sprintf("%d reminders could not be prepared", skipped), skippedFor)
+	} else {
+		s.recovered(failurePrepare)
 	}
 
 	var (
@@ -177,6 +233,7 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 		mu        sync.Mutex
 		delivered int
 		failed    int
+		failedFor = accountSet{}
 		slots     = make(chan struct{}, sendConcurrency)
 	)
 	for _, p := range pushes {
@@ -194,15 +251,20 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 			case Gone:
 				if err := s.repo.DeactivateByID(ctx, p.device.ID); err != nil {
 					failed++
+					failedFor.add(p.device.AccountID)
 				}
 			default:
 				failed++
+				failedFor.add(p.device.AccountID)
 			}
 		}(p)
 	}
 	wg.Wait()
 	if failed > 0 {
 		log.Printf("reminder: %d of %d reminders could not be delivered", failed, len(pushes))
+		s.reportFailure(ctx, failureDeliver, fmt.Sprintf("%d of %d reminders could not be delivered", failed, len(pushes)), failedFor)
+	} else {
+		s.recovered(failureDeliver)
 	}
 	return delivered, nil
 }

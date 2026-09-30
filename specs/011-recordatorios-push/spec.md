@@ -255,5 +255,6 @@ instalada y en una PC, y comprobar el mensaje de cada caso.
   "Despliegue"). En desarrollo local los avisos solo salen mientras el backend local corre.
 - Hoy la app no puede recibir avisos con la app cerrada; esta funcionalidad agrega esa capacidad, pero no el uso sin
   conexión de la PWA (ver pantallas sin internet), que queda fuera.
+- Las fallas del proceso (leer las tomas, preparar y entregar avisos) quedan además en `error_logs` con `endpoint = job:reminders`, agrupadas (spec 018).
 - Fuera de alcance: exportar las tomas al calendario (.ics), recordatorios por correo o SMS, avisos de tomas que ya
   pasaron antes de activar, y avisos al médico o a otros tutores.
