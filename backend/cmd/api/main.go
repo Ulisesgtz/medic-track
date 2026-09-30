@@ -31,6 +31,7 @@ import (
 	_ "github.com/Ulisesgtz/medic-track/backend/internal/docs"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
+	"github.com/Ulisesgtz/medic-track/backend/internal/jobreport"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
 	"github.com/Ulisesgtz/medic-track/backend/internal/platform"
 	"github.com/Ulisesgtz/medic-track/backend/internal/reminder"
@@ -73,6 +74,8 @@ func main() {
 	reminderService := reminder.NewService(reminder.NewRepository(pool), reminder.NewWebPushSender(reminderConfig, nil), reminderConfig)
 	reminderHandler := reminder.NewHandler(reminderService, responder)
 	if reminderConfig.Available() {
+		// What fails in the ticker also goes to error_logs (specs/018), grouped so a failure that lasts doesn't fill it.
+		reminderService.SetReporter(jobreport.New(errorLogRepo, "reminders"))
 		go reminderService.RunScheduler(ctx)
 	} else {
 		log.Printf("reminders unavailable: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT and REMINDER_ACTION_SECRET must all be set")
