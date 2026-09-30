@@ -9,6 +9,8 @@ import type { Medication } from './types'
 const at = (month: number, day: number, hour: number) => new Date(2026, month - 1, day, hour).toISOString()
 
 function med(id: string, name: string, days: [number, number][], hours: number[] = [8], endedAt: string | null = null): Medication {
+  // The server cancels the unmarked doses after the end; the fixtures say it the same way.
+  const statusOf = (instant: string) => (endedAt && new Date(instant) > new Date(endedAt) ? ('canceled' as const) : ('pending' as const))
   return {
     id,
     name,
@@ -16,8 +18,10 @@ function med(id: string, name: string, days: [number, number][], hours: number[]
     durationDays: days.length,
     startTime: null,
     endedAt,
+    extendableDoses: 0,
+    extensions: [],
     doses: days.flatMap(([m, d]) =>
-      hours.map((h) => ({ id: `${id}-${m}-${d}-${h}`, scheduledAt: at(m, d, h), taken: false, status: 'pending' as const })),
+      hours.map((h) => ({ id: `${id}-${m}-${d}-${h}`, scheduledAt: at(m, d, h), taken: false, status: statusOf(at(m, d, h)) })),
     ),
   }
 }
@@ -67,7 +71,7 @@ describe('TreatmentCalendar (specs/019)', () => {
   it('marks every day of each range with its number — both on a shared day — and no day outside it', () => {
     renderCalendar()
 
-    expect(day('30 de septiembre · 1 Amoxicilina, 2 Paracetamol')).toBeInTheDocument()
+    expect(day('30 de septiembre · inicio de 1 Amoxicilina, inicio de 2 Paracetamol')).toBeInTheDocument()
     // The day before the treatment is plain.
     expect(day('29 de septiembre')).toBeInTheDocument()
     // Another month, only the longer medication.
@@ -85,8 +89,10 @@ describe('TreatmentCalendar (specs/019)', () => {
 
     expect(screen.getByText('octubre 2026')).toBeInTheDocument()
     expect(next).toBeDisabled()
-    expect(day('1 de octubre · 1 Amoxicilina, 2 Paracetamol')).toBeInTheDocument()
+    expect(day('1 de octubre · 1 Amoxicilina, 2 Paracetamol')).toBeInTheDocument() // in the middle of both
+    expect(day('2 de octubre · 1 Amoxicilina, fin de 2 Paracetamol')).toBeInTheDocument()
     expect(day('3 de octubre · 1 Amoxicilina')).toBeInTheDocument()
+    expect(day('6 de octubre · fin de 1 Amoxicilina')).toBeInTheDocument()
     expect(day('7 de octubre')).toBeInTheDocument() // past the end: no mark
     await user.click(screen.getByRole('button', { name: 'Mes anterior' }))
     expect(screen.getByText('septiembre 2026')).toBeInTheDocument()
@@ -161,9 +167,45 @@ describe('TreatmentCalendar (specs/019)', () => {
     const ended = med('m1', 'Amoxicilina', range([9, 30], [10, 6]), [8], at(10, 1, 9))
     renderCalendar({ medications: [ended], today: '2026-10-01' })
 
-    expect(day('1 de octubre · 1 Amoxicilina')).toBeInTheDocument()
-    expect(day('2 de octubre')).toBeInTheDocument() // no mark: it ended the day before
+    // Its last day with a dose that was not canceled, and nothing after it.
+    expect(day('1 de octubre · fin de 1 Amoxicilina')).toBeInTheDocument()
+    expect(day('2 de octubre')).toBeInTheDocument()
     expect(day('6 de octubre')).toBeInTheDocument()
+  })
+
+  it('draws the start and the end filled with the color of the medication and the days in between as its number', () => {
+    renderCalendar({ medications: [med('m1', 'Amoxicilina', range([10, 1], [10, 3]))], today: '2026-10-02' })
+
+    const filled = (name: string) => day(name).querySelector('span.bg-med-1')
+    expect(filled('1 de octubre · inicio de 1 Amoxicilina')).not.toBeNull()
+    expect(filled('3 de octubre · fin de 1 Amoxicilina')).not.toBeNull()
+    // In the middle: the number in the color, not filled.
+    expect(filled('2 de octubre · 1 Amoxicilina')).toBeNull()
+    expect(day('2 de octubre · 1 Amoxicilina').querySelector('span.text-med-1')).not.toBeNull()
+  })
+
+  it('a day in between with no dose (every 48 h) has no mark at all', () => {
+    const everyOtherDay = med('m1', 'Amoxicilina', [[10, 1], [10, 3]])
+    renderCalendar({ medications: [everyOtherDay], today: '2026-10-01' })
+
+    expect(day('1 de octubre · inicio de 1 Amoxicilina')).toBeInTheDocument()
+    expect(day('2 de octubre')).toBeInTheDocument()
+    expect(day('3 de octubre · fin de 1 Amoxicilina')).toBeInTheDocument()
+  })
+
+  it('an extension (doses added at the end) moves the last day', () => {
+    const base = med('m1', 'Amoxicilina', range([10, 1], [10, 2]))
+    const extended: Medication = {
+      ...base,
+      doses: [...base.doses, { id: 'added', scheduledAt: at(10, 4, 8), taken: false, status: 'pending' }],
+    }
+    const { rerenderWith } = renderCalendar({ medications: [base], today: '2026-10-01' })
+    expect(day('2 de octubre · fin de 1 Amoxicilina')).toBeInTheDocument()
+
+    rerenderWith({ medications: [extended] })
+
+    expect(day('2 de octubre · 1 Amoxicilina')).toBeInTheDocument()
+    expect(day('4 de octubre · fin de 1 Amoxicilina')).toBeInTheDocument()
   })
 
   it('draws nothing when no medication has a day to show', () => {
@@ -181,7 +223,7 @@ describe('TreatmentCalendar (specs/019)', () => {
     expect(numbers[0]).toHaveClass('bg-med-1')
     expect(numbers[5]).toHaveClass('bg-med-6')
     expect(numbers[6]).toHaveClass('bg-med-1')
-    expect(day(/^1 de octubre · 1 Medicina 1, 2 Medicina 2/)).toBeInTheDocument()
+    expect(day(/^1 de octubre · inicio y fin de 1 Medicina 1, inicio y fin de 2 Medicina 2/)).toBeInTheDocument()
   })
 
   it('keeps the chosen day when the detail is refreshed', async () => {

@@ -5,7 +5,10 @@ import { dayKey } from './treatmentDays'
 import { ProgressBar } from './ProgressBar'
 import { groupByPeriod } from './dayPeriods'
 import { EndTreatmentDialog } from './EndTreatmentDialog'
+import { ExtendTreatmentDialog } from './ExtendTreatmentDialog'
+import { ConsultationApiError } from './api'
 import { useEndTreatment } from './useEndTreatment'
+import { useExtendTreatment } from './useExtendTreatment'
 import { medicationProgress } from './progress'
 import type { Medication } from './types'
 
@@ -40,6 +43,21 @@ export function MedicationCard({ consultationId, medication, variant }: Medicati
   const endMutation = useEndTreatment(consultationId, medication.id)
   const closeConfirm = useCallback(() => setConfirming(false), [setConfirming])
   const canEnd = !medication.endedAt && medication.doses.some((d) => d.status === 'pending')
+
+  // specs/020: adding doses to the end, only when the parent decides (their doctor said so). Offered while there are
+  // unregistered doses not covered yet; the card says afterwards that it was done.
+  const [extending, setExtending] = useState(false)
+  const extendButton = useRef<HTMLButtonElement>(null)
+  const extendMutation = useExtendTreatment(consultationId, medication.id)
+  const closeExtend = useCallback(() => setExtending(false), [setExtending])
+  // A backend that predates spec 020 (both versions are deployed for a while) sends neither field: nothing to offer.
+  const extendable = medication.extendableDoses ?? 0
+  const extensions = medication.extensions ?? []
+  const canExtend = !medication.endedAt && extendable > 0
+  const lastExtension = extensions[extensions.length - 1]
+  // Another device extended it while the dialog was open: nothing is left to cover, so the dialog closes for good —
+  // otherwise it would pop up again the day new doses turn unregistered.
+  if (extending && !canExtend) setExtending(false)
   const progress = medicationProgress(medication.doses)
 
   return (
@@ -68,25 +86,73 @@ export function MedicationCard({ consultationId, medication, variant }: Medicati
         </div>
       ))}
 
+      {lastExtension && (
+        <p className="mt-4 text-[13px] font-bold text-ink-soft">
+          Se recorrió el {formatDayMonth(lastExtension.createdAt)} · +{lastExtension.addedDoses}{' '}
+          {lastExtension.addedDoses === 1 ? 'toma' : 'tomas'}
+          {lastExtension.manual ? ' · número ingresado manualmente' : ''}
+        </p>
+      )}
+
       {medication.endedAt ? (
         <p className="mt-4 text-[13px] font-bold text-ink-soft">
           Terminado el {formatDayMonth(medication.endedAt)} · {progress.taken} de {progress.total}{' '}
           {progress.total === 1 ? 'toma' : 'tomas'}
         </p>
       ) : (
-        canEnd && (
-          <button
-            ref={endButton}
-            type="button"
-            onClick={() => {
-              endMutation.reset()
-              setConfirming(true)
-            }}
-            className="mt-4 min-h-11 cursor-pointer rounded-2xl border-2 border-action px-5 py-2.5 text-[15px] font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
-          >
-            Finalizar tratamiento
-          </button>
+        (canEnd || canExtend) && (
+          <div className="mt-4 flex flex-wrap gap-3">
+            {canExtend && (
+              <button
+                ref={extendButton}
+                type="button"
+                onClick={() => {
+                  extendMutation.reset()
+                  setExtending(true)
+                }}
+                className="min-h-11 cursor-pointer rounded-2xl border-2 border-action px-5 py-2.5 text-[15px] font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+              >
+                Recorrer tratamiento
+              </button>
+            )}
+            {canEnd && (
+              <button
+                ref={endButton}
+                type="button"
+                onClick={() => {
+                  endMutation.reset()
+                  setConfirming(true)
+                }}
+                className="min-h-11 cursor-pointer rounded-2xl border-2 border-action px-5 py-2.5 text-[15px] font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+              >
+                Finalizar tratamiento
+              </button>
+            )}
+          </div>
         )
+      )}
+      {extending && (
+        <ExtendTreatmentDialog
+          medicationName={medication.name}
+          frequencyHours={medication.frequencyHours}
+          lastDoseAt={medication.doses[medication.doses.length - 1].scheduledAt}
+          proposed={extendable}
+          busy={extendMutation.isPending}
+          error={
+            extendMutation.isError && !(extendMutation.error instanceof ConsultationApiError && extendMutation.error.kind === 'nothing_to_extend')
+              ? 'No pudimos recorrer el tratamiento. Inténtalo de nuevo.'
+              : null
+          }
+          onConfirm={(doses) =>
+            extendMutation.mutate(doses, {
+              onSuccess: closeExtend,
+              // Already done (another tap or device): the detail refreshes and the button goes away.
+              onError: (e) => e instanceof ConsultationApiError && e.kind === 'nothing_to_extend' && closeExtend(),
+            })
+          }
+          onCancel={closeExtend}
+          opener={extendButton}
+        />
       )}
       {confirming && (
         <EndTreatmentDialog

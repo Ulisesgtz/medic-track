@@ -26,6 +26,10 @@ var (
 
 	// ErrNothingToEnd is returned when a medication has no doses left ahead: there is no treatment to end.
 	ErrNothingToEnd = errors.New("nothing to end")
+
+	// ErrNothingToExtend is returned when a medication can't be extended (specs/020): it was ended, or it has no
+	// unregistered dose left to cover — also what a second attempt for the same doses gets, so nothing is ever added twice.
+	ErrNothingToExtend = errors.New("nothing to extend")
 )
 
 // ValidationError describes a single field-level validation failure.

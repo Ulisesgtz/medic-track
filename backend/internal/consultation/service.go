@@ -121,6 +121,17 @@ func (s *Service) EndTreatment(ctx context.Context, consultationID, medicationID
 	return s.repo.EndTreatment(ctx, consultationID, medicationID)
 }
 
+// MaxExtensionDoses is the most doses one extension may add: 20 days every 8 hours, so a typo can't add a year.
+const MaxExtensionDoses = 60
+
+// ExtendTreatment adds `doses` doses to the end of a medication, because the parent decided so (specs/020).
+func (s *Service) ExtendTreatment(ctx context.Context, consultationID, medicationID uuid.UUID, doses int) (*Medication, error) {
+	if doses < 1 || doses > MaxExtensionDoses {
+		return nil, ValidationErrors{{Field: "doses", Message: "must be a whole number between 1 and 60"}}
+	}
+	return s.repo.ExtendTreatment(ctx, consultationID, medicationID, doses)
+}
+
 // MarkDose sets a dose's taken status, with no restriction based on its
 // scheduled date or the treatment's duration (FR-011, FR-016). The update
 // is scoped to consultationID — a doseID that exists but belongs to a

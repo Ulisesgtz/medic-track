@@ -8,7 +8,7 @@ export type { ValidationErrorDetail }
 
 /** Discriminated error thrown by this feature's api functions. */
 export class ConsultationApiError extends ApiError<
-  'child_not_found' | 'consultation_not_found' | 'dose_not_found' | 'medication_not_found' | 'validation_error' | 'symptom_not_available' | 'unknown'
+  'child_not_found' | 'consultation_not_found' | 'dose_not_found' | 'medication_not_found' | 'nothing_to_extend' | 'validation_error' | 'symptom_not_available' | 'unknown'
 > {}
 
 // contracts/get-consultations.md
@@ -122,6 +122,33 @@ export async function endTreatment(consultationId: string, medicationId: string,
     throw new ConsultationApiError('validation_error', body.message ?? 'Nothing to end', body.details)
   }
   throw new ConsultationApiError('unknown', body.message ?? 'Unexpected error ending the treatment')
+}
+
+// specs/020 contracts/medication-extend.md — adds `doses` doses to the end of a medication, because the parent decided so.
+export async function extendTreatment(
+  consultationId: string,
+  medicationId: string,
+  doses: number,
+  token: string | null,
+): Promise<Medication> {
+  const res = await fetch(`${API_BASE_URL}/consultations/${consultationId}/medications/${medicationId}/extend`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...withAuthHeader(token) },
+    body: JSON.stringify({ doses }),
+  })
+  const body = await res.json()
+
+  if (res.ok) {
+    return body as Medication
+  }
+  if (res.status === 404 || res.status === 403) {
+    throw new ConsultationApiError('medication_not_found', body.message ?? 'Medication not found')
+  }
+  if (res.status === 400) {
+    const nothing = (body.details as { message?: string }[] | undefined)?.some((d) => d.message === 'nothing_to_extend')
+    throw new ConsultationApiError(nothing ? 'nothing_to_extend' : 'validation_error', body.message ?? 'Invalid request', body.details)
+  }
+  throw new ConsultationApiError('unknown', body.message ?? 'Unexpected error extending the treatment')
 }
 
 export async function updateDoseStatus(

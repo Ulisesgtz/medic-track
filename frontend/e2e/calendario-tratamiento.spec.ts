@@ -54,13 +54,13 @@ for (const design of designs) {
       await expect(legend.getByRole('listitem')).toHaveText(['1Amoxicilina', '2Paracetamol'])
 
       const today = daysFromToday(0)
-      await expect(cal.getByRole('button', { name: `${longDay(today)} · 1 Amoxicilina, 2 Paracetamol` })).toHaveAttribute('aria-current', 'date')
+      await expect(cal.getByRole('button', { name: `${longDay(today)} · inicio de 1 Amoxicilina, inicio de 2 Paracetamol` })).toHaveAttribute('aria-current', 'date')
 
       // Day 4 of the treatment: only the longer one; day 7 is its last; day 8 has nothing.
       await showMonthOf(page, daysFromToday(3))
       await expect(cal.getByRole('button', { name: `${longDay(daysFromToday(3))} · 1 Amoxicilina` })).toBeVisible()
       await showMonthOf(page, daysFromToday(6))
-      await expect(cal.getByRole('button', { name: `${longDay(daysFromToday(6))} · 1 Amoxicilina` })).toBeVisible()
+      await expect(cal.getByRole('button', { name: `${longDay(daysFromToday(6))} · fin de 1 Amoxicilina` })).toBeVisible()
       const after = daysFromToday(7)
       if (after.getMonth() === daysFromToday(6).getMonth()) {
         await expect(cal.getByRole('button', { name: longDay(after), exact: true })).toBeVisible()
@@ -74,7 +74,7 @@ for (const design of designs) {
       const day = daysFromToday(2)
       await showMonthOf(page, day)
 
-      await cal.getByRole('button', { name: new RegExp(`^${longDay(day)} · 1 Amoxicilina, 2 Paracetamol`) }).click()
+      await cal.getByRole('button', { name: new RegExp(`^${longDay(day)} · 1 Amoxicilina, fin de 2 Paracetamol`) }).click()
 
       const list = cal.getByRole('list', { name: 'Tomas del día' })
       await expect(list.getByRole('button')).toHaveCount(6)
@@ -127,7 +127,7 @@ for (const design of designs) {
       await expect(page.getByRole('dialog')).toBeHidden()
 
       // The day it ended keeps its mark…
-      await expect(cal.getByRole('button', { name: `${longDay(daysFromToday(0))} · 1 Amoxicilina, 2 Paracetamol` })).toBeVisible()
+      await expect(cal.getByRole('button', { name: `${longDay(daysFromToday(0))} · inicio y fin de 1 Amoxicilina, inicio de 2 Paracetamol` })).toBeVisible()
       // …and tomorrow still has Paracetamol, but no longer Amoxicilina.
       const tomorrow = daysFromToday(1)
       await showMonthOf(page, tomorrow)

@@ -93,6 +93,7 @@ Al tocar un día del calendario, el padre ve debajo las tomas de ese día, de to
 - Solo frontend: todo se deriva de las tomas y de `endedAt` que el detalle de la consulta ya trae; sin cambios de API ni de base de datos.
 - **Decidido por el usuario (2026-09-30, al ver las capturas)**: el selector «Día anterior / Día siguiente» de cada medicamento se **quita**; el calendario y su lista del día son la forma de ver las tomas de otros días. Cada medicamento sigue mostrando los chips de un día (hoy, o el día más cercano con tomas). Consecuencia: las tomas de un tratamiento finalizado antes de tiempo (canceladas) ya no se alcanzan por el calendario si caen después del día en que terminó; solo se ven en el día más cercano de la tarjeta.
 - La paleta exacta (unos 6 colores) se define en el plan y se documenta en `design-tokens.md`.
+- **Actualizado por la spec 020 (2026-09-30, a pedido del usuario)**: el calendario marca **solo los días con tomas** (no el rango continuo) y dibuja el **inicio** y el **fin** de cada medicamento como círculos rellenos de su color; el nombre del día dice «inicio de» / «fin de».
 - Fuera de alcance: recorrer el tratamiento o marcar en el calendario los días con tomas sin registrar (B5), exportar al calendario del teléfono (.ics, spec 011), y vistas semanal o anual.
 - Depende de: specs 013 (estados), 015 (hora local), 016 (finalizar), 014 (progreso).
 - Sin mock: se diseña con `design-tokens.md` y se muestran capturas.

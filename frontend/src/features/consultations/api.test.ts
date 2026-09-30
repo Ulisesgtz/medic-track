@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { fetchConsultations, fetchChildOverview, createConsultation, fetchConsultationDetail, updateDoseStatus, endTreatment, ConsultationApiError } from './api'
+import { fetchConsultations, fetchChildOverview, createConsultation, fetchConsultationDetail, updateDoseStatus, endTreatment, extendTreatment, ConsultationApiError } from './api'
 
 const medicationPayload = { name: 'Amoxicilina', frequencyHours: 8, durationDays: 3, startTime: '08:00' }
 
@@ -114,6 +114,43 @@ describe('endTreatment (specs/016)', () => {
     expect(await endTreatment('c1', 'm1', 'tok').catch((e) => e.kind)).toBe('validation_error')
     vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) } as Response)
     expect(await endTreatment('c1', 'm1', 'tok').catch((e) => e.kind)).toBe('unknown')
+  })
+})
+
+describe('extendTreatment (specs/020)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('posts the number to the medication extend route with the session and returns the medication', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => ({ id: 'm1', extendableDoses: 0 }) } as Response)
+
+    const med = await extendTreatment('c1', 'm1', 3, 'tok')
+
+    expect(med.id).toBe('m1')
+    const [url, init] = vi.mocked(fetch).mock.calls[0]
+    expect(String(url)).toMatch(/\/consultations\/c1\/medications\/m1\/extend$/)
+    expect(init?.method).toBe('POST')
+    expect(init?.headers).toMatchObject({ Authorization: 'Bearer tok', 'Content-Type': 'application/json' })
+    expect(JSON.parse(String(init?.body))).toEqual({ doses: 3 })
+  })
+
+  it('maps the failures to their own kinds', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({}) } as Response)
+    expect(await extendTreatment('c1', 'x', 3, 'tok').catch((e) => e.kind)).toBe('medication_not_found')
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 403, json: async () => ({}) } as Response)
+    expect(await extendTreatment('c1', 'x', 3, 'tok').catch((e) => e.kind)).toBe('medication_not_found')
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({ details: [{ field: 'medicationId', message: 'nothing_to_extend' }] }) } as Response)
+    expect(await extendTreatment('c1', 'm1', 3, 'tok').catch((e) => e.kind)).toBe('nothing_to_extend')
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({ details: [{ field: 'doses', message: 'must be…' }] }) } as Response)
+    expect(await extendTreatment('c1', 'm1', 99, 'tok').catch((e) => e.kind)).toBe('validation_error')
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({}) } as Response)
+    expect(await extendTreatment('c1', 'm1', 99, 'tok').catch((e) => e.kind)).toBe('validation_error')
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) } as Response)
+    expect(await extendTreatment('c1', 'm1', 3, 'tok').catch((e) => e.kind)).toBe('unknown')
   })
 })
 

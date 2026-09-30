@@ -338,6 +338,7 @@ func routerWithPool(t *testing.T) (http.Handler, *pgxpool.Pool) {
 	r.Get("/consultations/{consultationId}", h.GetConsultation)
 	r.Patch("/consultations/{consultationId}/doses/{doseId}", h.UpdateDose)
 	r.Post("/consultations/{consultationId}/medications/{medicationId}/end", h.EndTreatment)
+	r.Post("/consultations/{consultationId}/medications/{medicationId}/extend", h.ExtendTreatment)
 	return r, pool
 }
 
