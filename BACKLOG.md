@@ -91,7 +91,7 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
   `error_logs` con su propio "endpoint" (p. ej. `job:reminders`), cuenta cuando se conozca y sin el `endpoint` del
   dispositivo, las claves ni el token (nunca en logs, spec 011). Decidir si un 404/410 del servicio de avisos (dispositivo
   dado de baja, algo normal) cuenta como error o no.
-- **Revisión automática de Swagger en CI** (anotado 2026-09-29) — nada verifica que `backend/internal/docs/` esté al día
+- **Revisión automática de Swagger en CI** — **ya estaba hecho** (verificado 2026-09-30): el paso «Verify Swagger docs are up to date» del job de backend de `.github/workflows/ci.yml` (desde la spec 011) regenera la documentación y falla si hay diferencias, con el comando para regenerarla. Lo que sigue describe la propuesta original (anotado 2026-09-29) — nada verifica que `backend/internal/docs/` esté al día
   con los handlers; depende de correr `swag init` a mano después de cada cambio. Propuesta: un paso en el job de backend
   de `.github/workflows/ci.yml` que regenere la documentación y falle si hay diferencias (`swag init … && git diff
   --exit-code backend/internal/docs`), con un mensaje que diga el comando para regenerarla.
