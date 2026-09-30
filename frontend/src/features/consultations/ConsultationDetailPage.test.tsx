@@ -586,6 +586,166 @@ describe('ConsultationDetailPage', () => {
     })
   })
 
+  describe('extending the treatment (specs/020)', () => {
+    const withExtension = (extra: Record<string, unknown>) =>
+      consultation({
+        medications: [
+          {
+            id: 'm1', name: 'Amoxicilina', frequencyHours: 8, durationDays: 3, startTime: '08:00', endedAt: null,
+            doses: [
+              { id: 'd1', scheduledAt: at(8, 13), taken: false, status: 'unregistered' },
+              { id: 'd2', scheduledAt: at(16, 13), taken: false, status: 'unregistered' },
+              { id: 'd3', scheduledAt: at(23, 20), taken: false, status: 'pending' },
+            ],
+            extendableDoses: 2,
+            extensions: [],
+            ...extra,
+          },
+        ],
+      })
+
+    function stubExtend(extendResponse: { ok: boolean; status?: number; body?: unknown }) {
+      const fetchMock = vi.fn().mockImplementation(async (input: string, init?: RequestInit) => {
+        const url = String(input)
+        if (url.endsWith('/extend')) {
+          return { ok: extendResponse.ok, status: extendResponse.status ?? 200, json: async () => extendResponse.body ?? {} }
+        }
+        if (url.includes('/overview')) return { ok: true, json: async () => ({ childId: 'child-1', doses: [], activeTreatment: null }) }
+        if (url.includes('/accounts/')) return { ok: true, json: async () => account }
+        void init
+        return { ok: true, json: async () => withExtension({}) }
+      })
+      vi.stubGlobal('fetch', fetchMock)
+      return fetchMock
+    }
+
+    const extendCalls = (fetchMock: ReturnType<typeof vi.fn>) =>
+      fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/extend'))
+
+    it('offers "Recorrer tratamiento" only with unregistered doses still to cover, never on its own', async () => {
+      const fetchMock = stubExtend({ ok: true })
+      renderPage()
+
+      expect(await screen.findByRole('button', { name: 'Recorrer tratamiento' })).toBeInTheDocument()
+      expect(extendCalls(fetchMock)).toHaveLength(0)
+    })
+
+    it('offers nothing without doses to cover, when ended, or from a backend that predates the feature', async () => {
+      stubApi(withExtension({ extendableDoses: 0 }))
+      const first = renderPage()
+      await screen.findByRole('heading', { level: 3, name: 'Amoxicilina' })
+      expect(screen.queryByRole('button', { name: 'Recorrer tratamiento' })).not.toBeInTheDocument()
+      first.unmount()
+
+      stubApi(withExtension({ endedAt: at(9, 14), extendableDoses: 0 }))
+      const second = renderPage()
+      await screen.findByText(/^Terminado el/)
+      expect(screen.queryByRole('button', { name: 'Recorrer tratamiento' })).not.toBeInTheDocument()
+      second.unmount()
+
+      stubApi(withExtension({ extendableDoses: undefined, extensions: undefined }))
+      renderPage()
+      await screen.findByRole('heading', { level: 3, name: 'Amoxicilina' })
+      expect(screen.queryByRole('button', { name: 'Recorrer tratamiento' })).not.toBeInTheDocument()
+    })
+
+    it('asks first: cancelling changes nothing and gives the focus back', async () => {
+      const user = userEvent.setup()
+      const fetchMock = stubExtend({ ok: true })
+      renderPage()
+
+      await user.click(await screen.findByRole('button', { name: 'Recorrer tratamiento' }))
+      const dialog = screen.getByRole('dialog', { name: '¿Recorrer el tratamiento de Amoxicilina?' })
+      expect(within(dialog).getByRole('textbox', { name: 'Tomas a agregar' })).toHaveValue('2')
+      await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(extendCalls(fetchMock)).toHaveLength(0)
+      expect(screen.getByRole('button', { name: 'Recorrer tratamiento' })).toHaveFocus()
+    })
+
+    it('confirming sends the proposed number and closes the dialog', async () => {
+      const user = userEvent.setup()
+      const fetchMock = stubExtend({ ok: true, body: withExtension({}).medications[0] })
+      renderPage()
+
+      await user.click(await screen.findByRole('button', { name: 'Recorrer tratamiento' }))
+      await user.click(screen.getByRole('button', { name: 'Sí, recorrer' }))
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+      const [url, init] = extendCalls(fetchMock)[0]
+      expect(String(url)).toContain('/consultations/c1/medications/m1/extend')
+      expect(JSON.parse(String(init.body))).toEqual({ doses: 2 })
+    })
+
+    it('sends a number the parent typed', async () => {
+      const user = userEvent.setup()
+      const fetchMock = stubExtend({ ok: true, body: withExtension({}).medications[0] })
+      renderPage()
+
+      await user.click(await screen.findByRole('button', { name: 'Recorrer tratamiento' }))
+      const field = screen.getByRole('textbox', { name: 'Tomas a agregar' })
+      await user.clear(field)
+      await user.type(field, '5')
+      expect(screen.getByRole('status')).toHaveTextContent('lo ingresaste tú manualmente')
+      await user.click(screen.getByRole('button', { name: 'Sí, recorrer' }))
+
+      await waitFor(() => expect(extendCalls(fetchMock)).toHaveLength(1))
+      expect(JSON.parse(String(extendCalls(fetchMock)[0][1].body))).toEqual({ doses: 5 })
+    })
+
+    it('if it was already done (another tap or device) the dialog closes without an error', async () => {
+      const user = userEvent.setup()
+      stubExtend({
+        ok: false,
+        status: 400,
+        body: { error: 'validation_error', message: 'One or more fields are invalid', details: [{ field: 'medicationId', message: 'nothing_to_extend' }] },
+      })
+      renderPage()
+
+      await user.click(await screen.findByRole('button', { name: 'Recorrer tratamiento' }))
+      await user.click(screen.getByRole('button', { name: 'Sí, recorrer' }))
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+      expect(screen.queryByText(/No pudimos recorrer/)).not.toBeInTheDocument()
+    })
+
+    it('a server failure says so in Spanish and keeps the dialog open', async () => {
+      const user = userEvent.setup()
+      stubExtend({ ok: false, status: 500, body: { error: 'internal_error', message: 'Could not extend the treatment' } })
+      renderPage()
+
+      await user.click(await screen.findByRole('button', { name: 'Recorrer tratamiento' }))
+      await user.click(screen.getByRole('button', { name: 'Sí, recorrer' }))
+
+      expect(await screen.findByText('No pudimos recorrer el tratamiento. Inténtalo de nuevo.')).toBeInTheDocument()
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+
+    it('says it was extended and when, and that the number was typed by the parent when it was', async () => {
+      stubApi(
+        withExtension({
+          extendableDoses: 0,
+          extensions: [
+            { createdAt: at(10, 14), proposedDoses: 2, addedDoses: 2, manual: false },
+            { createdAt: at(11, 15), proposedDoses: 1, addedDoses: 4, manual: true },
+          ],
+        }),
+      )
+      renderPage()
+
+      // The latest one: 15 ene, 4 doses, typed by the parent.
+      expect(await screen.findByText('Se recorrió el 15 ene · +4 tomas · número ingresado manualmente')).toBeInTheDocument()
+    })
+
+    it('the line of an extension with the proposed number and a single dose has no note', async () => {
+      stubApi(withExtension({ extendableDoses: 0, extensions: [{ createdAt: at(10, 14), proposedDoses: 1, addedDoses: 1, manual: false }] }))
+      renderPage()
+
+      expect(await screen.findByText('Se recorrió el 14 ene · +1 toma')).toBeInTheDocument()
+    })
+  })
+
   describe('treatment calendar (specs/019)', () => {
     it('sits before the medications on the phone, with today listed and marking from the list', async () => {
       const fetchMock = stubApi(consultation())

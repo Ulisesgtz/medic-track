@@ -4,6 +4,7 @@ import { DayDoses } from './DayDoses'
 import {
   initialDay,
   longDay,
+  markLabel,
   marksOn,
   medBg,
   medText,
@@ -96,7 +97,7 @@ export function TreatmentCalendar({ consultationId, medications, today, variant,
                 const isSelected = day.key === selected
                 const isToday = day.key === today
                 const name = marks.length
-                  ? `${longDay(day.key)} · ${marks.map((n) => `${n} ${meds[n - 1].medication.name}`).join(', ')}`
+                  ? `${longDay(day.key)} · ${marks.map((m) => markLabel(m, meds[m.number - 1].medication.name)).join(', ')}`
                   : longDay(day.key)
                 return (
                   <button
@@ -119,11 +120,21 @@ export function TreatmentCalendar({ consultationId, medications, today, variant,
                     </span>
                     {marks.length > 0 && (
                       <span aria-hidden="true" className="mt-0.5 flex flex-wrap justify-center gap-x-1 px-0.5 text-[13px] leading-[1.1] font-black">
-                        {marks.map((n) => (
-                          <span key={n} className={medText(n)}>
-                            {n}
-                          </span>
-                        ))}
+                        {marks.map(({ number, role }) =>
+                          role === 'mid' ? (
+                            <span key={number} className={medText(number)}>
+                              {number}
+                            </span>
+                          ) : (
+                            // The start and the end of a treatment: filled with the medication's color (specs/020).
+                            <span
+                              key={number}
+                              className={`flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-0.5 text-white ${medBg(number)}`}
+                            >
+                              {number}
+                            </span>
+                          ),
+                        )}
                       </span>
                     )}
                   </button>

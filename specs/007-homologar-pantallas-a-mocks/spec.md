@@ -36,6 +36,10 @@ otro; no hay clases responsivas `lg:` que combinen ambos.
 Decidida por el usuario (spec 019, 2026-09-30): el selector «← Día anterior / Día siguiente →» bajo los chips de cada medicamento
 (descrito más abajo) se quitó; ahora el calendario del tratamiento lleva a las tomas de cualquier día.
 
+Sin mock (spec 020, 2026-09-30): el botón «Recorrer tratamiento», su diálogo (número de tomas editable con la nota de «ingresado
+manualmente»), la línea «Se recorrió el …» de la tarjeta y los círculos rellenos de inicio y fin del calendario no existen en los
+mocks; se diseñaron con los tokens y se muestran para aprobar.
+
 Sin mock (spec 019, 2026-09-30): el bloque «Calendario del tratamiento» del detalle de la consulta (cuadrícula del mes con los
 números de colores de cada medicamento, leyenda y lista de tomas del día) no existe en los mocks; se diseñó con los tokens
 (incluidos los seis `med-*` nuevos) y se muestra para aprobar.

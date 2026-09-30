@@ -18,6 +18,10 @@
 
 > **Nota (spec 016, 2026-09-30)**: única excepción a la inmutabilidad de la consulta (FR-014): el padre puede terminar un
 > tratamiento antes de tiempo; solo cambia `medications.ended_at`. El horario, la duración, las tomas y las marcas no cambian.
+>
+> **Nota (spec 020, 2026-09-30)**: segunda excepción a FR-014: el padre, por indicación de su médico y tras confirmarlo, puede **agregar
+> tomas al final** de un medicamento (`POST …/medications/{id}/extend`). Se agregan filas (`doses`) y se guarda un registro de
+> solo agregar (`medication_extensions`: cuenta, número propuesto y confirmado, hora); nada existente se edita ni se borra.
 
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 

@@ -29,6 +29,17 @@ export interface Dose {
   status: DoseStatus
 }
 
+/** One time the parent added doses to the end of a medication (specs/020). */
+export interface MedicationExtension {
+  createdAt: string
+  /** What the app proposed: the unregistered doses not covered yet. */
+  proposedDoses: number
+  /** What the parent confirmed. */
+  addedDoses: number
+  /** True when the parent typed a number other than the proposed one. */
+  manual: boolean
+}
+
 export interface Medication {
   id: string
   name: string
@@ -38,6 +49,10 @@ export interface Medication {
   /** When the parent ended the treatment early (specs/016); null while it runs. */
   endedAt: string | null
   doses: Dose[]
+  /** Unregistered doses not covered by an extension yet (specs/020): the number proposed; 0 once ended. */
+  extendableDoses: number
+  /** The parent's extensions, oldest first. */
+  extensions: MedicationExtension[]
 }
 
 export interface ConsultationDetail {

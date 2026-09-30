@@ -44,7 +44,7 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
   cada medicamento de inicio a fin, **un color por medicamento** con su leyenda. Colores nuevos en `design-tokens.md`:
   distinguibles entre sí, contraste ≥ 3:1 contra el fondo, sin rojo (no hay alerta médica) y sin el ámbar, que ya
   significa "pendiente de marcar". Al tocar un día se ven las tomas de ese día.
-- **B5. Fecha de fin cuando hay tomas sin registrar** — el pedido es que la fecha de fin se recorra sola. **Choca con el
+- **B5. Fecha de fin cuando hay tomas sin registrar** — hecho en `specs/020-recorrer-tratamiento/` con la opción (b): botón «Recorrer tratamiento», el número de tomas se propone y el padre puede cambiarlo (queda registrado como manual). Texto original: el pedido es que la fecha de fin se recorra sola. **Choca con el
   Principio I**: recorrer el tratamiento es decidir reponer las tomas perdidas, y eso lo indica el médico (en algunos
   medicamentos se reponen y en otros no). Opciones a decidir: (a) la fecha de fin no se mueve y el calendario marca los
   días con tomas sin registrar; (b) un botón "Recorrer tratamiento" que el padre usa si su médico se lo indicó, que
