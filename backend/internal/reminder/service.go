@@ -65,13 +65,10 @@ func NewService(repo *Repository, sender Sender, config Config) *Service {
 // SetReporter makes the ticker's failures also go to error_logs. Without one they only reach the console.
 func (s *Service) SetReporter(r FailureReporter) { s.reporter = r }
 
-// reportFailure records a failure — unless the server is shutting down, which cancels the cycle and is not a failure.
-func (s *Service) reportFailure(ctx context.Context, kind, message string, accounts accountSet) {
-	if s.reporter == nil || ctx.Err() != nil {
-		return
-	}
-	s.reporter.Report(kind, message, accounts.single())
-}
+// shouldReport says whether a failure goes to error_logs: there is a reporter and the server is not shutting down
+// (which cancels the cycle and is not a failure). The call to Report stays in Tick itself — the row's file and line are
+// the caller's, so a helper in between would make every row point at the helper.
+func (s *Service) shouldReport(ctx context.Context) bool { return s.reporter != nil && ctx.Err() == nil }
 
 func (s *Service) recovered(kind string) {
 	if s.reporter != nil {
@@ -182,7 +179,9 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 	now := s.now()
 	due, err := s.repo.ClaimDueDoses(ctx, now, remindWindow)
 	if err != nil {
-		s.reportFailure(ctx, failureTick, "reminder tick failed: could not read the due doses", accountSet{})
+		if s.shouldReport(ctx) {
+			s.reporter.Report(failureTick, "reminder tick failed: could not read the due doses", nil)
+		}
 		return 0, err
 	}
 	s.recovered(failureTick)
@@ -223,7 +222,9 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 	}
 	if skipped > 0 {
 		log.Printf("reminder: %d reminders could not be prepared", skipped)
-		s.reportFailure(ctx, failurePrepare, fmt.Sprintf("%d reminders could not be prepared", skipped), skippedFor)
+		if s.shouldReport(ctx) {
+			s.reporter.Report(failurePrepare, fmt.Sprintf("%d reminders could not be prepared", skipped), skippedFor.single())
+		}
 	} else if len(due) > 0 {
 		// Only a cycle that had something to prepare proves it works: an idle one says nothing.
 		s.recovered(failurePrepare)
@@ -263,7 +264,9 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 	wg.Wait()
 	if failed > 0 {
 		log.Printf("reminder: %d of %d reminders could not be delivered", failed, len(pushes))
-		s.reportFailure(ctx, failureDeliver, fmt.Sprintf("%d of %d reminders could not be delivered", failed, len(pushes)), failedFor)
+		if s.shouldReport(ctx) {
+			s.reporter.Report(failureDeliver, fmt.Sprintf("%d of %d reminders could not be delivered", failed, len(pushes)), failedFor.single())
+		}
 	} else if len(pushes) > 0 {
 		s.recovered(failureDeliver)
 	}

@@ -2,6 +2,7 @@ package reminder_test
 
 import (
 	"context"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -20,6 +21,9 @@ type reported struct {
 	account       *uuid.UUID
 }
 
+// callers are the functions that called Report: the row's file and line are the caller's, so it must be Tick itself.
+var callers []string
+
 type fakeReporter struct {
 	mu        sync.Mutex
 	reports   []reported
@@ -29,6 +33,9 @@ type fakeReporter struct {
 func (f *fakeReporter) Report(kind, message string, accountID *uuid.UUID) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	if pc, _, _, ok := runtime.Caller(1); ok {
+		callers = append(callers, runtime.FuncForPC(pc).Name())
+	}
 	f.reports = append(f.reports, reported{kind, message, accountID})
 }
 
@@ -47,6 +54,7 @@ func TestService_Tick_ReportsWhenTheDueDosesCannotBeRead(t *testing.T) {
 
 	require.Error(t, err)
 	require.Equal(t, []reported{{"tick", "reminder tick failed: could not read the due doses", nil}}, rep.reports)
+	require.Contains(t, callers[len(callers)-1], "(*Service).Tick", "error_logs must point at where the failure was detected")
 	require.Empty(t, rep.recovered)
 }
 
