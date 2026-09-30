@@ -21,13 +21,13 @@ identificable como del proceso de recordatorios y sin datos sensibles.
 **Por qué esta prioridad**: los recordatorios son la función de la app cuyo fallo es silencioso — no hay pantalla que
 muestre un error —; un aviso que no llega es justo lo que el padre no puede reportar.
 
-**Prueba Independiente**: con la base de datos caída o con un servicio de avisos que rechaza los envíos, tras un ciclo
-del proceso hay una fila nueva en `error_logs` cuyo `endpoint` dice `job:reminders`, con un mensaje que explica qué
+**Prueba Independiente**: con una consulta del proceso que falla o con un servicio de avisos que rechaza los envíos,
+tras un ciclo del proceso hay una fila nueva en `error_logs` cuyo `endpoint` dice `job:reminders`, con un mensaje que explica qué
 falló, sin claves, sin tokens y sin la dirección del dispositivo.
 
 **Escenarios de Aceptación**:
 
-1. **Dado** que el ciclo no puede leer las tomas vencidas (p. ej. la base no responde), **Cuando** termina el ciclo,
+1. **Dado** que el ciclo no puede leer las tomas vencidas (p. ej. la consulta falla), **Cuando** termina el ciclo,
    **Entonces** hay una fila en `error_logs` con `endpoint = job:reminders`, `http_status` vacío, el archivo y la línea
    de donde salió y un mensaje que dice que el ciclo falló.
 2. **Dado** que N recordatorios no se pudieron preparar en un ciclo, **Entonces** hay una fila que dice cuántos y por
@@ -44,7 +44,7 @@ falló, sin claves, sin tokens y sin la dirección del dispositivo.
 
 ### Historia de Usuario 2 - Una falla que dura no inunda la tabla (Prioridad: P1)
 
-El proceso corre cada 30 segundos. Si la base de datos se cae una hora, no debe generar 120 filas idénticas: la misma
+El proceso corre cada 30 segundos. Si una falla dura una hora, no debe generar 120 filas idénticas: la misma
 falla se registra una vez y luego se vuelve a registrar, con cuántas veces ocurrió, pasado un rato.
 
 **Por qué esta prioridad**: sin esto, la historia 1 convierte una falla larga en miles de filas que tapan cualquier otro
@@ -67,8 +67,10 @@ el intervalo de agrupación y volver a fallar, recibe otra que indica cuántas v
 
 ### Casos Límite
 
-- Si escribir en `error_logs` también falla (la misma base caída), el proceso de recordatorios NO se detiene ni se
-  retrasa: se imprime en la consola como hoy y sigue (igual que el registro de errores HTTP, spec 002 FR-005).
+- Si escribir en `error_logs` también falla (p. ej. la base entera está caída: `error_logs` vive en ella y ese caso
+  solo puede quedar en la consola), el proceso de recordatorios NO se detiene ni se retrasa: se imprime en la consola
+  como hoy y sigue (igual que el registro de errores HTTP, spec 002 FR-005), y el intento fallido no cuenta como fila
+  escrita: la siguiente falla se vuelve a intentar sin esperar el intervalo.
 - El mensaje nunca incluye la dirección del dispositivo (`endpoint` del servicio de avisos), las claves VAPID, el secreto
   ni el token de «Tomada» (spec 011): solo conteos y el tipo de falla.
 - Los mensajes de error del servicio de avisos o de la base pueden traer datos sensibles: se guarda una descripción
