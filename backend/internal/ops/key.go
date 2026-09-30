@@ -16,6 +16,8 @@ import (
 // Both keys are hashed before being compared, in constant time: neither the content nor the length of the real key can be
 // learned from how long the answer takes. The comparison always runs, even when there is no token.
 //
+// With no key at all (an empty string) nothing gets through: two empty keys must never count as a match.
+//
 // A rejection is deliberately NOT written through the httpx.Responder (and so not into error_logs): anyone could then fill the
 // table by sending wrong keys. Answers to someone who does hold the key do go through it.
 func RequireKey(key string) func(http.Handler) http.Handler {
@@ -24,7 +26,7 @@ func RequireKey(key string) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token, isBearer := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
 			got := sha256.Sum256([]byte(token))
-			match := subtle.ConstantTimeCompare(got[:], want[:]) == 1
+			match := subtle.ConstantTimeCompare(got[:], want[:]) == 1 && key != ""
 			if !isBearer || !match {
 				http.NotFound(w, r)
 				return

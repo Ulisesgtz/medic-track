@@ -84,13 +84,15 @@ func (h *Handler) parse(r *http.Request, forList bool) (errorlog.Filter, []httpx
 	var errs []httpx.FieldError
 	bad := func(field, msg string) { errs = append(errs, httpx.FieldError{Field: field, Message: msg}) }
 
-	f.Since = h.now().Add(-defaultPeriod)
+	since := h.now().Add(-defaultPeriod)
+	sinceGiven := false
+	f.Since = since
 	if v := q.Get("since"); v != "" {
 		t, err := time.Parse(time.RFC3339, v)
 		if err != nil {
 			bad("since", "must be an RFC 3339 date and time")
 		} else {
-			f.Since = t
+			f.Since, sinceGiven = t, true
 		}
 	}
 	if v := q.Get("until"); v != "" {
@@ -99,7 +101,10 @@ func (h *Handler) parse(r *http.Request, forList bool) (errorlog.Filter, []httpx
 			bad("until", "must be an RFC 3339 date and time")
 		} else {
 			f.Until = t
-			if !f.Until.After(f.Since) && len(errs) == 0 {
+			if !sinceGiven {
+				// Only an `until`: the default period is the one that ends there, not the last 7 days from now.
+				f.Since = t.Add(-defaultPeriod)
+			} else if !f.Until.After(f.Since) && len(errs) == 0 {
 				bad("until", "must be after since")
 			}
 		}

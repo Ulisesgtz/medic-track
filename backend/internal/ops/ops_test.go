@@ -70,6 +70,19 @@ func TestRequireKey_OnlyTheRightBearerKeyGetsThrough(t *testing.T) {
 	require.Equal(t, 1, reached, "a wrong key never reaches the handler")
 }
 
+func TestRequireKey_WithNoKeyConfiguredNothingGetsThrough(t *testing.T) {
+	h := ops.RequireKey("")(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte("open")) }))
+	for _, header := range []string{"", "Bearer ", "Bearer x"} {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		if header != "" {
+			req.Header.Set("Authorization", header)
+		}
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, req)
+		require.Equal(t, http.StatusNotFound, rec.Code, "%q", header)
+	}
+}
+
 // ---- the queries (real database)
 
 func testPool(t *testing.T) *pgxpool.Pool {
@@ -181,6 +194,25 @@ func TestListErrorLogs_FiltersAndDefaultsToTheLastSevenDays(t *testing.T) {
 	require.Equal(t, []string{"week-old-ish"}, messages("/ops/error-logs?endpoint="+ep+"&status=500"))
 	require.Equal(t, []string{"today"}, messages("/ops/error-logs?endpointPrefix="+ep+"&until="+now.Format(time.RFC3339)+"&status=400"))
 	require.Empty(t, messages("/ops/error-logs?endpoint=nothing-"+ep), "an empty period is a list, not an error")
+}
+
+func TestListErrorLogs_OnlyAnUntilMeansTheWeekThatEndsThere(t *testing.T) {
+	pool := testPool(t)
+	router := newRouter(t, pool)
+	ep := marker()
+	now := time.Now().UTC()
+	insertAt(t, pool, ep, "too-old", nil, nil, now.Add(-40*24*time.Hour))
+	insertAt(t, pool, ep, "in-that-week", nil, nil, now.Add(-33*24*time.Hour))
+	insertAt(t, pool, ep, "after", nil, nil, now.Add(-time.Hour))
+
+	// Until 30 days ago, with no `since`: the 7 days before that (not "until is before since").
+	rec := get(t, router, "/ops/error-logs?endpoint="+ep+"&until="+now.Add(-30*24*time.Hour).Format(time.RFC3339))
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	var body listBody
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Len(t, body.Entries, 1)
+	require.Equal(t, "in-that-week", body.Entries[0].Message)
 }
 
 func TestListErrorLogs_PagesByCursor(t *testing.T) {
