@@ -31,6 +31,11 @@ describe('medicationProgress (specs/014)', () => {
     expect(progressText({ taken: 3, total: 9 })).toBe('3 / 9 tomas')
   })
 
+  it('leaves the doses canceled by ending the treatment out of the total (specs/016)', () => {
+    const p = medicationProgress([dose(true), dose(false, 'unregistered'), dose(false, 'canceled'), dose(false, 'canceled')])
+    expect(p).toEqual({ taken: 1, total: 2, unregistered: 1 })
+  })
+
   it('mentions the unregistered doses only when there are', () => {
     expect(unregisteredSuffix(0)).toBe('')
     expect(unregisteredSuffix(2)).toBe(' · 2 sin registrar')

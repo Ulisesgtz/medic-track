@@ -127,6 +127,25 @@ func TestRepository_ClaimDueDoses_NeverADoseAlreadyUnregistered(t *testing.T) {
 	require.Equal(t, []uuid.UUID{due}, claimedIDs(claimed))
 }
 
+// A dose canceled by ending the treatment early is never reminded (specs/016).
+func TestRepository_ClaimDueDoses_NeverACanceledDose(t *testing.T) {
+	pool := testPool(t)
+	repo := reminder.NewRepository(pool)
+	now := uniqueNow()
+	f := newFamily(t, pool, nil)
+	device := f.device(t, repo, uniqueEndpoint())
+	activatedAt(t, pool, device.ID, now.Add(-3*time.Hour))
+	before := f.dose(t, pool, now.Add(-30*time.Minute), false)
+	_ = f.dose(t, pool, now.Add(-10*time.Minute), false) // after the end below: canceled
+	_, err := pool.Exec(context.Background(), `UPDATE medications SET ended_at = $2 WHERE id = $1`, f.medicationID, now.Add(-20*time.Minute))
+	require.NoError(t, err)
+
+	claimed, err := repo.ClaimDueDoses(context.Background(), now, window)
+
+	require.NoError(t, err)
+	require.Equal(t, []uuid.UUID{before}, claimedIDs(claimed))
+}
+
 func TestRepository_ClaimDueDoses_NeedsADeviceActivatedBeforeTheDose(t *testing.T) {
 	pool := testPool(t)
 	repo := reminder.NewRepository(pool)

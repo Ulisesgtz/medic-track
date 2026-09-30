@@ -184,7 +184,7 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, c *Consultat
 			loc = c.ConsultDate.Location()
 		}
 		for _, scheduledAt := range generateDoseSchedule(c.ConsultDate, loc, med) {
-			dose := Dose{MedicationID: med.ID, ScheduledAt: scheduledAt, Status: StatusAt(scheduledAt, false, med.FrequencyHours, now)}
+			dose := Dose{MedicationID: med.ID, ScheduledAt: scheduledAt, Status: StatusAt(scheduledAt, false, med.FrequencyHours, nil, now)}
 			err = tx.QueryRow(ctx, `
 				INSERT INTO doses (medication_id, scheduled_at)
 				VALUES ($1, $2)
@@ -258,7 +258,7 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Consultation, 
 	}
 
 	medRows, err := r.pool.Query(ctx, `
-		SELECT id, name, frequency_hours, duration_days, to_char(start_time, 'HH24:MI'), created_at
+		SELECT id, name, frequency_hours, duration_days, to_char(start_time, 'HH24:MI'), created_at, ended_at
 		FROM medications WHERE consultation_id = $1 ORDER BY created_at ASC
 	`, id)
 	if err != nil {
@@ -269,7 +269,7 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Consultation, 
 	for medRows.Next() {
 		med := Medication{ConsultationID: id}
 		var startTime *string
-		if err := medRows.Scan(&med.ID, &med.Name, &med.FrequencyHours, &med.DurationDays, &startTime, &med.CreatedAt); err != nil {
+		if err := medRows.Scan(&med.ID, &med.Name, &med.FrequencyHours, &med.DurationDays, &startTime, &med.CreatedAt, &med.EndedAt); err != nil {
 			return nil, fmt.Errorf("scanning medication: %w", err)
 		}
 		med.StartTime = startTime
@@ -295,7 +295,7 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Consultation, 
 				doseRows.Close()
 				return nil, fmt.Errorf("scanning dose: %w", err)
 			}
-			dose.Status = StatusAt(dose.ScheduledAt, dose.Taken, med.FrequencyHours, now)
+			dose.Status = StatusAt(dose.ScheduledAt, dose.Taken, med.FrequencyHours, med.EndedAt, now)
 			med.Doses = append(med.Doses, dose)
 		}
 		if err := doseRows.Err(); err != nil {
@@ -318,22 +318,64 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Consultation, 
 func (r *Repository) UpdateDoseStatus(ctx context.Context, consultationID, id uuid.UUID, taken bool) (*Dose, error) {
 	dose := &Dose{ID: id, Taken: taken}
 	var frequencyHours int
+	var endedAt *time.Time
 	err := r.pool.QueryRow(ctx, `
 		UPDATE doses SET taken = $1
 		FROM medications m
 		WHERE doses.id = $2
 		  AND m.id = doses.medication_id
 		  AND m.consultation_id = $3
-		RETURNING doses.medication_id, doses.scheduled_at, doses.created_at, m.frequency_hours
-	`, taken, id, consultationID).Scan(&dose.MedicationID, &dose.ScheduledAt, &dose.CreatedAt, &frequencyHours)
+		RETURNING doses.medication_id, doses.scheduled_at, doses.created_at, m.frequency_hours, m.ended_at
+	`, taken, id, consultationID).Scan(&dose.MedicationID, &dose.ScheduledAt, &dose.CreatedAt, &frequencyHours, &endedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrDoseNotFound
 		}
 		return nil, fmt.Errorf("updating dose: %w", err)
 	}
-	dose.Status = StatusAt(dose.ScheduledAt, dose.Taken, frequencyHours, r.now())
+	dose.Status = StatusAt(dose.ScheduledAt, dose.Taken, frequencyHours, endedAt, r.now())
 	return dose, nil
+}
+
+// EndTreatment ends a medication early (specs/016): it records when, once. No dose is touched — the ones that had
+// not come yet turn "canceled" when read. Idempotent: ending it again keeps the first moment and gives the same
+// result. ErrMedicationNotFound if it doesn't exist or isn't of this consultation; ErrNothingToEnd if it has no doses
+// left ahead and wasn't ended.
+func (r *Repository) EndTreatment(ctx context.Context, consultationID, medicationID uuid.UUID) (*Medication, error) {
+	now := r.now() // one reading: the doses counted ahead are the ones canceled by the moment stored
+	var endedAt *time.Time
+	var ahead int
+	err := r.pool.QueryRow(ctx, `
+		SELECT m.ended_at, (SELECT count(*) FROM doses d WHERE d.medication_id = m.id AND d.scheduled_at > $3)
+		FROM medications m WHERE m.id = $1 AND m.consultation_id = $2
+	`, medicationID, consultationID, now).Scan(&endedAt, &ahead)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrMedicationNotFound
+		}
+		return nil, fmt.Errorf("reading medication: %w", err)
+	}
+	if endedAt == nil {
+		if ahead == 0 {
+			return nil, ErrNothingToEnd
+		}
+		if _, err := r.pool.Exec(ctx, `
+			UPDATE medications SET ended_at = $3 WHERE id = $1 AND consultation_id = $2 AND ended_at IS NULL
+		`, medicationID, consultationID, now); err != nil {
+			return nil, fmt.Errorf("ending treatment: %w", err)
+		}
+	}
+
+	c, err := r.GetByID(ctx, consultationID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range c.Medications {
+		if c.Medications[i].ID == medicationID {
+			return &c.Medications[i], nil
+		}
+	}
+	return nil, ErrMedicationNotFound
 }
 
 // GetOverview returns the doses of all the child's consultations scheduled in
@@ -355,6 +397,8 @@ func (r *Repository) GetOverview(ctx context.Context, childID uuid.UUID, from, t
 		JOIN medications m ON m.id = d.medication_id
 		JOIN consultations c ON c.id = m.consultation_id
 		WHERE c.child_id = $1 AND d.scheduled_at >= $2 AND d.scheduled_at < $3
+		  -- A dose canceled by ending the treatment early is not one of today's (specs/016).
+		  AND NOT (m.ended_at IS NOT NULL AND d.scheduled_at > m.ended_at AND NOT d.taken)
 		ORDER BY d.scheduled_at ASC, m.name ASC
 	`, childID, from, to)
 	if err != nil {
@@ -369,7 +413,7 @@ func (r *Repository) GetOverview(ctx context.Context, childID uuid.UUID, from, t
 		if err := doseRows.Scan(&d.ID, &d.ConsultationID, &d.MedicationName, &d.ScheduledAt, &d.Taken, &frequencyHours); err != nil {
 			return nil, fmt.Errorf("scanning dose: %w", err)
 		}
-		d.Status = StatusAt(d.ScheduledAt, d.Taken, frequencyHours, now)
+		d.Status = StatusAt(d.ScheduledAt, d.Taken, frequencyHours, nil, now) // canceled ones are filtered out above
 		overview.Doses = append(overview.Doses, d)
 	}
 	if err := doseRows.Err(); err != nil {
@@ -381,7 +425,7 @@ func (r *Repository) GetOverview(ctx context.Context, childID uuid.UUID, from, t
 		FROM doses d
 		JOIN medications m ON m.id = d.medication_id
 		JOIN consultations c ON c.id = m.consultation_id
-		WHERE c.child_id = $1
+		WHERE c.child_id = $1 AND m.ended_at IS NULL
 		GROUP BY m.id, m.name
 		HAVING max(d.scheduled_at) > $2
 		ORDER BY ends_at DESC, m.name ASC

@@ -9,6 +9,25 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 )
 
+// Ending the treatment early cancels the unmarked doses whose time came after it (specs/016).
+func TestStatusAt_EndedEarly(t *testing.T) {
+	ended := time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC)
+	at := func(h int) time.Time { return time.Date(2026, 9, 29, h, 0, 0, 0, time.UTC) }
+	later := ended.AddDate(0, 0, 5)
+
+	// A dose exactly at the moment it ended had come: it keeps its own status; one after it is canceled.
+	require.Equal(t, consultation.DoseStatusUnregistered, consultation.StatusAt(at(10), false, 8, &ended, later))
+	require.Equal(t, consultation.DoseStatusCanceled, consultation.StatusAt(ended.Add(time.Nanosecond), false, 8, &ended, later))
+	require.Equal(t, consultation.DoseStatusCanceled, consultation.StatusAt(at(16), false, 8, &ended, ended))
+	// Already-come doses keep their status.
+	require.Equal(t, consultation.DoseStatusUnregistered, consultation.StatusAt(at(0), false, 8, &ended, later))
+	require.Equal(t, consultation.DoseStatusDue, consultation.StatusAt(at(8), false, 8, &ended, at(12)))
+	// A marked dose stays taken, even one after the end.
+	require.Equal(t, consultation.DoseStatusTaken, consultation.StatusAt(at(16), true, 8, &ended, later))
+	// Without an end, nothing is canceled.
+	require.Equal(t, consultation.DoseStatusUnregistered, consultation.StatusAt(at(16), false, 8, nil, later))
+}
+
 func TestStatusAt(t *testing.T) {
 	at := time.Date(2026, 9, 29, 8, 0, 0, 0, time.UTC)
 
@@ -29,7 +48,7 @@ func TestStatusAt(t *testing.T) {
 		"marked long after":                      {true, 8, at.AddDate(0, 0, 3), consultation.DoseStatusTaken},
 	} {
 		t.Run(name, func(t *testing.T) {
-			require.Equal(t, tc.want, consultation.StatusAt(at, tc.taken, tc.frequency, tc.now))
+			require.Equal(t, tc.want, consultation.StatusAt(at, tc.taken, tc.frequency, nil, tc.now))
 		})
 	}
 }

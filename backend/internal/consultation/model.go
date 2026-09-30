@@ -55,8 +55,10 @@ type Medication struct {
 	FrequencyHours int
 	DurationDays   int
 	StartTime      *string // "HH:MM", nil when no start time was given (FR-010)
-	CreatedAt      time.Time
-	Doses          []Dose
+	// EndedAt is when the parent ended the treatment early (specs/016); nil while it runs.
+	EndedAt   *time.Time
+	CreatedAt time.Time
+	Doses     []Dose
 }
 
 // Dose represents one expected occurrence of a Medication, generated only

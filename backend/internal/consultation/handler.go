@@ -37,16 +37,18 @@ type doseResponse struct {
 	Taken       bool   `json:"taken" example:"false"`
 	// Status is derived by the server with its own clock (specs/013): pending, due ("por marcar"), taken or
 	// unregistered ("sin registrar": the next dose of its medication came and it isn't marked).
-	Status string `json:"status" enums:"pending,due,taken,unregistered" example:"due"`
+	Status string `json:"status" enums:"pending,due,taken,unregistered,canceled" example:"due"`
 } // @name DoseResponse
 
 type medicationResponse struct {
-	ID             string         `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
-	Name           string         `json:"name" example:"Amoxicilina"`
-	FrequencyHours int            `json:"frequencyHours" example:"8"`
-	DurationDays   int            `json:"durationDays" example:"5"`
-	StartTime      *string        `json:"startTime" example:"08:00"`
-	Doses          []doseResponse `json:"doses"`
+	ID             string  `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	Name           string  `json:"name" example:"Amoxicilina"`
+	FrequencyHours int     `json:"frequencyHours" example:"8"`
+	DurationDays   int     `json:"durationDays" example:"5"`
+	StartTime      *string `json:"startTime" example:"08:00"`
+	// EndedAt is when the parent ended the treatment early (specs/016); null while it runs.
+	EndedAt *string        `json:"endedAt" example:"2026-09-30T14:02:00Z"`
+	Doses   []doseResponse `json:"doses"`
 } // @name MedicationResponse
 
 type consultationSummaryResponse struct {
@@ -164,7 +166,7 @@ type overviewDoseResponse struct {
 	ScheduledAt    string `json:"scheduledAt" example:"2026-01-15T14:00:00Z"`
 	Taken          bool   `json:"taken" example:"false"`
 	// Status as in DoseResponse (specs/013).
-	Status string `json:"status" enums:"pending,due,taken,unregistered" example:"due"`
+	Status string `json:"status" enums:"pending,due,taken,unregistered,canceled" example:"due"`
 } // @name OverviewDoseResponse
 
 type activeTreatmentResponse struct {
@@ -517,6 +519,82 @@ func validationErrorBody(errs []ValidationError, message string) map[string]any 
 	}
 }
 
+// EndTreatment handles POST /consultations/{consultationId}/medications/{medicationId}/end
+// (specs/016-finalizar-tratamiento/contracts/medication-end.md).
+//
+//	@Summary		End a medication's treatment early
+//	@Description	Records when the parent ended the treatment (irreversible). No dose is deleted: the ones whose
+//	@Description	time hadn't come turn "canceled" and stop being reminded. Idempotent: ending it again returns the
+//	@Description	same result (specs/016).
+//	@Tags			consultations
+//	@Produce		json
+//	@Param			consultationId	path		string	true	"Consultation UUID"
+//	@Param			medicationId	path		string	true	"Medication UUID"
+//	@Success		200				{object}	medicationResponse
+//	@Failure		400				{object}	validationErrorResponseDoc	"Nothing left to end (details: nothing_to_end)"
+//	@Failure		404				{object}	medicationNotFoundResponseDoc	"No such medication in this consultation"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	sessionErrorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	sessionErrorResponseDoc	"The session does not own this resource"
+//	@Router			/consultations/{consultationId}/medications/{medicationId}/end [post]
+func (h *Handler) EndTreatment(w http.ResponseWriter, r *http.Request) {
+	consultationID, err := uuid.Parse(chi.URLParam(r, "consultationId"))
+	if err != nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, medicationNotFoundBody(), nil)
+		return
+	}
+	medicationID, err := uuid.Parse(chi.URLParam(r, "medicationId"))
+	if err != nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, medicationNotFoundBody(), nil)
+		return
+	}
+
+	med, err := h.service.EndTreatment(r.Context(), consultationID, medicationID)
+	switch {
+	case errors.Is(err, ErrMedicationNotFound):
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, medicationNotFoundBody(), nil)
+	case errors.Is(err, ErrNothingToEnd):
+		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody(ValidationErrors{{
+			Field:   "medicationId",
+			Message: "nothing_to_end",
+		}}, "One or more fields are invalid"), nil)
+	case err != nil:
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not end the treatment", nil)
+	default:
+		h.responder.WriteJSON(r.Context(), w, http.StatusOK, toMedicationResponse(med), nil)
+	}
+}
+
+type medicationNotFoundResponseDoc struct {
+	Error   string `json:"error" example:"medication_not_found"`
+	Message string `json:"message" example:"Medication not found"`
+} // @name MedicationNotFoundResponse
+
+func medicationNotFoundBody() map[string]any {
+	return map[string]any{"error": "medication_not_found", "message": "Medication not found"}
+}
+
+func toMedicationResponse(m *Medication) medicationResponse {
+	doses := make([]doseResponse, 0, len(m.Doses))
+	for _, d := range m.Doses {
+		doses = append(doses, toDoseResponse(&d))
+	}
+	var endedAt *string
+	if m.EndedAt != nil {
+		formatted := m.EndedAt.Format(time.RFC3339)
+		endedAt = &formatted
+	}
+	return medicationResponse{
+		ID:             m.ID.String(),
+		Name:           m.Name,
+		FrequencyHours: m.FrequencyHours,
+		DurationDays:   m.DurationDays,
+		StartTime:      m.StartTime,
+		EndedAt:        endedAt,
+		Doses:          doses,
+	}
+}
+
 func toDoseResponse(d *Dose) doseResponse {
 	return doseResponse{
 		ID:          d.ID.String(),
@@ -528,19 +606,8 @@ func toDoseResponse(d *Dose) doseResponse {
 
 func toConsultationDetailResponse(c *Consultation) consultationDetailResponse {
 	medications := make([]medicationResponse, 0, len(c.Medications))
-	for _, m := range c.Medications {
-		doses := make([]doseResponse, 0, len(m.Doses))
-		for _, d := range m.Doses {
-			doses = append(doses, toDoseResponse(&d))
-		}
-		medications = append(medications, medicationResponse{
-			ID:             m.ID.String(),
-			Name:           m.Name,
-			FrequencyHours: m.FrequencyHours,
-			DurationDays:   m.DurationDays,
-			StartTime:      m.StartTime,
-			Doses:          doses,
-		})
+	for i := range c.Medications {
+		medications = append(medications, toMedicationResponse(&c.Medications[i]))
 	}
 	symptoms := make([]catalog.SymptomResponse, 0, len(c.Symptoms))
 	for _, sym := range c.Symptoms {

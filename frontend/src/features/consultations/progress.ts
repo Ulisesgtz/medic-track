@@ -10,10 +10,11 @@ export interface MedicationProgress {
   unregistered: number
 }
 
+/** The total leaves out the doses canceled by ending the treatment early (specs/016): they no longer corresponded. */
 export function medicationProgress(doses: Dose[]): MedicationProgress {
   return {
     taken: doses.filter((d) => d.taken).length,
-    total: doses.length,
+    total: doses.filter((d) => d.status !== 'canceled').length,
     unregistered: doses.filter(isUnregistered).length,
   }
 }

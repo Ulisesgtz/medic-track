@@ -16,6 +16,9 @@
 - Q: Cuando un medicamento tiene horario de inicio, frecuencia y duración definidos, ¿se generan todas sus tomas esperadas de una sola vez, o progresivamente conforme pasan los días? → A: Todas de una vez, al guardar la consulta.
 - Q: ¿Se pueden marcar tomas de un medicamento cuyo tratamiento ya terminó, o el marcado se limita a tratamientos en curso? → A: Siempre disponible, sin importar cuándo fue la toma.
 
+> **Nota (spec 016, 2026-09-30)**: única excepción a la inmutabilidad de la consulta (FR-014): el padre puede terminar un
+> tratamiento antes de tiempo; solo cambia `medications.ended_at`. El horario, la duración, las tomas y las marcas no cambian.
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 - Ver el reporte de consultas de mi hijo (Prioridad: P1)

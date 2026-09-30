@@ -38,8 +38,8 @@ func yesterdaysConsultation(t *testing.T) (*consultation.Service, uuid.UUID, *co
 func statusesMatchTheRule(t *testing.T, doses []consultation.Dose, before, after time.Time) {
 	t.Helper()
 	for _, d := range doses {
-		want := consultation.StatusAt(d.ScheduledAt, d.Taken, 8, before)
-		if want != consultation.StatusAt(d.ScheduledAt, d.Taken, 8, after) {
+		want := consultation.StatusAt(d.ScheduledAt, d.Taken, 8, nil, before)
+		if want != consultation.StatusAt(d.ScheduledAt, d.Taken, 8, nil, after) {
 			continue // a boundary fell inside the call
 		}
 		require.Equal(t, want, d.Status, "dose at %s", d.ScheduledAt)

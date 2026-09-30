@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { fetchConsultations, fetchChildOverview, createConsultation, fetchConsultationDetail, updateDoseStatus, ConsultationApiError } from './api'
+import { fetchConsultations, fetchChildOverview, createConsultation, fetchConsultationDetail, updateDoseStatus, endTreatment, ConsultationApiError } from './api'
 
 const medicationPayload = { name: 'Amoxicilina', frequencyHours: 8, durationDays: 3, startTime: '08:00' }
 
@@ -85,6 +85,35 @@ describe('createConsultation', () => {
 
     const err = await createConsultation('child-1', { doctorName: 'X', consultDate: '2026-01-15', photoBase64: 'x', utcOffsetMinutes: 0, medications: [medicationPayload] }, 'tok').catch((e) => e)
     expect(err.kind).toBe('unknown')
+  })
+})
+
+describe('endTreatment (specs/016)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('posts to the medication end route and returns the medication', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => ({ id: 'm1', endedAt: '2026-01-15T12:00:00Z' }) } as Response)
+
+    const med = await endTreatment('c1', 'm1', 'tok')
+
+    expect(med.endedAt).toBe('2026-01-15T12:00:00Z')
+    const [url, init] = vi.mocked(fetch).mock.calls[0]
+    expect(String(url)).toMatch(/\/consultations\/c1\/medications\/m1\/end$/)
+    expect(init?.method).toBe('POST')
+  })
+
+  it('maps the failures to their own kinds', async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 404, json: async () => ({}) } as Response)
+    expect(await endTreatment('c1', 'x', 'tok').catch((e) => e.kind)).toBe('medication_not_found')
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({ details: [{ field: 'medicationId', message: 'nothing_to_end' }] }) } as Response)
+    expect(await endTreatment('c1', 'm1', 'tok').catch((e) => e.kind)).toBe('validation_error')
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) } as Response)
+    expect(await endTreatment('c1', 'm1', 'tok').catch((e) => e.kind)).toBe('unknown')
   })
 })
 

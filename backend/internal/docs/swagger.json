@@ -953,6 +953,71 @@
                 }
             }
         },
+        "/consultations/{consultationId}/medications/{medicationId}/end": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Records when the parent ended the treatment (irreversible). No dose is deleted: the ones whose\ntime hadn't come turn \"canceled\" and stop being reminded. Idempotent: ending it again returns the\nsame result (specs/016).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "End a medication's treatment early",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Consultation UUID",
+                        "name": "consultationId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Medication UUID",
+                        "name": "medicationId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/MedicationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Nothing left to end (details: nothing_to_end)",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such medication in this consultation",
+                        "schema": {
+                            "$ref": "#/definitions/MedicationNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/reminders/actions/taken": {
             "post": {
                 "description": "Public (no session). The token names one dose and the device that received it; it\nonly works while that device is on and belongs to the dose's account, and for 24 h.",
@@ -1280,7 +1345,8 @@
                         "pending",
                         "due",
                         "taken",
-                        "unregistered"
+                        "unregistered",
+                        "canceled"
                     ],
                     "example": "due"
                 },
@@ -1350,6 +1416,19 @@
                 }
             }
         },
+        "MedicationNotFoundResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "medication_not_found"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Medication not found"
+                }
+            }
+        },
         "MedicationResponse": {
             "type": "object",
             "properties": {
@@ -1362,6 +1441,11 @@
                 "durationDays": {
                     "type": "integer",
                     "example": 5
+                },
+                "endedAt": {
+                    "description": "EndedAt is when the parent ended the treatment early (specs/016); null while it runs.",
+                    "type": "string",
+                    "example": "2026-09-30T14:02:00Z"
                 },
                 "frequencyHours": {
                     "type": "integer",
@@ -1420,7 +1504,8 @@
                         "pending",
                         "due",
                         "taken",
-                        "unregistered"
+                        "unregistered",
+                        "canceled"
                     ],
                     "example": "due"
                 },

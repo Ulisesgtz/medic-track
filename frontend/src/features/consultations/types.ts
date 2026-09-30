@@ -16,9 +16,10 @@ export interface ConsultationSummary {
 
 /**
  * specs/013: pending (its time hasn't come), due ("por marcar"), taken, or unregistered ("sin registrar": the next dose
- * of its medication came and nobody marked it). Computed by the server with its own clock.
+ * of its medication came and nobody marked it), or canceled (specs/016: the treatment was ended before its time
+ * came). Computed by the server with its own clock.
  */
-export type DoseStatus = 'pending' | 'due' | 'taken' | 'unregistered'
+export type DoseStatus = 'pending' | 'due' | 'taken' | 'unregistered' | 'canceled'
 
 // Mirrors contracts/get-consultation-detail.md's response shape.
 export interface Dose {
@@ -34,6 +35,8 @@ export interface Medication {
   frequencyHours: number
   durationDays: number
   startTime: string | null
+  /** When the parent ended the treatment early (specs/016); null while it runs. */
+  endedAt: string | null
   doses: Dose[]
 }
 
