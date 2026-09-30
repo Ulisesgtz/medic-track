@@ -126,7 +126,8 @@ describe('ConsultationDetailPage', () => {
       await screen.findByRole('heading', { level: 1, name: 'Dra. López' })
       expect(screen.queryByRole('heading', { name: 'Síntomas' })).not.toBeInTheDocument()
       expect(screen.queryByRole('heading', { name: 'Notas previas a la consulta' })).not.toBeInTheDocument()
-      expect(screen.queryByRole('list')).not.toBeInTheDocument()
+      // The lists left are the calendar's (specs/019, both named); the symptom chips' list is unnamed.
+      expect(screen.queryAllByRole('list').filter((l) => !l.getAttribute('aria-label'))).toHaveLength(0)
     })
 
     it("shows an earlier consultation's old symptoms text, whole, as its notes (FR-013)", async () => {
@@ -379,8 +380,7 @@ describe('ConsultationDetailPage', () => {
       })
     })
 
-    it('shows the nearest day with doses when none are left today, and lets you move between days', async () => {
-      const user = userEvent.setup()
+    it('shows the nearest day with doses when none are left today, with no day switcher (specs/019)', async () => {
       stubApi(
         consultation({
           medications: [{
@@ -398,33 +398,7 @@ describe('ConsultationDetailPage', () => {
 
       // Jan 15 has no doses: the next day with doses (Jan 17) is shown.
       expect(await screen.findByRole('button', { name: 'Toma de 08:00' })).toHaveAttribute('aria-pressed', 'false')
-      expect(screen.getByText('17 ene')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Día siguiente →' })).toBeDisabled()
-
-      await user.click(screen.getByRole('button', { name: '← Día anterior' }))
-
-      expect(screen.getByText('13 ene')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Toma de 08:00' })).toHaveAttribute('aria-pressed', 'true')
-      expect(screen.getByRole('button', { name: '← Día anterior' })).toBeDisabled()
-      await user.click(screen.getByRole('button', { name: 'Día siguiente →' }))
-      expect(screen.getByText('17 ene')).toBeInTheDocument()
-    })
-
-    it('says "Hoy" on the day switcher when the shown day is today', async () => {
-      stubApi(
-        consultation({
-          medications: [{
-            id: 'm1', name: 'Amoxicilina', frequencyHours: 8, durationDays: 2, startTime: '08:00',
-            doses: [
-              { id: 'a', scheduledAt: at(8), taken: false, status: 'due' },
-              { id: 'b', scheduledAt: at(8, 16), taken: false, status: 'pending' },
-            ],
-          }],
-        }),
-      )
-      renderPage()
-
-      expect(await screen.findByText('Hoy')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Día (anterior|siguiente)/ })).not.toBeInTheDocument()
     })
 
     it('does not show chips for a medication without a start time (FR-010)', async () => {
@@ -609,6 +583,46 @@ describe('ConsultationDetailPage', () => {
 
       await user.click(close)
       expect(opener).toHaveFocus()
+    })
+  })
+
+  describe('treatment calendar (specs/019)', () => {
+    it('sits before the medications on the phone, with today listed and marking from the list', async () => {
+      const fetchMock = stubApi(consultation())
+      const user = userEvent.setup()
+      renderPage()
+
+      const heading = await screen.findByRole('heading', { name: 'Calendario del tratamiento' })
+      const medicationsHeading = screen.getByRole('heading', { level: 2, name: 'Medicamentos' })
+      expect(heading.compareDocumentPosition(medicationsHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(screen.getByRole('heading', { name: 'Tomas de hoy' })).toBeInTheDocument()
+      // The same dose is also a chip of its medication: its own name stays unique.
+      expect(screen.getAllByRole('button', { name: 'Toma de 16:00' })).toHaveLength(1)
+
+      await user.click(screen.getByRole('button', { name: 'Amoxicilina 250 mg, 16:00' }))
+
+      const patch = fetchMock.mock.calls.find(([, init]) => init?.method === 'PATCH')
+      expect(String(patch?.[0])).toContain('/consultations/c1/doses/d2')
+    })
+
+    it('leaves no gap when no medication has a day to show (no start time, so no doses)', async () => {
+      stubApi(consultation({ medications: [{ id: 'm1', name: 'Ibuprofeno', frequencyHours: 12, durationDays: 1, startTime: null, doses: [] }] }))
+      renderPage()
+
+      await screen.findByRole('heading', { level: 2, name: 'Medicamentos' })
+      expect(screen.queryByRole('heading', { name: 'Calendario del tratamiento' })).not.toBeInTheDocument()
+      expect(screen.getByRole('heading', { level: 2, name: 'Medicamentos' }).closest('section')?.previousElementSibling?.tagName).not.toBe('DIV')
+    })
+
+    it('has its own place on the web: on top of the left column, above the medications', async () => {
+      useDesktop()
+      stubApi(consultation())
+      renderPage()
+
+      const heading = await screen.findByRole('heading', { name: 'Calendario del tratamiento' })
+      const medicationsHeading = screen.getByRole('heading', { level: 2, name: 'Medicamentos' })
+      expect(heading.compareDocumentPosition(medicationsHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(heading.closest('aside')).toBeNull()
     })
   })
 })

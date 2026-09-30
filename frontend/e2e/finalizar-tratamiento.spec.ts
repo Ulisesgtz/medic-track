@@ -1,4 +1,4 @@
-import { test, expect, designs, seedChild } from './helpers'
+import { test, expect, designs, seedChild, apiPost, PNG_BASE64 } from './helpers'
 
 // specs/016: ending a treatment early. seedChild registers today a medication every 8 h for 3 days from 00:00 (nine
 // doses, the last ones days ahead), so there is always something ahead to end whatever time the suite runs.
@@ -33,19 +33,34 @@ for (const design of designs) {
       await expect(page.getByText(/^Terminado el \d{1,2} \w{3} · \d+ de \d+ tomas?$/)).toBeVisible()
       await expect(page.getByRole('button', { name: 'Finalizar tratamiento' })).toHaveCount(0)
 
-      // Tomorrow's and later doses were ahead: canceled, not markable. Go to the last day.
-      for (let i = 0; i < 3; i++) {
-        const next = page.getByRole('button', { name: 'Día siguiente →' })
-        if (await next.isEnabled()) await next.click()
-      }
-      const canceled = page.getByRole('button', { name: 'Toma de 16:00' })
-      await expect(canceled).toBeDisabled()
-      await expect(canceled).toHaveAccessibleDescription('Cancelada')
-      await expect(canceled).toContainText('cancelada')
-
       // It stays ended after a reload.
       await page.reload()
       await expect(page.getByText(/^Terminado el/)).toBeVisible()
+    })
+
+    test('las tomas que faltaban quedan canceladas y no se pueden marcar', async ({ page }) => {
+      // One dose a day at 23:59: today's is still ahead when the suite runs (any time but the last minute of the day),
+      // so ending the treatment cancels it.
+      const { childId, token } = await seedChild(page, { withConsultation: false })
+      const now = new Date()
+      const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+      const created = await apiPost(page.context().request, token, `/children/${childId}/consultations`, {
+        doctorName: 'Dra. Laura Cázares',
+        consultDate: today,
+        photoBase64: PNG_BASE64,
+        notes: '',
+        utcOffsetMinutes: -now.getTimezoneOffset() || 0,
+        medications: [{ name: 'Amoxicilina', frequencyHours: 24, durationDays: 3, startTime: '23:59' }],
+      })
+      await open(page, { consultationId: created.id })
+      await page.getByRole('button', { name: 'Finalizar tratamiento' }).click()
+      await page.getByRole('dialog').getByRole('button', { name: 'Finalizar tratamiento' }).click()
+      await expect(page.getByText(/^Terminado el/)).toBeVisible()
+
+      const canceled = page.getByRole('button', { name: 'Toma de 23:59' })
+      await expect(canceled).toBeDisabled()
+      await expect(canceled).toHaveAccessibleDescription('Cancelada')
+      await expect(canceled).toContainText('cancelada')
     })
 
     test('una toma ya pasada de un tratamiento terminado se sigue pudiendo marcar', async ({ page }) => {

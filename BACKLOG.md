@@ -40,7 +40,7 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
 - **B2. Toma "sin registrar" automática** — hecho en `specs/013-tomas-sin-registrar/` (cambia a la siguiente toma de su
   medicamento; la última, a su hora + la frecuencia).
 - **B3. Barra de progreso por medicamento** — hecho en `specs/014-progreso-tomas/`.
-- **B4. Calendario del tratamiento** — **un solo calendario** por consulta (no uno por medicamento) con el rango de
+- **B4. Calendario del tratamiento** — hecho en `specs/019-calendario-tratamiento/` (texto original: **un solo calendario** por consulta (no uno por medicamento) con el rango de
   cada medicamento de inicio a fin, **un color por medicamento** con su leyenda. Colores nuevos en `design-tokens.md`:
   distinguibles entre sí, contraste ≥ 3:1 contra el fondo, sin rojo (no hay alerta médica) y sin el ámbar, que ya
   significa "pendiente de marcar". Al tocar un día se ven las tomas de ese día.

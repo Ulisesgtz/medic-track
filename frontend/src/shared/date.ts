@@ -37,7 +37,7 @@ export function localDayRange(now: Date = new Date()): { from: Date; to: Date } 
   }
 }
 
-const LONG_MONTHS = [
+export const LONG_MONTHS = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
 ]

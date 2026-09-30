@@ -29,11 +29,10 @@ test.describe('Detalle de consulta — diseño móvil (mock 03)', () => {
     await expect(page.getByRole('heading', { level: 2, name: 'Medicamentos' })).toBeVisible()
     await expect(page.getByRole('heading', { level: 3, name: 'Amoxicilina' })).toBeVisible()
     await expect(page.getByText('Cada 8 horas · 1 día · primera toma 00:00')).toBeVisible()
-    // Doses at 00:00, 08:00 and 16:00 today, as chips; a one-day treatment has no day switcher.
+    // Doses at 00:00, 08:00 and 16:00 today, as chips.
     for (const time of ['00:00', '08:00', '16:00']) {
       await expect(page.getByRole('button', { name: `Toma de ${time}` })).toBeVisible()
     }
-    await expect(page.getByRole('button', { name: 'Día siguiente →' })).toHaveCount(0)
     // Phone only: no sidebar, no web header button.
     await expect(page.locator('aside')).toHaveCount(0)
     await expect(page.getByRole('link', { name: 'Nueva consulta' })).toHaveCount(0)
