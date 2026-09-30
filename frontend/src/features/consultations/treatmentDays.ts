@@ -135,7 +135,7 @@ export function dosesOn(day: string, medications: Medication[]): DayDose[] {
     .flatMap((medication, i) =>
       medication.doses.filter((dose) => dayKey(dose.scheduledAt) === day).map((dose) => ({ number: i + 1, medication, dose })),
     )
-    .sort((a, b) => a.dose.scheduledAt.localeCompare(b.dose.scheduledAt) || a.number - b.number)
+    .sort((a, b) => Date.parse(a.dose.scheduledAt) - Date.parse(b.dose.scheduledAt) || a.number - b.number)
 }
 
 /** "30 de septiembre" of a `YYYY-MM-DD` day. */

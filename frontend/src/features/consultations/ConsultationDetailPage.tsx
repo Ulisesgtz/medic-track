@@ -107,12 +107,13 @@ export function ConsultationDetailPage() {
     </button>
   )
   // specs/019: one calendar for the whole consultation, before the medications. `today` is the parent's local day.
-  const calendar = (variant: 'phone' | 'desktop') => (
+  const calendar = (variant: 'phone' | 'desktop', className?: string) => (
     <TreatmentCalendar
       consultationId={consultation.id}
       medications={consultation.medications}
       today={dayKey(today.from)}
       variant={variant}
+      className={className}
     />
   )
   const medications = consultation.medications.map((med) => (
@@ -246,7 +247,7 @@ export function ConsultationDetailPage() {
           </section>
         )}
 
-        <div className="px-6 pt-7">{calendar('phone')}</div>
+        {calendar('phone', 'px-6 pt-7')}
 
         <section className="px-6 pt-7">
           <h2 className={overline}>Medicamentos</h2>

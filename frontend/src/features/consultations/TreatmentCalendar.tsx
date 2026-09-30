@@ -24,6 +24,8 @@ interface TreatmentCalendarProps {
   /** The parent's local today, `YYYY-MM-DD`. */
   today: string
   variant: 'phone' | 'desktop'
+  /** Spacing around the block: here, so a consultation with nothing to show leaves no empty gap behind. */
+  className?: string
 }
 
 /**
@@ -33,7 +35,7 @@ interface TreatmentCalendarProps {
  * the last month with treatment, so there is never an empty month to page through. Phone and web are two designs
  * (`variant`): the same pieces with their own sizes.
  */
-export function TreatmentCalendar({ consultationId, medications, today, variant }: TreatmentCalendarProps) {
+export function TreatmentCalendar({ consultationId, medications, today, variant, className }: TreatmentCalendarProps) {
   const meds = numbered(medications)
   const span = treatmentSpan(meds)
   const [selected, setSelected] = useState<string | null>(() => initialDay(meds, today))
@@ -48,7 +50,7 @@ export function TreatmentCalendar({ consultationId, medications, today, variant 
   const desktop = variant === 'desktop'
 
   return (
-    <section aria-labelledby={headingId}>
+    <section aria-labelledby={headingId} className={className}>
       <h2 id={headingId} className="text-xs font-extrabold uppercase tracking-[0.1em] text-ink-soft">
         Calendario del tratamiento
       </h2>

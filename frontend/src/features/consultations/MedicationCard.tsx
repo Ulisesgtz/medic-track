@@ -23,21 +23,15 @@ interface MedicationCardProps {
 
 /**
  * A medication with its schedule line and the chips of one day of doses, grouped by moment of the day (specs/015).
- * The mockups show a single row of chips: it is today's when the medication
- * has doses today, otherwise the nearest day with doses; a small day switcher
- * appears only when the treatment spans several days, so every dose stays
- * reachable.
+ * The mockups show a single row of chips: it is today's when the medication has doses today, otherwise the nearest day
+ * with doses. The other days are reached through the treatment calendar (specs/019), which lists any day's doses.
  */
 export function MedicationCard({ consultationId, medication, variant }: MedicationCardProps) {
   const [now] = useState(() => Date.now())
   const days = [...new Set(medication.doses.map((d) => dayKey(d.scheduledAt)))].sort()
   const todayKey = dayKey(new Date(now).toISOString())
-  const [selected, setSelected] = useState<string | undefined>(
-    () => days.find((d) => d >= todayKey) ?? days[days.length - 1],
-  )
-  const index = selected ? days.indexOf(selected) : -1
-  const chips = medication.doses.filter((d) => dayKey(d.scheduledAt) === selected)
-  const dayLabel = selected === todayKey ? 'Hoy' : chips[0] ? formatDayMonth(chips[0].scheduledAt) : ''
+  const shownDay = days.find((d) => d >= todayKey) ?? days[days.length - 1]
+  const chips = medication.doses.filter((d) => dayKey(d.scheduledAt) === shownDay)
 
   // specs/016: ending the treatment early. Offered while it runs and has doses still ahead; afterwards the card says
   // when it ended and how many of the doses that corresponded were marked.
@@ -103,28 +97,6 @@ export function MedicationCard({ consultationId, medication, variant }: Medicati
           onCancel={closeConfirm}
           opener={endButton}
         />
-      )}
-
-      {days.length > 1 && (
-        <div className="mt-3 flex items-center justify-between text-[13px] font-bold text-action">
-          <button
-            type="button"
-            disabled={index <= 0}
-            onClick={() => setSelected(days[index - 1])}
-            className="-my-3 min-h-11 cursor-pointer pr-3 disabled:cursor-default disabled:opacity-40"
-          >
-            ← Día anterior
-          </button>
-          <span className="text-slate-500">{dayLabel}</span>
-          <button
-            type="button"
-            disabled={index >= days.length - 1}
-            onClick={() => setSelected(days[index + 1])}
-            className="-my-3 min-h-11 cursor-pointer pl-3 disabled:cursor-default disabled:opacity-40"
-          >
-            Día siguiente →
-          </button>
-        </div>
       )}
     </article>
   )

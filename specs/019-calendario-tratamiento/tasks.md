@@ -46,7 +46,7 @@ el calendario con sus marcas y US2 agrega la lista del día.
 
 ## Fase 5: Pulido
 
-- [ ] T011 Diseño: capturas del calendario, el día elegido y la leyenda en 390 y 1280 px con 1, 3 y 7 medicamentos; contraste ≥ 4.5:1 en textos y ≥ 3:1 en marcas; mostrarlas al usuario para aprobarlas (FR-010) y decidir si el selector «Día anterior / Día siguiente» por medicamento sigue o se quita
+- [X] T011 Diseño (aprobado por el usuario el 2026-09-30; decidió quitar el selector por medicamento): capturas del calendario, el día elegido y la leyenda en 390 y 1280 px con 1, 3 y 7 medicamentos; contraste ≥ 4.5:1 en textos y ≥ 3:1 en marcas; mostrarlas al usuario para aprobarlas (FR-010) y decidir si el selector «Día anterior / Día siguiente» por medicamento sigue o se quita
 - [X] T012 [P] Documentación: `CLAUDE.md` (feature 019), `frontend/CLAUDE.md` (`TreatmentCalendar`, `DayDoses`, `DoseChip`, `treatmentCalendar.ts`, colores `med-*`), `specs/007-homologar-pantallas-a-mocks/spec.md` (desviación: calendario sin mock) y `BACKLOG.md` (B4 hecho)
 - [X] T013 Calidad: `npx tsc --noEmit -p tsconfig.app.json && npx eslint . && npx vitest run --coverage`; E2E afectados (detalle de consulta, tomas sin registrar, finalizar, progreso) en los tres navegadores
 - [ ] T014 Commit, push, PR a `develop` y code review
