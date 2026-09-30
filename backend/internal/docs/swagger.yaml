@@ -197,6 +197,92 @@ definitions:
         example: Email is already in use
         type: string
     type: object
+  ErrorLogEntry:
+    properties:
+      accountId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      createdAt:
+        example: "2026-09-30T14:02:11Z"
+        type: string
+      endpoint:
+        example: /accounts
+        type: string
+      file:
+        example: internal/account/handler.go
+        type: string
+      httpStatus:
+        example: 400
+        type: integer
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      line:
+        example: 88
+        type: integer
+      message:
+        example: email is required
+        type: string
+    type: object
+  ErrorLogListResponse:
+    properties:
+      entries:
+        items:
+          $ref: '#/definitions/ErrorLogEntry'
+        type: array
+      nextCursor:
+        description: NextCursor is null on the last page.
+        example: MTc5MDc3MDAwMDAwMDAwMDAwMC5hMWIyYzNkNA
+        type: string
+    type: object
+  ErrorLogSummaryGroup:
+    properties:
+      count:
+        example: 42
+        type: integer
+      endpoint:
+        example: /accounts
+        type: string
+      firstSeen:
+        example: "2026-09-24T10:00:00Z"
+        type: string
+      httpStatus:
+        example: 400
+        type: integer
+      lastSeen:
+        example: "2026-09-30T13:58:02Z"
+        type: string
+      message:
+        example: email is required
+        type: string
+    type: object
+  ErrorLogSummaryResponse:
+    properties:
+      groups:
+        items:
+          $ref: '#/definitions/ErrorLogSummaryGroup'
+        type: array
+    type: object
+  ErrorLogValidationError:
+    properties:
+      details:
+        items:
+          properties:
+            field:
+              example: limit
+              type: string
+            message:
+              example: must be a whole number from 1 to 500
+              type: string
+          type: object
+        type: array
+      error:
+        example: validation_error
+        type: string
+      message:
+        example: One or more fields are invalid
+        type: string
+    type: object
   ErrorResponse:
     properties:
       error:
@@ -1403,6 +1489,108 @@ paths:
       summary: Add doses to the end of a medication's treatment
       tags:
       - consultations
+  /ops/error-logs:
+    get:
+      description: |-
+        For the team that runs the service, not for parents: needs the operation key (`Authorization: Bearer
+        <OPS_API_KEY>`), and the route does not exist when the server has none. A wrong or missing key gets the
+        same 404 as an unknown route. Filters by period (default: the last 7 days), endpoint (exact or prefix such as
+        `job:`), status and account; paged by cursor (100 by default, at most 500).
+      parameters:
+      - description: 'RFC 3339; default: 7 days ago'
+        in: query
+        name: since
+        type: string
+      - description: 'RFC 3339; default: no upper bound'
+        in: query
+        name: until
+        type: string
+      - description: Exact endpoint, e.g. /accounts or job:reminders
+        in: query
+        name: endpoint
+        type: string
+      - description: 'Endpoint prefix, e.g. job:'
+        in: query
+        name: endpointPrefix
+        type: string
+      - description: HTTP status
+        in: query
+        name: status
+        type: integer
+      - description: Account UUID
+        in: query
+        name: accountId
+        type: string
+      - description: 1 to 500; default 100
+        in: query
+        name: limit
+        type: integer
+      - description: nextCursor of the previous page
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ErrorLogListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorLogValidationError'
+      security:
+      - OpsKey: []
+      summary: List the registered errors, newest first
+      tags:
+      - operations
+  /ops/error-logs/summary:
+    get:
+      description: |-
+        Groups by endpoint, status and message with how often each happened and when first and last; the most
+        frequent first (the most recent breaks a tie), up to 100 groups. Same key and filters as the list.
+      parameters:
+      - description: 'RFC 3339; default: 7 days ago'
+        in: query
+        name: since
+        type: string
+      - description: 'RFC 3339; default: no upper bound'
+        in: query
+        name: until
+        type: string
+      - description: Exact endpoint
+        in: query
+        name: endpoint
+        type: string
+      - description: 'Endpoint prefix, e.g. job:'
+        in: query
+        name: endpointPrefix
+        type: string
+      - description: HTTP status
+        in: query
+        name: status
+        type: integer
+      - description: Account UUID
+        in: query
+        name: accountId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ErrorLogSummaryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorLogValidationError'
+      security:
+      - OpsKey: []
+      summary: Summarize the registered errors of a period
+      tags:
+      - operations
   /reminders/actions/taken:
     post:
       consumes:
@@ -1455,6 +1643,12 @@ paths:
 securityDefinitions:
   ClerkSession:
     description: Clerk session token, sent as "Bearer <token>".
+    in: header
+    name: Authorization
+    type: apiKey
+  OpsKey:
+    description: Operation key (OPS_API_KEY), sent as "Bearer <key>"; only for the
+      team that runs the service.
     in: header
     name: Authorization
     type: apiKey

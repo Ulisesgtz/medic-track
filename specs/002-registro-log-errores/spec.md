@@ -63,7 +63,7 @@ Como responsable técnico, cuando reviso el log de errores, quiero saber en qué
 - **FR-004**: El sistema NUNCA DEBE almacenar el correo electrónico del usuario en la tabla de log de errores; solo el identificador interno de cuenta (UUID).
 - **FR-005**: Una falla al registrar una entrada de log NUNCA DEBE impedir ni alterar la respuesta de error que el servidor ya iba a enviar al cliente original.
 - **FR-006**: El sistema DEBE aplicar el registro de errores en el mecanismo compartido que el backend ya usa para construir todas sus respuestas de error, de forma que cubra automáticamente todos los endpoints existentes sin duplicar lógica de registro en cada uno por separado.
-- **FR-007**: Esta funcionalidad NO DEBE incluir ningún endpoint ni interfaz para consultar, listar o exportar las entradas de log — eso es una tarea futura separada.
+- **FR-007**: Esta funcionalidad NO DEBE incluir ningún endpoint ni interfaz para consultar, listar o exportar las entradas de log — eso es una tarea futura separada. *(Atendido después por `specs/021-consulta-y-retencion-error-logs/`: consulta y resumen con una clave de operación, y depuración por antigüedad.)*
 - **FR-008**: Esta funcionalidad NO DEBE incluir el envío de correos ni ningún job programado (digest semanal) — eso es una tarea futura separada.
 
 ### Entidades Clave

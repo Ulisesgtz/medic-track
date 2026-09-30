@@ -103,6 +103,8 @@ Guárdalas solo en Railway (paso 3). No las pegues en el repo ni en el chat.
    | `CLERK_SECRET_KEY` | la `sk_test_…` (misma que en `backend/.env.local`) |
    | `FRONTEND_ORIGIN` | `https://app.pedi-track.com` (exacta, sin `/` al final: es el único origen que acepta CORS) |
    | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `REMINDER_ACTION_SECRET` | las del paso 2 |
+   | `OPS_API_KEY` | (opcional, spec 021) una clave larga y aleatoria (`node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`): abre `GET /ops/error-logs` y `/ops/error-logs/summary` para el equipo (`Authorization: Bearer …`). Sin ella esas rutas no existen |
+   | `ERROR_LOGS_RETENTION_DAYS` | (opcional, spec 021) días que se guardan los errores; 90 por omisión, nunca menos de 7 |
    | `VAPID_SUBJECT` | tu correo de contacto, p. ej. `ulises.gtzr@gmail.com` |
 
    `PORT` no se pone: Railway la define y el API la lee.

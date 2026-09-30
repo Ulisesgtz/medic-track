@@ -16,6 +16,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
+	"github.com/Ulisesgtz/medic-track/backend/internal/ops"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
 	"github.com/Ulisesgtz/medic-track/backend/internal/reminder"
 )
@@ -27,6 +28,10 @@ type Deps struct {
 	Account        *account.Handler
 	Consultation   *consultation.Handler
 	Reminder       *reminder.Handler
+	// Ops and OpsKey: the read-only queries over error_logs for the team that runs the service (specs/021). Without
+	// both the routes are not registered at all: there is no open door by default.
+	Ops            *ops.Handler
+	OpsKey         string
 	Ownership      *ownership.Repository
 	FrontendOrigin string
 	// RequireSession verifies the Clerk session (authmw.RequireSession in
@@ -52,6 +57,14 @@ func NewRouter(d Deps) *chi.Mux {
 	r.Get("/catalog/countries", d.Catalog.ListCountries)
 	r.Get("/catalog/countries/{countryCode}/states", d.Catalog.ListStates)
 	r.Get("/catalog/symptoms", d.Catalog.ListSymptoms)
+
+	// Operation queries: not for parents, so no Clerk session — a single key held by the server (ops.RequireKey), and
+	// only if the server has one. A wrong key gets the same 404 as any unknown route.
+	if d.Ops != nil && d.OpsKey != "" {
+		requireKey := ops.RequireKey(d.OpsKey)
+		r.With(requireKey).Get("/ops/error-logs", d.Ops.ListErrorLogs)
+		r.With(requireKey).Get("/ops/error-logs/summary", d.Ops.ErrorLogSummary)
+	}
 
 	// The "Tomada" button of a reminder, sent by the service worker, which has no session: the
 	// signed action token is the only thing it accepts, and it names a single dose (specs/011).

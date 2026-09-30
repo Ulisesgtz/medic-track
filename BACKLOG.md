@@ -95,15 +95,15 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
   con los handlers; depende de correr `swag init` a mano después de cada cambio. Propuesta: un paso en el job de backend
   de `.github/workflows/ci.yml` que regenere la documentación y falle si hay diferencias (`swag init … && git diff
   --exit-code backend/internal/docs`), con un mensaje que diga el comando para regenerarla.
-- **Consulta/listado del log de errores** — endpoint o interfaz para leer las entradas de
+- **Consulta/listado del log de errores** — hecho en `specs/021-consulta-y-retencion-error-logs/` (`GET /ops/error-logs` y `/summary` con una clave de operación). Texto original: endpoint o interfaz para leer las entradas de
   `error_logs` (creado por `specs/002-registro-log-errores/`). Esa funcionalidad excluyó
   explícitamente la lectura (FR-007) — solo implementa el registro (escritura).
-- **Digest semanal de errores por correo** — job programado que junte las entradas de `error_logs`
+- **Digest semanal de errores por correo** — **sigue pendiente**: la consulta y el resumen de la spec 021 son su base; falta elegir proveedor de correo y quién lo recibe. Job programado que junte las entradas de `error_logs`
   de los últimos 7 días y las envíe por email. Depende de: la consulta/listado de arriba, elegir un
   proveedor de envío de correo (aún no decidido/configurado en el proyecto), y decidir quién lo
   recibe. Ver `specs/002-registro-log-errores/` (FR-008) y memoria de sesión
   `peditrack-error-logging-plan.md`.
-- **Política de retención/purga de `error_logs`** — hoy la tabla crece indefinidamente
+- **Política de retención/purga de `error_logs`** — hecho en `specs/021-consulta-y-retencion-error-logs/` (depuración diaria, 90 días por omisión, mínimo 7). Texto original: hoy la tabla crece indefinidamente
   (`specs/002-registro-log-errores/spec.md`, Aclaraciones sesión 2026-09-16). Revisar cuando haya
   visibilidad real de volumen.
 - **Excepción de `cmd/api` en el gate de cobertura de CI** — actualmente `cmd/api` (wiring de Go) no
