@@ -126,6 +126,20 @@ func TestService_Tick_AGoneDeviceIsNotAFailureAndACleanCycleReportsNothing(t *te
 	require.ElementsMatch(t, []string{"tick", "prepare", "deliver"}, rep.recovered)
 }
 
+func TestService_Tick_AnIdleCycleOnlyProvesTheReadingWorks(t *testing.T) {
+	svc, _ := newService(t, &fakeSender{}, uniqueNow())
+	rep := &fakeReporter{}
+	svc.SetReporter(rep)
+
+	_, err := svc.Tick(context.Background())
+
+	require.NoError(t, err)
+	require.Empty(t, rep.reports)
+	// Nothing was prepared or delivered, so nothing is proven about those kinds: a failure that comes back after
+	// an idle cycle is still grouped with the one before it.
+	require.Equal(t, []string{"tick"}, rep.recovered)
+}
+
 func TestService_Tick_ShuttingDownIsNotAFailure(t *testing.T) {
 	svc := reminder.NewService(reminder.NewRepository(closedPool(t)), &fakeSender{}, testConfig)
 	rep := &fakeReporter{}

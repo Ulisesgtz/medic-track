@@ -102,7 +102,8 @@ func (r *Reporter) undo(kind string, previous kindState) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	state := r.kinds[kind]
-	state.written, state.recovered, state.lastWritten = previous.written, previous.recovered, previous.lastWritten
+	// A recovery that happened while the write was running stays: only the row is forgotten, not what was seen since.
+	state.written, state.recovered, state.lastWritten = previous.written, state.recovered || previous.recovered, previous.lastWritten
 	state.suppressed += previous.suppressed
 }
 

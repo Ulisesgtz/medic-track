@@ -224,7 +224,8 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 	if skipped > 0 {
 		log.Printf("reminder: %d reminders could not be prepared", skipped)
 		s.reportFailure(ctx, failurePrepare, fmt.Sprintf("%d reminders could not be prepared", skipped), skippedFor)
-	} else {
+	} else if len(due) > 0 {
+		// Only a cycle that had something to prepare proves it works: an idle one says nothing.
 		s.recovered(failurePrepare)
 	}
 
@@ -263,7 +264,7 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 	if failed > 0 {
 		log.Printf("reminder: %d of %d reminders could not be delivered", failed, len(pushes))
 		s.reportFailure(ctx, failureDeliver, fmt.Sprintf("%d of %d reminders could not be delivered", failed, len(pushes)), failedFor)
-	} else {
+	} else if len(pushes) > 0 {
 		s.recovered(failureDeliver)
 	}
 	return delivered, nil
