@@ -126,7 +126,8 @@ describe('ConsultationDetailPage', () => {
       await screen.findByRole('heading', { level: 1, name: 'Dra. López' })
       expect(screen.queryByRole('heading', { name: 'Síntomas' })).not.toBeInTheDocument()
       expect(screen.queryByRole('heading', { name: 'Notas previas a la consulta' })).not.toBeInTheDocument()
-      expect(screen.queryByRole('list')).not.toBeInTheDocument()
+      // The lists left are the calendar's (specs/019, both named); the symptom chips' list is unnamed.
+      expect(screen.queryAllByRole('list').filter((l) => !l.getAttribute('aria-label'))).toHaveLength(0)
     })
 
     it("shows an earlier consultation's old symptoms text, whole, as its notes (FR-013)", async () => {
@@ -609,6 +610,37 @@ describe('ConsultationDetailPage', () => {
 
       await user.click(close)
       expect(opener).toHaveFocus()
+    })
+  })
+
+  describe('treatment calendar (specs/019)', () => {
+    it('sits before the medications on the phone, with today listed and marking from the list', async () => {
+      const fetchMock = stubApi(consultation())
+      const user = userEvent.setup()
+      renderPage()
+
+      const heading = await screen.findByRole('heading', { name: 'Calendario del tratamiento' })
+      const medicationsHeading = screen.getByRole('heading', { level: 2, name: 'Medicamentos' })
+      expect(heading.compareDocumentPosition(medicationsHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(screen.getByRole('heading', { name: 'Tomas de hoy' })).toBeInTheDocument()
+      // The same dose is also a chip of its medication: its own name stays unique.
+      expect(screen.getAllByRole('button', { name: 'Toma de 16:00' })).toHaveLength(1)
+
+      await user.click(screen.getByRole('button', { name: 'Amoxicilina 250 mg, 16:00' }))
+
+      const patch = fetchMock.mock.calls.find(([, init]) => init?.method === 'PATCH')
+      expect(String(patch?.[0])).toContain('/consultations/c1/doses/d2')
+    })
+
+    it('has its own place on the web: on top of the left column, above the medications', async () => {
+      useDesktop()
+      stubApi(consultation())
+      renderPage()
+
+      const heading = await screen.findByRole('heading', { name: 'Calendario del tratamiento' })
+      const medicationsHeading = screen.getByRole('heading', { level: 2, name: 'Medicamentos' })
+      expect(heading.compareDocumentPosition(medicationsHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(heading.closest('aside')).toBeNull()
     })
   })
 })

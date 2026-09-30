@@ -12,6 +12,8 @@ import { sniffImageMimeType } from './imageMime'
 import { MedicationCard } from './MedicationCard'
 import { PhotoViewer } from './PhotoViewer'
 import { SymptomChips } from './SymptomChips'
+import { TreatmentCalendar } from './TreatmentCalendar'
+import { dayKey } from './treatmentDays'
 import { DOSE_REFETCH_MS } from './doseStatus'
 
 const overline = 'text-xs font-extrabold uppercase tracking-[0.1em] text-ink-soft'
@@ -104,6 +106,15 @@ export function ConsultationDetailPage() {
       Ver completa
     </button>
   )
+  // specs/019: one calendar for the whole consultation, before the medications. `today` is the parent's local day.
+  const calendar = (variant: 'phone' | 'desktop') => (
+    <TreatmentCalendar
+      consultationId={consultation.id}
+      medications={consultation.medications}
+      today={dayKey(today.from)}
+      variant={variant}
+    />
+  )
   const medications = consultation.medications.map((med) => (
     <MedicationCard
       key={med.id}
@@ -140,6 +151,7 @@ export function ConsultationDetailPage() {
 
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
               <div className="flex min-w-0 flex-col gap-4">
+                {calendar('desktop')}
                 <h2 className={overline}>Medicamentos</h2>
                 {medications}
                 {(hasSymptoms || hasNotes) && (
@@ -233,6 +245,8 @@ export function ConsultationDetailPage() {
             <p className="mt-2.5 text-base leading-relaxed whitespace-pre-line text-[#1f3d44]">{consultation.notes}</p>
           </section>
         )}
+
+        <div className="px-6 pt-7">{calendar('phone')}</div>
 
         <section className="px-6 pt-7">
           <h2 className={overline}>Medicamentos</h2>

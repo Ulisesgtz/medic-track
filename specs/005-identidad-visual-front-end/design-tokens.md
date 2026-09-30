@@ -23,6 +23,26 @@ La paleta anterior era un solo cyan claro sobre blanco: bordes `cyan-100`, badge
 | `--color-surface` | `#ffffff` | Tarjetas y modales |
 | `--color-hint` | `#ecfeff` / borde `#a5f3fc` | Bloques de sugerencia de OCR y agrupaciones de formulario |
 
+### Colores de medicamento (spec 019)
+
+El calendario del tratamiento da un color a cada medicamento de la consulta (por su orden: el 1.º `med-1`, …, el 7.º vuelve
+a `med-1`). Nunca se usan solos: cada marca lleva el **número** del medicamento en blanco y la leyenda lo repite.
+
+| Token | Valor | Contraste vs `canvas` / `surface` (y del número blanco) |
+|---|---|---|
+| `--color-med-1` | `#0c75df` | 4.46 / 4.54 |
+| `--color-med-2` | `#565b52` | 6.84 / 6.97 |
+| `--color-med-3` | `#360cdf` | 9.06 / 9.23 |
+| `--color-med-4` | `#2d1c54` | 14.66 / 14.94 |
+| `--color-med-5` | `#526e98` | 5.10 / 5.19 |
+| `--color-med-6` | `#140788` | 14.56 / 14.83 |
+
+Elegidos con una búsqueda (ΔE mínimo entre cualquier par: 32 con visión normal, 29.7 en deuteranopía y 31.2 en protanopía;
+Machado 2009) entre azules, violetas, magentas, verdes azulados y grises, **descartando**: rojos y rosas (alerta médica,
+Principio I), verde (`confirmed` = «tomada»), ámbar y naranja (`pending` = «por marcar») y cian (`action`/`bright`); ninguno
+queda a menos de ΔE 18 de un token del sistema. Todos pasan ≥ 3:1 como elemento gráfico y ≥ 4.5:1 con el número blanco encima
+(excepción acotada a la regla de «texto blanco solo sobre…»: el número de la marca).
+
 Reglas:
 
 - Un solo botón sólido por pantalla (`--color-confirmed`); las acciones secundarias van con contorno `--color-action` de 2 px.

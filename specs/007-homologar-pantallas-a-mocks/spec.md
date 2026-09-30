@@ -33,6 +33,10 @@ otro; no hay clases responsivas `lg:` que combinen ambos.
 
 ## Desviaciones respecto a los mocks (decididas o inevitables)
 
+Sin mock (spec 019, 2026-09-30): el bloque «Calendario del tratamiento» del detalle de la consulta (cuadrícula del mes con los
+números de colores de cada medicamento, leyenda y lista de tomas del día) no existe en los mocks; se diseñó con los tokens
+(incluidos los seis `med-*` nuevos) y se muestra para aprobar.
+
 Sin mock (spec 017, 2026-09-30): el indicador de «jalar para actualizar» (píldora oscura arriba, «Jala/Suelta para actualizar»,
 «Actualizando…», y el aviso de falla) y la barra «Hay una versión nueva · Actualizar» (abajo en el móvil, tarjeta en la
 esquina en el web) no existen en los mocks; se diseñaron con los tokens (`ink`, texto blanco, botón de contorno).

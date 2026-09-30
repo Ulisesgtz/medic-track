@@ -21,6 +21,14 @@
   --color-on-pending: #451a03;
   --color-pending-strong: #92400e;
   --color-confirmed-strong: #065f46;
+  /* Un color por medicamento en el calendario del tratamiento (specs/019): sin rojo, verde, ámbar ni cian (esos ya
+     significan algo). El número de la marca es el segundo indicador. Medidos en specs/019 (contraste y daltonismo). */
+  --color-med-1: #0c75df;
+  --color-med-2: #565b52;
+  --color-med-3: #360cdf;
+  --color-med-4: #2d1c54;
+  --color-med-5: #526e98;
+  --color-med-6: #140788;
 }
 
 body {
