@@ -1,7 +1,8 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { formatAgeLong } from '../../shared/age'
+import { useUnsavedWork } from '../../shared/appVersion/unsavedWork'
 import { AppShell } from '../home/AppShell'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { useSidebarSession } from '../home/useSidebarSession'
@@ -19,8 +20,12 @@ export function NewConsultationPage() {
   const queryClient = useQueryClient()
   const { isDesktop } = useSidebarSession()
   const dirtyRef = useRef(false)
-  const handleDirtyChange = useCallback((dirty: boolean) => {
-    dirtyRef.current = dirty
+  // The ref answers "leave?" at click time; the state tells the "new version" bar there is work a reload would lose.
+  const [dirty, setDirty] = useState(false)
+  useUnsavedWork(dirty)
+  const handleDirtyChange = useCallback((value: boolean) => {
+    dirtyRef.current = value
+    setDirty(value)
   }, [])
 
   const accountQuery = useCurrentAccount()

@@ -53,7 +53,7 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
 - Depende de: B2 define el estado de las tomas que usan B3, B4, B5 y B6; B6 afecta a los recordatorios (spec 011: una
   toma cancelada no se avisa).
 
-## La app instalada: actualizar datos y versión (anotado 2026-09-29, sin fecha)
+## La app instalada: actualizar datos y versión — hecho en `specs/017-actualizar-datos-y-version/` (anotado 2026-09-29)
 
 - **Jalar hacia abajo para actualizar** — la PWA instalada en la pantalla de inicio se abre sin la barra del navegador y
   pierde su gesto de "jalar para actualizar" (en iPhone no hay forma de activarlo; Android Chrome también lo quita en apps

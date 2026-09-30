@@ -134,6 +134,10 @@ Guárdalas solo en Railway (paso 3). No las pegues en el repo ni en el chat.
 4. **Custom domains → `app.pedi-track.com`**. Como el DNS está en HostGator, Cloudflare te pide un CNAME hacia
    `<tu-proyecto>.pages.dev`: va en el paso 5.
 
+`vite build` también escribe `dist/version.json` (`{"version":"<sha del commit>"}`, con `CF_PAGES_COMMIT_SHA`) y
+`public/_headers` lo sirve con `Cache-Control: no-store`: con eso la app instalada sabe que hay una versión nueva y
+muestra «Hay una versión nueva · Actualizar» (spec 017).
+
 No hace falta configurar rutas: sin un `404.html`, Pages sirve `index.html` para cualquier ruta (como una SPA), y el
 service worker queda en `/sw.js`, en la raíz, como debe.
 

@@ -19,6 +19,7 @@ export default mergeConfig(
           'src/**/*.test.{ts,tsx}',
           'src/**/*.test-utils.ts',
           'src/vite-env.d.ts',
+          'src/globals.d.ts',
           // Only wires the service worker's events to features/reminders/notification.ts, which is tested.
           'src/sw.ts',
         ],

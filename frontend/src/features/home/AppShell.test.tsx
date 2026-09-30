@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppShell } from './AppShell'
+import { resetNewVersion } from '../../shared/appVersion/useNewVersion'
 
 const account = {
   id: 'a1', firstName: 'Ana', lastName: 'Gómez', email: 'ana@example.com',
@@ -79,6 +80,7 @@ describe('AppShell', () => {
   })
 
   afterEach(() => {
+    resetNewVersion()
     vi.unstubAllGlobals()
     window.localStorage.clear()
   })
@@ -178,5 +180,57 @@ describe('AppShell', () => {
     stubWidth(1024)
     renderShell()
     expect(await screen.findByRole('navigation', { name: 'Tus hijos' })).toBeInTheDocument()
+  })
+
+  describe('shared by every signed-in screen (specs/017)', () => {
+    const pullDown = () => {
+      fireEvent.touchStart(document, { touches: [{ clientY: 100 }] })
+      fireEvent.touchMove(document, { touches: [{ clientY: 260 }] })
+      fireEvent.touchEnd(document, { changedTouches: [{ clientY: 260 }] })
+    }
+
+    it('on the phone, pulling down fetches the data again; the screen and what was typed stay', async () => {
+      stubWidth(390)
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => account })
+      vi.stubGlobal('fetch', fetchMock)
+      renderShell()
+      await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+      const before = fetchMock.mock.calls.length
+
+      pullDown()
+
+      await waitFor(() => expect(fetchMock.mock.calls.length).toBeGreaterThan(before))
+      expect(screen.getByText('SCREEN CONTENT')).toBeInTheDocument()
+    })
+
+    it('on the web there is no pull gesture', async () => {
+      stubWidth(1280)
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => account })
+      vi.stubGlobal('fetch', fetchMock)
+      renderShell()
+      await screen.findByRole('navigation', { name: 'Tus hijos' })
+      const before = fetchMock.mock.calls.length
+
+      pullDown()
+
+      expect(fetchMock.mock.calls.length).toBe(before)
+      expect(screen.queryByText('Actualizando…')).not.toBeInTheDocument()
+    })
+
+    it('shows the new-version bar on the phone and on the web', async () => {
+      const published = vi.fn().mockImplementation((url: string) =>
+        Promise.resolve({ ok: true, json: async () => (String(url).startsWith('/version.json') ? { version: 'otra' } : account) }),
+      )
+      vi.stubGlobal('fetch', published)
+
+      stubWidth(390)
+      const phone = renderShell()
+      expect(await screen.findByRole('button', { name: 'Actualizar' })).toBeInTheDocument()
+      phone.unmount()
+
+      stubWidth(1280)
+      renderShell()
+      expect(await screen.findByRole('button', { name: 'Actualizar' })).toBeInTheDocument()
+    })
   })
 })

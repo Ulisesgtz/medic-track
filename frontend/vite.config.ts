@@ -1,6 +1,6 @@
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { defineConfig, type ProxyOptions } from 'vite'
+import { defineConfig, type Plugin, type ProxyOptions } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // Testing on a phone through a temporary HTTPS tunnel (DEPLOY.md, "Prueba con túnel"): the phone only
@@ -12,11 +12,24 @@ const apiProxy: Record<string, ProxyOptions> = {
 // Vite only answers requests for hosts it knows; these are the tunnel services' domains.
 const tunnelHosts = ['.trycloudflare.com', '.ngrok-free.app']
 
+// The id of this build (specs/017): compiled into the app and published in dist/version.json, so a phone with the
+// app open can tell that a newer one is out. Same value for both: it is read once, here.
+const appVersion = (process.env.CF_PAGES_COMMIT_SHA ?? process.env.GITHUB_SHA ?? String(Date.now())).slice(0, 12)
+const versionFile: Plugin = {
+  name: 'peditrack-version-file',
+  apply: 'build',
+  generateBundle() {
+    this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version: appVersion }) })
+  },
+}
+
 // https://vite.dev/config/
 export default defineConfig({
+  define: { __APP_VERSION__: JSON.stringify(appVersion) },
   plugins: [
     react(),
     tailwindcss(),
+    versionFile,
     // The service worker that receives the dose reminders (specs/011-recordatorios-push). Written in
     // TypeScript (src/sw.ts) and compiled by the plugin; no precache (working offline is out of scope)
     // and our own public/manifest.webmanifest stays as it is.

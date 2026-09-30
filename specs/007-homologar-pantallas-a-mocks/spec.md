@@ -33,6 +33,10 @@ otro; no hay clases responsivas `lg:` que combinen ambos.
 
 ## Desviaciones respecto a los mocks (decididas o inevitables)
 
+Sin mock (spec 017, 2026-09-30): el indicador de «jalar para actualizar» (píldora oscura arriba, «Jala/Suelta para actualizar»,
+«Actualizando…», y el aviso de falla) y la barra «Hay una versión nueva · Actualizar» (abajo en el móvil, tarjeta en la
+esquina en el web) no existen en los mocks; se diseñaron con los tokens (`ink`, texto blanco, botón de contorno).
+
 Decididas por el usuario:
 
 - **Sin la palabra "OCR" (2026-09-28)**: el primer punto de la lista del mock 11 ("El OCR de la receta corre en tu
