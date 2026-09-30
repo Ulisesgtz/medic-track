@@ -1018,6 +1018,83 @@
                 }
             }
         },
+        "/consultations/{consultationId}/medications/{medicationId}/extend": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Only because the parent decided so (their doctor told them to): adds `doses` doses after the last one, one\nfrequency apart, records who decided and what was proposed vs confirmed, and marks the unregistered doses as\ncovered so they are never proposed twice. Nothing that exists changes. Not idempotent on purpose: a second\nattempt for the same doses gets nothing_to_extend (specs/020).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "Add doses to the end of a medication's treatment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Consultation UUID",
+                        "name": "consultationId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Medication UUID",
+                        "name": "medicationId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "How many doses to add",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ExtendTreatmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/MedicationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "doses out of range, or nothing to extend (details: nothing_to_extend)",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such medication in this consultation",
+                        "schema": {
+                            "$ref": "#/definitions/MedicationNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/reminders/actions/taken": {
             "post": {
                 "description": "Public (no session). The token names one dose and the device that received it; it\nonly works while that device is on and belongs to the dose's account, and for 24 h.",
@@ -1382,6 +1459,38 @@
                 }
             }
         },
+        "ExtendTreatmentRequest": {
+            "type": "object",
+            "properties": {
+                "doses": {
+                    "description": "Doses is how many doses to add to the end: a whole number from 1 to 60.",
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
+        "ExtensionResponse": {
+            "type": "object",
+            "properties": {
+                "addedDoses": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "createdAt": {
+                    "type": "string",
+                    "example": "2026-09-30T14:02:00Z"
+                },
+                "manual": {
+                    "description": "Manual is true when the parent changed the number the app proposed.",
+                    "type": "boolean",
+                    "example": true
+                },
+                "proposedDoses": {
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
         "FieldError": {
             "type": "object",
             "properties": {
@@ -1446,6 +1555,18 @@
                     "description": "EndedAt is when the parent ended the treatment early (specs/016); null while it runs.",
                     "type": "string",
                     "example": "2026-09-30T14:02:00Z"
+                },
+                "extendableDoses": {
+                    "description": "ExtendableDoses is how many unregistered doses haven't been covered by an extension yet (specs/020): the number the\napp proposes adding; the button \"Recorrer tratamiento\" shows only when it is above 0. 0 once the treatment ended.",
+                    "type": "integer",
+                    "example": 2
+                },
+                "extensions": {
+                    "description": "Extensions are the parent's decisions to add doses to the end, oldest first.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ExtensionResponse"
+                    }
                 },
                 "frequencyHours": {
                     "type": "integer",

@@ -135,6 +135,7 @@ func (w *world) routes() []struct {
 		{"mark dose", http.MethodPatch, "/consultations/" + w.consultationA.String() + "/doses/" + w.doseA.String(), `{"taken":true}`, http.StatusOK},
 		// The owner reaches the handler, which knows no such medication (a real one would be ended for good).
 		{"end treatment", http.MethodPost, "/consultations/" + w.consultationA.String() + "/medications/" + uuid.NewString() + "/end", "", http.StatusNotFound},
+		{"extend treatment", http.MethodPost, "/consultations/" + w.consultationA.String() + "/medications/" + uuid.NewString() + "/extend", `{"doses":2}`, http.StatusNotFound},
 	}
 }
 

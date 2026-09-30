@@ -59,7 +59,23 @@ type Medication struct {
 	EndedAt   *time.Time
 	CreatedAt time.Time
 	Doses     []Dose
+	// ExtendableDoses is how many unregistered doses haven't been covered by an extension yet (specs/020): what the
+	// app proposes adding. 0 when the treatment was ended. Derived when read, with the server's clock.
+	ExtendableDoses int
+	// Extensions are the parent's decisions to add doses to the end, oldest first.
+	Extensions []Extension
 }
+
+// Extension is one time the parent decided to add doses to the end of a medication (specs/020). Append-only.
+type Extension struct {
+	ID            uuid.UUID
+	CreatedAt     time.Time
+	ProposedDoses int
+	AddedDoses    int
+}
+
+// Manual says the parent changed the number the app proposed.
+func (e Extension) Manual() bool { return e.AddedDoses != e.ProposedDoses }
 
 // Dose represents one expected occurrence of a Medication, generated only
 // when the Medication has a StartTime (FR-009/FR-010). Taken is the only
@@ -72,6 +88,8 @@ type Dose struct {
 	CreatedAt    time.Time
 	// Status is derived when read (specs/013): pending, due, taken or unregistered.
 	Status DoseStatus
+	// Covered: an extension already took this unregistered dose into account (specs/020); it is not proposed again.
+	Covered bool
 }
 
 // DoseOverview is one dose of any of a child's consultations, joined with its

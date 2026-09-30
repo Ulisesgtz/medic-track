@@ -49,7 +49,25 @@ type medicationResponse struct {
 	// EndedAt is when the parent ended the treatment early (specs/016); null while it runs.
 	EndedAt *string        `json:"endedAt" example:"2026-09-30T14:02:00Z"`
 	Doses   []doseResponse `json:"doses"`
+	// ExtendableDoses is how many unregistered doses haven't been covered by an extension yet (specs/020): the number the
+	// app proposes adding; the button "Recorrer tratamiento" shows only when it is above 0. 0 once the treatment ended.
+	ExtendableDoses int `json:"extendableDoses" example:"2"`
+	// Extensions are the parent's decisions to add doses to the end, oldest first.
+	Extensions []extensionResponse `json:"extensions"`
 } // @name MedicationResponse
+
+type extensionResponse struct {
+	CreatedAt     string `json:"createdAt" example:"2026-09-30T14:02:00Z"`
+	ProposedDoses int    `json:"proposedDoses" example:"2"`
+	AddedDoses    int    `json:"addedDoses" example:"3"`
+	// Manual is true when the parent changed the number the app proposed.
+	Manual bool `json:"manual" example:"true"`
+} // @name ExtensionResponse
+
+type extendTreatmentRequest struct {
+	// Doses is how many doses to add to the end: a whole number from 1 to 60.
+	Doses *int `json:"doses" example:"3"`
+} // @name ExtendTreatmentRequest
 
 type consultationSummaryResponse struct {
 	ID              string   `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
@@ -565,6 +583,71 @@ func (h *Handler) EndTreatment(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ExtendTreatment handles POST /consultations/{consultationId}/medications/{medicationId}/extend
+// (specs/020-recorrer-tratamiento/contracts/medication-extend.md).
+//
+//	@Summary		Add doses to the end of a medication's treatment
+//	@Description	Only because the parent decided so (their doctor told them to): adds `doses` doses after the last one, one
+//	@Description	frequency apart, records who decided and what was proposed vs confirmed, and marks the unregistered doses as
+//	@Description	covered so they are never proposed twice. Nothing that exists changes. Not idempotent on purpose: a second
+//	@Description	attempt for the same doses gets nothing_to_extend (specs/020).
+//	@Tags			consultations
+//	@Accept			json
+//	@Produce		json
+//	@Param			consultationId	path		string					true	"Consultation UUID"
+//	@Param			medicationId	path		string					true	"Medication UUID"
+//	@Param			body			body		extendTreatmentRequest	true	"How many doses to add"
+//	@Success		200				{object}	medicationResponse
+//	@Failure		400				{object}	validationErrorResponseDoc	"doses out of range, or nothing to extend (details: nothing_to_extend)"
+//	@Failure		404				{object}	medicationNotFoundResponseDoc	"No such medication in this consultation"
+//	@Security		ClerkSession
+//	@Failure		401				{object}	sessionErrorResponseDoc	"No valid Clerk session"
+//	@Failure		403				{object}	sessionErrorResponseDoc	"The session does not own this resource"
+//	@Router			/consultations/{consultationId}/medications/{medicationId}/extend [post]
+func (h *Handler) ExtendTreatment(w http.ResponseWriter, r *http.Request) {
+	consultationID, err := uuid.Parse(chi.URLParam(r, "consultationId"))
+	if err != nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, medicationNotFoundBody(), nil)
+		return
+	}
+	medicationID, err := uuid.Parse(chi.URLParam(r, "medicationId"))
+	if err != nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, medicationNotFoundBody(), nil)
+		return
+	}
+
+	var req extendTreatmentRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusBadRequest, "validation_error", "Malformed JSON body", nil)
+		return
+	}
+	if req.Doses == nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody(ValidationErrors{{
+			Field:   "doses",
+			Message: "is required",
+		}}, "One or more fields are invalid"), nil)
+		return
+	}
+
+	med, err := h.service.ExtendTreatment(r.Context(), consultationID, medicationID, *req.Doses)
+	var validation ValidationErrors
+	switch {
+	case errors.As(err, &validation):
+		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody(validation, "One or more fields are invalid"), nil)
+	case errors.Is(err, ErrMedicationNotFound):
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, medicationNotFoundBody(), nil)
+	case errors.Is(err, ErrNothingToExtend):
+		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody(ValidationErrors{{
+			Field:   "medicationId",
+			Message: "nothing_to_extend",
+		}}, "One or more fields are invalid"), nil)
+	case err != nil:
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not extend the treatment", nil)
+	default:
+		h.responder.WriteJSON(r.Context(), w, http.StatusOK, toMedicationResponse(med), nil)
+	}
+}
+
 type medicationNotFoundResponseDoc struct {
 	Error   string `json:"error" example:"medication_not_found"`
 	Message string `json:"message" example:"Medication not found"`
@@ -584,14 +667,25 @@ func toMedicationResponse(m *Medication) medicationResponse {
 		formatted := m.EndedAt.Format(time.RFC3339)
 		endedAt = &formatted
 	}
+	extensions := make([]extensionResponse, 0, len(m.Extensions))
+	for _, e := range m.Extensions {
+		extensions = append(extensions, extensionResponse{
+			CreatedAt:     e.CreatedAt.Format(time.RFC3339),
+			ProposedDoses: e.ProposedDoses,
+			AddedDoses:    e.AddedDoses,
+			Manual:        e.Manual(),
+		})
+	}
 	return medicationResponse{
-		ID:             m.ID.String(),
-		Name:           m.Name,
-		FrequencyHours: m.FrequencyHours,
-		DurationDays:   m.DurationDays,
-		StartTime:      m.StartTime,
-		EndedAt:        endedAt,
-		Doses:          doses,
+		ID:              m.ID.String(),
+		Name:            m.Name,
+		FrequencyHours:  m.FrequencyHours,
+		DurationDays:    m.DurationDays,
+		StartTime:       m.StartTime,
+		EndedAt:         endedAt,
+		Doses:           doses,
+		ExtendableDoses: m.ExtendableDoses,
+		Extensions:      extensions,
 	}
 }
 

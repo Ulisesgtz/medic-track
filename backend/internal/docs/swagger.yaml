@@ -206,6 +206,30 @@ definitions:
         example: Could not create account
         type: string
     type: object
+  ExtendTreatmentRequest:
+    properties:
+      doses:
+        description: 'Doses is how many doses to add to the end: a whole number from
+          1 to 60.'
+        example: 3
+        type: integer
+    type: object
+  ExtensionResponse:
+    properties:
+      addedDoses:
+        example: 3
+        type: integer
+      createdAt:
+        example: "2026-09-30T14:02:00Z"
+        type: string
+      manual:
+        description: Manual is true when the parent changed the number the app proposed.
+        example: true
+        type: boolean
+      proposedDoses:
+        example: 2
+        type: integer
+    type: object
   FieldError:
     properties:
       field:
@@ -253,6 +277,18 @@ definitions:
           null while it runs.
         example: "2026-09-30T14:02:00Z"
         type: string
+      extendableDoses:
+        description: |-
+          ExtendableDoses is how many unregistered doses haven't been covered by an extension yet (specs/020): the number the
+          app proposes adding; the button "Recorrer tratamiento" shows only when it is above 0. 0 once the treatment ended.
+        example: 2
+        type: integer
+      extensions:
+        description: Extensions are the parent's decisions to add doses to the end,
+          oldest first.
+        items:
+          $ref: '#/definitions/ExtensionResponse'
+        type: array
       frequencyHours:
         example: 8
         type: integer
@@ -1311,6 +1347,60 @@ paths:
       security:
       - ClerkSession: []
       summary: End a medication's treatment early
+      tags:
+      - consultations
+  /consultations/{consultationId}/medications/{medicationId}/extend:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Only because the parent decided so (their doctor told them to): adds `doses` doses after the last one, one
+        frequency apart, records who decided and what was proposed vs confirmed, and marks the unregistered doses as
+        covered so they are never proposed twice. Nothing that exists changes. Not idempotent on purpose: a second
+        attempt for the same doses gets nothing_to_extend (specs/020).
+      parameters:
+      - description: Consultation UUID
+        in: path
+        name: consultationId
+        required: true
+        type: string
+      - description: Medication UUID
+        in: path
+        name: medicationId
+        required: true
+        type: string
+      - description: How many doses to add
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/ExtendTreatmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/MedicationResponse'
+        "400":
+          description: 'doses out of range, or nothing to extend (details: nothing_to_extend)'
+          schema:
+            $ref: '#/definitions/ConsultationValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "404":
+          description: No such medication in this consultation
+          schema:
+            $ref: '#/definitions/MedicationNotFoundResponse'
+      security:
+      - ClerkSession: []
+      summary: Add doses to the end of a medication's treatment
       tags:
       - consultations
   /reminders/actions/taken:

@@ -283,7 +283,7 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Consultation, 
 	for i := range c.Medications {
 		med := &c.Medications[i]
 		doseRows, err := r.pool.Query(ctx, `
-			SELECT id, scheduled_at, taken, created_at
+			SELECT id, scheduled_at, taken, created_at, covered_by_extension_id IS NOT NULL
 			FROM doses WHERE medication_id = $1 ORDER BY scheduled_at ASC
 		`, med.ID)
 		if err != nil {
@@ -291,7 +291,7 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Consultation, 
 		}
 		for doseRows.Next() {
 			dose := Dose{MedicationID: med.ID}
-			if err := doseRows.Scan(&dose.ID, &dose.ScheduledAt, &dose.Taken, &dose.CreatedAt); err != nil {
+			if err := doseRows.Scan(&dose.ID, &dose.ScheduledAt, &dose.Taken, &dose.CreatedAt, &dose.Covered); err != nil {
 				doseRows.Close()
 				return nil, fmt.Errorf("scanning dose: %w", err)
 			}
@@ -303,9 +303,50 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Consultation, 
 			return nil, fmt.Errorf("iterating doses: %w", err)
 		}
 		doseRows.Close()
+
+		med.ExtendableDoses = len(uncoveredUnregistered(med.Doses, med.EndedAt))
+		if med.Extensions, err = extensionsOf(ctx, r.pool, med.ID); err != nil {
+			return nil, err
+		}
 	}
 
 	return c, nil
+}
+
+// uncoveredUnregistered are the doses an extension would cover (specs/020): "sin registrar" and not yet taken into
+// account by an earlier extension. None once the treatment was ended.
+func uncoveredUnregistered(doses []Dose, endedAt *time.Time) []Dose {
+	if endedAt != nil {
+		return nil
+	}
+	var out []Dose
+	for _, d := range doses {
+		if d.Status == DoseStatusUnregistered && !d.Covered {
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
+// extensionsOf reads a medication's extensions, oldest first.
+func extensionsOf(ctx context.Context, q rowsQuerier, medicationID uuid.UUID) ([]Extension, error) {
+	rows, err := q.Query(ctx, `
+		SELECT id, created_at, proposed_doses, added_doses
+		FROM medication_extensions WHERE medication_id = $1 ORDER BY created_at ASC, id ASC
+	`, medicationID)
+	if err != nil {
+		return nil, fmt.Errorf("querying extensions: %w", err)
+	}
+	defer rows.Close()
+	var out []Extension
+	for rows.Next() {
+		var e Extension
+		if err := rows.Scan(&e.ID, &e.CreatedAt, &e.ProposedDoses, &e.AddedDoses); err != nil {
+			return nil, fmt.Errorf("scanning extension: %w", err)
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
 }
 
 // UpdateDoseStatus sets a dose's taken status, with no validation of
@@ -364,6 +405,103 @@ func (r *Repository) EndTreatment(ctx context.Context, consultationID, medicatio
 		`, medicationID, consultationID, now); err != nil {
 			return nil, fmt.Errorf("ending treatment: %w", err)
 		}
+	}
+
+	c, err := r.GetByID(ctx, consultationID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range c.Medications {
+		if c.Medications[i].ID == medicationID {
+			return &c.Medications[i], nil
+		}
+	}
+	return nil, ErrMedicationNotFound
+}
+
+// ExtendTreatment adds `doses` doses to the end of a medication, only because the parent decided so (specs/020): in
+// one transaction with the medication locked, it records the decision (account that owns the consultation, what was
+// proposed, what was confirmed), marks every unregistered dose as covered and appends the new doses after the last one,
+// one frequency apart. Nothing that exists changes. ErrMedicationNotFound if it isn't of this consultation;
+// ErrNothingToExtend if it was ended or has no unregistered dose left to cover — which is also what a second attempt
+// (another tap, another device) gets, so the same doses are never covered twice.
+func (r *Repository) ExtendTreatment(ctx context.Context, consultationID, medicationID uuid.UUID, doses int) (*Medication, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("beginning extension: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var frequencyHours int
+	var endedAt *time.Time
+	if err := tx.QueryRow(ctx, `
+		SELECT frequency_hours, ended_at FROM medications WHERE id = $1 AND consultation_id = $2 FOR UPDATE
+	`, medicationID, consultationID).Scan(&frequencyHours, &endedAt); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrMedicationNotFound
+		}
+		return nil, fmt.Errorf("locking medication: %w", err)
+	}
+	if endedAt != nil {
+		return nil, ErrNothingToExtend
+	}
+
+	now := r.now() // one reading for the whole decision
+	rows, err := tx.Query(ctx, `
+		SELECT id, scheduled_at, taken, covered_by_extension_id IS NOT NULL FROM doses WHERE medication_id = $1
+	`, medicationID)
+	if err != nil {
+		return nil, fmt.Errorf("reading doses: %w", err)
+	}
+	var last time.Time
+	var covering []string
+	for rows.Next() {
+		var id uuid.UUID
+		var scheduledAt time.Time
+		var taken, covered bool
+		if err := rows.Scan(&id, &scheduledAt, &taken, &covered); err != nil {
+			rows.Close()
+			return nil, fmt.Errorf("scanning dose: %w", err)
+		}
+		if scheduledAt.After(last) {
+			last = scheduledAt
+		}
+		if !covered && StatusAt(scheduledAt, taken, frequencyHours, nil, now) == DoseStatusUnregistered {
+			covering = append(covering, id.String())
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating doses: %w", err)
+	}
+	if len(covering) == 0 {
+		return nil, ErrNothingToExtend
+	}
+
+	var extensionID uuid.UUID
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO medication_extensions (medication_id, account_id, proposed_doses, added_doses)
+		SELECT $1, ch.account_id, $2, $3
+		FROM consultations co JOIN children ch ON ch.id = co.child_id WHERE co.id = $4
+		RETURNING id
+	`, medicationID, len(covering), doses, consultationID).Scan(&extensionID); err != nil {
+		return nil, fmt.Errorf("recording extension: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE doses SET covered_by_extension_id = $1 WHERE id = ANY($2::uuid[])
+	`, extensionID, covering); err != nil {
+		return nil, fmt.Errorf("covering doses: %w", err)
+	}
+	step := time.Duration(frequencyHours) * time.Hour
+	for k := 1; k <= doses; k++ {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO doses (medication_id, scheduled_at, added_by_extension_id) VALUES ($1, $2, $3)
+		`, medicationID, last.Add(time.Duration(k)*step), extensionID); err != nil {
+			return nil, fmt.Errorf("adding dose: %w", err)
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("committing extension: %w", err)
 	}
 
 	c, err := r.GetByID(ctx, consultationID)
