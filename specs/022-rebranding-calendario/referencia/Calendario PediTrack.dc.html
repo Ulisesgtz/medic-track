@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>body{margin:0;background:#e2e8f0;font-family:'Figtree',sans-serif;color:#0f172a}a{color:#0e7490}a:hover{color:#04252b}</style>
+</helmet>
+<section style="padding:48px;display:flex;flex-direction:column;gap:24px">
+<div style="display:flex;flex-direction:column;gap:6px">
+<div style="font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#0e7490">Turno 1</div>
+<div style="font-size:32px;font-weight:900;color:#04252b">Calendario del tratamiento con la paleta nueva</div>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:48px;align-items:flex-start">
+
+<div id="1a" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;gap:8px;align-items:center"><span style="background:#04252b;color:#22d3ee;font-weight:800;font-size:13px;padding:4px 10px;border-radius:999px">1a</span><span style="font-weight:700;color:#334155">Móvil · 430 px</span></div>
+<div style="width:430px;background:#f0fdff;border-radius:28px;padding:28px 20px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px;box-shadow:0 20px 50px rgba(4,37,43,.15)">
+<div style="font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#04252b">Calendario del tratamiento</div>
+<div style="background:#fff;border-radius:24px;padding:20px 16px;display:flex;flex-direction:column;gap:18px;box-shadow:0 8px 24px rgba(4,37,43,.06)">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<button style="width:40px;height:40px;border-radius:12px;border:1px solid #cffafe;background:#ecfeff;color:#0e7490;font-size:20px;font-weight:800;cursor:pointer;font-family:inherit">‹</button>
+<div style="font-size:20px;font-weight:900;color:#04252b">febrero 2025</div>
+<button style="width:40px;height:40px;border-radius:12px;border:1px solid #cffafe;background:#ecfeff;color:#0e7490;font-size:20px;font-weight:800;cursor:pointer;font-family:inherit">›</button>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">
+<sc-for list="{{ weekdays }}" as="w" hint-placeholder-count="7"><div style="text-align:center;font-size:12px;font-weight:800;color:#64748b;padding-bottom:4px">{{ w }}</div></sc-for>
+<sc-for list="{{ days }}" as="d" hint-placeholder-count="35">
+<div style="height:54px">
+<sc-if value="{{ d.isOut }}"><div style="height:100%;display:flex;justify-content:center;padding-top:8px;box-sizing:border-box;font-size:16px;font-weight:700;color:#94a3b8">{{ d.n }}</div></sc-if>
+<sc-if value="{{ d.isTreat }}"><div style="height:100%;box-sizing:border-box;background:#ecfeff;border:1px solid #cffafe;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:7px;cursor:pointer">
+<span style="font-size:16px;font-weight:800;color:#04252b">{{ d.n }}</span>
+<div style="display:flex;gap:3px"><sc-for list="{{ d.dots }}" as="dot"><span style="width:7px;height:7px;border-radius:50%;box-sizing:border-box;border:2px solid {{ dot.color }};background:{{ dot.fill }}"></span></sc-for></div>
+</div></sc-if>
+<sc-if value="{{ d.isSel }}"><div style="height:100%;box-sizing:border-box;background:#04252b;border-radius:12px;box-shadow:0 0 0 2px #22d3ee;display:flex;flex-direction:column;align-items:center;gap:6px;padding-top:7px">
+<span style="font-size:16px;font-weight:900;color:#fff">{{ d.n }}</span>
+<div style="display:flex;gap:3px"><sc-for list="{{ d.dots }}" as="dot"><span style="width:7px;height:7px;border-radius:50%;box-sizing:border-box;border:2px solid {{ dot.selColor }};background:{{ dot.selFill }}"></span></sc-for></div>
+</div></sc-if>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ meds }}" as="m" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:10px"><span style="width:26px;height:26px;border-radius:50%;background:{{ m.color }};color:#fff;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ m.n }}</span><span style="font-size:14px;font-weight:800;color:#1e293b;letter-spacing:.02em">{{ m.name }}</span></div></sc-for>
+</div>
+<div style="height:1px;background:#cffafe"></div>
+<div style="font-size:18px;font-weight:900;color:#04252b">Tomas del 4 de febrero</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ doses }}" as="t" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:10px">
+<span style="width:26px;height:26px;border-radius:50%;background:{{ t.color }};color:#fff;font-size:13px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ t.n }}</span>
+<span style="flex:1;min-width:0;font-size:14px;font-weight:800;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ t.name }}</span>
+<sc-if value="{{ t.isDone }}"><div style="width:130px;box-sizing:border-box;padding:8px;border-radius:12px;background:#ecfdf5;border:1.5px solid #10b981;text-align:center"><div style="font-size:16px;font-weight:900;color:#047857">✓ {{ t.time }}</div><div style="font-size:12px;font-weight:700;color:#047857">dada {{ t.at }}</div></div></sc-if>
+<sc-if value="{{ t.isPending }}"><div style="width:130px;box-sizing:border-box;padding:8px;border-radius:12px;background:#fffbeb;border:1.5px solid #f59e0b;text-align:center;cursor:pointer"><div style="font-size:16px;font-weight:900;color:#92400e">{{ t.time }}</div><div style="font-size:12px;font-weight:700;color:#92400e">sin registrar</div></div></sc-if>
+<sc-if value="{{ t.isNext }}"><div style="width:130px;box-sizing:border-box;padding:8px;border-radius:12px;background:#fff;border:1.5px dashed #cbd5e1;text-align:center"><div style="font-size:16px;font-weight:900;color:#475569">{{ t.time }}</div><div style="font-size:12px;font-weight:700;color:#64748b">próxima</div></div></sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+</div>
+
+<div id="1b" style="display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;gap:8px;align-items:center"><span style="background:#04252b;color:#22d3ee;font-weight:800;font-size:13px;padding:4px 10px;border-radius:999px">1b</span><span style="font-weight:700;color:#334155">Web · 1024 px</span></div>
+<div style="width:1024px;background:#f0fdff;border-radius:20px;padding:36px 44px;box-sizing:border-box;display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:28px;align-items:start;box-shadow:0 20px 50px rgba(4,37,43,.15)">
+<div style="display:flex;flex-direction:column;gap:14px">
+<div style="font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#04252b">Calendario del tratamiento</div>
+<div style="background:#fff;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:20px;box-shadow:0 8px 24px rgba(4,37,43,.06)">
+<div style="display:flex;align-items:center;justify-content:space-between">
+<button style="width:36px;height:36px;border-radius:10px;border:1px solid #cffafe;background:#ecfeff;color:#0e7490;font-size:18px;font-weight:800;cursor:pointer;font-family:inherit">‹</button>
+<div style="font-size:18px;font-weight:900;color:#04252b">febrero 2025</div>
+<button style="width:36px;height:36px;border-radius:10px;border:1px solid #cffafe;background:#ecfeff;color:#0e7490;font-size:18px;font-weight:800;cursor:pointer;font-family:inherit">›</button>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px">
+<sc-for list="{{ weekdays }}" as="w" hint-placeholder-count="7"><div style="text-align:center;font-size:12px;font-weight:800;color:#64748b;padding-bottom:4px">{{ w }}</div></sc-for>
+<sc-for list="{{ days }}" as="d" hint-placeholder-count="35">
+<div style="height:62px">
+<sc-if value="{{ d.isOut }}"><div style="height:100%;display:flex;justify-content:center;padding-top:10px;box-sizing:border-box;font-size:15px;font-weight:700;color:#94a3b8">{{ d.n }}</div></sc-if>
+<sc-if value="{{ d.isTreat }}"><div style="height:100%;box-sizing:border-box;background:#ecfeff;border:1px solid #cffafe;border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:9px;cursor:pointer" style-hover="background:#cffafe">
+<span style="font-size:15px;font-weight:800;color:#04252b">{{ d.n }}</span>
+<div style="display:flex;gap:4px"><sc-for list="{{ d.dots }}" as="dot"><span style="width:8px;height:8px;border-radius:50%;box-sizing:border-box;border:2px solid {{ dot.color }};background:{{ dot.fill }}"></span></sc-for></div>
+</div></sc-if>
+<sc-if value="{{ d.isSel }}"><div style="height:100%;box-sizing:border-box;background:#04252b;border-radius:12px;box-shadow:0 0 0 2px #22d3ee;display:flex;flex-direction:column;align-items:center;gap:8px;padding-top:9px">
+<span style="font-size:15px;font-weight:900;color:#fff">{{ d.n }}</span>
+<div style="display:flex;gap:4px"><sc-for list="{{ d.dots }}" as="dot"><span style="width:8px;height:8px;border-radius:50%;box-sizing:border-box;border:2px solid {{ dot.selColor }};background:{{ dot.selFill }}"></span></sc-for></div>
+</div></sc-if>
+</div>
+</sc-for>
+</div>
+<div style="display:flex;flex-wrap:wrap;gap:10px 22px">
+<sc-for list="{{ meds }}" as="m" hint-placeholder-count="3"><div style="display:flex;align-items:center;gap:8px"><span style="width:22px;height:22px;border-radius:50%;background:{{ m.color }};color:#fff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center">{{ m.n }}</span><span style="font-size:13px;font-weight:800;color:#1e293b;letter-spacing:.02em">{{ m.name }}</span></div></sc-for>
+</div>
+<div style="height:1px;background:#cffafe"></div>
+<div style="font-size:16px;font-weight:900;color:#04252b">Tomas del 4 de febrero</div>
+<div style="display:flex;flex-direction:column;gap:10px">
+<sc-for list="{{ doses }}" as="t" hint-placeholder-count="4">
+<div style="display:flex;align-items:center;gap:12px">
+<span style="width:24px;height:24px;border-radius:50%;background:{{ t.color }};color:#fff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center;flex-shrink:0">{{ t.n }}</span>
+<span style="flex:1;min-width:0;font-size:14px;font-weight:800;color:#1e293b">{{ t.name }}</span>
+<sc-if value="{{ t.isDone }}"><div style="width:160px;box-sizing:border-box;padding:7px;border-radius:12px;background:#ecfdf5;border:1.5px solid #10b981;text-align:center"><div style="font-size:15px;font-weight:900;color:#047857">✓ {{ t.time }}</div><div style="font-size:12px;font-weight:700;color:#047857">dada {{ t.at }}</div></div></sc-if>
+<sc-if value="{{ t.isPending }}"><div style="width:160px;box-sizing:border-box;padding:7px;border-radius:12px;background:#fffbeb;border:1.5px solid #f59e0b;text-align:center;cursor:pointer" style-hover="background:#fef3c7"><div style="font-size:15px;font-weight:900;color:#92400e">{{ t.time }}</div><div style="font-size:12px;font-weight:700;color:#92400e">sin registrar</div></div></sc-if>
+<sc-if value="{{ t.isNext }}"><div style="width:160px;box-sizing:border-box;padding:7px;border-radius:12px;background:#fff;border:1.5px dashed #cbd5e1;text-align:center"><div style="font-size:15px;font-weight:900;color:#475569">{{ t.time }}</div><div style="font-size:12px;font-weight:700;color:#64748b">próxima</div></div></sc-if>
+</div>
+</sc-for>
+</div>
+</div>
+</div>
+<div style="display:flex;flex-direction:column;gap:16px;padding-top:30px">
+<div style="background:#04252b;border-radius:24px;padding:24px;display:flex;flex-direction:column;gap:8px">
+<div style="font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#22d3ee">Tratamiento activo</div>
+<div style="font-size:20px;font-weight:900;color:#fff">Paracetamol</div>
+<div style="font-size:14px;font-weight:700;color:#a5f3fc">termina el 01 oct</div>
+</div>
+<div style="background:#fff;border-radius:24px;padding:22px;display:flex;flex-direction:column;gap:12px;box-shadow:0 8px 24px rgba(4,37,43,.06)">
+<div style="font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:#04252b">Cómo leer el calendario</div>
+<div style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:#334155"><span style="width:10px;height:10px;border-radius:50%;background:#0e7490;border:2px solid #0e7490;box-sizing:border-box"></span>Punto relleno: dosis dada</div>
+<div style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:#334155"><span style="width:10px;height:10px;border-radius:50%;border:2px solid #0e7490;box-sizing:border-box"></span>Punto vacío: dosis sin registrar</div>
+<div style="display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;color:#334155"><span style="width:18px;height:14px;border-radius:4px;background:#ecfeff;border:1px solid #cffafe"></span>Día dentro del tratamiento</div>
+</div>
+</div>
+</div>
+</div>
+
+</div>
+</section>
+<template id="__bundler_thumbnail" data-bg-color="#04252b"><svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><rect x="30" y="32" width="40" height="36" rx="6" fill="none" stroke="#22d3ee" stroke-width="4"></rect><rect x="30" y="32" width="40" height="9" rx="3" fill="#22d3ee"></rect><circle cx="42" cy="54" r="3" fill="#22d3ee"></circle><circle cx="50" cy="54" r="3" fill="#fff"></circle><circle cx="58" cy="54" r="3" fill="#22d3ee"></circle></svg></template></x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const meds = [
+      { n: 1, name: 'PARACETAMOL', color: '#0e7490' },
+      { n: 2, name: 'TRAMADOL / KETOROLACO', color: '#7c3aed' },
+      { n: 3, name: 'METOCLOPRAMIDA', color: '#db2777' },
+    ];
+    const dot = (m, done) => ({
+      color: m.color, fill: done ? m.color : 'transparent',
+      selColor: done ? '#22d3ee' : '#a5f3fc', selFill: done ? '#22d3ee' : 'transparent',
+    });
+    const days = [];
+    for (let i = 0; i < 5; i++) days.push({ n: '', isOut: true });
+    for (let n = 1; n <= 28; n++) {
+      if (n === 4) days.push({ n, isSel: true, dots: meds.map((m, i) => dot(m, i === 0)) });
+      else if (n > 4 && n <= 11) days.push({ n, isTreat: true, dots: meds.map(m => dot(m, false)) });
+      else days.push({ n, isOut: true });
+    }
+    const doses = [
+      { ...meds[0], time: '16:32', at: '16:40', isDone: true },
+      { ...meds[1], time: '16:34', isPending: true },
+      { ...meds[2], time: '16:37', isPending: true },
+      { ...meds[0], time: '22:32', isNext: true },
+    ];
+    return { weekdays: ['L', 'M', 'M', 'J', 'V', 'S', 'D'], days, meds, doses };
+  }
+}
+</script>
+</body>
+</html>
