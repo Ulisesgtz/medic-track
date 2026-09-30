@@ -12,22 +12,23 @@
 
 ### Historia de Usuario 1 - Recorrer el tratamiento cuando el médico lo indicó (Prioridad: P1)
 
-Cuando un medicamento tiene tomas **sin registrar** (spec 013), el padre puede decidir —porque su médico se lo indicó— **agregar al final del tratamiento** tantas tomas como las que quedaron sin registrar. Lo hace con un botón «Recorrer tratamiento» en la tarjeta del medicamento, que pide una confirmación clara, y queda registrado **quién** lo decidió y **cuándo**. La app **nunca** lo hace sola ni lo sugiere: la decisión de reponer las tomas es del médico y del padre (Principio I).
+Cuando un medicamento tiene tomas **sin registrar** (spec 013), el padre puede decidir —porque su médico se lo indicó— **agregar al final del tratamiento** tomas más. Lo hace con un botón «Recorrer tratamiento» en la tarjeta del medicamento, que propone tantas tomas como las que quedaron sin registrar, le deja **confirmar ese número o cambiarlo**, y queda registrado **quién** lo decidió, **cuándo** y si el número lo ingresó él manualmente. La app **nunca** lo hace sola ni lo sugiere: la decisión de reponer las tomas es del médico y del padre (Principio I).
 
 **Por qué esta prioridad**: es el pedido del B5 («la fecha de fin se recorra»), pero con la regla acordada: solo con una decisión explícita del padre. Sin esto, una toma perdida deja la fecha de fin desactualizada para quien sí repone.
 
-**Prueba Independiente**: un medicamento cada 8 h por 3 días con 2 tomas sin registrar; el padre toca «Recorrer tratamiento», confirma, y el medicamento termina 2 tomas (16 h) después; el detalle muestra cuántas tomas se agregaron y cuándo, y las 2 sin registrar siguen sin registrar.
+**Prueba Independiente**: un medicamento cada 8 h por 3 días con 2 tomas sin registrar; el padre toca «Recorrer tratamiento», ve propuesto el número 2, confirma, y el medicamento termina 2 tomas (16 h) después; repitiéndolo con 5 en lugar de 2, el diálogo y la tarjeta dicen que el número lo ingresó él; en ambos casos el detalle muestra cuántas tomas se agregaron y cuándo, y las 2 sin registrar siguen sin registrar.
 
 **Escenarios de Aceptación**:
 
 1. **Dado** un medicamento sin finalizar con al menos una toma «sin registrar» que aún no se ha recorrido, **Cuando** el padre ve su tarjeta, **Entonces** hay un botón «Recorrer tratamiento» de contorno, discreto, sin lenguaje que lo recomiende.
-2. **Dado** el botón, **Cuando** lo toca, **Entonces** aparece un diálogo neutral que dice cuántas tomas se agregarán y hasta cuándo quedaría el tratamiento, pregunta si su médico se lo indicó, avisa que quedará registrado en su cuenta y que no se puede deshacer, con «Cancelar» (enfocado) y «Sí, recorrer».
-3. **Dado** que confirma, **Entonces** se agregan al final del medicamento tantas tomas como tomas sin registrar había, con su misma frecuencia a partir de la última toma; las tomas sin registrar **no cambian** (siguen siendo historia) y el tratamiento ahora termina después.
-4. **Dado** que confirma, **Entonces** queda registrado qué cuenta lo decidió, cuándo y cuántas tomas agregó; la tarjeta lo dice («Se recorrió el 30 sep · +2 tomas»).
-5. **Dado** un medicamento ya recorrido, **Cuando** no hay tomas sin registrar nuevas, **Entonces** no vuelve a ofrecerse; si después llegan tomas sin registrar nuevas, se puede recorrer otra vez **solo por esas**.
-6. **Dado** un medicamento finalizado (spec 016), **Entonces** no se ofrece recorrerlo.
-7. **Dado** que el padre cancela o cierra el diálogo, **Entonces** no cambia nada.
-8. **Dado** las tomas agregadas, **Entonces** se comportan como cualquier otra: estados (pendiente, por marcar, tomada, sin registrar), recordatorios, progreso («x / total» sube en el total), «Tomas de hoy», tratamiento activo y marcar/desmarcar.
+2. **Dado** el botón, **Cuando** lo toca, **Entonces** aparece un diálogo neutral con el número de tomas a agregar **propuesto** (las que están sin registrar) en un campo que puede confirmar o cambiar, y debajo hasta cuándo quedaría el tratamiento con ese número; pregunta si su médico se lo indicó, avisa que quedará registrado en su cuenta y que no se puede deshacer, con «Cancelar» (enfocado) y «Sí, recorrer».
+3. **Dado** que cambia el número, **Entonces** el diálogo muestra una nota: «Cambiaste el número propuesto: quedará registrado que lo ingresaste tú manualmente.», y el «hasta cuándo» se actualiza; no acepta números que no sean enteros de 1 a 60.
+4. **Dado** que confirma, **Entonces** se agregan al final del medicamento tantas tomas como el número confirmado, con su misma frecuencia a partir de la última toma; las tomas sin registrar **no cambian** (siguen siendo historia) y el tratamiento ahora termina después.
+5. **Dado** que confirma, **Entonces** queda registrado qué cuenta lo decidió, cuándo, el número propuesto y el confirmado; la tarjeta lo dice («Se recorrió el 30 sep · +2 tomas»), y si el número no fue el propuesto, añade «número ingresado manualmente».
+6. **Dado** un medicamento ya recorrido, **Cuando** no hay tomas sin registrar nuevas, **Entonces** no vuelve a ofrecerse; si después llegan tomas sin registrar nuevas, se puede recorrer otra vez **solo por esas** (el número propuesto cuenta solo las nuevas).
+7. **Dado** un medicamento finalizado (spec 016), **Entonces** no se ofrece recorrerlo.
+8. **Dado** que el padre cancela o cierra el diálogo, **Entonces** no cambia nada.
+9. **Dado** las tomas agregadas, **Entonces** se comportan como cualquier otra: estados (pendiente, por marcar, tomada, sin registrar), recordatorios, progreso («x / total» sube en el total), «Tomas de hoy», tratamiento activo y marcar/desmarcar.
 
 ---
 
@@ -52,7 +53,8 @@ En el calendario del tratamiento (spec 019), cada medicamento marca con **su col
 
 ### Casos Límite
 
-- Varias tomas sin registrar: se agregan tantas como sin registrar haya, no una por día.
+- Varias tomas sin registrar: el número propuesto es cuántas hay, no una por día.
+- Un recorrido da por recorridas **todas** las tomas sin registrar que había en ese momento, sin importar el número que el padre confirme (si puso menos, esas tomas no vuelven a ofrecerse: fue su decisión).
 - Tomas sin registrar que el padre marca como tomadas **después** de recorrer: no se quitan las tomas agregadas (la decisión ya se tomó); solo las sin registrar que queden cuentan para un siguiente recorrido.
 - El tratamiento ya terminó por su fecha pero quedaron tomas sin registrar: se puede recorrer (se agregan después de la última toma).
 - Dos dispositivos recorren a la vez: solo se aplica una vez por las mismas tomas (sin duplicar).
@@ -67,10 +69,10 @@ En el calendario del tratamiento (spec 019), cada medicamento marca con **su col
 
 - **FR-001**: La app NUNCA DEBE recorrer un tratamiento por sí sola ni sugerirlo; solo lo hace tras la confirmación explícita del padre (Principio I).
 - **FR-002**: Un medicamento sin finalizar con tomas «sin registrar» aún no recorridas DEBE mostrar un botón «Recorrer tratamiento» de contorno; sin esas tomas, o finalizado, NO DEBE mostrarse.
-- **FR-003**: Al tocarlo DEBE abrirse un diálogo neutral con: cuántas tomas se agregan, hasta qué día quedaría el tratamiento, la pregunta de si su médico se lo indicó, el aviso de que queda registrado en su cuenta y que no se puede deshacer; «Cancelar» con el foco inicial, Escape y fondo cancelan.
-- **FR-004**: Al confirmar, el sistema DEBE agregar al final del medicamento tantas tomas como tomas sin registrar aún no recorridas tenía, con su frecuencia, a partir de la hora de su última toma; las tomas existentes NO DEBEN cambiar.
-- **FR-005**: Cada recorrido DEBE quedar registrado de forma permanente: la cuenta que lo decidió, cuándo, el medicamento y cuántas tomas agregó; las mismas tomas sin registrar NO DEBEN poder recorrerse dos veces, tampoco desde dos dispositivos a la vez.
-- **FR-006**: La tarjeta del medicamento DEBE decir que se recorrió y cuándo («Se recorrió el 30 sep · +2 tomas»).
+- **FR-003**: Al tocarlo DEBE abrirse un diálogo neutral con: un campo con el número de tomas propuesto (las sin registrar aún no recorridas) que el padre puede confirmar o cambiar (entero de 1 a 60), hasta qué día quedaría el tratamiento con ese número, la pregunta de si su médico se lo indicó, el aviso de que queda registrado en su cuenta y que no se puede deshacer; «Cancelar» con el foco inicial, Escape y fondo cancelan. Si el número cambia, DEBE mostrar la nota de que lo ingresó manualmente.
+- **FR-004**: Al confirmar, el sistema DEBE agregar al final del medicamento el número de tomas confirmado, con su frecuencia, a partir de la hora de su última toma; las tomas existentes NO DEBEN cambiar, y las tomas sin registrar que había quedan como recorridas.
+- **FR-005**: Cada recorrido DEBE quedar registrado de forma permanente: la cuenta que lo decidió, cuándo, el medicamento, el número propuesto y el confirmado (y por tanto si fue manual); las mismas tomas sin registrar NO DEBEN poder recorrerse dos veces, tampoco desde dos dispositivos a la vez.
+- **FR-006**: La tarjeta del medicamento DEBE decir que se recorrió y cuándo («Se recorrió el 30 sep · +2 tomas»), y «número ingresado manualmente» cuando el confirmado no fue el propuesto.
 - **FR-007**: Las tomas agregadas DEBEN ser tomas normales en todo: estados, marcar/desmarcar, recordatorios (spec 011), progreso (spec 014), «Tomas de hoy» y tratamiento activo.
 - **FR-008**: Solo el dueño de la consulta DEBE poder recorrer un medicamento; un medicamento finalizado NO DEBE poder recorrerse.
 - **FR-009**: El calendario (spec 019) DEBE marcar con el color del medicamento los días que tienen al menos una toma de él, y distinguir con una marca rellena el primer día (**inicio**) y el último (**fin**); el nombre accesible del día DEBE decir «inicio de» / «fin de».
@@ -80,7 +82,7 @@ En el calendario del tratamiento (spec 019), cada medicamento marca con **su col
 
 ### Entidades Clave
 
-- **Recorrido del tratamiento**: decisión del padre de agregar N tomas al final de un medicamento; guarda la cuenta, el medicamento, cuántas tomas y cuándo. Es de solo agregar (no se edita ni se borra).
+- **Recorrido del tratamiento**: decisión del padre de agregar N tomas al final de un medicamento; guarda la cuenta, el medicamento, el número propuesto, el confirmado y cuándo. Es de solo agregar (no se edita ni se borra).
 - **Toma agregada**: una toma más del medicamento creada por un recorrido; se distingue de las originales solo en que su recorrido la trajo.
 
 ## Criterios de Éxito *(obligatorio)*
@@ -96,10 +98,10 @@ En el calendario del tratamiento (spec 019), cada medicamento marca con **su col
 ## Supuestos
 
 - **Decisión del usuario (2026-09-30)**: se sigue la opción (b) del backlog y se descarta la (a); el calendario marca inicio y fin con el color del medicamento.
-- Se agregan **tantas tomas como tomas sin registrar** (propuesta a revisar con el usuario): el padre repone exactamente lo que dejó de registrar. No hay opción de elegir otro número.
+- **Decidido por el usuario (2026-09-30)**: la app **propone** tantas tomas como tomas sin registrar, pero el padre puede **confirmar o cambiar el número**; si lo cambia, se le avisa con una nota y queda registrado que lo ingresó manualmente. Un máximo de 60 tomas por recorrido evita errores de captura (propuesta mía, fácil de ajustar).
 - «Quién lo decidió» es la **cuenta del padre** que confirmó (no hay más de un usuario por cuenta); se guarda con la hora y el número de tomas.
 - Esto requiere cambios de servidor: es la **segunda excepción** a la inmutabilidad de las consultas (spec 004, FR-014), después de finalizar (spec 016): ahora también se **agregan tomas**; nada se edita ni se borra. Toca el Principio I, por lo que requiere la confirmación del usuario, que la dio al elegir la opción (b).
 - Las tomas sin registrar no se vuelven a marcar ni se quitan: siguen siendo historia.
-- Fuera de alcance: recorrer automáticamente, elegir cuántas tomas agregar, deshacer un recorrido, recorrer por otro motivo (cambiar la frecuencia o las horas), avisar al médico, y mostrar el historial de recorridos como lista (solo la línea de la tarjeta).
+- Fuera de alcance: recorrer automáticamente, deshacer un recorrido, recorrer por otro motivo (cambiar la frecuencia o las horas), avisar al médico, y mostrar el historial de recorridos como lista (solo la línea de la tarjeta).
 - Depende de: specs 013 (sin registrar), 016 (finalizar), 019 (calendario), 011 (recordatorios), 014 (progreso).
 - Sin mock: se diseña con `design-tokens.md` y se muestran capturas.
