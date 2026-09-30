@@ -9,6 +9,10 @@
 //	@in							header
 //	@name						Authorization
 //	@description				Clerk session token, sent as "Bearer <token>".
+//	@securityDefinitions.apikey	OpsKey
+//	@in							header
+//	@name						Authorization
+//	@description				Operation key (OPS_API_KEY), sent as "Bearer <key>"; only for the team that runs the service.
 //	@BasePath		/
 package main
 
@@ -32,9 +36,11 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/jobreport"
+	"github.com/Ulisesgtz/medic-track/backend/internal/ops"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
 	"github.com/Ulisesgtz/medic-track/backend/internal/platform"
 	"github.com/Ulisesgtz/medic-track/backend/internal/reminder"
+	"github.com/Ulisesgtz/medic-track/backend/internal/retention"
 	"github.com/Ulisesgtz/medic-track/backend/internal/server"
 )
 
@@ -81,6 +87,19 @@ func main() {
 		log.Printf("reminders unavailable: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT and REMINDER_ACTION_SECRET must all be set")
 	}
 
+	// The log doesn't grow forever (specs/021): once a day what is older than the retention is deleted, by batches; a failure
+	// of that job is itself reported to error_logs like any background process's (specs/018).
+	go retention.Run(ctx, errorLogRepo, jobreport.New(errorLogRepo, "error-logs-retention"), retention.ConfigFromEnv())
+
+	// Operation queries over error_logs (specs/021): they exist only with a key; without one there is no such route.
+	var opsHandler *ops.Handler
+	opsKey := os.Getenv("OPS_API_KEY")
+	if opsKey != "" {
+		opsHandler = ops.NewHandler(errorLogRepo, responder)
+	} else {
+		log.Printf("operation queries disabled: OPS_API_KEY is not set")
+	}
+
 	frontendOrigin := os.Getenv("FRONTEND_ORIGIN")
 	if frontendOrigin == "" {
 		frontendOrigin = "http://localhost:5173"
@@ -92,6 +111,8 @@ func main() {
 		Account:        accountHandler,
 		Consultation:   consultationHandler,
 		Reminder:       reminderHandler,
+		Ops:            opsHandler,
+		OpsKey:         opsKey,
 		Ownership:      ownership.NewRepository(pool),
 		FrontendOrigin: frontendOrigin,
 		RequireSession: authmw.RequireSession(responder),

@@ -199,11 +199,15 @@ func TestExtendTreatment_NothingUnregisteredNothingToExtend(t *testing.T) {
 	pool := testPool(t)
 	svc := consultation.NewService(consultation.NewRepository(pool))
 	childID := createTestChild(t, pool)
-	// Starts in a few hours: no dose has come yet.
-	start := time.Now().UTC().Add(3 * time.Hour)
+	// Today's first dose is at 23:59 UTC: no dose has come yet. (A consultation cannot be dated tomorrow, so the start
+	// can't just be "a few hours from now": after 21:00 UTC that is already tomorrow.)
+	now := time.Now().UTC()
+	if now.Hour() == 23 && now.Minute() >= 58 {
+		t.Skip("the minute before midnight UTC: the first dose of the day is about to come")
+	}
 	c, err := svc.CreateConsultation(context.Background(), childID, consultation.CreateConsultationInput{
-		DoctorName: "Dra. López", ConsultDate: time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, time.UTC), Photo: samplePhoto(),
-		Medications: []consultation.CreateMedicationInput{{Name: "Nueva", FrequencyHours: 8, DurationDays: 1, StartTime: strPtr(start.Format("15:04"))}},
+		DoctorName: "Dra. López", ConsultDate: time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC), Photo: samplePhoto(),
+		Medications: []consultation.CreateMedicationInput{{Name: "Nueva", FrequencyHours: 24, DurationDays: 1, StartTime: strPtr("23:59")}},
 	})
 	require.NoError(t, err)
 

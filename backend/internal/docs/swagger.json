@@ -1095,6 +1095,156 @@
                 }
             }
         },
+        "/ops/error-logs": {
+            "get": {
+                "security": [
+                    {
+                        "OpsKey": []
+                    }
+                ],
+                "description": "For the team that runs the service, not for parents: needs the operation key (`Authorization: Bearer\n\u003cOPS_API_KEY\u003e`), and the route does not exist when the server has none. A wrong or missing key gets the\nsame 404 as an unknown route. Filters by period (default: the last 7 days), endpoint (exact or prefix such as\n`job:`), status and account; paged by cursor (100 by default, at most 500).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operations"
+                ],
+                "summary": "List the registered errors, newest first",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "RFC 3339; default: 7 days ago",
+                        "name": "since",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC 3339; default: no upper bound",
+                        "name": "until",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Exact endpoint, e.g. /accounts or job:reminders",
+                        "name": "endpoint",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Endpoint prefix, e.g. job:",
+                        "name": "endpointPrefix",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "HTTP status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "1 to 500; default 100",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "nextCursor of the previous page",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorLogListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorLogValidationError"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/error-logs/summary": {
+            "get": {
+                "security": [
+                    {
+                        "OpsKey": []
+                    }
+                ],
+                "description": "Groups by endpoint, status and message with how often each happened and when first and last; the most\nfrequent first (the most recent breaks a tie), up to 100 groups. Same key and filters as the list.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operations"
+                ],
+                "summary": "Summarize the registered errors of a period",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "RFC 3339; default: 7 days ago",
+                        "name": "since",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC 3339; default: no upper bound",
+                        "name": "until",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Exact endpoint",
+                        "name": "endpoint",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Endpoint prefix, e.g. job:",
+                        "name": "endpointPrefix",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "HTTP status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorLogSummaryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorLogValidationError"
+                        }
+                    }
+                }
+            }
+        },
         "/reminders/actions/taken": {
             "post": {
                 "description": "Public (no session). The token names one dose and the device that received it; it\nonly works while that device is on and belongs to the dose's account, and for 24 h.",
@@ -1443,6 +1593,128 @@
                 "message": {
                     "type": "string",
                     "example": "Email is already in use"
+                }
+            }
+        },
+        "ErrorLogEntry": {
+            "type": "object",
+            "properties": {
+                "accountId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "createdAt": {
+                    "type": "string",
+                    "example": "2026-09-30T14:02:11Z"
+                },
+                "endpoint": {
+                    "type": "string",
+                    "example": "/accounts"
+                },
+                "file": {
+                    "type": "string",
+                    "example": "internal/account/handler.go"
+                },
+                "httpStatus": {
+                    "type": "integer",
+                    "example": 400
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "line": {
+                    "type": "integer",
+                    "example": 88
+                },
+                "message": {
+                    "type": "string",
+                    "example": "email is required"
+                }
+            }
+        },
+        "ErrorLogListResponse": {
+            "type": "object",
+            "properties": {
+                "entries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ErrorLogEntry"
+                    }
+                },
+                "nextCursor": {
+                    "description": "NextCursor is null on the last page.",
+                    "type": "string",
+                    "example": "MTc5MDc3MDAwMDAwMDAwMDAwMC5hMWIyYzNkNA"
+                }
+            }
+        },
+        "ErrorLogSummaryGroup": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer",
+                    "example": 42
+                },
+                "endpoint": {
+                    "type": "string",
+                    "example": "/accounts"
+                },
+                "firstSeen": {
+                    "type": "string",
+                    "example": "2026-09-24T10:00:00Z"
+                },
+                "httpStatus": {
+                    "type": "integer",
+                    "example": 400
+                },
+                "lastSeen": {
+                    "type": "string",
+                    "example": "2026-09-30T13:58:02Z"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "email is required"
+                }
+            }
+        },
+        "ErrorLogSummaryResponse": {
+            "type": "object",
+            "properties": {
+                "groups": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ErrorLogSummaryGroup"
+                    }
+                }
+            }
+        },
+        "ErrorLogValidationError": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "field": {
+                                "type": "string",
+                                "example": "limit"
+                            },
+                            "message": {
+                                "type": "string",
+                                "example": "must be a whole number from 1 to 500"
+                            }
+                        }
+                    }
+                },
+                "error": {
+                    "type": "string",
+                    "example": "validation_error"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "One or more fields are invalid"
                 }
             }
         },
@@ -2057,6 +2329,12 @@
     "securityDefinitions": {
         "ClerkSession": {
             "description": "Clerk session token, sent as \"Bearer \u003ctoken\u003e\".",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        },
+        "OpsKey": {
+            "description": "Operation key (OPS_API_KEY), sent as \"Bearer \u003ckey\u003e\"; only for the team that runs the service.",
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"
