@@ -165,6 +165,16 @@ func TestExtendTreatment_TheLimitsOfTheNumber(t *testing.T) {
 	require.Len(t, extended.Doses, 6+consultation.MaxExtensionDoses)
 }
 
+func TestCreateConsultation_SaysWhatCouldBeExtendedLikeTheDetailDoes(t *testing.T) {
+	svc, _, c := yesterdaysConsultation(t)
+
+	detail, err := svc.GetConsultation(context.Background(), c.ID)
+
+	require.NoError(t, err)
+	require.Positive(t, c.Medications[0].ExtendableDoses)
+	require.Equal(t, detail.Medications[0].ExtendableDoses, c.Medications[0].ExtendableDoses)
+}
+
 func TestExtendTreatment_SingleDose(t *testing.T) {
 	svc, _, c := yesterdaysConsultation(t)
 	extended, err := svc.ExtendTreatment(context.Background(), c.ID, c.Medications[0].ID, 1)

@@ -710,6 +710,34 @@ describe('ConsultationDetailPage', () => {
       expect(screen.queryByText(/No pudimos recorrer/)).not.toBeInTheDocument()
     })
 
+    it('if another device extends it while the dialog is open, the dialog closes and does not come back', async () => {
+      const user = userEvent.setup()
+      let extendable = 2
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockImplementation(async (input: string) => {
+          const url = String(input)
+          if (url.includes('/overview')) return { ok: true, json: async () => ({ childId: 'child-1', doses: [], activeTreatment: null }) }
+          if (url.includes('/accounts/')) return { ok: true, json: async () => account }
+          return { ok: true, json: async () => withExtension({ extendableDoses: extendable }) }
+        }),
+      )
+      renderPage()
+      await user.click(await screen.findByRole('button', { name: 'Recorrer tratamiento' }))
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+      // The next refresh says there is nothing left to cover.
+      extendable = 0
+      window.dispatchEvent(new Event('visibilitychange')) // coming back to the app refetches the detail
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+
+      // Later new doses turn unregistered: the button is offered again, the dialog is not open by itself.
+      extendable = 3
+      window.dispatchEvent(new Event('visibilitychange')) // coming back to the app refetches the detail
+      expect(await screen.findByRole('button', { name: 'Recorrer tratamiento' })).toBeInTheDocument()
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+
     it('a server failure says so in Spanish and keeps the dialog open', async () => {
       const user = userEvent.setup()
       stubExtend({ ok: false, status: 500, body: { error: 'internal_error', message: 'Could not extend the treatment' } })

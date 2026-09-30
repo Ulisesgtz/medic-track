@@ -196,6 +196,8 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, c *Consultat
 			}
 			med.Doses = append(med.Doses, dose)
 		}
+		// A consultation of a past date already has unregistered doses: the same answer the detail gives (specs/020).
+		med.ExtendableDoses = len(uncoveredUnregistered(med.Doses, nil))
 	}
 
 	if err := tx.Commit(ctx); err != nil {

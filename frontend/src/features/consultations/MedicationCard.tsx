@@ -55,6 +55,9 @@ export function MedicationCard({ consultationId, medication, variant }: Medicati
   const extensions = medication.extensions ?? []
   const canExtend = !medication.endedAt && extendable > 0
   const lastExtension = extensions[extensions.length - 1]
+  // Another device extended it while the dialog was open: nothing is left to cover, so the dialog closes for good —
+  // otherwise it would pop up again the day new doses turn unregistered.
+  if (extending && !canExtend) setExtending(false)
   const progress = medicationProgress(medication.doses)
 
   return (
