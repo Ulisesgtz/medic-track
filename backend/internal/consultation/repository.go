@@ -170,8 +170,8 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, c *Consultat
 		med := &c.Medications[i]
 		med.ConsultationID = c.ID
 		err = tx.QueryRow(ctx, `
-			INSERT INTO medications (consultation_id, name, frequency_hours, duration_days, start_time)
-			VALUES ($1, $2, $3, $4, $5)
+			INSERT INTO medications (consultation_id, name, frequency_hours, duration_days, start_time, created_at)
+			VALUES ($1, $2, $3, $4, $5, clock_timestamp())
 			RETURNING id, created_at
 		`, med.ConsultationID, med.Name, med.FrequencyHours, med.DurationDays, med.StartTime,
 		).Scan(&med.ID, &med.CreatedAt)
@@ -259,7 +259,7 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Consultation, 
 
 	medRows, err := r.pool.Query(ctx, `
 		SELECT id, name, frequency_hours, duration_days, to_char(start_time, 'HH24:MI'), created_at, ended_at
-		FROM medications WHERE consultation_id = $1 ORDER BY created_at ASC
+		FROM medications WHERE consultation_id = $1 ORDER BY created_at ASC, id ASC
 	`, id)
 	if err != nil {
 		return nil, fmt.Errorf("querying medications: %w", err)

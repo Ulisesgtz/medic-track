@@ -183,3 +183,41 @@ func TestEndTreatment_HandlerNothingToEnd(t *testing.T) {
 	require.JSONEq(t, `{"error":"validation_error","message":"One or more fields are invalid",
 		"details":[{"field":"medicationId","message":"nothing_to_end"}]}`, rec.Body.String())
 }
+
+// specs/019: the calendar numbers the medications by their place in the detail, so that place must never change. A
+// `DEFAULT now()` is the start of the transaction — every medication of a consultation got the same created_at — and
+// updating a row (ending its treatment) moves it in the heap, which is what used to reorder them.
+func TestGetConsultation_KeepsTheMedicationsInTheOrderTheyWereCreatedEvenAfterOneIsUpdated(t *testing.T) {
+	pool := testPool(t)
+	svc := consultation.NewService(consultation.NewRepository(pool))
+	childID := createTestChild(t, pool)
+	n := time.Now().UTC()
+	yesterday := time.Date(n.Year(), n.Month(), n.Day()-1, 0, 0, 0, 0, time.UTC)
+	names := []string{"Zinc", "Amoxicilina", "Paracetamol", "Loratadina"}
+	meds := make([]consultation.CreateMedicationInput, len(names))
+	for i, name := range names {
+		meds[i] = consultation.CreateMedicationInput{Name: name, FrequencyHours: 8, DurationDays: 2, StartTime: strPtr("08:00")}
+	}
+	c, err := svc.CreateConsultation(context.Background(), childID, consultation.CreateConsultationInput{
+		DoctorName: "Dra. López", ConsultDate: yesterday, Photo: samplePhoto(), Medications: meds,
+	})
+	require.NoError(t, err)
+
+	order := func(got *consultation.Consultation) []string {
+		var out []string
+		for _, m := range got.Medications {
+			out = append(out, m.Name)
+		}
+		return out
+	}
+	require.Equal(t, names, order(c), "creation answers in the order of the request")
+
+	// Ending the first one rewrites its row; the order must not move.
+	_, err = svc.EndTreatment(context.Background(), c.ID, c.Medications[0].ID)
+	require.NoError(t, err)
+	for i := 0; i < 5; i++ {
+		got, err := svc.GetConsultation(context.Background(), c.ID)
+		require.NoError(t, err)
+		require.Equal(t, names, order(got))
+	}
+}
