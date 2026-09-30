@@ -17,8 +17,8 @@ detección a un worker que en E2E está bloqueado y en iOS se actualiza con retr
 precache de todo — introduce precache y offline, fuera de alcance de la spec 011.
 
 **Id de versión**: `GITHUB_SHA` o `CF_PAGES_COMMIT_SHA` si existen, si no la marca de tiempo del build. En desarrollo
-(`vite dev`) es `dev` y, como no hay `version.json` real (el servidor devuelve el `index.html`), la respuesta que no es
-JSON con `version` se ignora: sin aviso y sin error.
+(`vite dev`) no hay `version.json` real (el servidor devuelve el `index.html`): la respuesta que no es JSON con
+`version` se ignora, sin aviso y sin error.
 
 **Caché**: la petición va con `cache: 'no-store'` y `?t=<ms>`; `public/_headers` añade `Cache-Control: no-store` para
 `/version.json` en Cloudflare Pages (DEPLOY.md).

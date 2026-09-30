@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useAuth } from '@clerk/react'
 import { createPortal } from 'react-dom'
 import { useForm } from 'react-hook-form'
+import { useUnsavedWork } from '../../shared/appVersion/unsavedWork'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
 import { nameError, nameValidation, positiveNumberValidation } from '../account-signup/validation'
@@ -45,10 +46,11 @@ export function AddChildModal({ accountId, onClose }: AddChildModalProps) {
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<AddChildFormValues>({
     defaultValues: { firstName: '', lastName: '', birthDate: '', height: '', weight: '' },
   })
+  useUnsavedWork(isDirty)
 
   const mutation = useMutation({
     mutationFn: async (values: AddChildFormValues) =>
