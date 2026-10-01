@@ -45,7 +45,8 @@ export interface CreateMedicationPayload {
   name: string
   frequencyHours: number
   durationDays: number
-  startTime: string
+  /** `null` on a record-only consultation (specs/024): it has no schedule. */
+  startTime: string | null
 }
 
 export interface CreateConsultationPayload {
@@ -56,6 +57,8 @@ export interface CreateConsultationPayload {
   /** Catalog codes of the marked symptoms (specs/012). */
   symptomCodes?: string[]
   medications: CreateMedicationPayload[]
+  /** Save only as a record (specs/024): no start times, no doses, no reminders. */
+  recordOnly?: boolean
   /** The parent's UTC offset, so each medication's start time is read in their own time zone. */
   utcOffsetMinutes: number
 }

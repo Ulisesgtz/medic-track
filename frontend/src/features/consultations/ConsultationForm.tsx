@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useAuth } from '@clerk/react'
 import { Link } from 'react-router-dom'
-import { Controller, useForm, useFieldArray, type Path } from 'react-hook-form'
+import { Controller, useForm, useFieldArray, useWatch, type Path } from 'react-hook-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchSymptoms } from '../../shared/catalog/api'
 import { SYMPTOMS_QUERY_KEY } from '../../shared/catalog/useCatalog'
@@ -26,6 +26,8 @@ export interface ConsultationFormValues {
   notes: string
   /** Codes of the symptoms the parent tapped (specs/012). */
   symptomCodes: string[]
+  /** Save only as a record (specs/024): no start times, no doses, no reminders. */
+  recordOnly: boolean
   medications: MedicationFormValues[]
 }
 
@@ -217,10 +219,12 @@ export function ConsultationForm({
       consultDate: '',
       notes: '',
       symptomCodes: [],
+      recordOnly: false,
       medications: [emptyMedication],
     },
   })
   const { fields, append, remove } = useFieldArray({ control, name: 'medications' })
+  const recordOnly = useWatch({ control, name: 'recordOnly' })
 
   // A typed field or a chosen photo (which OCR may have autofilled from) is worth a confirmation.
   const dirty = isDirty || photoFile !== null
@@ -239,11 +243,13 @@ export function ConsultationForm({
         photoBase64,
         notes: values.notes,
         symptomCodes: values.symptomCodes,
+        recordOnly: values.recordOnly,
         medications: values.medications.map((m) => ({
           name: m.name,
           frequencyHours: parsePositiveInt(m.frequencyHours) ?? 0,
           durationDays: parsePositiveInt(m.durationDays) ?? 0,
-          startTime: m.startTime,
+          // A record-only consultation has no schedule (specs/024): no start time is sent, even if one was typed.
+          startTime: values.recordOnly ? null : m.startTime,
         })),
         // Start times are read in the parent's own time zone (their offset on the consult date).
         utcOffsetMinutes: -new Date(`${values.consultDate}T00:00:00`).getTimezoneOffset(),
@@ -482,7 +488,7 @@ export function ConsultationForm({
       ? mutation.error.message
       : 'Ocurrió un error al guardar la consulta. Intenta de nuevo.'
     : missing
-      ? missingFieldsText(errors, photoMissing && !photoFile, fields.length)
+      ? missingFieldsText(errors, photoMissing && !photoFile, fields.length, recordOnly)
       : ''
 
   // specs/012: what the parent observed, in its own section after the prescription group in both designs —
@@ -512,6 +518,33 @@ export function ConsultationForm({
         />
       </div>
     </div>
+  )
+
+  // specs/024: an old consultation kept only as a record. Decided here, once: consultations are immutable.
+  const recordOnlyField = (
+    <label
+      htmlFor="recordOnly"
+      className={`flex min-h-11 min-w-0 cursor-pointer items-start gap-3 rounded-2xl border-[1.5px] border-slate-200 bg-surface ${
+        desktop ? 'p-5' : 'p-4'
+      }`}
+    >
+      <input
+        id="recordOnly"
+        type="checkbox"
+        aria-labelledby="recordOnly-title"
+        aria-describedby="recordOnly-help"
+        className="mt-0.5 h-6 w-6 shrink-0 cursor-pointer accent-action"
+        {...register('recordOnly')}
+      />
+      <span className="flex min-w-0 flex-col gap-1">
+        <span id="recordOnly-title" className="text-[15px] font-extrabold text-ink">
+          Consulta anterior: guardar solo como registro
+        </span>
+        <span id="recordOnly-help" className="text-[13px] font-semibold text-slate-600">
+          No se crearán horarios de tomas ni avisos. Esto no se puede cambiar después.
+        </span>
+      </span>
+    </label>
   )
 
   const ocrGroup = (
@@ -561,6 +594,7 @@ export function ConsultationForm({
           removeDisabled={ocrProgress !== null}
           suggested={suggested}
           variant={variant}
+          recordOnly={recordOnly}
         />
       ))}
     </div>
@@ -616,6 +650,7 @@ export function ConsultationForm({
         {ocrPanel}
         <form onSubmit={onSubmit} noValidate className="flex min-w-0 flex-col gap-5">
           {ocrGroup}
+          {recordOnlyField}
           {symptomsSection}
           {medications}
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -640,6 +675,7 @@ export function ConsultationForm({
       </header>
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5 px-6 pt-6">
         {ocrGroup}
+        {recordOnlyField}
         {symptomsSection}
         {medications}
         {addButton}

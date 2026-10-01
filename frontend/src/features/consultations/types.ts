@@ -12,6 +12,8 @@ export interface ConsultationSummary {
   /** The marked symptoms' names, in catalog order ([] when none). */
   symptomNames: string[]
   medicationCount: number
+  /** Saved only as a record (specs/024): no schedule, no doses. Optional: a backend that predates it doesn't send it. */
+  recordOnly?: boolean
 }
 
 /**
@@ -56,6 +58,8 @@ export interface Medication {
 }
 
 export interface ConsultationDetail {
+  /** Saved only as a record (specs/024): no schedule, no doses. Optional: a backend that predates it doesn't send it. */
+  recordOnly?: boolean
   id: string
   childId: string
   doctorName: string

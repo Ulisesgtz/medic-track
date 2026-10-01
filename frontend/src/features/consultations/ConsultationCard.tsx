@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { formatDateShort } from '../../shared/date'
+import { RecordOnlyBadge } from './RecordOnlyBadge'
 import type { ConsultationSummary } from './types'
 
 interface ConsultationCardProps {
@@ -36,7 +37,10 @@ export function ConsultationCard({ consultation, isLatest = false, variant = 'ph
   const accent = `border-l-[5px] ${isLatest ? 'border-bright' : 'border-[#cffafe]'}`
   const text = (
     <>
-      <p className="text-[13px] font-bold text-action">{formatDateShort(consultation.consultDate)}</p>
+      <div className="flex flex-wrap items-center gap-2">
+        <p className="text-[13px] font-bold text-action">{formatDateShort(consultation.consultDate)}</p>
+        {consultation.recordOnly && <RecordOnlyBadge />}
+      </div>
       <p
         className={`truncate font-extrabold tracking-tight text-ink ${
           variant === 'desktop' ? 'mt-1.5 text-[19px]' : 'mt-1.5 text-lg'

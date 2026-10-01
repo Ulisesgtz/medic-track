@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
@@ -747,5 +747,106 @@ describe('ConsultationForm', () => {
       expect(await screen.findByText(/ya no está disponible/)).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Fiebre' })).toHaveAttribute('aria-pressed', 'true')
     })
+  })
+})
+
+describe('ConsultationForm, record only (specs/024)', () => {
+  beforeEach(() => recognizeAs(''))
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.clearAllMocks()
+  })
+
+  const created = {
+    id: 'consultation-1', childId: 'child-1', doctorName: 'Dra. López', consultDate: '2026-01-15',
+    photoBase64: 'Zm9v', notes: '', symptoms: [], medications: [], recordOnly: true,
+  }
+  const stubCreated = () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => created })
+    vi.stubGlobal('fetch', fetchMock)
+    return fetchMock
+  }
+  const checkbox = () => screen.getByRole('checkbox', { name: 'Consulta anterior: guardar solo como registro' })
+
+  it.each(['phone', 'desktop'] as const)('%s: offers the checkbox, off by default, saying nothing will be scheduled or alerted and that it cannot be changed', (variant) => {
+    renderForm(variant)
+
+    expect(checkbox()).not.toBeChecked()
+    expect(checkbox()).toHaveAccessibleDescription('No se crearán horarios de tomas ni avisos. Esto no se puede cambiar después.')
+  })
+
+  it.each(['phone', 'desktop'] as const)('%s: marking it takes "Primera toma" away and does not ask for it', async (variant) => {
+    const user = userEvent.setup()
+    const fetchMock = stubCreated()
+    renderForm(variant)
+    expect(byId('medications.0.startTime')).not.toBeNull()
+
+    await user.click(checkbox())
+
+    expect(byId('medications.0.startTime')).toBeNull()
+    expect(screen.queryByText('Primera toma')).not.toBeInTheDocument()
+    await user.type(screen.getByLabelText('Doctor'), 'Dra. López')
+    await user.type(screen.getByLabelText('Fecha'), '2025-07-15')
+    await user.upload(screen.getByLabelText('Foto de la receta'), samplePhoto())
+    await user.type(byId('medications.0.name'), 'Amoxicilina')
+    await user.type(byId('medications.0.frequencyHours'), 'c/8 h')
+    await user.type(byId('medications.0.durationDays'), '7 días')
+    await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    expect(screen.queryByText('Elige la hora de la primera toma.')).not.toBeInTheDocument()
+  })
+
+  it('sends recordOnly and no start time, even if one was typed before marking it', async () => {
+    const user = userEvent.setup()
+    const fetchMock = stubCreated()
+    const { onSuccess } = renderForm()
+    await fillValid(user)
+    expect(byId('medications.0.startTime').value).toBe('08:00')
+
+    await user.click(checkbox())
+    await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('consultation-1'))
+    const body = JSON.parse(String(fetchMock.mock.calls[0][1].body))
+    expect(body.recordOnly).toBe(true)
+    expect(body.medications).toEqual([{ name: 'Amoxicilina 250 mg', frequencyHours: 8, durationDays: 7, startTime: null }])
+  })
+
+  it('unmarking it brings "Primera toma" back with what was typed in it', async () => {
+    const user = userEvent.setup()
+    renderForm()
+    await user.type(byId('medications.0.startTime'), '0800')
+
+    await user.click(checkbox())
+    await user.click(checkbox())
+
+    expect(byId('medications.0.startTime').value).toBe('08:00')
+  })
+
+  it('without the mark it sends recordOnly false and the start time, as before', async () => {
+    const user = userEvent.setup()
+    const fetchMock = stubCreated()
+    renderForm()
+    await fillValid(user)
+
+    await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1))
+    const body = JSON.parse(String(fetchMock.mock.calls[0][1].body))
+    expect(body.recordOnly).toBe(false)
+    expect(body.medications[0].startTime).toBe('08:00')
+  })
+
+  it('the list of what is missing does not ask for the start time while it is marked', async () => {
+    const user = userEvent.setup()
+    renderForm()
+    await user.click(checkbox())
+
+    await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
+
+    expect(await screen.findByRole('status')).toHaveTextContent(
+      'Falta: la foto de la receta, el doctor, la fecha, el nombre del medicamento, cada cuántas horas, cuántos días.',
+    )
   })
 })

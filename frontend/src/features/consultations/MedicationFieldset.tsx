@@ -12,6 +12,10 @@ const label = 'text-[13px] font-bold text-ink-soft'
 const error = 'text-[13px] font-semibold text-red-700'
 const START_TIME_MESSAGE = 'Elige la hora de la primera toma.'
 
+// Required, except on a record-only consultation (specs/024). A function, not `required`, because the field is not
+// drawn while it is marked but stays registered (its typed value is kept): the rule must read the mark when it runs.
+const startTimeRule = (value: string, form: ConsultationFormValues) => form.recordOnly || value.trim() !== ''
+
 interface MedicationFieldsetProps {
   index: number
   register: UseFormRegister<ConsultationFormValues>
@@ -23,6 +27,8 @@ interface MedicationFieldsetProps {
   /** Field paths the OCR filled in — rendered with the bright "to review" border. */
   suggested?: ReadonlySet<string>
   variant: 'phone' | 'desktop'
+  /** A record-only consultation (specs/024) has no schedule: "Primera toma" is not drawn. */
+  recordOnly?: boolean
 }
 
 /**
@@ -48,6 +54,7 @@ export function MedicationFieldset({
   removeDisabled = false,
   suggested,
   variant,
+  recordOnly = false,
 }: MedicationFieldsetProps) {
   const medErrors = errors.medications?.[index]
   const cls = (name: string) => (suggested?.has(`medications.${index}.${name}`) ? suggestedBorder : plain)
@@ -132,7 +139,7 @@ export function MedicationFieldset({
             />
             {medErrors?.durationDays && <p className={error}>Escribe cuántos días (ej. 7).</p>}
           </div>
-          {desktop && (
+          {desktop && !recordOnly && (
             // Not in the mock's row of three. With room (the card is 720px wide or more) it is a fourth
             // column of the same row; otherwise it goes to a second row, under "Frecuencia" and "Duración".
             <div className="flex min-w-0 flex-col gap-2 sm:col-span-2 sm:col-start-2 @min-[720px]:col-span-1 @min-[720px]:col-start-auto">
@@ -144,7 +151,7 @@ export function MedicationFieldset({
                 type="time"
                 size={1}
                 className={`${plain} text-[15px]`}
-                {...register(`medications.${index}.startTime`, { required: true })}
+                {...register(`medications.${index}.startTime`, { validate: startTimeRule })}
               />
               {medErrors?.startTime && <p className={error}>{START_TIME_MESSAGE}</p>}
             </div>
@@ -152,7 +159,7 @@ export function MedicationFieldset({
         </div>
       </div>
 
-      {!desktop && (
+      {!desktop && !recordOnly && (
         // Half the row minus half the 10px gap: exactly the width of the frequency field above.
         <div className="flex w-[calc(50%-5px)] min-w-0 flex-col gap-2">
           <label htmlFor={id('startTime')} className={label}>
@@ -165,7 +172,7 @@ export function MedicationFieldset({
             // iOS Safari draws time inputs with their own minimum width and ignores the box's: without
             // appearance-none the field ran past the card's edge on the iPhone.
             className={`${plain} appearance-none text-[15px] [&::-webkit-date-and-time-value]:text-left`}
-            {...register(`medications.${index}.startTime`, { required: true })}
+            {...register(`medications.${index}.startTime`, { validate: startTimeRule })}
           />
           {medErrors?.startTime && <p className={error}>{START_TIME_MESSAGE}</p>}
         </div>

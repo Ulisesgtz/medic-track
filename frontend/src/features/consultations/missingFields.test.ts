@@ -31,3 +31,17 @@ describe('missingFieldsText', () => {
     expect(missingFieldsText({}, false, 1)).toBe('Completa los campos faltantes.')
   })
 })
+
+describe('missingFieldsText, record only (specs/024)', () => {
+  it('does not ask for the start time of a consultation with no schedule', () => {
+    const errors = { medications: [{ name: err, startTime: err }] } as unknown as FieldErrors<ConsultationFormValues>
+
+    expect(missingFieldsText(errors, false, 1, true)).toBe('Falta: el nombre del medicamento.')
+  })
+
+  it('still says something when only the start time failed', () => {
+    const errors = { medications: [{ startTime: err }] } as unknown as FieldErrors<ConsultationFormValues>
+
+    expect(missingFieldsText(errors, false, 1, true)).toBe('Completa los campos faltantes.')
+  })
+})

@@ -13,6 +13,7 @@ import { MedicationCard } from './MedicationCard'
 import { PhotoViewer } from './PhotoViewer'
 import { SymptomChips } from './SymptomChips'
 import { CalendarLegendCard } from './CalendarLegendCard'
+import { RecordOnlyBadge } from './RecordOnlyBadge'
 import { TreatmentCalendar } from './TreatmentCalendar'
 import { dayKey, firstDoseDay, initialDay, numbered } from './treatmentDays'
 import { DOSE_REFETCH_MS } from './doseStatus'
@@ -162,7 +163,10 @@ export function ConsultationDetailPage() {
                 >
                   {backLabel}
                 </Link>
-                <p className="mt-3 text-sm font-bold text-action">{date}</p>
+                <p className="mt-3 flex flex-wrap items-center gap-2 text-sm font-bold text-action">
+                  {date}
+                  {consultation.recordOnly && <RecordOnlyBadge />}
+                </p>
                 <h1 className="mt-1 text-4xl font-black tracking-tight text-ink">{consultation.doctorName}</h1>
               </div>
               <Link
@@ -208,17 +212,20 @@ export function ConsultationDetailPage() {
                   {seeFull('-mb-[11px] block w-fit')}
                 </div>
 
-                <div className="min-w-0 rounded-3xl bg-ink p-6">
-                  <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-[#67e8f9]">
-                    Tratamiento activo
-                  </p>
-                  <p className="mt-2.5 text-xl font-black tracking-tight text-white">
-                    {treatment ? treatment.medicationName : 'Ninguno'}
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-[#a5f3fc]">
-                    {treatment ? `termina el ${formatDayMonth(treatment.endsAt)}` : 'sin tomas pendientes'}
-                  </p>
-                </div>
+                {/* A record-only consultation has no treatment to show (specs/024). */}
+                {!consultation.recordOnly && (
+                  <div className="min-w-0 rounded-3xl bg-ink p-6">
+                    <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-[#67e8f9]">
+                      Tratamiento activo
+                    </p>
+                    <p className="mt-2.5 text-xl font-black tracking-tight text-white">
+                      {treatment ? treatment.medicationName : 'Ninguno'}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-[#a5f3fc]">
+                      {treatment ? `termina el ${formatDayMonth(treatment.endsAt)}` : 'sin tomas pendientes'}
+                    </p>
+                  </div>
+                )}
 
                 {/* specs/022: the key of the treatment calendar, only in the web design (as the mock). */}
                 {consultation.medications.some((m) => m.doses.length > 0) && <CalendarLegendCard />}
@@ -242,7 +249,10 @@ export function ConsultationDetailPage() {
           >
             {backLabel}
           </Link>
-          <p className="mt-5 text-sm font-bold text-bright">{date}</p>
+          <p className="mt-5 flex flex-wrap items-center gap-2 text-sm font-bold text-bright">
+            {date}
+            {consultation.recordOnly && <RecordOnlyBadge />}
+          </p>
           <h1 className="mt-1.5 text-2xl font-black tracking-tight text-white">{consultation.doctorName}</h1>
         </header>
 

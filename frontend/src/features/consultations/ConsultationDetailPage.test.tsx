@@ -783,6 +783,52 @@ describe('ConsultationDetailPage', () => {
     })
   })
 
+  describe('a consultation saved only as a record (specs/024)', () => {
+    const recordOnly = () =>
+      consultation({
+        recordOnly: true,
+        notes: '',
+        medications: [{ id: 'm1', name: 'Amoxicilina 250 mg', frequencyHours: 8, durationDays: 7, startTime: null, doses: [], extendableDoses: 0, extensions: [] }],
+      })
+
+    it.each([false, true])('is tagged "Solo registro" and shows no schedule at all (web: %s)', async (web) => {
+      if (web) useDesktop()
+      stubApi(recordOnly())
+      renderPage()
+
+      expect(await screen.findByText('Solo registro')).toBeInTheDocument()
+      // The medication reads as information: its schedule line, with no first dose.
+      expect(screen.getByText('Cada 8 horas · 7 días')).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Calendario del tratamiento' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /^Toma de/ })).not.toBeInTheDocument()
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Finalizar tratamiento' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Recorrer tratamiento' })).not.toBeInTheDocument()
+      expect(screen.queryByText(/^Tomas (de hoy|del)/)).not.toBeInTheDocument()
+      expect(screen.queryByText('Este día no tiene tomas.')).not.toBeInTheDocument()
+    })
+
+    it('on the web there is no "Tratamiento activo" nor "Cómo leer el calendario" for it', async () => {
+      useDesktop()
+      stubApi(recordOnly())
+      renderPage()
+
+      await screen.findByText('Solo registro')
+      expect(screen.queryByText('Tratamiento activo')).not.toBeInTheDocument()
+      expect(screen.queryByRole('region', { name: 'Cómo leer el calendario' })).not.toBeInTheDocument()
+    })
+
+    it('a consultation with doses has no tag and keeps its "Tratamiento activo" on the web', async () => {
+      useDesktop()
+      stubApi(consultation())
+      renderPage()
+
+      await screen.findByRole('heading', { name: 'Calendario del tratamiento' })
+      expect(screen.queryByText('Solo registro')).not.toBeInTheDocument()
+      expect(screen.getByText('Tratamiento activo')).toBeInTheDocument()
+    })
+  })
+
   describe('treatment calendar (specs/019)', () => {
     it('sits before the medications on the phone, with no list of its own: today is chosen and marking is on the card', async () => {
       const fetchMock = stubApi(consultation())
