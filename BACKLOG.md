@@ -49,6 +49,7 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
   medicamentos se reponen y en otros no). Opciones a decidir: (a) la fecha de fin no se mueve y el calendario marca los
   días con tomas sin registrar; (b) un botón "Recorrer tratamiento" que el padre usa si su médico se lo indicó, que
   agrega las tomas al final y queda registrado quién lo decidió. Recomendación: (b), nunca automático.
+- **Calendario: inicio y fin visibles** (anotado 2026-09-30, a pedido del usuario: la fecha de inicio y la de fin marcadas con el color de cada medicamento) — la spec 022 (rebranding con el diseño de Claude Design) los quitó de la vista porque el «Turno 1» del diseño no los trae; siguen en el nombre accesible del día. Falta un segundo turno del diseño que los dibuje (p. ej. pastilla del día con el color del medicamento y la etiqueta «Inicio»/«Fin»).
 - **B6. "Finalizar tratamiento"** — hecho en `specs/016-finalizar-tratamiento/`.
 - Depende de: B2 define el estado de las tomas que usan B3, B4, B5 y B6; B6 afecta a los recordatorios (spec 011: una
   toma cancelada no se avisa).

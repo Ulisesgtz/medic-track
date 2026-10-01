@@ -36,6 +36,9 @@ otro; no hay clases responsivas `lg:` que combinen ambos.
 Decidida por el usuario (spec 019, 2026-09-30): el selector «← Día anterior / Día siguiente →» bajo los chips de cada medicamento
 (descrito más abajo) se quitó; ahora el calendario del tratamiento lleva a las tomas de cualquier día.
 
+Con mock (spec 022, 2026-09-30): el calendario del tratamiento y la tarjeta «Cómo leer el calendario» siguen ahora el diseño de Claude Design
+(`specs/022-rebranding-calendario/referencia/`); las 12 desviaciones están en esa spec y las 11 primeras las aprobó el usuario.
+
 Sin mock (spec 020, 2026-09-30): el botón «Recorrer tratamiento», su diálogo (número de tomas editable con la nota de «ingresado
 manualmente»), la línea «Se recorrió el …» de la tarjeta y los círculos rellenos de inicio y fin del calendario no existen en los
 mocks; se diseñaron con los tokens y se muestran para aprobar.

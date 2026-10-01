@@ -12,6 +12,7 @@ import { sniffImageMimeType } from './imageMime'
 import { MedicationCard } from './MedicationCard'
 import { PhotoViewer } from './PhotoViewer'
 import { SymptomChips } from './SymptomChips'
+import { CalendarLegendCard } from './CalendarLegendCard'
 import { TreatmentCalendar } from './TreatmentCalendar'
 import { dayKey } from './treatmentDays'
 import { DOSE_REFETCH_MS } from './doseStatus'
@@ -196,6 +197,9 @@ export function ConsultationDetailPage() {
                     {treatment ? `termina el ${formatDayMonth(treatment.endsAt)}` : 'sin tomas pendientes'}
                   </p>
                 </div>
+
+                {/* specs/022: the key of the treatment calendar, only in the web design (as the mock). */}
+                {consultation.medications.some((m) => m.doses.length > 0) && <CalendarLegendCard />}
               </aside>
             </div>
           </div>

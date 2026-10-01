@@ -1,6 +1,6 @@
 import { useId } from 'react'
 import { formatTime } from '../../shared/date'
-import { CANCELED_LABEL, DOSE_CHIP_STYLE, UNREGISTERED_LABEL, statusOf } from './doseStatus'
+import { CALENDAR_CHIP_NOTE, CALENDAR_CHIP_STYLE, CANCELED_LABEL, DOSE_CHIP_STYLE, UNREGISTERED_LABEL, statusOf } from './doseStatus'
 import type { Dose } from './types'
 import { useDoseToggle } from './useDoseToggle'
 
@@ -10,13 +10,56 @@ import { useDoseToggle } from './useDoseToggle'
  * time — once the next dose of its medication came unmarked. Always enabled: the parent can mark or correct any dose.
  * A toggle: fixed name ("Toma de 08:00", or `label` when the same dose is shown twice — specs/019's day list names it after its medication), marked only in aria-pressed; "sin registrar" is its description.
  */
-export function DoseChip({ consultationId, dose, label }: { consultationId: string; dose: Dose; label?: string }) {
+interface DoseChipProps {
+  consultationId: string
+  dose: Dose
+  label?: string
+  /** `calendar`: the chip of the treatment calendar's day list (specs/022), a fixed width (160 px on the web, 130 on the phone). */
+  appearance?: 'default' | 'calendar'
+  desktop?: boolean
+  /** The next dose to come: its second line says "próxima". */
+  next?: boolean
+}
+
+export function DoseChip({ consultationId, dose, label, appearance = 'default', desktop = false, next = false }: DoseChipProps) {
   const mutation = useDoseToggle(consultationId, dose.id)
   const time = formatTime(dose.scheduledAt)
   const status = statusOf(dose)
   const unregistered = status === 'unregistered'
   const canceled = status === 'canceled'
   const stateId = `${useId()}-state`
+
+  if (appearance === 'calendar') {
+    const second = status === 'pending' ? (next ? 'próxima' : null) : CALENDAR_CHIP_NOTE[status]
+    return (
+      <button
+        type="button"
+        aria-pressed={dose.taken}
+        aria-label={label ?? `Toma de ${time}`}
+        aria-describedby={unregistered || canceled ? stateId : undefined}
+        disabled={mutation.isPending || canceled}
+        onClick={() => mutation.mutate(!dose.taken)}
+        className={`box-border min-h-11 shrink-0 cursor-pointer rounded-xl border-[1.5px] text-center transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+          desktop ? 'w-40 p-[7px]' : 'w-[130px] p-2'
+        } ${canceled ? 'disabled:opacity-100' : ''} ${CALENDAR_CHIP_STYLE[status]}`}
+      >
+        <span className={`block leading-tight font-black ${desktop ? 'text-[15px]' : 'text-base'} ${canceled ? 'line-through' : ''}`}>
+          {dose.taken ? '✓ ' : ''}
+          {time}
+        </span>
+        {second && (
+          <span aria-hidden={unregistered || canceled ? true : undefined} className="block text-xs leading-tight font-bold">
+            {second}
+          </span>
+        )}
+        {(unregistered || canceled) && (
+          <span id={stateId} className="sr-only">
+            {canceled ? CANCELED_LABEL : UNREGISTERED_LABEL}
+          </span>
+        )}
+      </button>
+    )
+  }
 
   return (
     <button
