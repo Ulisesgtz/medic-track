@@ -164,6 +164,6 @@ Las pruebas E2E usan la instancia de **desarrollo** de Clerk de verdad (nada de 
 
 ```bash
 npx vitest run --coverage   # unit tests, >90% threshold gate
-npx playwright test         # E2E — needs the backend (`go run ./cmd/api`, with CLERK_SECRET_KEY) running, network access to Clerk; the frontend dev server is started by Playwright
+npx playwright test         # E2E — needs the backend (`go run ./cmd/api`, with CLERK_SECRET_KEY) running, network access to Clerk; Playwright starts the frontend itself (the dev server locally; in CI — `CI` set — the production build with `vite preview`, with 3 workers, `E2E_WORKERS` changes them)
 npx tsc --noEmit && npx eslint .   # type-check + lint
 ```

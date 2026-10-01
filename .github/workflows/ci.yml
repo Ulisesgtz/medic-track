@@ -175,6 +175,20 @@ jobs:
         working-directory: frontend
         run: npm ci
 
+      - name: Get Playwright version
+        id: playwright
+        working-directory: frontend
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        # The three browsers are ~600 MB: downloaded again on every run before. The key is the Playwright version, so a
+        # new version downloads its own. `playwright install` below still runs (it installs the system packages and skips
+        # what is already cached).
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
       - name: Install Playwright browsers
         working-directory: frontend
         run: npx playwright install --with-deps
@@ -189,10 +203,12 @@ jobs:
 
       - name: Run Playwright E2E suite
         working-directory: frontend
-        # playwright.config.ts's webServer starts the frontend dev server
-        # itself and waits for it — don't also start one here, or Playwright
-        # refuses to bind :5173 ("already used") since reuseExistingServer
-        # is false in CI (process.env.CI is set).
+        # playwright.config.ts's webServer builds the frontend and serves it
+        # (`vite preview`) itself and waits for it — don't also start one here,
+        # or Playwright refuses to bind :5173 ("already used") since
+        # reuseExistingServer is false in CI (process.env.CI is set). The build
+        # reads VITE_CLERK_PUBLISHABLE_KEY from the env below. Several workers
+        # (E2E_WORKERS, 3 by default) share the run.
         run: npx playwright test
         env:
           # The frontend throws without it (specs/008). Repository secret: the *test* (pk_test_) key of the Clerk development instance.
