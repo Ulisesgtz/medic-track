@@ -51,6 +51,7 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
   agrega las tomas al final y queda registrado quién lo decidió. Recomendación: (b), nunca automático.
 - **Calendario: inicio y fin visibles** (anotado 2026-09-30, a pedido del usuario: la fecha de inicio y la de fin marcadas con el color de cada medicamento) — la spec 022 (rebranding con el diseño de Claude Design) los quitó de la vista porque el «Turno 1» del diseño no los trae; siguen en el nombre accesible del día. Falta un segundo turno del diseño que los dibuje (p. ej. pastilla del día con el color del medicamento y la etiqueta «Inicio»/«Fin»).
 - **Quitar «Tomas de hoy» del detalle de la consulta** — hecho en `specs/023-calendario-selector-de-dia/` (opción b: el calendario elige el día y cada tarjeta de medicamento muestra sus tomas).
+- **Convertir una consulta «solo registro» en una con tomas** (anotado 2026-10-01) — la spec 024 la deja fija al crearla (consultas inmutables, spec 004); si hace falta, sería una acción explícita del padre que pida la hora de inicio y genere las tomas desde ahí.
 - **B6. "Finalizar tratamiento"** — hecho en `specs/016-finalizar-tratamiento/`.
 - Depende de: B2 define el estado de las tomas que usan B3, B4, B5 y B6; B6 afecta a los recordatorios (spec 011: una
   toma cancelada no se avisa).

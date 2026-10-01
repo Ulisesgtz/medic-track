@@ -31,5 +31,5 @@
 
 ## Notas
 
-- Supuestos a confirmar por el usuario: (1) los medicamentos solo-registro conservan frecuencia y duración como información (con las validaciones de hoy); (2) una consulta solo-registro puede llevar cualquier fecha, incluso de hoy o futura; (3) no hay deshacer si se marca por error.
+- Supuestos a confirmar por el usuario: (1) los medicamentos solo-registro conservan frecuencia y duración como información (con las validaciones de hoy); (2) la fecha sigue las reglas de siempre (pasada o de hoy; la futura se rechaza); (3) no hay deshacer si se marca por error.
 - La mención de «migración … una columna» en Supuestos es una restricción de alcance (qué toca el backend), no un diseño de la solución.

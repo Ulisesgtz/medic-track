@@ -54,7 +54,7 @@ Una consulta solo-registro se ve como un archivo, no como un tratamiento: no tie
 - Un medicamento solo-registro conserva sus reglas de nombre, frecuencia y duración (positivas); lo único que deja de pedirse es la hora de inicio.
 - El padre que marca el checkbox por error y guarda: queda la consulta sin tomas; no hay deshacer (lo ve en el listado con «Solo registro»). El texto del checkbox lo advierte.
 - Las consultas **ya existentes** no cambian: todas conservan sus tomas, y no se marcan como solo-registro.
-- Una consulta solo-registro con una **fecha de hoy o futura** se acepta igual (no se valida contra el pasado: es información que el padre escribió).
+- La **fecha** de una consulta solo-registro sigue las reglas de siempre: cualquier día pasado o de hoy; una fecha futura se sigue rechazando (la consulta ya ocurrió).
 - Móvil y web: el checkbox y la etiqueta existen en ambos diseños, cada uno con el suyo.
 - Pantallas de 390 px: sin desplazamiento horizontal.
 
