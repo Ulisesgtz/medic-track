@@ -61,11 +61,13 @@ for (const design of designs) {
       await expect(page.getByRole('button', { name: 'Finalizar tratamiento' })).toHaveCount(0)
       if (design.isWeb) await expect(page.getByText('Tratamiento activo')).toHaveCount(0)
 
-      // The child's list: tagged, and its doses are not among today's (only the normal consultation's are).
+      // The child's list: tagged; and today's doses are only the normal consultation's (Paracetamol), never the record's.
       await page.goto(`/children/${childId}`)
       const recordCard = page.getByRole('link', { name: /Dra\. Anterior/ })
       await expect(recordCard).toContainText('Solo registro')
       await expect(page.getByRole('link', { name: /Dr\. Normal/ })).not.toContainText('Solo registro')
+      await expect(page.getByRole('main').getByText(/Paracetamol/).first()).toBeVisible()
+      await expect(page.getByRole('main').getByText(/Amoxicilina/)).toHaveCount(0)
 
       // The normal consultation still has its doses and its calendar.
       await page.goto(`/consultations/${normal.id}`)

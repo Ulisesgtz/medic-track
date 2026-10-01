@@ -50,7 +50,7 @@ Una consulta solo-registro se ve como un archivo, no como un tratamiento: no tie
 ### Casos Límite
 
 - Se decide **al crear** y no se puede cambiar después: las consultas son inmutables (spec 004). No hay forma de convertir una solo-registro en una con tomas.
-- Una consulta solo-registro **sin medicamentos** se permite igual que hoy una consulta sin medicamentos.
+- Una consulta solo-registro lleva **al menos un medicamento**, igual que cualquier consulta (la regla de hoy no cambia): el formulario siempre deja una fila de medicamento y el servidor rechaza una consulta sin ninguno. Quien solo quiera guardar la receta puede escribir el medicamento sin su horario.
 - Un medicamento solo-registro conserva sus reglas de nombre, frecuencia y duración (positivas); lo único que deja de pedirse es la hora de inicio.
 - El padre que marca el checkbox por error y guarda: queda la consulta sin tomas; no hay deshacer (lo ve en el listado con «Solo registro»). El texto del checkbox lo advierte.
 - Las consultas **ya existentes** no cambian: todas conservan sus tomas, y no se marcan como solo-registro.
@@ -92,7 +92,7 @@ Una consulta solo-registro se ve como un archivo, no como un tratamiento: no tie
 ## Supuestos
 
 - La decisión del checkbox es **una sola vez al crear** y vive con la consulta; no hay forma de cambiarla (inmutabilidad de la spec 004).
-- Los medicamentos de una consulta solo-registro conservan frecuencia y duración como **información** (escritas como «Cada 8 horas · 7 días»), con las mismas validaciones de hoy (números positivos); solo la hora de inicio se omite. Una consulta solo-registro puede no tener medicamentos, como cualquier consulta.
+- Los medicamentos de una consulta solo-registro conservan frecuencia y duración como **información** (escritas como «Cada 8 horas · 7 días»), con las mismas validaciones de hoy (números positivos); solo la hora de inicio se omite. Como cualquier consulta, lleva al menos un medicamento (no se relaja esa regla).
 - La foto de la receta, el doctor y la fecha siguen siendo obligatorios como hoy; el OCR del teléfono sigue siendo opcional y no propone horas.
 - «Solo registro» es una etiqueta neutra (chip) en el detalle y en el listado, con los tokens de diseño; no usa rojo ni ámbar (Principio I).
 - Se hace en la misma rama que la spec 023 (decisión del usuario, 2026-10-01); sigue después del PR de la 023.
