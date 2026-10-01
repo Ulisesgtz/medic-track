@@ -25,7 +25,8 @@ En el detalle de la consulta el padre ve hoy las tomas del día en **dos lugares
 3. **Dado** que el padre marca o desmarca una toma en una tarjeta con un día distinto de hoy elegido, **Entonces** se actualiza en la tarjeta, en el calendario (el punto relleno o vacío de ese día), en la barra de progreso y en el resto de la pantalla, sin recargar y sin cambiar el día elegido.
 4. **Dado** que se toca el día de hoy, **Entonces** las tarjetas muestran lo mismo que hoy mostraban por omisión.
 5. **Dado** una toma cancelada (spec 016) o sin registrar (spec 013), **Cuando** su día está elegido, **Entonces** conserva su aspecto y reglas actuales en la tarjeta.
-6. **Dado** el padre en el teléfono, **Cuando** toca un día, **Entonces** el calendario conserva su posición y no se desplaza la pantalla por sí sola; cada tarjeta dice **qué día** está mostrando, para que, al bajar a «Medicamentos», sepa a qué día corresponden las tomas.
+6. **Dado** el padre en el teléfono, **Cuando** toca un día, **Entonces** la pantalla se desplaza **lo mínimo** para dejar a la vista la primera tarjeta de medicamento (si ya se ve, no se mueve; con «reducir movimiento» el desplazamiento no es animado); en la web no se desplaza. Cada tarjeta dice **qué día** está mostrando.
+7. **Dado** el padre que toca un día en una consulta y luego abre otra consulta, **Entonces** la otra abre en su propio día inicial, no en el que se tocó en la primera.
 
 ---
 
@@ -65,7 +66,7 @@ Al abrir el detalle de la consulta ya hay un día elegido y las tarjetas muestra
 - **FR-002**: El día elegido en el calendario DEBE ser **el mismo** que determina qué tomas muestra cada tarjeta de «Medicamentos»: una sola selección por pantalla.
 - **FR-003**: Cada tarjeta DEBE mostrar las tomas **de su medicamento en el día elegido**, agrupadas en Mañana, Tarde y Noche (spec 015), con el mismo chip marcable y los mismos estados (tomada, por marcar, pendiente, sin registrar, cancelada) que hoy.
 - **FR-004**: Si el medicamento no tiene tomas en el día elegido, su tarjeta DEBE decir que ese día no tiene tomas.
-- **FR-005**: Cada tarjeta DEBE decir **qué día** muestra (p. ej. «Hoy» o «3 de octubre»), con el formato de fechas del proyecto.
+- **FR-005**: Cada tarjeta DEBE decir **qué día** muestra (p. ej. «Hoy» o «3 de octubre»), con el formato de fechas del proyecto; los grupos Mañana/Tarde/Noche también lo dicen en su nombre accesible («Mañana, Amoxicilina, hoy»).
 - **FR-006**: Al abrir el detalle el día elegido DEBE ser hoy si está dentro del tratamiento o, si no, el primer día del tratamiento (la regla de la spec 019); el día elegido por el padre no cambia solo cuando pasa la medianoche.
 - **FR-007**: Marcar o desmarcar una toma DEBE actualizarse en la tarjeta, el calendario, el progreso y las cantidades del resto de la pantalla, sin recargar y sin cambiar el día elegido.
 - **FR-008**: La barra de progreso, el horario, «Terminado el …», «Se recorrió el …» y los botones «Finalizar tratamiento» / «Recorrer tratamiento» de cada tarjeta DEBEN seguir calculándose con **todo** el medicamento, sin depender del día elegido.

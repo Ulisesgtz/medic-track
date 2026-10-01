@@ -9,13 +9,12 @@ import {
   monthGrid,
   monthOfDay,
   monthsOf,
-  numbered,
   slotsOn,
   treatmentSpan,
   type DayMark,
   type Month,
+  type NumberedMedication,
 } from './treatmentDays'
-import type { Medication } from './types'
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
@@ -31,7 +30,7 @@ function Dot({ mark, selected, desktop }: { mark: DayMark; selected: boolean; de
 }
 
 interface TreatmentCalendarProps {
-  medications: Medication[]
+  meds: NumberedMedication[]
   /** The chosen day, `YYYY-MM-DD` (the page's: the medication cards show the doses of this same day, specs/023). */
   selected: string | null
   onSelect: (day: string) => void
@@ -52,8 +51,7 @@ interface TreatmentCalendarProps {
  * the first and the last month with treatment. Phone and web are two designs (`variant`): the same pieces with their own
  * sizes.
  */
-export function TreatmentCalendar({ medications, selected, onSelect, today, variant, className }: TreatmentCalendarProps) {
-  const meds = numbered(medications)
+export function TreatmentCalendar({ meds, selected, onSelect, today, variant, className }: TreatmentCalendarProps) {
   const span = treatmentSpan(meds)
   // The month on screen is the calendar's own: paging through months never changes the chosen day. Until the parent pages,
   // it follows the chosen day.

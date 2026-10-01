@@ -61,6 +61,7 @@ export function MedicationCard({ consultationId, medication, variant, day, today
 
   return (
     <article
+      data-medication-card
       className={`min-w-0 rounded-3xl bg-surface shadow-[0_8px_20px_rgba(4,37,43,0.07)] ${
         variant === 'desktop' ? 'p-6' : 'p-5'
       }`}
@@ -79,7 +80,7 @@ export function MedicationCard({ consultationId, medication, variant, day, today
       {day && chips.length === 0 && <p className="mt-2 text-sm font-semibold text-slate-600">Este día no tiene tomas.</p>}
       {/* specs/015: the day's doses by moment of the day (Mañana, Tarde, Noche); empty moments don't show. */}
       {groupByPeriod(chips).map((group) => (
-        <div key={group.key} role="group" aria-label={`${group.label}, ${medication.name}`} className="mt-3">
+        <div key={group.key} role="group" aria-label={`${group.label}, ${medication.name}, ${day === today ? 'hoy' : longDay(day!)}`} className="mt-3">
           <p aria-hidden="true" className="text-xs font-extrabold tracking-[0.1em] text-ink-soft uppercase">
             {group.label}
           </p>

@@ -29,8 +29,9 @@ const overline = 'text-xs font-extrabold uppercase tracking-[0.1em] text-ink-sof
 export function ConsultationDetailPage() {
   const { consultationId } = useParams<{ consultationId: string }>()
   const [viewerOpen, setViewerOpen] = useState(false)
-  // specs/023: the day the parent tapped in the calendar; until then, the calendar's own first day (today when it is inside).
-  const [picked, setPicked] = useState<string | null>(null)
+  // specs/023: the day the parent tapped in the calendar, with the consultation it was tapped in (this component is reused
+  // when the route changes to another consultation); until then, the calendar's own first day (today when it is inside).
+  const [picked, setPicked] = useState<{ consultationId: string; day: string } | null>(null)
   const { isDesktop } = useSidebarSession()
 
   const { getToken } = useAuth()
@@ -112,12 +113,22 @@ export function ConsultationDetailPage() {
   // specs/019 and 023: one calendar for the whole consultation, before the medications; the day it chooses is the one every
   // medication card shows. `todayKey` is the parent's local day.
   const todayKey = dayKey(today.from)
-  const selectedDay = picked ?? initialDay(numbered(consultation.medications), todayKey)
+  const meds = numbered(consultation.medications)
+  const selectedDay = (picked?.consultationId === consultation.id ? picked.day : null) ?? initialDay(meds, todayKey)
+  const chooseDay = (day: string) => {
+    setPicked({ consultationId: consultation.id, day })
+    // On the phone the cards sit below the tall calendar: bring the first one into view, the least it takes (nothing if it is).
+    if (!isDesktop) {
+      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+      document.querySelector('[data-medication-card]')?.scrollIntoView?.({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' })
+    }
+  }
   const calendar = (variant: 'phone' | 'desktop', className?: string) => (
     <TreatmentCalendar
-      medications={consultation.medications}
+      key={consultation.id}
+      meds={meds}
       selected={selectedDay}
-      onSelect={setPicked}
+      onSelect={chooseDay}
       today={todayKey}
       variant={variant}
       className={className}

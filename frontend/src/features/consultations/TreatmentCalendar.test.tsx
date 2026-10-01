@@ -38,7 +38,7 @@ const range = (from: [number, number], to: [number, number]): [number, number][]
 const amoxicilina = med('m1', 'Amoxicilina', range([9, 30], [10, 6]), [8, 16])
 const paracetamol = med('m2', 'Paracetamol', range([9, 30], [10, 2]), [12])
 
-type Props = Partial<Parameters<typeof TreatmentCalendar>[0]>
+type Props = { medications?: Medication[]; today?: string; variant?: 'phone' | 'desktop' }
 
 /** Stands in for the detail page (specs/023): it owns the chosen day, starting where the page does, and hears `onSelect`. */
 function Page({ onSelect, ...p }: Props & { onSelect: (day: string) => void }) {
@@ -49,7 +49,7 @@ function Page({ onSelect, ...p }: Props & { onSelect: (day: string) => void }) {
     <TreatmentCalendar
       variant="phone"
       {...p}
-      medications={medications}
+      meds={numbered(medications)}
       today={today}
       selected={selected}
       onSelect={(d) => {

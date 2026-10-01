@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter, Routes, Route } from 'react-router-dom'
+import { MemoryRouter, Routes, Route, Link } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ConsultationDetailPage } from './ConsultationDetailPage'
 
@@ -168,11 +168,11 @@ describe('ConsultationDetailPage', () => {
       )
       renderPage()
 
-      const morning = await screen.findByRole('group', { name: 'Mañana, Amoxicilina' })
+      const morning = await screen.findByRole('group', { name: 'Mañana, Amoxicilina, hoy' })
       expect(within(morning).getByRole('button', { name: 'Toma de 08:00' })).toBeInTheDocument()
-      expect(within(screen.getByRole('group', { name: 'Tarde, Amoxicilina' })).getByRole('button', { name: 'Toma de 16:00' })).toBeInTheDocument()
-      expect(within(screen.getByRole('group', { name: 'Noche, Amoxicilina' })).getByRole('button', { name: 'Toma de 00:00' })).toBeInTheDocument()
-      expect(screen.getAllByRole('group').map((g) => g.getAttribute('aria-label'))).toEqual(['Mañana, Amoxicilina', 'Tarde, Amoxicilina', 'Noche, Amoxicilina'])
+      expect(within(screen.getByRole('group', { name: 'Tarde, Amoxicilina, hoy' })).getByRole('button', { name: 'Toma de 16:00' })).toBeInTheDocument()
+      expect(within(screen.getByRole('group', { name: 'Noche, Amoxicilina, hoy' })).getByRole('button', { name: 'Toma de 00:00' })).toBeInTheDocument()
+      expect(screen.getAllByRole('group').map((g) => g.getAttribute('aria-label'))).toEqual(['Mañana, Amoxicilina, hoy', 'Tarde, Amoxicilina, hoy', 'Noche, Amoxicilina, hoy'])
 
       await user.click(within(morning).getByRole('button', { name: 'Toma de 08:00' }))
       await waitFor(() => expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === 'PATCH')).toBe(true))
@@ -189,9 +189,9 @@ describe('ConsultationDetailPage', () => {
       )
       renderPage()
 
-      await screen.findByRole('group', { name: 'Mañana, Amoxicilina' })
-      expect(screen.queryByRole('group', { name: 'Tarde, Amoxicilina' })).not.toBeInTheDocument()
-      expect(screen.queryByRole('group', { name: 'Noche, Amoxicilina' })).not.toBeInTheDocument()
+      await screen.findByRole('group', { name: 'Mañana, Amoxicilina, hoy' })
+      expect(screen.queryByRole('group', { name: 'Tarde, Amoxicilina, hoy' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('group', { name: 'Noche, Amoxicilina, hoy' })).not.toBeInTheDocument()
     })
 
     describe('ending the treatment early (specs/016)', () => {
@@ -873,6 +873,77 @@ describe('ConsultationDetailPage', () => {
 
         expect(card('Amoxicilina').getByText('0 / 3 tomas')).toBeInTheDocument()
         expect(card('Amoxicilina').getByRole('button', { name: 'Finalizar tratamiento' })).toBeInTheDocument()
+      })
+
+      it('names the day in the groups of doses, so a screen reader knows which day they belong to', async () => {
+        stubApi(twoMedications())
+        const user = userEvent.setup()
+        renderPage()
+        await screen.findByRole('heading', { level: 3, name: 'Amoxicilina' })
+        expect(screen.getByRole('group', { name: 'Mañana, Amoxicilina, hoy' })).toBeInTheDocument()
+
+        await user.click(screen.getByRole('button', { name: /^16 de enero/ }))
+
+        expect(screen.getByRole('group', { name: 'Mañana, Amoxicilina, 16 de enero' })).toBeInTheDocument()
+      })
+
+      it('on the phone, tapping a day brings the first card into view; on the web it does not move the page', async () => {
+        const scrollIntoView = vi.fn()
+        Element.prototype.scrollIntoView = scrollIntoView
+        stubApi(twoMedications())
+        const user = userEvent.setup()
+        const phone = renderPage()
+        await screen.findByRole('heading', { level: 3, name: 'Amoxicilina' })
+
+        await user.click(screen.getByRole('button', { name: /^16 de enero/ }))
+
+        expect(scrollIntoView).toHaveBeenCalledTimes(1)
+        expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', behavior: 'smooth' })
+        expect(scrollIntoView.mock.contexts[0]).toBe(screen.getByRole('heading', { level: 3, name: 'Amoxicilina' }).closest('article'))
+        phone.unmount()
+        vi.unstubAllGlobals()
+
+        scrollIntoView.mockClear()
+        useDesktop()
+        stubApi(twoMedications())
+        renderPage()
+        await screen.findByRole('heading', { level: 3, name: 'Amoxicilina' })
+        await user.click(screen.getByRole('button', { name: /^16 de enero/ }))
+
+        expect(scrollIntoView).not.toHaveBeenCalled()
+      })
+
+      it('does not carry the tapped day over to another consultation', async () => {
+        const other = { ...twoMedications(), id: 'c2' }
+        vi.stubGlobal(
+          'fetch',
+          vi.fn().mockImplementation(async (input: string) => {
+            const url = String(input)
+            if (url.includes('/overview')) return { ok: true, json: async () => ({ childId: 'child-1', doses: [], activeTreatment: null }) }
+            if (url.includes('/accounts/')) return { ok: true, json: async () => account }
+            return { ok: true, json: async () => (url.includes('/consultations/c2') ? other : twoMedications()) }
+          }),
+        )
+        const user = userEvent.setup()
+        const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        render(
+          <QueryClientProvider client={queryClient}>
+            <MemoryRouter initialEntries={['/consultations/c1']}>
+              <Link to="/consultations/c2">otra consulta</Link>
+              <Routes>
+                <Route path="/consultations/:consultationId" element={<ConsultationDetailPage />} />
+              </Routes>
+            </MemoryRouter>
+          </QueryClientProvider>,
+        )
+        await screen.findByRole('heading', { level: 3, name: 'Amoxicilina' })
+        await user.click(screen.getByRole('button', { name: /^16 de enero/ }))
+        expect(screen.getAllByText('Tomas del 16 de enero')).toHaveLength(2)
+
+        await user.click(screen.getByRole('link', { name: 'otra consulta' }))
+
+        await waitFor(() => expect(screen.getAllByText('Tomas de hoy')).toHaveLength(2))
+        expect(screen.getByRole('button', { name: /^15 de enero/ })).toHaveAttribute('aria-pressed', 'true')
       })
 
       it('a finished treatment opens on its first day', async () => {
