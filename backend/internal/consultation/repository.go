@@ -86,7 +86,7 @@ func (r *Repository) GetByChild(ctx context.Context, childID uuid.UUID) ([]Consu
 	}
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT c.id, c.child_id, c.doctor_name, c.consult_date, c.notes, c.created_at,
+		SELECT c.id, c.child_id, c.doctor_name, c.consult_date, c.notes, c.created_at, c.record_only,
 		       (SELECT count(*) FROM medications m WHERE m.consultation_id = c.id),
 		       COALESCE((SELECT array_agg(s.name ORDER BY s.sort_order)
 		                 FROM consultation_symptoms cs JOIN symptoms s ON s.code = cs.symptom_code
@@ -101,7 +101,7 @@ func (r *Repository) GetByChild(ctx context.Context, childID uuid.UUID) ([]Consu
 	consultations := make([]Consultation, 0)
 	for rows.Next() {
 		var c Consultation
-		if err := rows.Scan(&c.ID, &c.ChildID, &c.DoctorName, &c.ConsultDate, &c.Notes, &c.CreatedAt, &c.MedicationCount, &c.SymptomNames); err != nil {
+		if err := rows.Scan(&c.ID, &c.ChildID, &c.DoctorName, &c.ConsultDate, &c.Notes, &c.CreatedAt, &c.RecordOnly, &c.MedicationCount, &c.SymptomNames); err != nil {
 			return nil, fmt.Errorf("scanning consultation: %w", err)
 		}
 		consultations = append(consultations, c)
@@ -135,10 +135,10 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, c *Consultat
 	c.ChildID = childID
 	now := r.now() // one reading for every dose's status in this response
 	err = tx.QueryRow(ctx, `
-		INSERT INTO consultations (child_id, doctor_name, consult_date, photo, notes)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO consultations (child_id, doctor_name, consult_date, photo, notes, record_only)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, created_at
-	`, c.ChildID, c.DoctorName, c.ConsultDate, c.Photo, c.Notes,
+	`, c.ChildID, c.DoctorName, c.ConsultDate, c.Photo, c.Notes, c.RecordOnly,
 	).Scan(&c.ID, &c.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("inserting consultation: %w", err)
@@ -245,9 +245,9 @@ func generateDoseSchedule(consultDate time.Time, loc *time.Location, med *Medica
 func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Consultation, error) {
 	c := &Consultation{ID: id}
 	err := r.pool.QueryRow(ctx, `
-		SELECT child_id, doctor_name, consult_date, photo, notes, created_at
+		SELECT child_id, doctor_name, consult_date, photo, notes, created_at, record_only
 		FROM consultations WHERE id = $1
-	`, id).Scan(&c.ChildID, &c.DoctorName, &c.ConsultDate, &c.Photo, &c.Notes, &c.CreatedAt)
+	`, id).Scan(&c.ChildID, &c.DoctorName, &c.ConsultDate, &c.Photo, &c.Notes, &c.CreatedAt, &c.RecordOnly)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrConsultationNotFound

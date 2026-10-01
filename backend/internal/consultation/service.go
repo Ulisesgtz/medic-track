@@ -42,6 +42,9 @@ type CreateConsultationInput struct {
 	// empty is valid. A repeated code is stored once (the repository).
 	SymptomCodes []string
 	Medications  []CreateMedicationInput
+	// RecordOnly saves the consultation as a record (specs/024): the medications' start time is neither required nor kept,
+	// so no doses are generated.
+	RecordOnly bool
 	// UTCOffsetMinutes is the parent's UTC offset (e.g. -360 for Mexico City
 	// standard time). Each medication's StartTime is read in that offset so
 	// the generated doses are real instants; 0 (the default) reads it as UTC.
@@ -94,14 +97,20 @@ func (s *Service) CreateConsultation(ctx context.Context, childID uuid.UUID, inp
 		Photo:            input.Photo,
 		Notes:            input.Notes,
 		SymptomCodes:     input.SymptomCodes,
+		RecordOnly:       input.RecordOnly,
 		ScheduleLocation: time.FixedZone("client", input.UTCOffsetMinutes*60),
 	}
 	for _, m := range input.Medications {
+		startTime := m.StartTime
+		if input.RecordOnly {
+			// The server, not the client, guarantees "no schedule": without a start time no doses are generated.
+			startTime = nil
+		}
 		c.Medications = append(c.Medications, Medication{
 			Name:           m.Name,
 			FrequencyHours: m.FrequencyHours,
 			DurationDays:   m.DurationDays,
-			StartTime:      m.StartTime,
+			StartTime:      startTime,
 		})
 	}
 
@@ -176,7 +185,11 @@ func validateCreateConsultationInput(input CreateConsultationInput) ValidationEr
 			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "durationDays"), Message: "must be a positive integer"})
 		}
 		// A start time is required: without it no doses would be generated (and the child would show no
-		// active treatment). Consultations saved before this rule keep a NULL start time (FR-010).
+		// active treatment). Consultations saved before this rule keep a NULL start time (FR-010). A record-only
+		// consultation (specs/024) has no schedule: its start time is not asked for.
+		if input.RecordOnly {
+			continue
+		}
 		if m.StartTime == nil || *m.StartTime == "" {
 			errs = append(errs, ValidationError{Field: fieldIndex(prefix, i, "startTime"), Message: "start time is required"})
 		} else if !startTimeFormat.MatchString(*m.StartTime) {

@@ -80,3 +80,20 @@ describe('ConsultationCard subtitle', () => {
     expect(screen.getByText('Control de peso · sin receta')).toBeInTheDocument()
   })
 })
+
+describe('ConsultationCard, record only (specs/024)', () => {
+  it('tags a consultation saved only as a record, in both designs', () => {
+    renderCard(false, { recordOnly: true })
+    expect(screen.getByText('Solo registro')).toBeInTheDocument()
+  })
+
+  it('has no tag otherwise, nor when the backend sends no such field', () => {
+    renderCard(false, { recordOnly: false })
+    expect(screen.queryByText('Solo registro')).not.toBeInTheDocument()
+  })
+
+  it('the web card carries it too', () => {
+    renderCard(false, { recordOnly: true }, 'desktop')
+    expect(screen.getByText('Solo registro')).toBeInTheDocument()
+  })
+})

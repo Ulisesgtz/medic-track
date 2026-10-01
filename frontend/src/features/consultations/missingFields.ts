@@ -18,6 +18,7 @@ export function missingFieldsText(
   errors: FieldErrors<ConsultationFormValues>,
   photoMissing: boolean,
   medicationCount: number,
+  recordOnly = false,
 ): string {
   const items: string[] = []
   if (photoMissing) items.push('la foto de la receta')
@@ -28,6 +29,8 @@ export function missingFieldsText(
     const medErrors = medications?.[i]
     if (!medErrors) continue
     for (const { key, label } of MEDICATION_FIELDS) {
+      // A record-only consultation has no schedule: its start time is not asked for (specs/024).
+      if (recordOnly && key === 'startTime') continue
       if (medErrors[key]) items.push(medicationCount > 1 ? `${label} (medicamento ${i + 1})` : label)
     }
   }

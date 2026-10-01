@@ -37,6 +37,9 @@ type Consultation struct {
 	// ("08:00") is read when generating doses — the parent's, so the dose
 	// instants are real. Nil means ConsultDate's own location (UTC).
 	ScheduleLocation *time.Location
+	// RecordOnly says the consultation was saved only as a record (specs/024): its medications have no start time and no
+	// doses exist. Set when creating, never changed (consultations are immutable).
+	RecordOnly bool
 	// MedicationCount is filled only when listing (GetByChild), where the
 	// medications themselves aren't loaded.
 	MedicationCount int

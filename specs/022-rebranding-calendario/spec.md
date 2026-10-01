@@ -4,7 +4,7 @@
 
 **Creado**: 2026-09-30
 
-**Estado**: Borrador — las 11 desviaciones fueron aprobadas por el usuario el 2026-09-30; la 12 (chips: ámbar = «por marcar») está en research R5 y se le señala
+**Estado**: Borrador — la lista de tomas del día y su chip «calendar» (desviación 7 y 12) los quita la spec 023 (2026-10-01); lo demás sigue vigente — las 11 desviaciones fueron aprobadas por el usuario el 2026-09-30; la 12 (chips: ámbar = «por marcar») está en research R5 y se le señala
 
 **Entrada**: Descripción del usuario: «quiero hacer un rebranding a los colores del calendario», con el diseño `Calendario PediTrack.dc.html` de Claude Design («Turno 1: Calendario del tratamiento con la paleta nueva», móvil de 430 px y web de 1024 px). Se guarda en `referencia/` junto con dos capturas de cómo se ve hoy la app (`actual-web.png`, `actual-iphone.png`, del usuario, con sus datos reales). Por la regla del proyecto, **el mock manda**: se construye tal cual y cada desviación se lista con su motivo.
 

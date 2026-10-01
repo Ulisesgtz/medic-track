@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
+import { useState } from 'react'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { TreatmentCalendar } from './TreatmentCalendar'
+import { initialDay, numbered } from './treatmentDays'
 import type { Medication } from './types'
 
 // Local dates, so the tests read the same in any time zone.
@@ -37,26 +38,35 @@ const range = (from: [number, number], to: [number, number]): [number, number][]
 const amoxicilina = med('m1', 'Amoxicilina', range([9, 30], [10, 6]), [8, 16])
 const paracetamol = med('m2', 'Paracetamol', range([9, 30], [10, 2]), [12])
 
-function renderCalendar(props: Partial<Parameters<typeof TreatmentCalendar>[0]> = {}) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  const view = (p: Partial<Parameters<typeof TreatmentCalendar>[0]>) => (
-    <QueryClientProvider client={queryClient}>
-      <TreatmentCalendar
-        consultationId="c1"
-        medications={[amoxicilina, paracetamol]}
-        today="2026-09-30"
-        variant="phone"
-        {...p}
-      />
-    </QueryClientProvider>
+type Props = { medications?: Medication[]; today?: string; variant?: 'phone' | 'desktop' }
+
+/** Stands in for the detail page (specs/023): it owns the chosen day, starting where the page does, and hears `onSelect`. */
+function Page({ onSelect, ...p }: Props & { onSelect: (day: string) => void }) {
+  const medications = p.medications ?? [amoxicilina, paracetamol]
+  const today = p.today ?? '2026-09-30'
+  const [selected, setSelected] = useState(() => initialDay(numbered(medications), today))
+  return (
+    <TreatmentCalendar
+      variant="phone"
+      {...p}
+      meds={numbered(medications)}
+      today={today}
+      selected={selected}
+      onSelect={(d) => {
+        setSelected(d)
+        onSelect(d)
+      }}
+    />
   )
-  const result = render(view(props))
-  return { ...result, rerenderWith: (p: Partial<Parameters<typeof TreatmentCalendar>[0]>) => result.rerender(view({ ...props, ...p })) }
+}
+
+function renderCalendar(props: Props = {}) {
+  const onSelect = vi.fn()
+  const result = render(<Page {...props} onSelect={onSelect} />)
+  return { ...result, onSelect, rerenderWith: (p: Props) => result.rerender(<Page {...props} {...p} onSelect={onSelect} />) }
 }
 
 const day = (name: string | RegExp) => screen.getByRole('button', { name })
-
-afterEach(() => vi.unstubAllGlobals())
 
 describe('TreatmentCalendar (specs/019)', () => {
   it('is one calendar for the consultation, with a legend of its medications in order', () => {
@@ -105,14 +115,13 @@ describe('TreatmentCalendar (specs/019)', () => {
     expect(screen.getByRole('button', { name: 'Mes siguiente' })).toBeDisabled()
   })
 
-  it('starts on today when it is inside the treatment, with today marked and its doses listed', () => {
+  it('starts on today when it is inside the treatment, with today marked', () => {
     renderCalendar({ today: '2026-10-01' })
 
     expect(screen.getByText('octubre 2026')).toBeInTheDocument()
     const today = day(/^1 de octubre/)
     expect(today).toHaveAttribute('aria-current', 'date')
     expect(today).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('heading', { name: 'Tomas de hoy' })).toBeInTheDocument()
   })
 
   it('starts on the first day when today is outside the treatment', () => {
@@ -120,47 +129,47 @@ describe('TreatmentCalendar (specs/019)', () => {
 
     expect(screen.getByText('septiembre 2026')).toBeInTheDocument()
     expect(day(/^30 de septiembre/)).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByRole('heading', { name: 'Tomas del 30 de septiembre' })).toBeInTheDocument()
   })
 
-  it('tapping a day selects it and lists its doses, of every medication, by time', async () => {
+  it('tapping a day selects it and tells the page, which is who shows its doses (specs/023)', async () => {
     const user = userEvent.setup()
-    renderCalendar({ today: '2026-12-25' })
+    const { onSelect } = renderCalendar({ today: '2026-12-25' })
 
-    await user.click(day(/^30 de septiembre/))
+    await user.click(day('15 de septiembre'))
 
-    const list = screen.getByRole('list', { name: 'Tomas del día' })
-    expect(within(list).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual([
-      'Amoxicilina, 08:00',
-      'Paracetamol, 12:00',
-      'Amoxicilina, 16:00',
-    ])
-  })
-
-  it('says there are no doses on a day outside every range, and selecting moves the selection', async () => {
-    const user = userEvent.setup()
-    renderCalendar({ today: '2026-12-25' })
-
-    await user.click(day('29 de septiembre'))
-
-    expect(screen.getByRole('heading', { name: 'Tomas del 29 de septiembre' })).toBeInTheDocument()
-    expect(screen.getByText('Ese día no hay tomas.')).toBeInTheDocument()
-    expect(day('29 de septiembre')).toHaveAttribute('aria-pressed', 'true')
+    expect(onSelect).toHaveBeenCalledWith('2026-09-15')
+    expect(day('15 de septiembre')).toHaveAttribute('aria-pressed', 'true')
     expect(day(/^30 de septiembre/)).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('marks a dose from the day list exactly like the chip of its medication', async () => {
-    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 'x', scheduledAt: '', taken: true, status: 'taken' }) })
-    vi.stubGlobal('fetch', fetchMock)
+  it('does not list doses under the calendar any more: no heading, no list, no chips', () => {
+    renderCalendar({ today: '2026-09-30' })
+
+    expect(screen.queryByRole('list', { name: 'Tomas del día' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: /Tomas de/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Toma de|, 08:00$/ })).not.toBeInTheDocument()
+  })
+
+  it('a day outside every range can be chosen too (the cards then say there are no doses)', async () => {
     const user = userEvent.setup()
-    renderCalendar({ today: '2026-12-25' })
+    const { onSelect } = renderCalendar({ today: '2026-12-25' })
 
-    await user.click(screen.getByRole('button', { name: 'Amoxicilina, 08:00' }))
+    await user.click(day('29 de septiembre'))
 
-    const [url, init] = fetchMock.mock.calls[0]
-    expect(String(url)).toMatch(/\/consultations\/c1\/doses\/m1-9-30-8$/)
-    expect(init).toMatchObject({ method: 'PATCH' })
-    expect(JSON.parse(String(init.body))).toEqual({ taken: true })
+    expect(onSelect).toHaveBeenCalledWith('2026-09-29')
+    expect(day('29 de septiembre')).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('paging through months does not choose another day', async () => {
+    const user = userEvent.setup()
+    const { onSelect } = renderCalendar({ today: '2026-09-30' })
+
+    await user.click(screen.getByRole('button', { name: 'Mes siguiente' }))
+
+    expect(screen.getByText('octubre 2026')).toBeInTheDocument()
+    expect(onSelect).not.toHaveBeenCalled()
+    await user.click(screen.getByRole('button', { name: 'Mes anterior' }))
+    expect(day(/^30 de septiembre/)).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('a treatment ended early stops marking the days after the day it ended', () => {

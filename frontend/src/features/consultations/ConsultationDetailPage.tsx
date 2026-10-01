@@ -13,8 +13,9 @@ import { MedicationCard } from './MedicationCard'
 import { PhotoViewer } from './PhotoViewer'
 import { SymptomChips } from './SymptomChips'
 import { CalendarLegendCard } from './CalendarLegendCard'
+import { RecordOnlyBadge } from './RecordOnlyBadge'
 import { TreatmentCalendar } from './TreatmentCalendar'
-import { dayKey } from './treatmentDays'
+import { dayKey, firstDoseDay, initialDay, numbered } from './treatmentDays'
 import { DOSE_REFETCH_MS } from './doseStatus'
 
 const overline = 'text-xs font-extrabold uppercase tracking-[0.1em] text-ink-soft'
@@ -29,6 +30,9 @@ const overline = 'text-xs font-extrabold uppercase tracking-[0.1em] text-ink-sof
 export function ConsultationDetailPage() {
   const { consultationId } = useParams<{ consultationId: string }>()
   const [viewerOpen, setViewerOpen] = useState(false)
+  // specs/023: the day the parent tapped in the calendar, with the consultation it was tapped in (this component is reused
+  // when the route changes to another consultation); until then, the calendar's own first day (today when it is inside).
+  const [picked, setPicked] = useState<{ consultationId: string; day: string } | null>(null)
   const { isDesktop } = useSidebarSession()
 
   const { getToken } = useAuth()
@@ -107,12 +111,29 @@ export function ConsultationDetailPage() {
       Ver completa
     </button>
   )
-  // specs/019: one calendar for the whole consultation, before the medications. `today` is the parent's local day.
+  // specs/019 and 023: one calendar for the whole consultation, before the medications; the day it chooses is the one every
+  // medication card shows. `todayKey` is the parent's local day.
+  const todayKey = dayKey(today.from)
+  const meds = numbered(consultation.medications)
+  const selectedDay = (picked?.consultationId === consultation.id ? picked.day : null) ??
+    initialDay(meds, todayKey) ??
+    // No calendar day (every dose canceled): the cards still show the first day with doses.
+    firstDoseDay(consultation.medications)
+  const chooseDay = (day: string) => {
+    setPicked({ consultationId: consultation.id, day })
+    // On the phone the cards sit below the tall calendar: bring the first one into view, the least it takes (nothing if it is).
+    if (!isDesktop) {
+      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+      document.querySelector('[data-medication-card]')?.scrollIntoView?.({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' })
+    }
+  }
   const calendar = (variant: 'phone' | 'desktop', className?: string) => (
     <TreatmentCalendar
-      consultationId={consultation.id}
-      medications={consultation.medications}
-      today={dayKey(today.from)}
+      key={consultation.id}
+      meds={meds}
+      selected={selectedDay}
+      onSelect={chooseDay}
+      today={todayKey}
       variant={variant}
       className={className}
     />
@@ -123,6 +144,8 @@ export function ConsultationDetailPage() {
       consultationId={consultation.id}
       medication={med}
       variant={isDesktop ? 'desktop' : 'phone'}
+      day={selectedDay}
+      today={todayKey}
     />
   ))
 
@@ -140,7 +163,10 @@ export function ConsultationDetailPage() {
                 >
                   {backLabel}
                 </Link>
-                <p className="mt-3 text-sm font-bold text-action">{date}</p>
+                <p className="mt-3 flex flex-wrap items-center gap-2 text-sm font-bold text-action">
+                  {date}
+                  {consultation.recordOnly && <RecordOnlyBadge />}
+                </p>
                 <h1 className="mt-1 text-4xl font-black tracking-tight text-ink">{consultation.doctorName}</h1>
               </div>
               <Link
@@ -186,17 +212,20 @@ export function ConsultationDetailPage() {
                   {seeFull('-mb-[11px] block w-fit')}
                 </div>
 
-                <div className="min-w-0 rounded-3xl bg-ink p-6">
-                  <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-[#67e8f9]">
-                    Tratamiento activo
-                  </p>
-                  <p className="mt-2.5 text-xl font-black tracking-tight text-white">
-                    {treatment ? treatment.medicationName : 'Ninguno'}
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-[#a5f3fc]">
-                    {treatment ? `termina el ${formatDayMonth(treatment.endsAt)}` : 'sin tomas pendientes'}
-                  </p>
-                </div>
+                {/* A record-only consultation has no treatment to show (specs/024). */}
+                {!consultation.recordOnly && (
+                  <div className="min-w-0 rounded-3xl bg-ink p-6">
+                    <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-[#67e8f9]">
+                      Tratamiento activo
+                    </p>
+                    <p className="mt-2.5 text-xl font-black tracking-tight text-white">
+                      {treatment ? treatment.medicationName : 'Ninguno'}
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-[#a5f3fc]">
+                      {treatment ? `termina el ${formatDayMonth(treatment.endsAt)}` : 'sin tomas pendientes'}
+                    </p>
+                  </div>
+                )}
 
                 {/* specs/022: the key of the treatment calendar, only in the web design (as the mock). */}
                 {consultation.medications.some((m) => m.doses.length > 0) && <CalendarLegendCard />}
@@ -220,7 +249,10 @@ export function ConsultationDetailPage() {
           >
             {backLabel}
           </Link>
-          <p className="mt-5 text-sm font-bold text-bright">{date}</p>
+          <p className="mt-5 flex flex-wrap items-center gap-2 text-sm font-bold text-bright">
+            {date}
+            {consultation.recordOnly && <RecordOnlyBadge />}
+          </p>
           <h1 className="mt-1.5 text-2xl font-black tracking-tight text-white">{consultation.doctorName}</h1>
         </header>
 

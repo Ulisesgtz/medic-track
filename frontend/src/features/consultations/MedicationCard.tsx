@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { formatDayMonth } from '../../shared/date'
 import { DoseChip } from './DoseChip'
-import { dayKey } from './treatmentDays'
+import { dosesOfDay, longDay } from './treatmentDays'
 import { ProgressBar } from './ProgressBar'
 import { groupByPeriod } from './dayPeriods'
 import { EndTreatmentDialog } from './EndTreatmentDialog'
@@ -22,19 +22,18 @@ interface MedicationCardProps {
   consultationId: string
   medication: Medication
   variant: 'phone' | 'desktop'
+  /** The day the treatment calendar has chosen (`YYYY-MM-DD`), or null when there are no doses to show at all. */
+  day: string | null
+  /** The parent's local today, `YYYY-MM-DD`. */
+  today: string
 }
 
 /**
- * A medication with its schedule line and the chips of one day of doses, grouped by moment of the day (specs/015).
- * The mockups show a single row of chips: it is today's when the medication has doses today, otherwise the nearest day
- * with doses. The other days are reached through the treatment calendar (specs/019), which lists any day's doses.
+ * A medication with its schedule line and the chips of the day chosen in the treatment calendar (specs/023), grouped by
+ * moment of the day (specs/015). Progress and the end/extend state always count the whole medication.
  */
-export function MedicationCard({ consultationId, medication, variant }: MedicationCardProps) {
-  const [now] = useState(() => Date.now())
-  const days = [...new Set(medication.doses.map((d) => dayKey(d.scheduledAt)))].sort()
-  const todayKey = dayKey(new Date(now).toISOString())
-  const shownDay = days.find((d) => d >= todayKey) ?? days[days.length - 1]
-  const chips = medication.doses.filter((d) => dayKey(d.scheduledAt) === shownDay)
+export function MedicationCard({ consultationId, medication, variant, day, today }: MedicationCardProps) {
+  const chips = day ? dosesOfDay(medication, day) : []
 
   // specs/016: ending the treatment early. Offered while it runs and has doses still ahead; afterwards the card says
   // when it ended and how many of the doses that corresponded were marked.
@@ -62,6 +61,7 @@ export function MedicationCard({ consultationId, medication, variant }: Medicati
 
   return (
     <article
+      data-medication-card
       className={`min-w-0 rounded-3xl bg-surface shadow-[0_8px_20px_rgba(4,37,43,0.07)] ${
         variant === 'desktop' ? 'p-6' : 'p-5'
       }`}
@@ -72,9 +72,15 @@ export function MedicationCard({ consultationId, medication, variant }: Medicati
       <p className="mt-1 text-sm font-semibold text-action">{schedule(medication)}</p>
       <ProgressBar doses={medication.doses} />
 
+      {day && (
+        <p className="mt-4 text-xs font-extrabold tracking-[0.1em] text-ink-soft uppercase">
+          {day === today ? 'Tomas de hoy' : `Tomas del ${longDay(day)}`}
+        </p>
+      )}
+      {day && chips.length === 0 && <p className="mt-2 text-sm font-semibold text-slate-600">Este día no tiene tomas.</p>}
       {/* specs/015: the day's doses by moment of the day (Mañana, Tarde, Noche); empty moments don't show. */}
       {groupByPeriod(chips).map((group) => (
-        <div key={group.key} role="group" aria-label={`${group.label}, ${medication.name}`} className="mt-4">
+        <div key={group.key} role="group" aria-label={`${group.label}, ${medication.name}, ${day === today ? 'hoy' : longDay(day!)}`} className="mt-3">
           <p aria-hidden="true" className="text-xs font-extrabold tracking-[0.1em] text-ink-soft uppercase">
             {group.label}
           </p>
