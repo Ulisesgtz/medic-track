@@ -25,6 +25,27 @@ export const DOSE_CHIP_STYLE: Record<DoseStatus, string> = {
   canceled: 'border-[1.5px] border-dashed border-slate-300 bg-surface text-slate-500',
 }
 
+/**
+ * The chip of the day list of the treatment calendar (specs/022): the design's own shapes, by the same server status.
+ * Amber stays "por marcar" and "sin registrar" stays dashed (specs/013: never amber, Principio I).
+ */
+export const CALENDAR_CHIP_STYLE: Record<DoseStatus, string> = {
+  taken: 'border-[#10b981] bg-[#ecfdf5] text-[#047857]',
+  due: 'border-[#f59e0b] bg-[#fffbeb] text-[#92400e] hover:bg-[#fef3c7]',
+  pending: 'border-dashed border-[#cbd5e1] bg-white text-[#475569]',
+  unregistered: 'border-dashed border-slate-400 bg-white text-slate-700',
+  canceled: 'border-dashed border-slate-300 bg-white text-slate-500',
+}
+
+/** The second line of a calendar chip, by status ("próxima" is only for the next pending dose of the day). */
+export const CALENDAR_CHIP_NOTE: Record<DoseStatus, string | null> = {
+  taken: 'dada',
+  due: 'por marcar',
+  pending: null,
+  unregistered: 'sin registrar',
+  canceled: 'cancelada',
+}
+
 interface DoseLike {
   status?: DoseStatus
   taken: boolean

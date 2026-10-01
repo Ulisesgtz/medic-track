@@ -44,13 +44,13 @@ export const MED_COLOR_COUNT = 6
 /** Tailwind needs whole class names in the source: one per `--color-med-N` token (src/index.css). */
 export const MED_BG = ['bg-med-1', 'bg-med-2', 'bg-med-3', 'bg-med-4', 'bg-med-5', 'bg-med-6'] as const
 
-export const MED_TEXT = ['text-med-1', 'text-med-2', 'text-med-3', 'text-med-4', 'text-med-5', 'text-med-6'] as const
+export const MED_BORDER = ['border-med-1', 'border-med-2', 'border-med-3', 'border-med-4', 'border-med-5', 'border-med-6'] as const
 
 /** The background class of the N-th medication of the consultation (1-based); from the 7th on the colors repeat. */
 export const medBg = (number: number) => MED_BG[(number - 1) % MED_COLOR_COUNT]
 
-/** Its text color (the number in a day cell): every token is at least 4.5:1 on the surface. */
-export const medText = (number: number) => MED_TEXT[(number - 1) % MED_COLOR_COUNT]
+/** Its border color (the ring of a dot in a day cell, specs/022). */
+export const medBorder = (number: number) => MED_BORDER[(number - 1) % MED_COLOR_COUNT]
 
 export interface NumberedMedication {
   /** 1-based, by its place in the consultation: the second indicator next to the color. */
@@ -60,16 +60,25 @@ export interface NumberedMedication {
   range: Range | null
   /** Every day with doses to take. */
   days: Set<string>
+  /** The doses to take each day (the canceled ones are left out): what says whether its dot is filled. */
+  dayDoses: Map<string, Dose[]>
 }
 
 export const numbered = (medications: Medication[]): NumberedMedication[] =>
   medications.map((medication, i) => {
     const days = medicationDays(medication)
+    const dayDoses = new Map<string, Dose[]>()
+    for (const dose of medication.doses) {
+      if (dose.status === 'canceled') continue
+      const key = dayKey(dose.scheduledAt)
+      dayDoses.set(key, [...(dayDoses.get(key) ?? []), dose])
+    }
     return {
       number: i + 1,
       medication,
       range: days.length === 0 ? null : { start: days[0], end: days[days.length - 1] },
       days: new Set(days),
+      dayDoses,
     }
   })
 
@@ -79,6 +88,8 @@ export type MarkRole = 'start' | 'end' | 'both' | 'mid'
 export interface DayMark {
   number: number
   role: MarkRole
+  /** Every dose of this medication that day was given: the dot is filled (specs/022). */
+  taken: boolean
 }
 
 /** The marks of a day, in the order of the medications: only those that have doses to take that day (specs/020). */
@@ -87,13 +98,32 @@ export const marksOn = (day: string, meds: NumberedMedication[]): DayMark[] =>
     if (!m.range || !m.days.has(day)) return []
     const first = day === m.range.start
     const last = day === m.range.end
-    return [{ number: m.number, role: first && last ? 'both' : first ? 'start' : last ? 'end' : 'mid' } as DayMark]
+    const doses = m.dayDoses.get(day) ?? []
+    const role = first && last ? 'both' : first ? 'start' : last ? 'end' : 'mid'
+    return [{ number: m.number, role, taken: doses.length > 0 && doses.every((d) => d.taken) } as DayMark]
   })
+
+/**
+ * One slot per medication of the consultation, in its order: the mark if it has doses that day, `null` if not. A dot keeps
+ * its place whether or not the others have doses, so its position says which medication it is (specs/022): the colors of the
+ * design are not always told apart, and never are the only way to know.
+ */
+export const slotsOn = (day: string, meds: NumberedMedication[]): (DayMark | null)[] => {
+  const marks = marksOn(day, meds)
+  return meds.map((m) => marks.find((mark) => mark.number === m.number) ?? null)
+}
 
 /** How a mark is said in the name of a day: "inicio de 1 Amoxicilina", "fin de …", "inicio y fin de …" or just "1 …". */
 export const markLabel = (mark: DayMark, name: string): string => {
   const prefix = { start: 'inicio de ', end: 'fin de ', both: 'inicio y fin de ', mid: '' }[mark.role]
-  return `${prefix}${mark.number} ${name}`
+  return `${prefix}${mark.number} ${name} (${mark.taken ? 'dada' : 'sin dar'})`
+}
+
+/** The next dose to come of the whole treatment (the earliest `pending` one, across every medication and day): the one the list calls "próxima". */
+export function nextDose(medications: Medication[]): string | null {
+  const pending = medications.flatMap((m) => m.doses).filter((dose) => dose.status === 'pending')
+  if (pending.length === 0) return null
+  return pending.reduce((first, dose) => (Date.parse(dose.scheduledAt) < Date.parse(first.scheduledAt) ? dose : first)).id
 }
 
 /** First and last day of the whole treatment (every medication), or null when none has a range. */

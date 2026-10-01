@@ -8,6 +8,9 @@ import {
   markLabel,
   marksOn,
   medBg,
+  medBorder,
+  nextDose,
+  slotsOn,
   medicationRange,
   monthGrid,
   monthOfDay,
@@ -59,9 +62,9 @@ describe('medicationRange', () => {
 
   it('marks only the days it has doses to take: a day in between with none (every 48 h) has no mark', () => {
     const meds = numbered([med('A', [['2026-09-30', '08:00'], ['2026-10-02', '08:00']])])
-    expect(marksOn('2026-09-30', meds)).toEqual([{ number: 1, role: 'start' }])
+    expect(marksOn('2026-09-30', meds)).toEqual([{ number: 1, role: 'start', taken: false }])
     expect(marksOn('2026-10-01', meds)).toEqual([])
-    expect(marksOn('2026-10-02', meds)).toEqual([{ number: 1, role: 'end' }])
+    expect(marksOn('2026-10-02', meds)).toEqual([{ number: 1, role: 'end', taken: false }])
   })
 
   it('ends on the last day with a dose that was not canceled when the treatment was ended early', () => {
@@ -102,6 +105,60 @@ describe('medicationRange', () => {
   })
 })
 
+describe('the dots of the design (specs/022)', () => {
+  const given = (m: Medication, indexes: number[]): Medication => ({
+    ...m,
+    doses: m.doses.map((d, i) => (indexes.includes(i) ? { ...d, taken: true, status: 'taken' as const } : d)),
+  })
+
+  it('a dot is filled only when every dose of that day was given', () => {
+    const twice = med('Amoxicilina', [['2026-09-30', '08:00'], ['2026-09-30', '16:00'], ['2026-10-01', '08:00']])
+    expect(marksOn('2026-09-30', numbered([given(twice, [0, 1])]))[0].taken).toBe(true)
+    expect(marksOn('2026-09-30', numbered([given(twice, [0])]))[0].taken).toBe(false)
+    expect(marksOn('2026-10-01', numbered([given(twice, [0, 1])]))[0].taken).toBe(false)
+    expect(marksOn('2026-10-01', numbered([given(twice, [2])]))[0].taken).toBe(true)
+  })
+
+  it('the canceled doses of an ended treatment do not count for the dot', () => {
+    const ended = med('Amoxicilina', [['2026-09-30', '08:00'], ['2026-10-01', '08:00']], at('2026-09-30', '09:00'))
+    expect(ended.doses[1].status).toBe('canceled')
+    expect(marksOn('2026-09-30', numbered([given(ended, [0])]))[0].taken).toBe(true)
+    expect(marksOn('2026-10-01', numbered([ended]))).toEqual([])
+  })
+
+  it('has one slot per medication, in order, null where it has no dose that day', () => {
+    const meds = numbered([
+      med('A', [['2026-09-30', '08:00']]),
+      med('B', [['2026-10-02', '08:00']]),
+      med('C', [['2026-09-30', '09:00']]),
+    ])
+    const slots = slotsOn('2026-09-30', meds)
+    expect(slots.map((s) => s?.number ?? null)).toEqual([1, null, 3])
+    expect(slotsOn('2026-10-05', meds)).toEqual([null, null, null])
+  })
+
+  it('names the next dose of the whole treatment: the first still to come, across the medications and days', () => {
+    const a = med('A', [['2026-09-30', '08:00'], ['2026-09-30', '20:00']])
+    const b = med('B', [['2026-09-30', '12:00']])
+    a.doses[0] = { ...a.doses[0], status: 'taken', taken: true }
+    a.doses[1] = { ...a.doses[1], status: 'pending' }
+    b.doses[0] = { ...b.doses[0], status: 'pending' }
+    expect(nextDose([a, b])).toBe(b.doses[0].id)
+    const later = med('C', [['2026-10-02', '07:00']])
+    later.doses[0] = { ...later.doses[0], status: 'pending' }
+    expect(nextDose([later, a, b])).toBe(b.doses[0].id)
+    b.doses[0] = { ...b.doses[0], status: 'unregistered' }
+    a.doses[1] = { ...a.doses[1], status: 'due' }
+    expect(nextDose([a, b])).toBeNull()
+  })
+
+  it('has a border class per color, repeating from the seventh', () => {
+    expect(medBorder(1)).toBe('border-med-1')
+    expect(medBorder(6)).toBe('border-med-6')
+    expect(medBorder(7)).toBe('border-med-1')
+  })
+})
+
 describe('marks, colors and numbering', () => {
   const meds = numbered([
     med('Amoxicilina', [['2026-09-30', '08:00'], ['2026-10-06', '08:00']]),
@@ -118,21 +175,21 @@ describe('marks, colors and numbering', () => {
       med('Amoxicilina', [['2026-09-30', '08:00'], ['2026-10-01', '08:00'], ['2026-10-02', '08:00'], ['2026-10-06', '08:00']]),
       med('Paracetamol', [['2026-09-30', '08:00'], ['2026-10-02', '08:00']]),
     ])
-    expect(marksOn('2026-09-30', every)).toEqual([{ number: 1, role: 'start' }, { number: 2, role: 'start' }])
-    expect(marksOn('2026-10-01', every)).toEqual([{ number: 1, role: 'mid' }])
-    expect(marksOn('2026-10-02', every)).toEqual([{ number: 1, role: 'mid' }, { number: 2, role: 'end' }])
-    expect(marksOn('2026-10-06', every)).toEqual([{ number: 1, role: 'end' }])
+    expect(marksOn('2026-09-30', every)).toEqual([{ number: 1, role: 'start', taken: false }, { number: 2, role: 'start', taken: false }])
+    expect(marksOn('2026-10-01', every)).toEqual([{ number: 1, role: 'mid', taken: false }])
+    expect(marksOn('2026-10-02', every)).toEqual([{ number: 1, role: 'mid', taken: false }, { number: 2, role: 'end', taken: false }])
+    expect(marksOn('2026-10-06', every)).toEqual([{ number: 1, role: 'end', taken: false }])
     expect(marksOn('2026-10-07', every)).toEqual([])
     expect(marksOn('2026-09-29', every)).toEqual([])
     // A treatment of one day starts and ends that day.
-    expect(marksOn('2026-10-01', numbered([med('Zinc', [['2026-10-01', '08:00']])]))).toEqual([{ number: 1, role: 'both' }])
+    expect(marksOn('2026-10-01', numbered([med('Zinc', [['2026-10-01', '08:00']])]))).toEqual([{ number: 1, role: 'both', taken: false }])
   })
 
   it('names the marks for the day: start, end, both or nothing', () => {
-    expect(markLabel({ number: 1, role: 'start' }, 'Amoxicilina')).toBe('inicio de 1 Amoxicilina')
-    expect(markLabel({ number: 2, role: 'end' }, 'Paracetamol')).toBe('fin de 2 Paracetamol')
-    expect(markLabel({ number: 3, role: 'both' }, 'Zinc')).toBe('inicio y fin de 3 Zinc')
-    expect(markLabel({ number: 4, role: 'mid' }, 'Loratadina')).toBe('4 Loratadina')
+    expect(markLabel({ number: 1, role: 'start', taken: false }, 'Amoxicilina')).toBe('inicio de 1 Amoxicilina (sin dar)')
+    expect(markLabel({ number: 2, role: 'end', taken: true }, 'Paracetamol')).toBe('fin de 2 Paracetamol (dada)')
+    expect(markLabel({ number: 3, role: 'both', taken: false }, 'Zinc')).toBe('inicio y fin de 3 Zinc (sin dar)')
+    expect(markLabel({ number: 4, role: 'mid', taken: true }, 'Loratadina')).toBe('4 Loratadina (dada)')
   })
 
   it('colors repeat from the 7th medication on', () => {

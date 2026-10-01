@@ -802,6 +802,30 @@ describe('ConsultationDetailPage', () => {
       expect(screen.getByRole('heading', { level: 2, name: 'Medicamentos' }).closest('section')?.previousElementSibling?.tagName).not.toBe('DIV')
     })
 
+    it('shows "Cómo leer el calendario" in the web design only, in the right column', async () => {
+      stubApi(consultation())
+      const phone = renderPage()
+      await screen.findByRole('heading', { name: 'Calendario del tratamiento' })
+      expect(screen.queryByRole('region', { name: 'Cómo leer el calendario' })).not.toBeInTheDocument()
+      phone.unmount()
+      vi.unstubAllGlobals()
+
+      useDesktop()
+      stubApi(consultation())
+      renderPage()
+      const legend = await screen.findByRole('region', { name: 'Cómo leer el calendario' })
+      expect(legend.closest('aside')).not.toBeNull()
+    })
+
+    it('has no key when there is nothing on the calendar (no medication has doses)', async () => {
+      useDesktop()
+      stubApi(consultation({ medications: [{ id: 'm1', name: 'Ibuprofeno', frequencyHours: 12, durationDays: 1, startTime: null, doses: [] }] }))
+      renderPage()
+
+      await screen.findByRole('heading', { level: 2, name: 'Medicamentos' })
+      expect(screen.queryByRole('region', { name: 'Cómo leer el calendario' })).not.toBeInTheDocument()
+    })
+
     it('has its own place on the web: on top of the left column, above the medications', async () => {
       useDesktop()
       stubApi(consultation())

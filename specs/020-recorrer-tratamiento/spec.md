@@ -97,6 +97,7 @@ En el calendario del tratamiento (spec 019), cada medicamento marca con **su col
 
 ## Supuestos
 
+- **La spec 022 (2026-09-30) cambia el aspecto del calendario**: los círculos rellenos de inicio y fin dejan de verse (el diseño nuevo no los tiene); «inicio de / fin de» sigue en el nombre accesible del día. Si se quieren en pantalla, hay que diseñarlos en un segundo turno del diseño (ver `BACKLOG.md`).
 - **Decisión del usuario (2026-09-30)**: se sigue la opción (b) del backlog y se descarta la (a); el calendario marca inicio y fin con el color del medicamento.
 - **Decidido por el usuario (2026-09-30)**: la app **propone** tantas tomas como tomas sin registrar, pero el padre puede **confirmar o cambiar el número**; si lo cambia, se le avisa con una nota y queda registrado que lo ingresó manualmente. Un máximo de 60 tomas por recorrido evita errores de captura (propuesta mía, fácil de ajustar).
 - «Quién lo decidió» es la **cuenta del padre** que confirmó (no hay más de un usuario por cuenta); se guarda con la hora y el número de tomas.
