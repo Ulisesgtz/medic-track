@@ -1,6 +1,6 @@
 import { formatTime } from '../../shared/date'
 import { DoseChip } from './DoseChip'
-import { dosesOn, longDay, medBg, nextDoseOn } from './treatmentDays'
+import { dosesOn, longDay, medBg, nextDose } from './treatmentDays'
 import type { Medication } from './types'
 
 interface DayDosesProps {
@@ -21,7 +21,7 @@ interface DayDosesProps {
  */
 export function DayDoses({ consultationId, medications, day, today, variant }: DayDosesProps) {
   const doses = dosesOn(day, medications)
-  const nextId = nextDoseOn(day, medications)
+  const nextId = nextDose(medications)
   const desktop = variant === 'desktop'
   return (
     <div className="flex flex-col gap-3.5">

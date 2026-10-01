@@ -9,7 +9,7 @@ import {
   marksOn,
   medBg,
   medBorder,
-  nextDoseOn,
+  nextDose,
   slotsOn,
   medicationRange,
   monthGrid,
@@ -137,17 +137,19 @@ describe('the dots of the design (specs/022)', () => {
     expect(slotsOn('2026-10-05', meds)).toEqual([null, null, null])
   })
 
-  it('names the next dose of the day: the first still to come, across the medications', () => {
+  it('names the next dose of the whole treatment: the first still to come, across the medications and days', () => {
     const a = med('A', [['2026-09-30', '08:00'], ['2026-09-30', '20:00']])
     const b = med('B', [['2026-09-30', '12:00']])
     a.doses[0] = { ...a.doses[0], status: 'taken', taken: true }
     a.doses[1] = { ...a.doses[1], status: 'pending' }
     b.doses[0] = { ...b.doses[0], status: 'pending' }
-    expect(nextDoseOn('2026-09-30', [a, b])).toBe(b.doses[0].id)
-    expect(nextDoseOn('2026-10-09', [a, b])).toBeNull()
+    expect(nextDose([a, b])).toBe(b.doses[0].id)
+    const later = med('C', [['2026-10-02', '07:00']])
+    later.doses[0] = { ...later.doses[0], status: 'pending' }
+    expect(nextDose([later, a, b])).toBe(b.doses[0].id)
     b.doses[0] = { ...b.doses[0], status: 'unregistered' }
     a.doses[1] = { ...a.doses[1], status: 'due' }
-    expect(nextDoseOn('2026-09-30', [a, b])).toBeNull()
+    expect(nextDose([a, b])).toBeNull()
   })
 
   it('has a border class per color, repeating from the seventh', () => {

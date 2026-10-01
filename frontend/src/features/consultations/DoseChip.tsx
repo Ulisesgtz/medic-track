@@ -29,63 +29,52 @@ export function DoseChip({ consultationId, dose, label, appearance = 'default', 
   const canceled = status === 'canceled'
   const stateId = `${useId()}-state`
 
-  if (appearance === 'calendar') {
-    const second = status === 'pending' ? (next ? 'próxima' : null) : CALENDAR_CHIP_NOTE[status]
-    return (
-      <button
-        type="button"
-        aria-pressed={dose.taken}
-        aria-label={label ?? `Toma de ${time}`}
-        aria-describedby={unregistered || canceled ? stateId : undefined}
-        disabled={mutation.isPending || canceled}
-        onClick={() => mutation.mutate(!dose.taken)}
-        className={`box-border min-h-11 shrink-0 cursor-pointer rounded-xl border-[1.5px] text-center transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
-          desktop ? 'w-40 p-[7px]' : 'w-[130px] p-2'
-        } ${canceled ? 'disabled:opacity-100' : ''} ${CALENDAR_CHIP_STYLE[status]}`}
-      >
-        <span className={`block leading-tight font-black ${desktop ? 'text-[15px]' : 'text-base'} ${canceled ? 'line-through' : ''}`}>
-          {dose.taken ? '✓ ' : ''}
-          {time}
-        </span>
-        {second && (
-          <span aria-hidden={unregistered || canceled ? true : undefined} className="block text-xs leading-tight font-bold">
-            {second}
-          </span>
-        )}
-        {(unregistered || canceled) && (
-          <span id={stateId} className="sr-only">
-            {canceled ? CANCELED_LABEL : UNREGISTERED_LABEL}
-          </span>
-        )}
-      </button>
-    )
-  }
+  const calendar = appearance === 'calendar'
+  const hasState = unregistered || canceled
+  // The second line: the calendar's chip says it for every status ("próxima" only for the next pending dose); the default one only for the two states without a mark.
+  const second = calendar
+    ? status === 'pending'
+      ? next
+        ? 'próxima'
+        : null
+      : CALENDAR_CHIP_NOTE[status]
+    : canceled
+      ? 'cancelada'
+      : unregistered
+        ? 'sin registrar'
+        : null
+  const shape = calendar
+    ? `box-border min-h-11 shrink-0 rounded-xl border-[1.5px] text-center ${desktop ? 'w-40 p-[7px]' : 'w-[130px] p-2'} ${CALENDAR_CHIP_STYLE[status]}`
+    : `flex min-h-11 min-w-[76px] max-w-40 flex-1 flex-col items-center justify-center rounded-xl text-sm font-extrabold ${hasState ? 'py-1.5 leading-tight' : 'py-3'} ${DOSE_CHIP_STYLE[status]}`
+  const timeClass = calendar ? `block leading-tight font-black ${desktop ? 'text-[15px]' : 'text-base'}` : ''
 
   return (
     <button
       type="button"
       aria-pressed={dose.taken}
       aria-label={label ?? `Toma de ${time}`}
-      aria-describedby={unregistered || canceled ? stateId : undefined}
+      aria-describedby={hasState ? stateId : undefined}
       disabled={mutation.isPending || canceled}
       onClick={() => mutation.mutate(!dose.taken)}
-      className={`flex min-h-11 min-w-[76px] max-w-40 flex-1 cursor-pointer flex-col items-center justify-center rounded-xl text-sm font-extrabold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
-        unregistered || canceled ? 'py-1.5 leading-tight' : 'py-3'
-      } ${canceled ? 'disabled:opacity-100' : ''} ${DOSE_CHIP_STYLE[status]}`}
+      className={`cursor-pointer transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${canceled ? 'disabled:opacity-100' : ''} ${shape}`}
     >
-      <span className={canceled ? 'line-through' : undefined}>
+      <span className={`${timeClass} ${canceled ? 'line-through' : ''}`.trim() || undefined}>
+        {calendar && dose.taken ? '✓ ' : ''}
         {time}
-        {dose.taken ? ' ✓' : ''}
+        {!calendar && dose.taken ? ' ✓' : ''}
       </span>
-      {(unregistered || canceled) && (
-        <>
-          <span aria-hidden="true" className="text-xs font-bold text-slate-600">
-            {canceled ? 'cancelada' : 'sin registrar'}
-          </span>
-          <span id={stateId} className="sr-only">
-            {canceled ? CANCELED_LABEL : UNREGISTERED_LABEL}
-          </span>
-        </>
+      {second && (
+        <span
+          aria-hidden={hasState ? true : undefined}
+          className={calendar ? 'block text-xs leading-tight font-bold' : 'text-xs font-bold text-slate-600'}
+        >
+          {second}
+        </span>
+      )}
+      {hasState && (
+        <span id={stateId} className="sr-only">
+          {canceled ? CANCELED_LABEL : UNREGISTERED_LABEL}
+        </span>
       )}
     </button>
   )

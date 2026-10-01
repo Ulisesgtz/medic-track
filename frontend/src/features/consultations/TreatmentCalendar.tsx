@@ -64,7 +64,9 @@ export function TreatmentCalendar({ consultationId, medications, today, variant,
   const index = found === -1 ? 0 : found
   const current = months[index]
   const desktop = variant === 'desktop'
-  const arrow = `flex cursor-pointer items-center justify-center border border-[#cffafe] bg-[#ecfeff] font-extrabold text-action transition-colors duration-200 hover:bg-[#cffafe] focus:outline-none focus-visible:ring-2 focus-visible:ring-action disabled:cursor-default disabled:opacity-40 disabled:hover:bg-[#ecfeff] ${
+  // The arrow is drawn at the design's size (40 / 36 px) inside a 44 px touch area (negative margin keeps the layout).
+  const arrowHit = `group ${desktop ? '-m-1' : '-m-0.5'} flex min-h-11 min-w-11 cursor-pointer items-center justify-center focus:outline-none disabled:cursor-default`
+  const arrow = `flex items-center justify-center border border-[#cffafe] bg-[#ecfeff] font-extrabold text-action transition-colors duration-200 group-hover:bg-[#cffafe] group-focus-visible:ring-2 group-focus-visible:ring-action group-disabled:opacity-40 group-disabled:group-hover:bg-[#ecfeff] ${
     desktop ? 'h-9 w-9 rounded-[10px] text-lg' : 'h-10 w-10 rounded-xl text-xl'
   }`
 
@@ -79,8 +81,8 @@ export function TreatmentCalendar({ consultationId, medications, today, variant,
         }`}
       >
         <div className="flex items-center justify-between gap-2">
-          <button type="button" aria-label="Mes anterior" disabled={index === 0} onClick={() => setView(months[index - 1])} className={arrow}>
-            ‹
+          <button type="button" aria-label="Mes anterior" disabled={index === 0} onClick={() => setView(months[index - 1])} className={arrowHit}>
+            <span className={arrow}>‹</span>
           </button>
           <p aria-live="polite" className={`font-black text-ink ${desktop ? 'text-lg' : 'text-xl'}`}>
             {LONG_MONTHS[current.month]} {current.year}
@@ -90,9 +92,9 @@ export function TreatmentCalendar({ consultationId, medications, today, variant,
             aria-label="Mes siguiente"
             disabled={index === months.length - 1}
             onClick={() => setView(months[index + 1])}
-            className={arrow}
+            className={arrowHit}
           >
-            ›
+            <span className={arrow}>›</span>
           </button>
         </div>
 
@@ -105,7 +107,7 @@ export function TreatmentCalendar({ consultationId, medications, today, variant,
           {monthGrid(current)
             .flat()
             .map((day) => {
-              const height = desktop ? 'h-[62px]' : 'h-[54px]'
+              const height = desktop ? 'min-h-[62px]' : 'min-h-[54px]'
               if (!day.inMonth) return <div key={day.key} className={height} />
               const slots = slotsOn(day.key, meds)
               const marks = marksOn(day.key, meds)

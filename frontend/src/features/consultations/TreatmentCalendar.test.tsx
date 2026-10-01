@@ -287,10 +287,19 @@ describe('TreatmentCalendar (specs/019)', () => {
 
   it('has its own sizes on the web (a taller day) than on the phone', () => {
     const phone = renderCalendar()
-    expect(day(/^30 de septiembre/).className).toContain('h-[54px]')
+    expect(day(/^30 de septiembre/).className).toContain('min-h-[54px]')
     phone.unmount()
 
     renderCalendar({ variant: 'desktop' })
-    expect(day(/^30 de septiembre/).className).toContain('h-[62px]')
+    expect(day(/^30 de septiembre/).className).toContain('min-h-[62px]')
+  })
+
+  it('keeps a 44 px touch area on the month arrows in both designs', () => {
+    const phone = renderCalendar()
+    expect(screen.getByRole('button', { name: 'Mes siguiente' }).className).toContain('min-h-11')
+    phone.unmount()
+
+    renderCalendar({ variant: 'desktop' })
+    expect(screen.getByRole('button', { name: 'Mes anterior' }).className).toContain('min-w-11')
   })
 })

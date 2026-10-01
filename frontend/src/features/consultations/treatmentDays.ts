@@ -44,15 +44,10 @@ export const MED_COLOR_COUNT = 6
 /** Tailwind needs whole class names in the source: one per `--color-med-N` token (src/index.css). */
 export const MED_BG = ['bg-med-1', 'bg-med-2', 'bg-med-3', 'bg-med-4', 'bg-med-5', 'bg-med-6'] as const
 
-export const MED_TEXT = ['text-med-1', 'text-med-2', 'text-med-3', 'text-med-4', 'text-med-5', 'text-med-6'] as const
-
 export const MED_BORDER = ['border-med-1', 'border-med-2', 'border-med-3', 'border-med-4', 'border-med-5', 'border-med-6'] as const
 
 /** The background class of the N-th medication of the consultation (1-based); from the 7th on the colors repeat. */
 export const medBg = (number: number) => MED_BG[(number - 1) % MED_COLOR_COUNT]
-
-/** Its text color: every token is at least 4.5:1 on the surface. */
-export const medText = (number: number) => MED_TEXT[(number - 1) % MED_COLOR_COUNT]
 
 /** Its border color (the ring of a dot in a day cell, specs/022). */
 export const medBorder = (number: number) => MED_BORDER[(number - 1) % MED_COLOR_COUNT]
@@ -124,10 +119,11 @@ export const markLabel = (mark: DayMark, name: string): string => {
   return `${prefix}${mark.number} ${name} (${mark.taken ? 'dada' : 'sin dar'})`
 }
 
-/** The first dose still to come (`pending`) of the day, across every medication, by time: the one the list calls "próxima". */
-export function nextDoseOn(day: string, medications: Medication[]): string | null {
-  const pending = dosesOn(day, medications).filter(({ dose }) => dose.status === 'pending')
-  return pending.length > 0 ? pending[0].dose.id : null
+/** The next dose to come of the whole treatment (the earliest `pending` one, across every medication and day): the one the list calls "próxima". */
+export function nextDose(medications: Medication[]): string | null {
+  const pending = medications.flatMap((m) => m.doses).filter((dose) => dose.status === 'pending')
+  if (pending.length === 0) return null
+  return pending.reduce((first, dose) => (Date.parse(dose.scheduledAt) < Date.parse(first.scheduledAt) ? dose : first)).id
 }
 
 /** First and last day of the whole treatment (every medication), or null when none has a range. */
