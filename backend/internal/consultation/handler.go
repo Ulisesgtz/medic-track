@@ -76,6 +76,8 @@ type consultationSummaryResponse struct {
 	Notes           string   `json:"notes" example:"Comió mariscos el domingo; la fiebre empezó el lunes"`
 	SymptomNames    []string `json:"symptomNames" example:"Fiebre,Tos"`
 	MedicationCount int      `json:"medicationCount" example:"2"`
+	// RecordOnly: saved only as a record (specs/024) — no schedule, no doses, no reminders.
+	RecordOnly bool `json:"recordOnly" example:"false"`
 } // @name ConsultationSummaryResponse
 
 type consultationListResponse struct {
@@ -93,6 +95,8 @@ type consultationDetailResponse struct {
 	// Symptoms are the marked symptoms in catalog order, retired ones included.
 	Symptoms    []catalog.SymptomResponse `json:"symptoms"`
 	Medications []medicationResponse      `json:"medications"`
+	// RecordOnly: saved only as a record (specs/024) — its medications have no start time and no doses.
+	RecordOnly bool `json:"recordOnly" example:"false"`
 } // @name ConsultationDetailResponse
 
 // sessionErrorResponseDoc documents the 401/403 bodies every endpoint here can
@@ -168,6 +172,7 @@ func (h *Handler) ListConsultations(w http.ResponseWriter, r *http.Request) {
 			Notes:           c.Notes,
 			SymptomNames:    c.SymptomNames, // [] when none: the query COALESCEs to an empty array,
 			MedicationCount: c.MedicationCount,
+			RecordOnly:      c.RecordOnly,
 		})
 	}
 
@@ -297,6 +302,9 @@ type createConsultationRequest struct {
 	// UTCOffsetMinutes is the parent's UTC offset, so "startTime" is read in
 	// their own time zone. Optional: 0 (default) means UTC.
 	UTCOffsetMinutes int `json:"utcOffsetMinutes" example:"-360"`
+	// RecordOnly saves the consultation only as a record (specs/024): optional, false by default. When true the
+	// medications' "startTime" is not required and is discarded, so no doses (and no reminders) exist.
+	RecordOnly bool `json:"recordOnly" example:"false"`
 }
 
 // CreateConsultation handles POST /children/{childId}/consultations
@@ -366,6 +374,7 @@ func (h *Handler) CreateConsultation(w http.ResponseWriter, r *http.Request) {
 		Photo:        photo,
 		Notes:        notesOf(req),
 		SymptomCodes: req.SymptomCodes,
+		RecordOnly:   req.RecordOnly,
 
 		UTCOffsetMinutes: req.UTCOffsetMinutes,
 	}
@@ -716,5 +725,6 @@ func toConsultationDetailResponse(c *Consultation) consultationDetailResponse {
 		Notes:       c.Notes,
 		Symptoms:    symptoms,
 		Medications: medications,
+		RecordOnly:  c.RecordOnly,
 	}
 }

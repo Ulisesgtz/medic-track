@@ -1432,6 +1432,11 @@ const docTemplate = `{
                 "photoBase64": {
                     "type": "string"
                 },
+                "recordOnly": {
+                    "description": "RecordOnly: saved only as a record (specs/024) — its medications have no start time and no doses.",
+                    "type": "boolean",
+                    "example": false
+                },
                 "symptoms": {
                     "description": "Symptoms are the marked symptoms in catalog order, retired ones included.",
                     "type": "array",
@@ -1517,6 +1522,11 @@ const docTemplate = `{
                 "notes": {
                     "type": "string",
                     "example": "Comió mariscos el domingo; la fiebre empezó el lunes"
+                },
+                "recordOnly": {
+                    "description": "RecordOnly: saved only as a record (specs/024) — no schedule, no doses, no reminders.",
+                    "type": "boolean",
+                    "example": false
                 },
                 "symptomNames": {
                     "type": "array",
@@ -2166,6 +2176,11 @@ const docTemplate = `{
                 },
                 "photoBase64": {
                     "type": "string"
+                },
+                "recordOnly": {
+                    "description": "RecordOnly saves the consultation only as a record (specs/024): optional, false by default. When true the\nmedications' \"startTime\" is not required and is discarded, so no doses (and no reminders) exist.",
+                    "type": "boolean",
+                    "example": false
                 },
                 "symptomCodes": {
                     "description": "SymptomCodes are catalog codes (GET /catalog/symptoms); optional, duplicates ignored.",
