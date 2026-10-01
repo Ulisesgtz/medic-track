@@ -177,6 +177,15 @@ export function initialDay(meds: NumberedMedication[], today: string): string | 
   return span.start <= today && today <= span.end ? today : span.start
 }
 
+/**
+ * The first day with any dose at all, canceled ones included, or null. The fallback when the calendar has no day to show
+ * (a treatment ended before its first dose: every dose is canceled), so the cards still show those doses (specs/023).
+ */
+export function firstDoseDay(medications: Medication[]): string | null {
+  const days = medications.flatMap((m) => m.doses.map((d) => dayKey(d.scheduledAt))).sort()
+  return days[0] ?? null
+}
+
 /** The doses of one medication on the day (any status, canceled ones included), in the order the detail brings them. */
 export const dosesOfDay = (medication: Medication, day: string): Dose[] =>
   medication.doses.filter((dose) => dayKey(dose.scheduledAt) === day)

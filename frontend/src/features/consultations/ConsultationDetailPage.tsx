@@ -14,7 +14,7 @@ import { PhotoViewer } from './PhotoViewer'
 import { SymptomChips } from './SymptomChips'
 import { CalendarLegendCard } from './CalendarLegendCard'
 import { TreatmentCalendar } from './TreatmentCalendar'
-import { dayKey, initialDay, numbered } from './treatmentDays'
+import { dayKey, firstDoseDay, initialDay, numbered } from './treatmentDays'
 import { DOSE_REFETCH_MS } from './doseStatus'
 
 const overline = 'text-xs font-extrabold uppercase tracking-[0.1em] text-ink-soft'
@@ -114,7 +114,10 @@ export function ConsultationDetailPage() {
   // medication card shows. `todayKey` is the parent's local day.
   const todayKey = dayKey(today.from)
   const meds = numbered(consultation.medications)
-  const selectedDay = (picked?.consultationId === consultation.id ? picked.day : null) ?? initialDay(meds, todayKey)
+  const selectedDay = (picked?.consultationId === consultation.id ? picked.day : null) ??
+    initialDay(meds, todayKey) ??
+    // No calendar day (every dose canceled): the cards still show the first day with doses.
+    firstDoseDay(consultation.medications)
   const chooseDay = (day: string) => {
     setPicked({ consultationId: consultation.id, day })
     // On the phone the cards sit below the tall calendar: bring the first one into view, the least it takes (nothing if it is).

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   dayKey,
   dosesOfDay,
+  firstDoseDay,
   MAX_EXTENSION_DOSES,
   parseDoses,
   initialDay,
@@ -260,6 +261,16 @@ describe('initialDay', () => {
 
   it('is null when there is nothing to show', () => {
     expect(initialDay(numbered([med('A', [])]), '2026-10-02')).toBeNull()
+  })
+})
+
+describe('firstDoseDay (specs/023)', () => {
+  it('is the earliest day with any dose, canceled ones included, or null', () => {
+    const a = med('A', [['2026-10-02', '08:00'], ['2026-10-01', '20:00']])
+    a.doses = a.doses.map((d) => ({ ...d, status: 'canceled' as const }))
+
+    expect(firstDoseDay([a, med('B', [['2026-10-05', '08:00']])])).toBe('2026-10-01')
+    expect(firstDoseDay([med('B', [])])).toBeNull()
   })
 })
 

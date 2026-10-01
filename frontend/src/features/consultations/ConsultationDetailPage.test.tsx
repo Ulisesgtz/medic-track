@@ -946,6 +946,26 @@ describe('ConsultationDetailPage', () => {
         expect(screen.getByRole('button', { name: /^15 de enero/ })).toHaveAttribute('aria-pressed', 'true')
       })
 
+      it('a treatment ended before its first dose (every dose canceled) still shows those doses', async () => {
+        stubApi(
+          consultation({
+            medications: [{
+              id: 'm1', name: 'Amoxicilina', frequencyHours: 24, durationDays: 2, startTime: '16:00', endedAt: at(9, 15),
+              doses: [
+                { id: 'c1', scheduledAt: at(16, 15), taken: false, status: 'canceled' },
+                { id: 'c2', scheduledAt: at(16, 16), taken: false, status: 'canceled' },
+              ],
+            }],
+          }),
+        )
+        renderPage()
+
+        // No calendar (it has no day to mark), but the card shows the first day's canceled dose, disabled.
+        expect(await screen.findByText('Tomas de hoy')).toBeInTheDocument()
+        expect(screen.queryByRole('heading', { name: 'Calendario del tratamiento' })).not.toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Toma de 16:00' })).toBeDisabled()
+      })
+
       it('a finished treatment opens on its first day', async () => {
         vi.setSystemTime(new Date(2026, 1, 20, 12))
         stubApi(twoMedications())
