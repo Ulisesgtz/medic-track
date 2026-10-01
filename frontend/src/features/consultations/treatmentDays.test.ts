@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   dayKey,
-  dosesOn,
+  dosesOfDay,
   MAX_EXTENSION_DOSES,
   parseDoses,
   initialDay,
@@ -9,7 +9,6 @@ import {
   marksOn,
   medBg,
   medBorder,
-  nextDose,
   slotsOn,
   medicationRange,
   monthGrid,
@@ -135,21 +134,6 @@ describe('the dots of the design (specs/022)', () => {
     const slots = slotsOn('2026-09-30', meds)
     expect(slots.map((s) => s?.number ?? null)).toEqual([1, null, 3])
     expect(slotsOn('2026-10-05', meds)).toEqual([null, null, null])
-  })
-
-  it('names the next dose of the whole treatment: the first still to come, across the medications and days', () => {
-    const a = med('A', [['2026-09-30', '08:00'], ['2026-09-30', '20:00']])
-    const b = med('B', [['2026-09-30', '12:00']])
-    a.doses[0] = { ...a.doses[0], status: 'taken', taken: true }
-    a.doses[1] = { ...a.doses[1], status: 'pending' }
-    b.doses[0] = { ...b.doses[0], status: 'pending' }
-    expect(nextDose([a, b])).toBe(b.doses[0].id)
-    const later = med('C', [['2026-10-02', '07:00']])
-    later.doses[0] = { ...later.doses[0], status: 'pending' }
-    expect(nextDose([later, a, b])).toBe(b.doses[0].id)
-    b.doses[0] = { ...b.doses[0], status: 'unregistered' }
-    a.doses[1] = { ...a.doses[1], status: 'due' }
-    expect(nextDose([a, b])).toBeNull()
   })
 
   it('has a border class per color, repeating from the seventh', () => {
@@ -279,22 +263,16 @@ describe('initialDay', () => {
   })
 })
 
-describe('dosesOn', () => {
-  it('joins the doses of every medication of the day, by time, keeping each one\'s number', () => {
-    const a = med('Amoxicilina', [['2026-09-30', '16:00'], ['2026-09-30', '08:00'], ['2026-10-01', '08:00']])
-    const b = med('Paracetamol', [['2026-09-30', '12:00'], ['2026-09-30', '08:00']])
+describe('dosesOfDay (specs/023)', () => {
+  it('is the doses of that medication on the day, whatever their status, in the order they come', () => {
+    const a = med('Amoxicilina', [['2026-09-30', '08:00'], ['2026-09-30', '16:00'], ['2026-10-01', '08:00']])
+    a.doses[1] = { ...a.doses[1], status: 'canceled' }
 
-    const day = dosesOn('2026-09-30', [a, b])
-
-    expect(day.map((d) => [d.medication.name, d.number, new Date(d.dose.scheduledAt).getHours()])).toEqual([
-      ['Amoxicilina', 1, 8],
-      ['Paracetamol', 2, 8],
-      ['Paracetamol', 2, 12],
-      ['Amoxicilina', 1, 16],
-    ])
+    expect(dosesOfDay(a, '2026-09-30').map((d) => new Date(d.scheduledAt).getHours())).toEqual([8, 16])
+    expect(dosesOfDay(a, '2026-10-01')).toHaveLength(1)
   })
 
-  it('is empty on a day with no doses', () => {
-    expect(dosesOn('2026-12-25', [med('A', [['2026-09-30', '08:00']])])).toEqual([])
+  it('is empty on a day the medication has no doses', () => {
+    expect(dosesOfDay(med('A', [['2026-09-30', '08:00']]), '2026-12-25')).toEqual([])
   })
 })

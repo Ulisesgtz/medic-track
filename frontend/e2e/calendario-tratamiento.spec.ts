@@ -33,6 +33,8 @@ async function seedTwoMedications(page: Page) {
 
 /** Shows the month of `date` in the calendar (the arrows only go between months with treatment). */
 async function showMonthOf(page: Page, date: Date) {
+  // The calendar draws after the detail loads: deciding before that would take a month that is not on screen yet.
+  await expect(page.getByRole('region', { name: 'Calendario del tratamiento' })).toBeVisible()
   const title = page.getByText(monthTitle(date), { exact: true })
   if (!(await title.isVisible())) await page.getByRole('button', { name: 'Mes siguiente' }).click()
   await expect(title).toBeVisible()
@@ -67,25 +69,45 @@ for (const design of designs) {
       }
     })
 
-    test('tocar un día lista sus tomas de todos los medicamentos; marcar una actualiza el progreso', async ({ page }) => {
+    test('tocar un día cambia las tarjetas de cada medicamento; marcar una toma actualiza el progreso (spec 023)', async ({ page }) => {
       const id = await seedTwoMedications(page)
       await page.goto(`/consultations/${id}`)
       const cal = calendar(page)
+      const amoxicilina = page.getByRole('article').filter({ hasText: 'Amoxicilina' })
+      const paracetamol = page.getByRole('article').filter({ hasText: 'Paracetamol' })
+
+      // Opens on today, with no list of its own under the calendar.
+      await expect(amoxicilina.getByText('Tomas de hoy')).toBeVisible()
+      await expect(cal.getByRole('list', { name: 'Tomas del día' })).toHaveCount(0)
+
       const day = daysFromToday(2)
       await showMonthOf(page, day)
-
       await cal.getByRole('button', { name: new RegExp(`^${longDay(day)} · 1 Amoxicilina \\(sin dar\\), fin de 2 Paracetamol`) }).click()
 
-      const list = cal.getByRole('list', { name: 'Tomas del día' })
-      await expect(list.getByRole('button')).toHaveCount(6)
-      await expect(cal.getByRole('heading', { name: `Tomas del ${longDay(day)}` })).toBeVisible()
+      await expect(amoxicilina.getByText(`Tomas del ${longDay(day)}`)).toBeVisible()
+      await expect(amoxicilina.getByRole('button', { name: /^Toma de/ })).toHaveCount(3)
+      await expect(paracetamol.getByRole('button', { name: /^Toma de/ })).toHaveCount(3)
       await expect(page.getByText('0 / 21 tomas')).toBeVisible()
 
-      const dose = list.getByRole('button', { name: 'Amoxicilina, 08:00' })
+      const dose = amoxicilina.getByRole('button', { name: 'Toma de 08:00' })
       await dose.click()
 
       await expect(dose).toHaveAttribute('aria-pressed', 'true')
       await expect(page.getByText('1 / 21 tomas')).toBeVisible()
+      await expect(amoxicilina.getByText(`Tomas del ${longDay(day)}`)).toBeVisible()
+    })
+
+    test('un medicamento sin tomas el día elegido lo dice', async ({ page }) => {
+      const id = await seedTwoMedications(page)
+      await page.goto(`/consultations/${id}`)
+      const cal = calendar(page)
+      const day = daysFromToday(4)
+      await showMonthOf(page, day)
+
+      await cal.getByRole('button', { name: new RegExp(`^${longDay(day)} · 1 Amoxicilina`) }).click()
+
+      await expect(page.getByRole('article').filter({ hasText: 'Paracetamol' }).getByText('Este día no tiene tomas.')).toBeVisible()
+      await expect(page.getByRole('article').filter({ hasText: 'Amoxicilina' }).getByRole('button', { name: /^Toma de/ })).toHaveCount(3)
     })
 
     test('un día fuera del tratamiento dice que no hay tomas', async ({ page }) => {
@@ -98,7 +120,8 @@ for (const design of designs) {
 
       await cal.getByRole('button', { name: longDay(outside), exact: true }).click()
 
-      await expect(cal.getByText('Ese día no hay tomas.')).toBeVisible()
+      // Both cards say it, since the calendar chooses the day of every medication (spec 023).
+      await expect(page.getByText('Este día no tiene tomas.')).toHaveCount(2)
     })
 
     test('las flechas de mes solo llegan a los meses con tratamiento', async ({ page }) => {
@@ -132,6 +155,10 @@ for (const design of designs) {
       const tomorrow = daysFromToday(1)
       await showMonthOf(page, tomorrow)
       await expect(cal.getByRole('button', { name: `${longDay(tomorrow)} · 2 Paracetamol` })).toBeVisible()
+
+      // The canceled doses after the end are reached by tapping their day (spec 023).
+      await cal.getByRole('button', { name: `${longDay(tomorrow)} · 2 Paracetamol` }).click()
+      await expect(page.getByRole('article').filter({ hasText: 'Amoxicilina' }).getByText('cancelada').first()).toBeVisible()
     })
 
     if (!design.isWeb) {

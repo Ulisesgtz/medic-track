@@ -14,7 +14,7 @@ import { PhotoViewer } from './PhotoViewer'
 import { SymptomChips } from './SymptomChips'
 import { CalendarLegendCard } from './CalendarLegendCard'
 import { TreatmentCalendar } from './TreatmentCalendar'
-import { dayKey } from './treatmentDays'
+import { dayKey, initialDay, numbered } from './treatmentDays'
 import { DOSE_REFETCH_MS } from './doseStatus'
 
 const overline = 'text-xs font-extrabold uppercase tracking-[0.1em] text-ink-soft'
@@ -29,6 +29,8 @@ const overline = 'text-xs font-extrabold uppercase tracking-[0.1em] text-ink-sof
 export function ConsultationDetailPage() {
   const { consultationId } = useParams<{ consultationId: string }>()
   const [viewerOpen, setViewerOpen] = useState(false)
+  // specs/023: the day the parent tapped in the calendar; until then, the calendar's own first day (today when it is inside).
+  const [picked, setPicked] = useState<string | null>(null)
   const { isDesktop } = useSidebarSession()
 
   const { getToken } = useAuth()
@@ -107,12 +109,16 @@ export function ConsultationDetailPage() {
       Ver completa
     </button>
   )
-  // specs/019: one calendar for the whole consultation, before the medications. `today` is the parent's local day.
+  // specs/019 and 023: one calendar for the whole consultation, before the medications; the day it chooses is the one every
+  // medication card shows. `todayKey` is the parent's local day.
+  const todayKey = dayKey(today.from)
+  const selectedDay = picked ?? initialDay(numbered(consultation.medications), todayKey)
   const calendar = (variant: 'phone' | 'desktop', className?: string) => (
     <TreatmentCalendar
-      consultationId={consultation.id}
       medications={consultation.medications}
-      today={dayKey(today.from)}
+      selected={selectedDay}
+      onSelect={setPicked}
+      today={todayKey}
       variant={variant}
       className={className}
     />
@@ -123,6 +129,8 @@ export function ConsultationDetailPage() {
       consultationId={consultation.id}
       medication={med}
       variant={isDesktop ? 'desktop' : 'phone'}
+      day={selectedDay}
+      today={todayKey}
     />
   ))
 

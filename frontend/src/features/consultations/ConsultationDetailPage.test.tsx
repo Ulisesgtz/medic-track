@@ -380,7 +380,7 @@ describe('ConsultationDetailPage', () => {
       })
     })
 
-    it('shows the nearest day with doses when none are left today, with no day switcher (specs/019)', async () => {
+    it('opens on today even when the medication has no doses that day, and says so; tapping another day shows its doses (specs/023)', async () => {
       stubApi(
         consultation({
           medications: [{
@@ -394,11 +394,20 @@ describe('ConsultationDetailPage', () => {
           }],
         }),
       )
+      const user = userEvent.setup()
       renderPage()
 
-      // Jan 15 has no doses: the next day with doses (Jan 17) is shown.
-      expect(await screen.findByRole('button', { name: 'Toma de 08:00' })).toHaveAttribute('aria-pressed', 'false')
+      // Jan 15 is inside the treatment but this medication has no doses that day.
+      expect(await screen.findByText('Tomas de hoy')).toBeInTheDocument()
+      expect(screen.getByText('Este día no tiene tomas.')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /^Toma de/ })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /Día (anterior|siguiente)/ })).not.toBeInTheDocument()
+
+      await user.click(screen.getByRole('button', { name: /^17 de enero/ }))
+
+      expect(screen.getByText('Tomas del 17 de enero')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Toma de 08:00' })).toHaveAttribute('aria-pressed', 'false')
+      expect(screen.getByRole('button', { name: 'Toma de 20:00' })).toBeInTheDocument()
     })
 
     it('does not show chips for a medication without a start time (FR-010)', async () => {
@@ -775,7 +784,7 @@ describe('ConsultationDetailPage', () => {
   })
 
   describe('treatment calendar (specs/019)', () => {
-    it('sits before the medications on the phone, with today listed and marking from the list', async () => {
+    it('sits before the medications on the phone, with no list of its own: today is chosen and marking is on the card', async () => {
       const fetchMock = stubApi(consultation())
       const user = userEvent.setup()
       renderPage()
@@ -783,14 +792,99 @@ describe('ConsultationDetailPage', () => {
       const heading = await screen.findByRole('heading', { name: 'Calendario del tratamiento' })
       const medicationsHeading = screen.getByRole('heading', { level: 2, name: 'Medicamentos' })
       expect(heading.compareDocumentPosition(medicationsHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-      expect(screen.getByRole('heading', { name: 'Tomas de hoy' })).toBeInTheDocument()
-      // The same dose is also a chip of its medication: its own name stays unique.
+      expect(screen.queryByRole('list', { name: 'Tomas del día' })).not.toBeInTheDocument()
+      expect(screen.getByText('Tomas de hoy')).toBeInTheDocument()
+      // Each dose is on screen once: only the card of its medication shows it (specs/023).
       expect(screen.getAllByRole('button', { name: 'Toma de 16:00' })).toHaveLength(1)
 
-      await user.click(screen.getByRole('button', { name: 'Amoxicilina 250 mg, 16:00' }))
+      await user.click(screen.getByRole('button', { name: 'Toma de 16:00' }))
 
       const patch = fetchMock.mock.calls.find(([, init]) => init?.method === 'PATCH')
       expect(String(patch?.[0])).toContain('/consultations/c1/doses/d2')
+    })
+
+    describe('the calendar chooses the day of every medication (specs/023)', () => {
+      const twoMedications = () =>
+        consultation({
+          medications: [
+            {
+              id: 'm1', name: 'Amoxicilina', frequencyHours: 24, durationDays: 3, startTime: '08:00',
+              doses: [
+                { id: 'a15', scheduledAt: at(8, 15), taken: false, status: 'due' },
+                { id: 'a16', scheduledAt: at(8, 16), taken: false, status: 'pending' },
+                { id: 'a17', scheduledAt: at(8, 17), taken: false, status: 'pending' },
+              ],
+            },
+            {
+              id: 'm2', name: 'Paracetamol', frequencyHours: 24, durationDays: 1, startTime: '12:00',
+              doses: [{ id: 'p15', scheduledAt: at(12, 15), taken: false, status: 'due' }],
+            },
+          ],
+        })
+      const card = (name: string) => within(screen.getByRole('heading', { level: 3, name }).closest('article')!)
+
+      it('opens on today for both cards', async () => {
+        stubApi(twoMedications())
+        renderPage()
+
+        await screen.findByRole('heading', { level: 3, name: 'Amoxicilina' })
+        expect(screen.getAllByText('Tomas de hoy')).toHaveLength(2)
+        expect(card('Amoxicilina').getByRole('button', { name: 'Toma de 08:00' })).toBeInTheDocument()
+        expect(card('Paracetamol').getByRole('button', { name: 'Toma de 12:00' })).toBeInTheDocument()
+      })
+
+      it('tapping a day changes both cards at once, and a medication without doses that day says so', async () => {
+        stubApi(twoMedications())
+        const user = userEvent.setup()
+        renderPage()
+        await screen.findByRole('heading', { level: 3, name: 'Amoxicilina' })
+
+        await user.click(screen.getByRole('button', { name: /^16 de enero/ }))
+
+        expect(screen.getAllByText('Tomas del 16 de enero')).toHaveLength(2)
+        expect(card('Amoxicilina').getByRole('button', { name: 'Toma de 08:00' })).toBeInTheDocument()
+        expect(card('Paracetamol').queryByRole('button')).not.toBeInTheDocument()
+        expect(card('Paracetamol').getByText('Este día no tiene tomas.')).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /^16 de enero/ })).toHaveAttribute('aria-pressed', 'true')
+      })
+
+      it('marking a dose of another day updates the card and keeps that day chosen', async () => {
+        const fetchMock = stubApi(twoMedications())
+        const user = userEvent.setup()
+        renderPage()
+        await screen.findByRole('heading', { level: 3, name: 'Amoxicilina' })
+        await user.click(screen.getByRole('button', { name: /^16 de enero/ }))
+
+        await user.click(card('Amoxicilina').getByRole('button', { name: 'Toma de 08:00' }))
+
+        const patch = fetchMock.mock.calls.find(([, init]) => init?.method === 'PATCH')
+        expect(String(patch?.[0])).toContain('/consultations/c1/doses/a16')
+        expect(screen.getByRole('button', { name: /^16 de enero/ })).toHaveAttribute('aria-pressed', 'true')
+        expect(screen.getAllByText('Tomas del 16 de enero')).toHaveLength(2)
+      })
+
+      it('progress and the end button count the whole medication, whatever day is chosen', async () => {
+        stubApi(twoMedications())
+        const user = userEvent.setup()
+        renderPage()
+        await screen.findByRole('heading', { level: 3, name: 'Amoxicilina' })
+
+        await user.click(screen.getByRole('button', { name: /^17 de enero/ }))
+
+        expect(card('Amoxicilina').getByText('0 / 3 tomas')).toBeInTheDocument()
+        expect(card('Amoxicilina').getByRole('button', { name: 'Finalizar tratamiento' })).toBeInTheDocument()
+      })
+
+      it('a finished treatment opens on its first day', async () => {
+        vi.setSystemTime(new Date(2026, 1, 20, 12))
+        stubApi(twoMedications())
+        renderPage()
+
+        await screen.findByRole('heading', { level: 3, name: 'Amoxicilina' })
+
+        expect(screen.getAllByText('Tomas del 15 de enero')).toHaveLength(2)
+        expect(screen.getByRole('button', { name: /^15 de enero/ })).toHaveAttribute('aria-pressed', 'true')
+      })
     })
 
     it('leaves no gap when no medication has a day to show (no start time, so no doses)', async () => {

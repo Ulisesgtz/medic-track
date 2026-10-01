@@ -119,13 +119,6 @@ export const markLabel = (mark: DayMark, name: string): string => {
   return `${prefix}${mark.number} ${name} (${mark.taken ? 'dada' : 'sin dar'})`
 }
 
-/** The next dose to come of the whole treatment (the earliest `pending` one, across every medication and day): the one the list calls "próxima". */
-export function nextDose(medications: Medication[]): string | null {
-  const pending = medications.flatMap((m) => m.doses).filter((dose) => dose.status === 'pending')
-  if (pending.length === 0) return null
-  return pending.reduce((first, dose) => (Date.parse(dose.scheduledAt) < Date.parse(first.scheduledAt) ? dose : first)).id
-}
-
 /** First and last day of the whole treatment (every medication), or null when none has a range. */
 export function treatmentSpan(meds: NumberedMedication[]): Range | null {
   const ranges = meds.flatMap((m) => (m.range ? [m.range] : []))
@@ -184,20 +177,9 @@ export function initialDay(meds: NumberedMedication[], today: string): string | 
   return span.start <= today && today <= span.end ? today : span.start
 }
 
-export interface DayDose {
-  number: number
-  medication: Medication
-  dose: Dose
-}
-
-/** The doses of every medication on the day, by time of day. */
-export function dosesOn(day: string, medications: Medication[]): DayDose[] {
-  return medications
-    .flatMap((medication, i) =>
-      medication.doses.filter((dose) => dayKey(dose.scheduledAt) === day).map((dose) => ({ number: i + 1, medication, dose })),
-    )
-    .sort((a, b) => Date.parse(a.dose.scheduledAt) - Date.parse(b.dose.scheduledAt) || a.number - b.number)
-}
+/** The doses of one medication on the day (any status, canceled ones included), in the order the detail brings them. */
+export const dosesOfDay = (medication: Medication, day: string): Dose[] =>
+  medication.doses.filter((dose) => dayKey(dose.scheduledAt) === day)
 
 /** The most doses one extension may add (the backend's `MaxExtensionDoses`, specs/020). */
 export const MAX_EXTENSION_DOSES = 60

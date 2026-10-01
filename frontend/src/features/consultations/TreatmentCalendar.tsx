@@ -1,8 +1,6 @@
 import { useId, useState } from 'react'
 import { LONG_MONTHS } from '../../shared/date'
-import { DayDoses } from './DayDoses'
 import {
-  initialDay,
   longDay,
   markLabel,
   marksOn,
@@ -33,8 +31,10 @@ function Dot({ mark, selected, desktop }: { mark: DayMark; selected: boolean; de
 }
 
 interface TreatmentCalendarProps {
-  consultationId: string
   medications: Medication[]
+  /** The chosen day, `YYYY-MM-DD` (the page's: the medication cards show the doses of this same day, specs/023). */
+  selected: string | null
+  onSelect: (day: string) => void
   /** The parent's local today, `YYYY-MM-DD`. */
   today: string
   variant: 'phone' | 'desktop'
@@ -45,17 +45,20 @@ interface TreatmentCalendarProps {
 /**
  * One calendar for the whole consultation, in the look of the design of specs/022: every day of the treatment is a pale
  * pill with one dot per medication that has doses that day — filled when they were all given, empty if not — the chosen
- * day is dark with a cyan ring, and below come the legend and that day's doses, markable. Each dot keeps its own place
+ * day is dark with a cyan ring, and below comes the legend. The chosen day belongs to the page (specs/023): tapping a day
+ * calls `onSelect`, and the medication cards show that day's doses. Each dot keeps its own place
  * whether or not the other medications have doses, so its position says which medication it is: colors are never the
  * only way to know. It only presents what the detail already has (no range, dose or status changes here). Arrows stop at
  * the first and the last month with treatment. Phone and web are two designs (`variant`): the same pieces with their own
  * sizes.
  */
-export function TreatmentCalendar({ consultationId, medications, today, variant, className }: TreatmentCalendarProps) {
+export function TreatmentCalendar({ medications, selected, onSelect, today, variant, className }: TreatmentCalendarProps) {
   const meds = numbered(medications)
   const span = treatmentSpan(meds)
-  const [selected, setSelected] = useState<string | null>(() => initialDay(meds, today))
-  const [view, setView] = useState<Month | null>(() => (selected ? monthOfDay(selected) : null))
+  // The month on screen is the calendar's own: paging through months never changes the chosen day. Until the parent pages,
+  // it follows the chosen day.
+  const [paged, setView] = useState<Month | null>(null)
+  const view = paged ?? (selected ? monthOfDay(selected) : null)
   const headingId = useId()
   if (!span || !selected || !view) return null
 
@@ -125,7 +128,7 @@ export function TreatmentCalendar({ consultationId, medications, today, variant,
                   aria-label={name}
                   aria-pressed={isSelected}
                   aria-current={day.key === today ? 'date' : undefined}
-                  onClick={() => setSelected(day.key)}
+                  onClick={() => onSelect(day.key)}
                   className={`box-border flex cursor-pointer flex-col items-center rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-action ${height} ${
                     isSelected
                       ? `bg-ink ring-2 ring-[#22d3ee] ${pad}`
@@ -179,10 +182,6 @@ export function TreatmentCalendar({ consultationId, medications, today, variant,
             </li>
           ))}
         </ul>
-
-        <div className="h-px bg-[#cffafe]" />
-
-        <DayDoses consultationId={consultationId} medications={medications} day={selected} today={today} variant={variant} />
       </div>
     </section>
   )
