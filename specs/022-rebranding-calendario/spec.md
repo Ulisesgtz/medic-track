@@ -92,7 +92,7 @@ Los primeros tres medicamentos de una consulta toman los colores del diseño: **
 4. **Días fuera del tratamiento** (`#94a3b8`, 2.6:1 sobre blanco): se usa `#64748b` (4.8:1) para cumplir 4.5:1.
 5. **Días de la semana a 12 px**: el mínimo del proyecto es 13 px; se usa **13 px**.
 6. **Chip «dada 16:40»**: el diseño muestra la hora a la que se dio; la app no guarda esa hora (solo si se dio): dice **«dada»** sin hora.
-7. **Chip «próxima»**: el diseño lo pone solo a la siguiente toma; aquí, **la primera toma pendiente del día elegido** lleva «próxima» y las demás pendientes quedan con el punteado sin segunda línea.
+7. **Chip «próxima»**: el diseño lo pone solo a la siguiente toma; aquí, **la primera toma pendiente de todo el tratamiento** (la más próxima en el tiempo, de cualquier medicamento) lleva «próxima», y solo se ve si su día es el elegido; las demás pendientes quedan con el punteado sin segunda línea.
 8. **Leyenda de «Cómo leer el calendario»**: «Punto vacío: dosis sin registrar» → **«Punto vacío: dosis sin dar»**, porque también son vacíos los puntos de tomas futuras (que aún no son «sin registrar», spec 013).
 9. **Hoy sin marca visual**: el diseño no la trae; se quita el círculo oscuro de hoy y queda solo `aria-current="date"`.
 10. **«Cómo leer el calendario» solo en la web**, como en el mock; el móvil no la trae.
