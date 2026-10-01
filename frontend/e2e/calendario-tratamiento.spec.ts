@@ -33,6 +33,9 @@ async function seedTwoMedications(page: Page) {
 
 /** Shows the month of `date` in the calendar (the arrows only go between months with treatment). */
 async function showMonthOf(page: Page, date: Date) {
+  // The calendar draws after the detail loads: deciding before that would take a month that is not on screen yet
+  // (on a slow runner the arrow was still disabled and the click waited until the timeout).
+  await expect(page.getByRole('region', { name: 'Calendario del tratamiento' })).toBeVisible()
   const title = page.getByText(monthTitle(date), { exact: true })
   if (!(await title.isVisible())) await page.getByRole('button', { name: 'Mes siguiente' }).click()
   await expect(title).toBeVisible()
