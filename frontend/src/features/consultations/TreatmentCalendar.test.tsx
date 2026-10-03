@@ -124,6 +124,26 @@ describe('TreatmentCalendar (specs/019)', () => {
     expect(today).toHaveAttribute('aria-pressed', 'true')
   })
 
+  it('marks today with a thin ink ring while another day is chosen, and not when it is the chosen one', async () => {
+    const user = userEvent.setup()
+    renderCalendar({ today: '2026-10-01' })
+    // Today is the chosen day: the dark cell with the cyan ring is its mark, no extra ring.
+    expect(day(/^1 de octubre/).className).not.toContain('ring-ink')
+
+    await user.click(day(/^2 de octubre/))
+
+    expect(day(/^1 de octubre/).className).toContain('ring-ink')
+    expect(day(/^1 de octubre/)).toHaveAttribute('aria-current', 'date')
+    expect(day(/^2 de octubre/).className).not.toContain('ring-ink')
+  })
+
+  it('marks today even when it is a day outside the treatment', () => {
+    renderCalendar({ today: '2026-09-29' })
+
+    expect(day('29 de septiembre').className).toContain('ring-ink')
+    expect(day('28 de septiembre').className).not.toContain('ring-ink')
+  })
+
   it('starts on the first day when today is outside the treatment', () => {
     renderCalendar({ today: '2026-12-25' })
 

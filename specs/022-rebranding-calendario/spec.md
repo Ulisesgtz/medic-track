@@ -94,7 +94,9 @@ Los primeros tres medicamentos de una consulta toman los colores del diseño: **
 6. **Chip «dada 16:40»**: el diseño muestra la hora a la que se dio; la app no guarda esa hora (solo si se dio): dice **«dada»** sin hora.
 7. **Chip «próxima»**: el diseño lo pone solo a la siguiente toma; aquí, **la primera toma pendiente de todo el tratamiento** (la más próxima en el tiempo, de cualquier medicamento) lleva «próxima», y solo se ve si su día es el elegido; las demás pendientes quedan con el punteado sin segunda línea.
 8. **Leyenda de «Cómo leer el calendario»**: «Punto vacío: dosis sin registrar» → **«Punto vacío: dosis sin dar»**, porque también son vacíos los puntos de tomas futuras (que aún no son «sin registrar», spec 013).
-9. **Hoy sin marca visual**: el diseño no la trae; se quita el círculo oscuro de hoy y queda solo `aria-current="date"`.
+12. **«Sin registrar» punteado, no ámbar** — el diseño lo pinta ámbar; la app deja el ámbar solo para «por marcar» (spec 013, Principio I). **Cerrada el 2026-10-02: el usuario decidió dejarlo punteado** (la auditoría de Design Claude lo respalda). *(Los chips de la lista del día desaparecieron con la spec 023; la regla sigue en `DOSE_CHIP_STYLE` de las tarjetas.)*
+
+9. **Hoy**: el diseño no trae marca; se quitó el círculo oscuro de hoy. **Cambiada el 2026-10-02 (decisión del usuario, a raíz de la auditoría de Design Claude):** hoy lleva un aro fino de tinta (1.5 px) mientras el padre eligió otro día, además de `aria-current="date"`; el día elegido ya es la celda oscura.
 10. **«Cómo leer el calendario» solo en la web**, como en el mock; el móvil no la trae.
 11. **Nombres de medicamento en mayúsculas del diseño** (`PARACETAMOL`): son datos de ejemplo; se muestran como el padre los escribió.
 

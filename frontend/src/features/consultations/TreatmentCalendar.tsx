@@ -117,6 +117,9 @@ export function TreatmentCalendar({ meds, selected, onSelect, today, variant, cl
               const name = inTreatment
                 ? `${longDay(day.key)} · ${marks.map((m) => markLabel(m, meds[m.number - 1].medication.name)).join(', ')}`
                 : longDay(day.key)
+              // Today keeps a thin ink ring while another day is chosen (the design had no mark for it): it is seen without
+              // relying on color and does not compete with the chosen day (dark, cyan ring).
+              const todayRing = day.key === today && !isSelected ? 'ring-[1.5px] ring-inset ring-ink' : ''
               const number = desktop ? 'text-[15px]' : 'text-base'
               const pad = desktop ? 'gap-2 pt-[9px]' : 'gap-1.5 pt-[7px]'
               return (
@@ -127,7 +130,7 @@ export function TreatmentCalendar({ meds, selected, onSelect, today, variant, cl
                   aria-pressed={isSelected}
                   aria-current={day.key === today ? 'date' : undefined}
                   onClick={() => onSelect(day.key)}
-                  className={`box-border flex cursor-pointer flex-col items-center rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-action ${height} ${
+                  className={`box-border flex cursor-pointer flex-col items-center rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-action ${height} ${todayRing} ${
                     isSelected
                       ? `bg-ink ring-2 ring-[#22d3ee] ${pad}`
                       : inTreatment
