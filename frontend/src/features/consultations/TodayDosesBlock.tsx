@@ -37,7 +37,7 @@ export function TodayDosesBlock({ doses, status }: TodayDosesBlockProps) {
       .filter(Boolean)
       .join(' · ')
 
-  const ink = pending ? 'text-[#451a03]' : 'text-[#065f46]'
+  const ink = pending ? 'text-on-pending' : 'text-confirmed-strong'
 
   return (
     <section aria-labelledby="today-block-title" className="px-6 pt-6">
@@ -52,7 +52,7 @@ export function TodayDosesBlock({ doses, status }: TodayDosesBlockProps) {
             type="button"
             disabled={markAll.isPending}
             onClick={() => markAll.mutate(unmarked)}
-            className="mt-4 min-h-11 w-full cursor-pointer rounded-xl bg-[#451a03] py-3 text-sm font-extrabold text-pending-soft transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-4 min-h-11 w-full cursor-pointer rounded-xl bg-on-pending py-3 text-sm font-extrabold text-pending-soft transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Marcar tomas
           </button>

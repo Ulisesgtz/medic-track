@@ -196,7 +196,7 @@ export function HomePage() {
                 <button
                   type="button"
                   onClick={logout}
-                  className="cursor-pointer text-[13px] font-bold text-[#67e8f9] hover:underline"
+                  className="cursor-pointer text-[13px] font-bold text-bright-soft hover:underline"
                 >
                   Cerrar sesión
                 </button>
@@ -230,7 +230,7 @@ export function HomePage() {
             ref={addChildButton}
             type="button"
             onClick={() => setShowAddChild(true)}
-            className="mt-4 min-h-11 w-full cursor-pointer rounded-3xl border-2 border-dashed border-[#67e8f9] py-5 text-base font-extrabold text-action transition-colors hover:bg-hint"
+            className="mt-4 min-h-11 w-full cursor-pointer rounded-3xl border-2 border-dashed border-bright-soft py-5 text-base font-extrabold text-action transition-colors hover:bg-hint"
           >
             + Agregar hijo
           </button>

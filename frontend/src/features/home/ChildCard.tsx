@@ -52,11 +52,11 @@ function ChildStatusChips({ childId }: { childId: string }) {
       )}
       {unmarked !== undefined &&
         (unmarked > 0 ? (
-          <span className={`${chip} bg-pending-soft text-[#92400e]`}>
+          <span className={`${chip} bg-pending-soft text-pending-strong`}>
             {unmarked} {unmarked === 1 ? 'toma' : 'tomas'} hoy
           </span>
         ) : (
-          <span className={`${chip} bg-confirmed-soft text-[#065f46]`}>Sin tomas pendientes</span>
+          <span className={`${chip} bg-confirmed-soft text-confirmed-strong`}>Sin tomas pendientes</span>
         ))}
     </div>
   )
@@ -77,7 +77,7 @@ export function ChildCard({ child, variant = 'phone', index = 0 }: ChildCardProp
       <span className="flex items-center gap-4">
         <span
           aria-hidden="true"
-          className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl font-black ${mint ? 'bg-[#a7f3d0] text-[#065f46]' : 'bg-bright text-ink'}`}
+          className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-2xl font-black ${mint ? 'bg-mint text-confirmed-strong' : 'bg-bright text-ink'}`}
         >
           {child.firstName.charAt(0)}
         </span>

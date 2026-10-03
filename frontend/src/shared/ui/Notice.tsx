@@ -6,7 +6,7 @@ export type NoticeTone = 'error' | 'info' | 'success'
 const TONES: Record<NoticeTone, { box: string; icon: string; link: string }> = {
   error: { box: 'border-rose-200 bg-rose-50', icon: 'bg-rose-100 text-rose-700', link: 'text-rose-800' },
   info: { box: 'border-hint-border bg-hint', icon: 'bg-hint-border text-action', link: 'text-action' },
-  success: { box: 'border-[#a7f3d0] bg-confirmed-soft', icon: 'bg-[#a7f3d0] text-confirmed-strong', link: 'text-confirmed-strong' },
+  success: { box: 'border-mint bg-confirmed-soft', icon: 'bg-mint text-confirmed-strong', link: 'text-confirmed-strong' },
 }
 
 const ICONS: Record<NoticeTone, ReactNode> = {

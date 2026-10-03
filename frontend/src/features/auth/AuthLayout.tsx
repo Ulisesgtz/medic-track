@@ -13,7 +13,7 @@ function Wordmark({ size }: { size: number }) {
     <div className="flex items-center gap-3">
       <Logo size={size} />
       <span className="text-2xl font-black tracking-tight text-white">
-        Pedi<span className="text-[#67e8f9]">Track</span>
+        Pedi<span className="text-bright-soft">Track</span>
       </span>
     </div>
   )
@@ -38,13 +38,13 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
             <h1 className="text-4xl leading-[1.05] font-black tracking-tight text-white lg:text-5xl">
               La bitácora médica de tus hijos, en un solo lugar.
             </h1>
-            <p className="mt-6 text-lg leading-relaxed text-[#a5f3fc]">
+            <p className="mt-6 text-lg leading-relaxed text-hint-border">
               Registra consultas, recetas y tomas de medicamento. La app registra datos, nunca los interpreta.
             </p>
           </div>
           <ul className="flex flex-col gap-3.5">
             {CHECKLIST.map((item) => (
-              <li key={item} className="flex items-start gap-3 text-[15px] leading-relaxed text-[#cffafe]">
+              <li key={item} className="flex items-start gap-3 text-[15px] leading-relaxed text-hint-edge">
                 <span className="mt-0.5 text-bright" aria-hidden="true">
                   ✓
                 </span>
@@ -72,7 +72,7 @@ export function AuthLayout({ title, subtitle, children }: { title: string; subti
       <header className="bg-ink px-6 pt-6 pb-8">
         <Wordmark size={44} />
         <h1 className="mt-6 text-3xl leading-tight font-black tracking-tight text-white">{title}</h1>
-        <p className="mt-4 text-[15px] leading-relaxed text-[#a5f3fc]">{subtitle}</p>
+        <p className="mt-4 text-[15px] leading-relaxed text-hint-border">{subtitle}</p>
       </header>
       <main className="flex flex-col gap-6 px-6 pt-7 pb-9">{children}</main>
     </div>

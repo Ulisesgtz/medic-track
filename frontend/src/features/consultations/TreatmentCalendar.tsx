@@ -23,8 +23,8 @@ function Dot({ mark, selected, desktop }: { mark: DayMark; selected: boolean; de
   const size = desktop ? 'h-2 w-2' : 'h-[7px] w-[7px]'
   const color = selected
     ? mark.taken
-      ? 'border-[#22d3ee] bg-[#22d3ee]'
-      : 'border-[#a5f3fc] bg-transparent'
+      ? 'border-bright bg-bright'
+      : 'border-hint-border bg-transparent'
     : `${medBorder(mark.number)} ${mark.taken ? medBg(mark.number) : 'bg-transparent'}`
   return <span className={`box-border rounded-full border-2 ${size} ${color}`} />
 }
@@ -67,7 +67,7 @@ export function TreatmentCalendar({ meds, selected, onSelect, today, variant, cl
   const desktop = variant === 'desktop'
   // The arrow is drawn at the design's size (40 / 36 px) inside a 44 px touch area (negative margin keeps the layout).
   const arrowHit = `group ${desktop ? '-m-1' : '-m-0.5'} flex min-h-11 min-w-11 cursor-pointer items-center justify-center focus:outline-none disabled:cursor-default`
-  const arrow = `flex items-center justify-center border border-[#cffafe] bg-[#ecfeff] font-extrabold text-action transition-colors duration-200 group-hover:bg-[#cffafe] group-focus-visible:ring-2 group-focus-visible:ring-action group-disabled:opacity-40 group-disabled:group-hover:bg-[#ecfeff] ${
+  const arrow = `flex items-center justify-center border border-hint-edge bg-hint font-extrabold text-action transition-colors duration-200 group-hover:bg-hint-edge group-focus-visible:ring-2 group-focus-visible:ring-action group-disabled:opacity-40 group-disabled:group-hover:bg-hint ${
     desktop ? 'h-9 w-9 rounded-[10px] text-lg' : 'h-10 w-10 rounded-xl text-xl'
   }`
 
@@ -101,7 +101,7 @@ export function TreatmentCalendar({ meds, selected, onSelect, today, variant, cl
 
         <div className={`grid grid-cols-7 ${desktop ? 'gap-1.5' : 'gap-1'}`}>
           {WEEKDAYS.map((d, i) => (
-            <div key={i} aria-hidden="true" className="pb-1 text-center text-[13px] font-extrabold text-[#64748b]">
+            <div key={i} aria-hidden="true" className="pb-1 text-center text-[13px] font-extrabold text-calendar-muted">
               {d}
             </div>
           ))}
@@ -132,15 +132,15 @@ export function TreatmentCalendar({ meds, selected, onSelect, today, variant, cl
                   onClick={() => onSelect(day.key)}
                   className={`box-border flex cursor-pointer flex-col items-center rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-action ${height} ${todayRing} ${
                     isSelected
-                      ? `bg-ink ring-2 ring-[#22d3ee] ${pad}`
+                      ? `bg-ink ring-2 ring-bright ${pad}`
                       : inTreatment
-                        ? `border border-[#cffafe] bg-[#ecfeff] transition-colors duration-200 hover:bg-[#cffafe] ${pad}`
+                        ? `border border-hint-edge bg-hint transition-colors duration-200 hover:bg-hint-edge ${pad}`
                         : 'justify-start pt-2.5'
                   }`}
                 >
                   <span
                     className={`${number} ${
-                      isSelected ? 'font-black text-white' : inTreatment ? 'font-extrabold text-ink' : 'font-bold text-[#64748b]'
+                      isSelected ? 'font-black text-white' : inTreatment ? 'font-extrabold text-ink' : 'font-bold text-calendar-muted'
                     }`}
                   >
                     {day.day}
@@ -170,7 +170,7 @@ export function TreatmentCalendar({ meds, selected, onSelect, today, variant, cl
           className={desktop ? 'flex flex-wrap gap-x-[22px] gap-y-2.5' : 'flex flex-col gap-2.5'}
         >
           {meds.map(({ number, medication }) => (
-            <li key={medication.id} className={`flex min-w-0 items-center text-[#1e293b] ${desktop ? 'gap-2' : 'gap-2.5'}`}>
+            <li key={medication.id} className={`flex min-w-0 items-center text-calendar-name ${desktop ? 'gap-2' : 'gap-2.5'}`}>
               <span
                 aria-hidden="true"
                 className={`flex shrink-0 items-center justify-center rounded-full text-[13px] font-black text-white ${medBg(number)} ${

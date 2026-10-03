@@ -195,7 +195,7 @@ export function ConsultationDetailPage() {
                     {hasNotes && (
                       <div>
                         <h2 className={overline}>Notas previas a la consulta</h2>
-                        <p className="mt-3 text-base leading-relaxed whitespace-pre-line text-[#1f3d44]">{consultation.notes}</p>
+                        <p className="mt-3 text-base leading-relaxed whitespace-pre-line text-body">{consultation.notes}</p>
                       </div>
                     )}
                   </div>
@@ -215,13 +215,13 @@ export function ConsultationDetailPage() {
                 {/* A record-only consultation has no treatment to show (specs/024). */}
                 {!consultation.recordOnly && (
                   <div className="min-w-0 rounded-3xl bg-ink p-6">
-                    <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-[#67e8f9]">
+                    <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-bright-soft">
                       Tratamiento activo
                     </p>
                     <p className="mt-2.5 text-xl font-black tracking-tight text-white">
                       {treatment ? treatment.medicationName : 'Ninguno'}
                     </p>
-                    <p className="mt-1 text-sm font-semibold text-[#a5f3fc]">
+                    <p className="mt-1 text-sm font-semibold text-hint-border">
                       {treatment ? `termina el ${formatDayMonth(treatment.endsAt)}` : 'sin tomas pendientes'}
                     </p>
                   </div>
@@ -245,7 +245,7 @@ export function ConsultationDetailPage() {
         <header className="bg-ink px-6 pt-6 pb-7">
           <Link
             to={childPath}
-            className="-my-3 inline-flex min-h-11 items-center text-sm font-bold text-[#67e8f9] hover:text-white"
+            className="-my-3 inline-flex min-h-11 items-center text-sm font-bold text-bright-soft hover:text-white"
           >
             {backLabel}
           </Link>
@@ -279,7 +279,7 @@ export function ConsultationDetailPage() {
         {hasNotes && (
           <section className="px-6 pt-7">
             <h2 className={overline}>Notas previas a la consulta</h2>
-            <p className="mt-2.5 text-base leading-relaxed whitespace-pre-line text-[#1f3d44]">{consultation.notes}</p>
+            <p className="mt-2.5 text-base leading-relaxed whitespace-pre-line text-body">{consultation.notes}</p>
           </section>
         )}
 
