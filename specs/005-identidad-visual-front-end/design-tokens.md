@@ -40,7 +40,7 @@ los círculos con número de la leyenda y de la lista de tomas. Los tres primero
 | `--color-med-6` | `#78350f` | 9.07 / 8.72 |
 
 El rosa `#db2777` es el del diseño: ya no se descartan los rosas (no es un color de alerta médica y se usa como identidad
-de un medicamento, nunca para un estado). Siguen sin usarse el verde (`confirmed` = «tomada»), el ámbar (`pending` = «por
+de un medicamento, nunca para un estado). `--color-med-1` (`#0e7490`) es el mismo valor que `--color-action`: **se deja así** (decisión del 2026-10-02): `action` va en botones y enlaces y `med-1` en puntos y círculos numerados, y el lugar fijo, el número y el nombre lo distinguen. Siguen sin usarse el verde (`confirmed` = «tomada»), el ámbar (`pending` = «por
 marcar») y el rojo. Los tres del diseño quedan a ΔE ≈ 8 entre sí en deuteranopía y protanopía: por eso **el color nunca va solo**:
 cada punto tiene su **lugar fijo** por medicamento (su posición dice cuál es), la leyenda y la lista llevan el número y el
 nombre, y el nombre accesible de cada día lista los medicamentos y si su dosis se dio. En el día elegido (fondo `ink`) los

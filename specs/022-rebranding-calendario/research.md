@@ -50,7 +50,7 @@ cambian). Mapa del estado (derivado por el servidor) al diseño:
 | `pending`, las demás | punteado blanco | ninguna |
 | `canceled` | el de la spec 016 | «cancelada» |
 
-**Desviación 12 (nueva, a señalar al usuario)**: el diseño pinta en ámbar «sin registrar»; en la app **ámbar es «por marcar»
+**Desviación 12 (cerrada el 2026-10-02 por decisión del usuario: se queda punteado)**: el diseño pinta en ámbar «sin registrar»; en la app **ámbar es «por marcar»
 y «sin registrar» es punteado** (spec 013, Principio I: ámbar nunca es una advertencia y «sin registrar» no es un
 reclamo). Se conserva la regla de la spec 013 y se usa la forma del diseño.
 Anchos fijos 130 / 160 px. El nombre accesible del chip sigue siendo «Amoxicilina, 08:00» (único en pantalla).
