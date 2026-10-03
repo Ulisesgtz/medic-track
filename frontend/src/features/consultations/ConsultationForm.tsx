@@ -172,7 +172,7 @@ const MEDICATION_STAGGER_MS = 180
 const ocrField =
   'min-h-11 w-full min-w-0 rounded-xl border-2 border-bright bg-surface px-4 py-3 text-base text-ink focus:border-ink focus:outline-none'
 const plainField =
-  'w-full min-w-0 rounded-xl border-[1.5px] border-slate-300 bg-surface px-4 py-3 text-base font-medium text-ink placeholder:text-slate-400 focus:border-2 focus:border-ink focus:outline-none'
+  'w-full min-w-0 rounded-xl border-[1.5px] border-slate-300 bg-surface px-4 py-3 text-base font-medium text-ink placeholder:text-slate-500 focus:border-2 focus:border-ink focus:outline-none'
 const label = 'text-[13px] font-bold text-ink-soft'
 const errorText = 'text-[13px] font-semibold text-red-700'
 

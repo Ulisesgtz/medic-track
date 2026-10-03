@@ -5,7 +5,7 @@ import { parsePositiveInt } from './parsePositiveInt'
 const validPositive = (value: string) => parsePositiveInt(value) !== null
 
 const field =
-  'min-h-11 w-full min-w-0 rounded-xl px-4 py-3 text-base text-ink placeholder:text-slate-400 focus:border-2 focus:border-ink focus:outline-none'
+  'min-h-11 w-full min-w-0 rounded-xl px-4 py-3 text-base text-ink placeholder:text-slate-500 focus:border-2 focus:border-ink focus:outline-none'
 const plain = `${field} border-[1.5px] border-slate-300`
 const suggestedBorder = `${field} border-2 border-bright`
 const label = 'text-[13px] font-bold text-ink-soft'

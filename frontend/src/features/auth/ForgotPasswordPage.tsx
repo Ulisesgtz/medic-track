@@ -8,7 +8,7 @@ import { AuthLayout } from './AuthLayout'
 import { useForgotPassword } from './useForgotPassword'
 
 const field =
-  'min-h-11 w-full min-w-0 rounded-2xl border-[1.5px] px-4 py-3.5 text-base font-medium text-ink placeholder:text-slate-400 focus:border-2 focus:border-ink focus:outline-none'
+  'min-h-11 w-full min-w-0 rounded-2xl border-[1.5px] px-4 py-3.5 text-base font-medium text-ink placeholder:text-slate-500 focus:border-2 focus:border-ink focus:outline-none'
 const border = (invalid: boolean) => (invalid ? 'border-red-600' : 'border-slate-300')
 const solidButton =
   'min-h-11 cursor-pointer rounded-2xl bg-confirmed py-4 text-base font-extrabold text-white transition-colors hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50'
