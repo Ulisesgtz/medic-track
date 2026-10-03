@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { fieldBorder, fieldCompact } from '../../shared/ui/formStyles'
 import { FormField as Field } from '../../shared/ui/FormField'
 import { Logo } from '../../shared/ui/Logo'
 import { EmailCodeStep } from './EmailCodeStep'
@@ -18,12 +19,11 @@ import {
 } from './validation'
 import type { SignupForm } from './useSignupForm'
 
-const border = (invalid: boolean, normal: string) => (invalid ? 'border-red-600' : normal)
+const border = fieldBorder
 
 // Mock 11: `rounded-xl border-[1.5px] px-4 py-3` for the account fields; the
 // child block's fields add `bg-surface` and the cyan border.
-const accountField =
-  'min-h-11 w-full min-w-0 rounded-xl border-[1.5px] px-4 py-3 text-base font-medium text-ink placeholder:text-slate-500 focus:border-2 focus:border-ink focus:outline-none'
+const accountField = fieldCompact
 const childField = `${accountField} bg-surface`
 
 const CHECKLIST = [

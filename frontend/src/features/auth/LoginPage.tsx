@@ -1,4 +1,5 @@
 import { Link, Navigate } from 'react-router-dom'
+import { fieldAuth, fieldBorder } from '../../shared/ui/formStyles'
 import { useAuth } from '@clerk/react'
 import { GoogleSignupButton } from '../account-signup/GoogleSignupButton'
 import { EMAIL_MESSAGE, emailValidation } from '../account-signup/validation'
@@ -8,9 +9,8 @@ import { PasswordInput } from '../../shared/ui/PasswordInput'
 import { AuthLayout } from './AuthLayout'
 import { useLoginForm } from './useLoginForm'
 
-const field =
-  'min-h-11 w-full min-w-0 rounded-2xl border-[1.5px] px-4 py-3.5 text-base font-medium text-ink placeholder:text-slate-500 focus:border-2 focus:border-ink focus:outline-none'
-const border = (invalid: boolean) => (invalid ? 'border-red-600' : 'border-slate-300')
+const field = fieldAuth
+const border = (invalid: boolean) => fieldBorder(invalid)
 
 const solidButton =
   'min-h-11 cursor-pointer rounded-2xl bg-confirmed py-4 text-base font-extrabold text-white transition-colors hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50'

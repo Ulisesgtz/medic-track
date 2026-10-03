@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { fieldAuth, fieldBorder } from '../../shared/ui/formStyles'
 import { useForm, useWatch } from 'react-hook-form'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/react'
@@ -15,10 +16,9 @@ import { BIRTH_DATE_MESSAGE, CHILD_NAME_MESSAGE, nameError, nameValidation, posi
 // ask) — this only collects what PediTrack's own Account model still needs.
 type FormValues = Omit<AccountSignupFormValues, 'email' | 'password'>
 
-const field =
-  'min-h-11 w-full min-w-0 rounded-2xl border-[1.5px] px-4 py-3.5 text-base font-medium text-ink placeholder:text-slate-500 focus:border-2 focus:border-ink focus:outline-none'
+const field = fieldAuth
 const childField = `${field} bg-hint`
-const border = (invalid: boolean, normal: string) => (invalid ? 'border-red-600' : normal)
+const border = fieldBorder
 
 function toPayload(values: FormValues): CreateAccountPayload {
   return {

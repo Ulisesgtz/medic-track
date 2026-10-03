@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { fieldBorder, fieldModal } from '../../shared/ui/formStyles'
 import { useAuth } from '@clerk/react'
 import { createPortal } from 'react-dom'
 import { useForm } from 'react-hook-form'
@@ -22,9 +23,8 @@ interface AddChildFormValues {
   weight: string
 }
 
-const field =
-  'min-h-11 w-full min-w-0 rounded-[14px] border-[1.5px] bg-surface px-4 py-3.5 text-base font-medium text-ink placeholder:text-slate-500 focus:border-2 focus:border-ink focus:outline-none'
-const border = (invalid: boolean) => (invalid ? 'border-red-600' : 'border-slate-300')
+const field = fieldModal
+const border = (invalid: boolean) => fieldBorder(invalid)
 
 /**
  * The "Agregar hijo" modal (FR-004), built from board screen 7: title and
