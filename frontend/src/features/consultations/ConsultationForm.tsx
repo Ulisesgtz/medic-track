@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { errorClass, fieldMultiline, fieldProposed, labelClass } from '../../shared/ui/formStyles'
 import { useAuth } from '@clerk/react'
 import { Link } from 'react-router-dom'
 import { Controller, useForm, useFieldArray, useWatch, type Path } from 'react-hook-form'
@@ -169,12 +170,10 @@ const MEDICATION_STAGGER_MS = 180
 
 // Mocks 04/14: every field of the "Leído de tu receta" group carries the bright
 // border ("proposed by the OCR, confirm it"); the notes box is a plain field.
-const ocrField =
-  'min-h-11 w-full min-w-0 rounded-xl border-2 border-bright bg-surface px-4 py-3 text-base text-ink focus:border-ink focus:outline-none'
-const plainField =
-  'w-full min-w-0 rounded-xl border-[1.5px] border-slate-300 bg-surface px-4 py-3 text-base font-medium text-ink placeholder:text-slate-500 focus:border-2 focus:border-ink focus:outline-none'
-const label = 'text-[13px] font-bold text-ink-soft'
-const errorText = 'text-[13px] font-semibold text-red-700'
+const ocrField = fieldProposed
+const plainField = fieldMultiline
+const label = labelClass
+const errorText = errorClass
 
 /**
  * The "Nueva consulta" screen (FR-003, FR-004), built from mockups 04 (phone)

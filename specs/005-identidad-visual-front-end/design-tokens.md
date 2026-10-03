@@ -109,12 +109,12 @@ Valores que las pantallas escriben como literales (`text-[#…]`) y que no está
 
 ## Recetas de implementación (Tailwind v4)
 
-Las clases exactas que ya usan las pantallas. Hoy cada pantalla las define en su propio archivo (no existe un `shared/ui/formStyles.ts`; unificarlas está en `BACKLOG.md`): una pantalla nueva copia estas clases tal cual, sin reinventarlas. Los placeholders van en `slate-500` como mínimo: `slate-400` sobre blanco da ~2.6:1.
+Las clases exactas que ya usan las pantallas. Viven en `frontend/src/shared/ui/formStyles.ts` (`fieldAuth`, `fieldCompact`, `fieldModal`, `fieldMedication`, `fieldMultiline`, `fieldProposed`, `fieldBorder`, `labelClass`, `errorClass`): una pantalla nueva las importa de ahí, no las reinventa ni las copia. Los radios y el relleno **difieren a propósito** entre los mocks (registro móvil 16 px, web 12 px, modal 14 px), por eso hay variantes con nombre y no un solo campo; `formStyles.test.ts` fija las clases de cada una. Los placeholders van en `slate-500` como mínimo: `slate-400` sobre blanco da ~2.6:1.
 Los tokens se usan como utilidades: `bg-ink`, `text-action`, `bg-confirmed`, `bg-canvas`, `bg-surface`, `border-hint-border`, etc.
 
 | Pieza | Clases |
 |---|---|
-| Campo | `min-h-11 w-full rounded-[14px] border-[1.5px] border-slate-300 bg-surface px-4 py-2.5 text-base font-medium text-ink placeholder-slate-500 outline-none focus:border-ink focus:ring-[0.5px] focus:ring-ink` |
+| Campo | las variantes de `formStyles.ts`; en esencia `min-h-11 w-full min-w-0 rounded-[14px] border-[1.5px] border-slate-300 bg-surface px-4 text-base font-medium text-ink placeholder:text-slate-500 focus:border-2 focus:border-ink focus:outline-none` (radio y relleno vertical según la variante) |
 | Campo sugerido por OCR | mismo, con `border-2 border-bright` en lugar del borde gris |
 | Etiqueta de campo | `mb-1.5 block text-[13px] font-bold text-ink` (y `font-medium text-slate-500` para "opcional") |
 | Error de campo | `mt-1.5 block text-sm font-semibold text-red-700` |

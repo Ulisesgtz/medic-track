@@ -1,15 +1,15 @@
 import type { FieldErrors, UseFormRegister } from 'react-hook-form'
+import { errorClass, fieldMedication, labelClass } from '../../shared/ui/formStyles'
 import type { ConsultationFormValues } from './ConsultationForm'
 import { parsePositiveInt } from './parsePositiveInt'
 
 const validPositive = (value: string) => parsePositiveInt(value) !== null
 
-const field =
-  'min-h-11 w-full min-w-0 rounded-xl px-4 py-3 text-base text-ink placeholder:text-slate-500 focus:border-2 focus:border-ink focus:outline-none'
+const field = fieldMedication
 const plain = `${field} border-[1.5px] border-slate-300`
 const suggestedBorder = `${field} border-2 border-bright`
-const label = 'text-[13px] font-bold text-ink-soft'
-const error = 'text-[13px] font-semibold text-red-700'
+const label = labelClass
+const error = errorClass
 const START_TIME_MESSAGE = 'Elige la hora de la primera toma.'
 
 // Required, except on a record-only consultation (specs/024). A function, not `required`, because the field is not

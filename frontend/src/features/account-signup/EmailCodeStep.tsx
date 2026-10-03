@@ -1,9 +1,9 @@
 import { FormField as Field } from '../../shared/ui/FormField'
+import { fieldAuth } from '../../shared/ui/formStyles'
 import { Notice } from '../../shared/ui/Notice'
 import type { SignupForm } from './useSignupForm'
 
-const codeField =
-  'min-h-11 w-full min-w-0 rounded-2xl border-[1.5px] border-slate-300 px-4 py-3.5 text-base font-medium text-ink placeholder:text-slate-500 focus:border-2 focus:border-ink focus:outline-none'
+const codeField = `${fieldAuth} border-slate-300`
 
 /**
  * The step between submitting the signup form and actually creating the

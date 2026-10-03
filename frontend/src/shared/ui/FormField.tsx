@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { errorClass, labelClass } from './formStyles'
 
 /** A labelled field with its inline error (`role="alert"`), as in the mockups' forms. */
 export function FormField({
@@ -14,12 +15,12 @@ export function FormField({
 }) {
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      <label htmlFor={id} className="text-[13px] font-bold text-ink-soft">
+      <label htmlFor={id} className={labelClass}>
         {text}
       </label>
       {children}
       {error && (
-        <p role="alert" className="text-[13px] font-semibold text-red-700">
+        <p role="alert" className={errorClass}>
           {error}
         </p>
       )}
