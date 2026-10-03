@@ -390,7 +390,7 @@ export function ConsultationForm({
           which removes it from the accessibility tree. The button carries its
           own accessible name and is described by this text instead. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p id="photo-label" className="text-[13px] font-extrabold tracking-[0.08em] text-[#67e8f9] uppercase">
+        <p id="photo-label" className="text-[13px] font-extrabold tracking-[0.08em] text-bright-soft uppercase">
           {photoFile ? 'Leyendo receta' : 'Foto de la receta'}
         </p>
         {photoFile && (
@@ -422,11 +422,11 @@ export function ConsultationForm({
         onChange={handlePhotoChange}
       />
       {ocrProgress && (
-        <p className={`${gapTop} text-[13px] font-semibold text-[#67e8f9]`} aria-live="polite">
+        <p className={`${gapTop} text-[13px] font-semibold text-bright-soft`} aria-live="polite">
           Agregando medicamentos de la receta… {ocrProgress.current} de {ocrProgress.total}
         </p>
       )}
-      <p className={`${gapTop} text-[13px] leading-relaxed text-[#a5f3fc]`}>
+      <p className={`${gapTop} text-[13px] leading-relaxed text-hint-border`}>
         {desktop
           ? 'El texto se lee en tu equipo; la foto se guarda solo en tu cuenta.'
           : 'El texto se lee en tu teléfono; la foto se guarda solo en tu cuenta.'}
@@ -456,7 +456,7 @@ export function ConsultationForm({
       className={
         desktop
           ? '-my-3 inline-flex min-h-11 cursor-pointer items-center self-start text-sm font-bold text-action'
-          : '-my-3 inline-flex min-h-11 cursor-pointer items-center text-sm font-bold text-[#67e8f9] hover:text-white'
+          : '-my-3 inline-flex min-h-11 cursor-pointer items-center text-sm font-bold text-bright-soft hover:text-white'
       }
     >
       Cambiar foto
@@ -472,7 +472,7 @@ export function ConsultationForm({
       className={
         desktop
           ? '-my-3 inline-flex min-h-11 items-center text-sm font-bold text-action'
-          : '-my-3 inline-flex min-h-11 items-center text-sm font-bold text-[#67e8f9] hover:text-white'
+          : '-my-3 inline-flex min-h-11 items-center text-sm font-bold text-bright-soft hover:text-white'
       }
     >
       ← Cancelar
@@ -607,7 +607,7 @@ export function ConsultationForm({
       className={
         desktop
           ? 'min-h-11 cursor-pointer rounded-2xl border-2 border-action px-6 py-3 text-[15px] font-extrabold text-action transition-colors hover:bg-hint disabled:cursor-not-allowed disabled:opacity-50'
-          : 'min-h-11 cursor-pointer rounded-3xl border-2 border-dashed border-[#67e8f9] py-4 text-[15px] font-extrabold text-action transition-colors hover:bg-hint disabled:cursor-not-allowed disabled:opacity-50'
+          : 'min-h-11 cursor-pointer rounded-3xl border-2 border-dashed border-bright-soft py-4 text-[15px] font-extrabold text-action transition-colors hover:bg-hint disabled:cursor-not-allowed disabled:opacity-50'
       }
     >
       + Otro medicamento

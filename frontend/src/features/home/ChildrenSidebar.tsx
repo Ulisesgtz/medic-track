@@ -31,7 +31,7 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
       <Link to="/home" className="-my-[5px] flex min-h-11 items-center gap-2.5" aria-label="PediTrack — ir a mi home">
         <Logo size={34} />
         <span className="text-lg font-black tracking-tight text-white">
-          Pedi<span className="text-[#67e8f9]">Track</span>
+          Pedi<span className="text-bright-soft">Track</span>
         </span>
       </Link>
 
@@ -48,12 +48,12 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
               }`}
             >
               <span
-                className={`min-w-0 truncate text-base ${isActive ? 'font-extrabold text-white' : 'font-bold text-[#a5f3fc]'}`}
+                className={`min-w-0 truncate text-base ${isActive ? 'font-extrabold text-white' : 'font-bold text-hint-border'}`}
               >
                 {child.firstName}
               </span>
               {/* Inactive age: #62909d (the mock's #5b8b94 is 4.3:1 on ink, under the 4.5:1 minimum). */}
-              <span className={`shrink-0 text-[13px] font-semibold ${isActive ? 'text-[#cffafe]' : 'text-[#62909d]'}`}>
+              <span className={`shrink-0 text-[13px] font-semibold ${isActive ? 'text-hint-edge' : 'text-ink-muted'}`}>
                 {formatAgeShort(child.birthDate)}
               </span>
             </Link>
@@ -64,7 +64,7 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
           ref={addChildButton}
           type="button"
           onClick={() => setShowAddChild(true)}
-          className="cursor-pointer rounded-2xl border-[1.5px] border-dashed border-[#0b5763] px-4 py-3.5 text-center text-sm font-bold text-[#67e8f9] transition-colors duration-200 hover:bg-ink-soft"
+          className="cursor-pointer rounded-2xl border-[1.5px] border-dashed border-ink-edge px-4 py-3.5 text-center text-sm font-bold text-bright-soft transition-colors duration-200 hover:bg-ink-soft"
         >
           + Agregar hijo
         </button>
@@ -84,7 +84,7 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
               <span className="block truncate text-sm font-bold text-white">
                 {account.firstName} {account.lastName}
               </span>
-              <span className="block text-xs text-[#67e8f9]">
+              <span className="block text-xs text-bright-soft">
                 {account.plan === 'free' ? 'Plan gratuito' : 'Plan completo'}
               </span>
             </span>
@@ -92,7 +92,7 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
           <button
             type="button"
             onClick={logout}
-            className="cursor-pointer self-start text-xs font-bold text-[#67e8f9] hover:underline"
+            className="cursor-pointer self-start text-xs font-bold text-bright-soft hover:underline"
           >
             Cerrar sesión
           </button>

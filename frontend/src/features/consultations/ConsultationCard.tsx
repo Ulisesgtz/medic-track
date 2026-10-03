@@ -34,7 +34,7 @@ function subtitle({ symptomNames, notes, medicationCount }: ConsultationSummary)
 /** One consultation's card in the listing (FR-001), built from the mockups.
  * Clicking navigates to that consultation's detail (Historia de Usuario 3). */
 export function ConsultationCard({ consultation, isLatest = false, variant = 'phone' }: ConsultationCardProps) {
-  const accent = `border-l-[5px] ${isLatest ? 'border-bright' : 'border-[#cffafe]'}`
+  const accent = `border-l-[5px] ${isLatest ? 'border-bright' : 'border-hint-edge'}`
   const text = (
     <>
       <div className="flex flex-wrap items-center gap-2">

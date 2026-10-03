@@ -19,14 +19,14 @@ const TONES: Record<Tone, { card: string; label: string; value: string; sub: str
     value: 'text-ink',
     sub: 'text-slate-500',
   },
-  pending: { card: 'bg-pending', label: 'text-[#451a03]', value: 'text-[#451a03]', sub: 'text-[#613102]' },
+  pending: { card: 'bg-pending', label: 'text-on-pending', value: 'text-on-pending', sub: 'text-on-pending-muted' },
   confirmed: {
     card: 'bg-confirmed-soft',
-    label: 'text-[#065f46]',
-    value: 'text-[#065f46]',
-    sub: 'text-[#065f46]',
+    label: 'text-confirmed-strong',
+    value: 'text-confirmed-strong',
+    sub: 'text-confirmed-strong',
   },
-  ink: { card: 'bg-ink', label: 'text-[#67e8f9]', value: 'text-white', sub: 'text-[#a5f3fc]' },
+  ink: { card: 'bg-ink', label: 'text-bright-soft', value: 'text-white', sub: 'text-hint-border' },
 }
 
 /** One figure of the child-detail summary row: overline label, big figure, small note. */

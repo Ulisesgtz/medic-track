@@ -65,7 +65,7 @@ export function EndTreatmentDialog({ medicationName, busy, error, onConfirm, onC
         <h2 id="end-treatment-title" className="text-2xl font-black tracking-tight text-ink">
           ¿Finalizar el tratamiento de {medicationName}?
         </h2>
-        <p id="end-treatment-body" className="mt-3 text-base leading-relaxed text-[#1f3d44]">
+        <p id="end-treatment-body" className="mt-3 text-base leading-relaxed text-body">
           Se dejarán de avisar las tomas que faltan. Las tomas registradas se conservan. No se puede deshacer.
         </p>
         {error && (

@@ -96,7 +96,7 @@ export function ExtendTreatmentDialog({
         <h2 id="extend-treatment-title" className="text-2xl font-black tracking-tight text-ink">
           ¿Recorrer el tratamiento de {medicationName}?
         </h2>
-        <p id="extend-treatment-body" className="mt-3 text-base leading-relaxed text-[#1f3d44]">
+        <p id="extend-treatment-body" className="mt-3 text-base leading-relaxed text-body">
           ¿Tu médico te indicó reponer las tomas?{' '}
           {proposed === 1 ? 'La toma sin registrar se conserva.' : `Las ${proposed} tomas sin registrar se conservan.`}{' '}
           Esto queda registrado en tu cuenta. No se puede deshacer.

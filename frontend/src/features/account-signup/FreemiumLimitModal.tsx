@@ -85,17 +85,17 @@ export function FreemiumLimitModal({ onViewPlans, onStayFree, childName, opener 
         onClick={(e) => e.stopPropagation()}
       >
         <div className={`bg-pending ${desktop ? 'px-8 py-7' : 'px-7 py-6'}`}>
-          <p className="text-xs font-extrabold tracking-[0.1em] text-[#451a03] uppercase">Plan gratuito</p>
+          <p className="text-xs font-extrabold tracking-[0.1em] text-on-pending uppercase">Plan gratuito</p>
           <h2
             id="freemium-limit-title"
-            className={`font-black tracking-tight text-[#451a03] ${desktop ? 'mt-2 text-3xl' : 'mt-1.5 text-2xl'}`}
+            className={`font-black tracking-tight text-on-pending ${desktop ? 'mt-2 text-3xl' : 'mt-1.5 text-2xl'}`}
           >
             Llegaste a un hijo registrado
           </h2>
         </div>
 
         <div className={desktop ? 'px-8 pt-7 pb-8' : 'px-7 pt-6 pb-7'}>
-          <p id="freemium-limit-body" className={`leading-relaxed text-[#1f3d44] ${desktop ? 'text-[17px]' : 'text-base'}`}>
+          <p id="freemium-limit-body" className={`leading-relaxed text-body ${desktop ? 'text-[17px]' : 'text-base'}`}>
             Para dar de alta a otro hijo necesitas ampliar tu plan. Tus datos actuales se mantienen intactos
             {childName ? ` y ${childName} sigue disponible sin cambios` : ''}.
           </p>

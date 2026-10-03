@@ -18,7 +18,7 @@ export const UNREGISTERED_LABEL = 'Sin registrar'
  */
 export const DOSE_CHIP_STYLE: Record<DoseStatus, string> = {
   taken: 'bg-confirmed text-white',
-  due: 'border-[1.5px] border-pending bg-pending-soft text-[#92400e]',
+  due: 'border-[1.5px] border-pending bg-pending-soft text-pending-strong',
   pending: 'bg-slate-100 text-slate-600',
   unregistered: 'border-[1.5px] border-dashed border-slate-400 bg-surface text-slate-700',
   // specs/016: the treatment was ended before this dose's time; it is kept, not marked, not markable.

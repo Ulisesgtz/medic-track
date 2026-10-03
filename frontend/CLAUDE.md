@@ -45,7 +45,7 @@ Tokens de color y tipografía viven en el bloque `@theme` de `src/index.css`; la
 - Ámbar (`--color-pending`) significa "el padre no lo ha marcado", nunca una advertencia médica
   (Principio I). No hay rojo de alerta médica; `red-700` solo para errores de formulario y "Quitar".
 - El mock manda sobre `design-tokens.md`, salvo el mínimo de accesibilidad 4.5:1 (las desviaciones están en la
-  spec 007). Los valores de los mocks se copian con clases arbitrarias (`rounded-[14px]`, `text-[#67e8f9]`).
+  spec 007). Las **medidas** de los mocks se copian con clases arbitrarias (`rounded-[14px]`); los **colores** son siempre tokens de `@theme` (`text-bright-soft`, `text-body`…): `shared/ui/noColorLiterals.test.ts` falla con un `text-[#…]`, así que si un mock trae un color nuevo se agrega a `index.css` con nombre y a `design-tokens.md`, no se escribe en la clase.
 - Un área táctil de 44 px sobre un elemento que el mock dibuja más chico se resuelve con `min-h-11` y margen
   negativo (`-my-3`, `-my-[5px]`), para que la posición visual sea la del mock.
 - El logo solo va en header, pantalla de registro, barra lateral e icono/splash de la PWA.

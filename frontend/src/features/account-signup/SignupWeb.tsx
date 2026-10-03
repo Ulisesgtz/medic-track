@@ -59,20 +59,20 @@ export function SignupWeb({ form }: { form: SignupForm }) {
         <div className="flex items-center gap-3">
           <Logo size={44} />
           <span className="text-2xl font-black tracking-tight text-white">
-            Pedi<span className="text-[#67e8f9]">Track</span>
+            Pedi<span className="text-bright-soft">Track</span>
           </span>
         </div>
         <div className="max-w-md">
           <h1 className="text-4xl leading-[1.05] font-black tracking-tight text-white lg:text-5xl">
             La bitácora médica de tus hijos, en un solo lugar.
           </h1>
-          <p className="mt-6 text-lg leading-relaxed text-[#a5f3fc]">
+          <p className="mt-6 text-lg leading-relaxed text-hint-border">
             Registra consultas, recetas y tomas de medicamento. La app registra datos, nunca los interpreta.
           </p>
         </div>
         <ul className="flex flex-col gap-3.5">
           {CHECKLIST.map((item) => (
-            <li key={item} className="flex items-start gap-3 text-[15px] leading-relaxed text-[#cffafe]">
+            <li key={item} className="flex items-start gap-3 text-[15px] leading-relaxed text-hint-edge">
               <span className="mt-0.5 text-bright" aria-hidden="true">
                 ✓
               </span>
@@ -188,7 +188,7 @@ export function SignupWeb({ form }: { form: SignupForm }) {
                   id="children.0.firstName"
                   size={1}
                   placeholder="Nombre"
-                  className={`${childField} ${border(!!childErrors?.firstName, 'border-[#67e8f9]')}`}
+                  className={`${childField} ${border(!!childErrors?.firstName, 'border-bright-soft')}`}
                   {...register('children.0.firstName', nameValidation)}
                 />
               </Field>
@@ -197,7 +197,7 @@ export function SignupWeb({ form }: { form: SignupForm }) {
                   id="children.0.lastName"
                   size={1}
                   placeholder="Apellido"
-                  className={`${childField} ${border(!!childErrors?.lastName, 'border-[#67e8f9]')}`}
+                  className={`${childField} ${border(!!childErrors?.lastName, 'border-bright-soft')}`}
                   {...register('children.0.lastName', nameValidation)}
                 />
               </Field>
@@ -208,7 +208,7 @@ export function SignupWeb({ form }: { form: SignupForm }) {
                 id="children.0.birthDate"
                 type="date"
                 size={1}
-                className={`${childField} ${border(!!childErrors?.birthDate, 'border-[#67e8f9]')}`}
+                className={`${childField} ${border(!!childErrors?.birthDate, 'border-bright-soft')}`}
                 {...register('children.0.birthDate', { required: true })}
               />
             </Field>
@@ -224,7 +224,7 @@ export function SignupWeb({ form }: { form: SignupForm }) {
                   type="number"
                   step="0.1"
                   size={1}
-                  className={`${childField} ${border(!!childErrors?.height, 'border-[#67e8f9]')}`}
+                  className={`${childField} ${border(!!childErrors?.height, 'border-bright-soft')}`}
                   {...register('children.0.height', positiveNumberValidation)}
                 />
               </Field>
@@ -238,7 +238,7 @@ export function SignupWeb({ form }: { form: SignupForm }) {
                   type="number"
                   step="0.1"
                   size={1}
-                  className={`${childField} ${border(!!childErrors?.weight, 'border-[#67e8f9]')}`}
+                  className={`${childField} ${border(!!childErrors?.weight, 'border-bright-soft')}`}
                   {...register('children.0.weight', positiveNumberValidation)}
                 />
               </Field>

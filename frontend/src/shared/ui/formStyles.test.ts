@@ -61,9 +61,9 @@ describe('formStyles', () => {
 
   it('fieldBorder: red for an invalid value, the given color otherwise (slate-300 by default)', () => {
     expect(fieldBorder(true)).toBe('border-red-600')
-    expect(fieldBorder(true, 'border-[#67e8f9]')).toBe('border-red-600')
+    expect(fieldBorder(true, 'border-bright-soft')).toBe('border-red-600')
     expect(fieldBorder(false)).toBe('border-slate-300')
-    expect(fieldBorder(false, 'border-[#67e8f9]')).toBe('border-[#67e8f9]')
+    expect(fieldBorder(false, 'border-bright-soft')).toBe('border-bright-soft')
   })
 
   it('label and error keep the project sizes: 13 px, error in red-700', () => {
