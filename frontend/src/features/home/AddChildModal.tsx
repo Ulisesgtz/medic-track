@@ -23,7 +23,7 @@ interface AddChildFormValues {
 }
 
 const field =
-  'min-h-11 w-full min-w-0 rounded-[14px] border-[1.5px] bg-surface px-4 py-3.5 text-base font-medium text-ink placeholder:text-slate-400 focus:border-2 focus:border-ink focus:outline-none'
+  'min-h-11 w-full min-w-0 rounded-[14px] border-[1.5px] bg-surface px-4 py-3.5 text-base font-medium text-ink placeholder:text-slate-500 focus:border-2 focus:border-ink focus:outline-none'
 const border = (invalid: boolean) => (invalid ? 'border-red-600' : 'border-slate-300')
 
 /**

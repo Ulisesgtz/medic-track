@@ -94,10 +94,22 @@ Marca: cápsula con rotación de -45°, partida a la mitad — mitad clara (regi
 - Sobre fondo claro: cuadro `--color-action`, wordmark "Pedi" `#04252b` + "Track" `#0e7490`.
 - Exportaciones: `favicon.svg`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png` (20% de safe area).
 - `theme_color` y `background_color` del manifest: `#04252b`.
+- Dónde aparece: el header de la app, la pantalla de registro, la barra lateral y el icono/splash; no se repite dentro del contenido de las pantallas.
+
+## Colores de apoyo sin token
+
+Valores que las pantallas escriben como literales (`text-[#…]`) y que no están en `@theme` de `index.css`. Se usan solo donde dice la tabla; si una pantalla nueva los necesita, se copian de aquí (no se inventa otro tono) hasta que se suban a tokens (`BACKLOG.md`).
+
+| Valor | Uso | Contraste |
+|---|---|---|
+| `#451a03` | texto sobre ámbar (`SummaryCard` «Tomas de hoy», `FreemiumLimitModal`) y fondo del botón de `TodayDosesBlock` (con texto `--color-pending-soft`) | 6.97:1 sobre `#f59e0b`; 13.45:1 el texto `#fef3c7` sobre él |
+| `#613102` | texto secundario sobre ámbar (`SummaryCard`) | 5.02:1 sobre `#f59e0b` |
+| `#62909d` | edad inactiva en la barra lateral (el mock da `#5b8b94`: 4.3:1, bajo el mínimo) | 4.60:1 sobre `--color-ink` |
+| `#67e8f9`, `#a5f3fc`, `#cffafe` | cian claro: textos y bordes sobre `--color-ink` / sobre fondo claro | — |
 
 ## Recetas de implementación (Tailwind v4)
 
-Las clases exactas que ya usan las pantallas. Una pantalla nueva las importa de `frontend/src/shared/ui/formStyles.ts` (`inputClass`, `suggestedInputClass`, `labelClass`, `errorClass`, `overlineClass`, `optionalClass`), no las reinventa ni las copia. Los placeholders van en `slate-500` como mínimo: `slate-400` sobre blanco da ~2.6:1.
+Las clases exactas que ya usan las pantallas. Hoy cada pantalla las define en su propio archivo (no existe un `shared/ui/formStyles.ts`; unificarlas está en `BACKLOG.md`): una pantalla nueva copia estas clases tal cual, sin reinventarlas. Los placeholders van en `slate-500` como mínimo: `slate-400` sobre blanco da ~2.6:1.
 Los tokens se usan como utilidades: `bg-ink`, `text-action`, `bg-confirmed`, `bg-canvas`, `bg-surface`, `border-hint-border`, etc.
 
 | Pieza | Clases |
@@ -117,6 +129,3 @@ Los tokens se usan como utilidades: `bg-ink`, `text-action`, `bg-confirmed`, `bg
 
 Además de los colores: hover con `transition-colors duration-200`, `cursor-pointer` en todo lo clicable, foco visible, mínimo 44 px de alto en todo control (FR-009), contraste ≥ 4.5:1 (FR-008), sin scroll horizontal de 320 a 1920 px.
 
-## Logo e iconos
-
-El logo aparece en el header de la app, en la pantalla de registro y como icono/splash. No se repite dentro del contenido de las pantallas.
