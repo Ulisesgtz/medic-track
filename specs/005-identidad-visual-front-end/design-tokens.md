@@ -96,16 +96,24 @@ Marca: cápsula con rotación de -45°, partida a la mitad — mitad clara (regi
 - `theme_color` y `background_color` del manifest: `#04252b`.
 - Dónde aparece: el header de la app, la pantalla de registro, la barra lateral y el icono/splash; no se repite dentro del contenido de las pantallas.
 
-## Colores de apoyo sin token
+## Colores de apoyo (tokens)
 
-Valores que las pantallas escriben como literales (`text-[#…]`) y que no están en `@theme` de `index.css`. Se usan solo donde dice la tabla; si una pantalla nueva los necesita, se copian de aquí (no se inventa otro tono) hasta que se suban a tokens (`BACKLOG.md`).
+Eran literales (`text-[#…]`) repartidos por las pantallas; desde el refactor 028 son tokens de `@theme` con **los mismos valores** y `noColorLiterals.test.ts` impide volver a escribir uno en una clase. Una pantalla nueva los usa por su nombre; si necesita un tono nuevo, se agrega a `index.css` y a esta tabla.
 
-| Valor | Uso | Contraste |
-|---|---|---|
-| `#451a03` | texto sobre ámbar (`SummaryCard` «Tomas de hoy», `FreemiumLimitModal`) y fondo del botón de `TodayDosesBlock` (con texto `--color-pending-soft`) | 6.97:1 sobre `#f59e0b`; 13.45:1 el texto `#fef3c7` sobre él |
-| `#613102` | texto secundario sobre ámbar (`SummaryCard`) | 5.02:1 sobre `#f59e0b` |
-| `#62909d` | edad inactiva en la barra lateral (el mock da `#5b8b94`: 4.3:1, bajo el mínimo) | 4.60:1 sobre `--color-ink` |
-| `#67e8f9`, `#a5f3fc`, `#cffafe` | cian claro: textos y bordes sobre `--color-ink` / sobre fondo claro | — |
+| Token | Valor | Uso | Contraste |
+|---|---|---|---|
+| `--color-bright-soft` | `#67e8f9` | cian claro: textos y bordes sobre tinta, borde del bloque del hijo | — |
+| `--color-hint-edge` | `#cffafe` | borde fino de las superficies `hint` y texto claro sobre tinta | — |
+| `--color-body` | `#1f3d44` | texto corrido sobre superficie | — |
+| `--color-ink-muted` | `#62909d` | edad inactiva en la barra lateral (el mock da `#5b8b94`: 4.3:1, bajo el mínimo) | 4.60:1 sobre `--color-ink` |
+| `--color-ink-edge` | `#0b5763` | borde punteado sobre tinta («+ Agregar hijo» de la barra lateral) | — |
+| `--color-on-pending-muted` | `#613102` | texto secundario sobre ámbar (`SummaryCard`) | 5.02:1 sobre `#f59e0b` |
+| `--color-mint` | `#a7f3d0` | verde menta: avatar de hijo y borde del aviso de éxito | — |
+| `--color-calendar-muted` | `#64748b` | días de la semana y días fuera del tratamiento | 4.76:1 sobre blanco |
+| `--color-calendar-text` | `#334155` | texto de la tarjeta «Cómo leer el calendario» | — |
+| `--color-calendar-name` | `#1e293b` | nombres de medicamento en la leyenda del calendario | — |
+
+Los tres tonos pizarra del calendario llevan el valor **exacto** del diseño (spec 022): los `slate-500/700/800` de Tailwind v4 son oklch y salen 2–3 niveles distintos. `#451a03` (texto sobre ámbar, y fondo del botón de `TodayDosesBlock`) ya era `--color-on-pending`; `#065f46`, `--color-confirmed-strong`; `#92400e`, `--color-pending-strong`; `#a5f3fc`, `--color-hint-border`. El logo de Google (`GoogleSignupButton`) conserva los colores de su marca.
 
 ## Recetas de implementación (Tailwind v4)
 

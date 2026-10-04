@@ -183,7 +183,7 @@ export function ChildDetailPage() {
         <header className="bg-ink px-6 pt-6 pb-7">
           <Link
             to="/home"
-            className="-my-3 inline-flex min-h-11 items-center text-sm font-bold text-[#67e8f9] hover:text-white"
+            className="-my-3 inline-flex min-h-11 items-center text-sm font-bold text-bright-soft hover:text-white"
           >
             ← Tus hijos
           </Link>
@@ -199,7 +199,7 @@ export function ChildDetailPage() {
                 <h1 className="truncate text-2xl font-black tracking-tight text-white">
                   {child.firstName} {child.lastName}
                 </h1>
-                <p className="mt-1 text-sm font-semibold text-[#a5f3fc]">
+                <p className="mt-1 text-sm font-semibold text-hint-border">
                   {formatAgeLong(child.birthDate)} · {formatDateShort(child.birthDate)}
                 </p>
               </div>

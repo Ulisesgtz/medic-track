@@ -170,7 +170,7 @@ export function CompleteGoogleSignupPage() {
                 <input
                   id="children.0.firstName"
                   size={1}
-                  className={`${childField} ${border(!!childErrors?.firstName, 'border-[#67e8f9]')}`}
+                  className={`${childField} ${border(!!childErrors?.firstName, 'border-bright-soft')}`}
                   {...register('children.0.firstName', nameValidation)}
                 />
               </Field>
@@ -178,7 +178,7 @@ export function CompleteGoogleSignupPage() {
                 <input
                   id="children.0.lastName"
                   size={1}
-                  className={`${childField} ${border(!!childErrors?.lastName, 'border-[#67e8f9]')}`}
+                  className={`${childField} ${border(!!childErrors?.lastName, 'border-bright-soft')}`}
                   {...register('children.0.lastName', nameValidation)}
                 />
               </Field>
@@ -189,7 +189,7 @@ export function CompleteGoogleSignupPage() {
                 id="children.0.birthDate"
                 type="date"
                 size={1}
-                className={`${childField} ${border(!!childErrors?.birthDate, 'border-[#67e8f9]')}`}
+                className={`${childField} ${border(!!childErrors?.birthDate, 'border-bright-soft')}`}
                 {...register('children.0.birthDate', { required: true })}
               />
             </Field>
@@ -205,7 +205,7 @@ export function CompleteGoogleSignupPage() {
                   type="number"
                   step="0.1"
                   size={1}
-                  className={`${childField} ${border(!!childErrors?.height, 'border-[#67e8f9]')}`}
+                  className={`${childField} ${border(!!childErrors?.height, 'border-bright-soft')}`}
                   {...register('children.0.height', positiveNumberValidation)}
                 />
               </Field>
@@ -219,7 +219,7 @@ export function CompleteGoogleSignupPage() {
                   type="number"
                   step="0.1"
                   size={1}
-                  className={`${childField} ${border(!!childErrors?.weight, 'border-[#67e8f9]')}`}
+                  className={`${childField} ${border(!!childErrors?.weight, 'border-bright-soft')}`}
                   {...register('children.0.weight', positiveNumberValidation)}
                 />
               </Field>

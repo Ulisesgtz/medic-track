@@ -306,7 +306,7 @@ describe('HomePage', () => {
 
       const links = await screen.findAllByRole('link', { name: /Morales/ })
       expect(links[0].querySelector('[aria-hidden]')).toHaveClass('bg-bright')
-      expect(links[1].querySelector('[aria-hidden]')).toHaveClass('bg-[#a7f3d0]')
+      expect(links[1].querySelector('[aria-hidden]')).toHaveClass('bg-mint')
     })
   })
 

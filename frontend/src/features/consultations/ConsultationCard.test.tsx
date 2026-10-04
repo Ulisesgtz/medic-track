@@ -30,7 +30,7 @@ describe('ConsultationCard', () => {
   })
 
   it('uses the soft accent bar for earlier consultations', () => {
-    expect(renderCard(false)).toHaveClass('border-[#cffafe]')
+    expect(renderCard(false)).toHaveClass('border-hint-edge')
   })
 
   it('shows "Ver →" on the web design only', () => {

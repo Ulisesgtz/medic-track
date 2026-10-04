@@ -23,13 +23,13 @@ export function AppHeader({ eyebrow, title, action, children }: AppHeaderProps) 
           <div className="flex items-center gap-2.5">
             <Logo size={32} />
             <span className="text-lg font-black tracking-tight text-white">
-              Pedi<span className="text-[#67e8f9]">Track</span>
+              Pedi<span className="text-bright-soft">Track</span>
             </span>
           </div>
           {action ? <div className="ml-auto">{action}</div> : null}
         </div>
         <div className="flex flex-col gap-1.5">
-          {eyebrow ? <div className="text-sm font-semibold text-[#67e8f9]">{eyebrow}</div> : null}
+          {eyebrow ? <div className="text-sm font-semibold text-bright-soft">{eyebrow}</div> : null}
           <h1 className="text-3xl font-black tracking-tight text-white">{title}</h1>
         </div>
         {children}

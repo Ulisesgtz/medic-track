@@ -245,12 +245,12 @@ describe('TreatmentCalendar (specs/019)', () => {
     renderCalendar({ medications: [med('m1', 'Amoxicilina', range([10, 1], [10, 3]))], today: '2026-10-02' })
 
     const chosen = day('2 de octubre · 1 Amoxicilina (sin dar)')
-    expect(chosen).toHaveClass('bg-ink', 'ring-[#22d3ee]')
-    expect(dots('2 de octubre · 1 Amoxicilina (sin dar)')[0]).toHaveClass('border-[#a5f3fc]')
+    expect(chosen).toHaveClass('bg-ink', 'ring-bright')
+    expect(dots('2 de octubre · 1 Amoxicilina (sin dar)')[0]).toHaveClass('border-hint-border')
     const outside = day('5 de octubre')
-    expect(outside).not.toHaveClass('bg-[#ecfeff]')
+    expect(outside).not.toHaveClass('bg-hint')
     expect(outside.querySelector('span[aria-hidden="true"]')).toBeNull()
-    expect(day('1 de octubre · inicio de 1 Amoxicilina (sin dar)')).toHaveClass('bg-[#ecfeff]', 'border-[#cffafe]')
+    expect(day('1 de octubre · inicio de 1 Amoxicilina (sin dar)')).toHaveClass('bg-hint', 'border-hint-edge')
   })
 
   it('puts four to six medications on two rows of dots', () => {
