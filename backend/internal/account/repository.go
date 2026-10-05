@@ -133,14 +133,15 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Account, error
 }
 
 // AddChildIfUnderLimit atomically checks the account's current child count
-// against limit and inserts input as a new child only if it's still under
+// against the limit of its plan (ChildLimit, read under the same lock, so a plan
+// change can't slip in between) and inserts input as a new child only if it's still under
 // that limit — all inside one transaction that locks the account row with
 // `FOR UPDATE`, so two concurrent calls for the same account can't both read
 // "under the limit" and both insert (the TOCTOU race a separate
 // count-then-insert would have). Returns ErrAccountNotFound if the account
 // doesn't exist, or a *FreemiumLimitError if the account is already at
 // limit.
-func (r *Repository) AddChildIfUnderLimit(ctx context.Context, accountID uuid.UUID, input CreateChildInput, limit int) (*Account, error) {
+func (r *Repository) AddChildIfUnderLimit(ctx context.Context, accountID uuid.UUID, input CreateChildInput) (*Account, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("beginning transaction: %w", err)
@@ -181,6 +182,7 @@ func (r *Repository) AddChildIfUnderLimit(ctx context.Context, accountID uuid.UU
 	}
 	rows.Close()
 
+	limit := ChildLimit(acc.Plan)
 	if len(acc.Children) >= limit {
 		return nil, &FreemiumLimitError{Limit: limit, Received: len(acc.Children) + 1}
 	}
