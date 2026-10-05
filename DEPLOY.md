@@ -80,6 +80,7 @@ base de datos de pruebas y sale de la rama `develop` (la constitución reserva `
 
    ```bash
    export RAILWAY_DB='<Connection URL de Public Network>'
+   export PGCLIENTENCODING=UTF8                             # sin esto, en Windows los acentos quedan como "MÃ©xico"
    psql "$RAILWAY_DB" -c "select current_database();"      # prueba: debe decir "railway"
    for f in backend/migrations/*.sql; do echo "== $f"; psql "$RAILWAY_DB" -v ON_ERROR_STOP=1 -f "$f" || break; done
    ```
@@ -209,6 +210,7 @@ desarrollo; es normal). En el teléfono sigue `PROBAR.md` (instalar, **Activar r
 | El navegador dice error de CORS | `FRONTEND_ORIGIN` no coincide **exactamente** con el origen de la página (sin `/` al final) |
 | La app dice «Falta terminar tu registro» | El usuario existe en Clerk pero no la cuenta de PediTrack (el `POST /accounts` falló, p. ej. por CORS). Pulsa **Terminar registro** |
 | «Could not resolve the session's email» (500) | La `sk_test_` del backend y la `pk_test_` del frontend son de instancias distintas de Clerk |
+| Los países/estados/síntomas salen como `MÃ©xico`, `CanadÃ¡` | Las migraciones se aplicaron con la codificación de Windows en vez de UTF-8. Arreglo: `export PGCLIENTENCODING=UTF8` y, en la base, `UPDATE countries SET name = convert_from(convert_to(name,'WIN1252'),'UTF8') WHERE name ~ 'Ã';` (igual con `states` y `symptoms`). Ejecuta el `UPDATE` **una sola vez** |
 | Cambié `VITE_*` y la app no lo nota | Son de *build*: reintenta el despliegue en Cloudflare |
 | Cloudflare: «Verifying» eterno | Falta el CNAME `dev`, o el nombre quedó duplicado; revisa con `nslookup -type=CNAME dev.pedi-track.com 8.8.8.8` |
 | Railway: «Waiting for DNS update» | Falta el CNAME `api-dev` o el TXT `_railway-verify.api-dev` (valor completo) |
