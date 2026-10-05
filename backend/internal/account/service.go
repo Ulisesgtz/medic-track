@@ -27,6 +27,19 @@ const nameMaxLength = 100
 // this at least collapses the two backend copies into one).
 const freePlanChildLimit = 1
 
+// paidPlanChildLimit is how many children a paid ("premium") account may have. It is a ceiling, not a
+// promise of unlimited: it keeps a bug or a script from creating children without end.
+const paidPlanChildLimit = 10
+
+// ChildLimit is how many children an account on the given plan may have. Anything that is not
+// the paid plan gets the free plan's limit, so an unknown value can never grant more.
+func ChildLimit(plan Plan) int {
+	if plan == PlanPaid {
+		return paidPlanChildLimit
+	}
+	return freePlanChildLimit
+}
+
 // CreateAccountInput is the input to Service.CreateAccount, mirroring the
 // POST /accounts request body (contracts/post-accounts.md). Email and
 // ClerkUserID are never taken from the client's JSON body — the handler
@@ -160,7 +173,7 @@ func (s *Service) GetAccountByClerkUserID(ctx context.Context, clerkUserID strin
 
 // AddChild adds a single child to an already-existing account, reusing the
 // same field validation (validateChildFields) as CreateAccount
-// (specs/003-home-listado-hijos FR-004). The freemium 1-child limit check
+// (specs/003-home-listado-hijos FR-004). The child limit of the account's plan (ChildLimit) check
 // and the insert happen atomically in the repository (AddChildIfUnderLimit,
 // under a row lock) — unlike CreateAccount, where the limit check race-frees
 // itself by running before the account even exists, AddChild's account
@@ -170,7 +183,7 @@ func (s *Service) AddChild(ctx context.Context, accountID uuid.UUID, input Creat
 		return nil, ValidationErrors(errs)
 	}
 
-	return s.repo.AddChildIfUnderLimit(ctx, accountID, input, freePlanChildLimit)
+	return s.repo.AddChildIfUnderLimit(ctx, accountID, input)
 }
 
 // AcceptDisclaimer records the account's acknowledgement of the "Antes de empezar" notice

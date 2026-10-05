@@ -152,7 +152,7 @@ func TestRepository_AddChildIfUnderLimit(t *testing.T) {
 
 	got, err := repo.AddChildIfUnderLimit(context.Background(), acc.ID, account.CreateChildInput{
 		FirstName: "Luis", LastName: "Gómez", BirthDate: mustParseDate(t, "2020-01-15"),
-	}, 1)
+	})
 	require.NoError(t, err)
 	require.Len(t, got.Children, 1)
 	require.NotEqual(t, uuid.Nil, got.Children[0].ID)
@@ -173,7 +173,7 @@ func TestRepository_AddChildIfUnderLimit_LimitExceeded(t *testing.T) {
 
 	_, err := repo.AddChildIfUnderLimit(context.Background(), acc.ID, account.CreateChildInput{
 		FirstName: "Hijo Dos", LastName: "Ruiz", BirthDate: mustParseDate(t, "2021-01-01"),
-	}, 1)
+	})
 
 	require.ErrorIs(t, err, account.ErrFreemiumChildLimitExceeded)
 	var limitErr *account.FreemiumLimitError
@@ -192,7 +192,7 @@ func TestRepository_AddChildIfUnderLimit_AccountNotFound(t *testing.T) {
 
 	_, err := repo.AddChildIfUnderLimit(context.Background(), uuid.New(), account.CreateChildInput{
 		FirstName: "Luis", LastName: "Gómez", BirthDate: mustParseDate(t, "2020-01-15"),
-	}, 1)
+	})
 
 	require.ErrorIs(t, err, account.ErrAccountNotFound)
 }
@@ -206,7 +206,7 @@ func TestRepository_AddChildIfUnderLimit_ConnectionError(t *testing.T) {
 
 	_, err := repo.AddChildIfUnderLimit(context.Background(), uuid.New(), account.CreateChildInput{
 		FirstName: "Luis", LastName: "Gómez", BirthDate: mustParseDate(t, "2020-01-15"),
-	}, 1)
+	})
 
 	require.Error(t, err)
 }
