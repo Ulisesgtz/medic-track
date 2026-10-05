@@ -191,6 +191,17 @@ desarrollo; es normal). En el teléfono sigue `PROBAR.md` (instalar, **Activar r
   Clerk; actualízala también en `backend/.env.local` y en el secreto `CLERK_SECRET_KEY` de GitHub Actions),
   `VAPID_*`/`REMINDER_ACTION_SECRET` (genera un juego nuevo con el comando del paso 2 y reemplázalo; las suscripciones
   push existentes dejan de servir y cada persona vuelve a pulsar **Activar recordatorios**) y `OPS_API_KEY`.
+- **Dar el plan de pago (premium) a quien prueba** (spec 029): no hay pantalla ni endpoint, se hace en la base (conéctate
+  como en el paso 1, con `PGCLIENTENCODING` y `RAILWAY_DB`). La persona debe haber creado ya su cuenta; si no, responde `UPDATE 0`:
+
+  ```bash
+  psql "$RAILWAY_DB" -c "UPDATE accounts SET plan = 'paid' WHERE lower(email) = lower('correo@ejemplo.com');"
+  psql "$RAILWAY_DB" -c "SELECT email, plan FROM accounts ORDER BY created_at DESC;"   # ver quién tiene qué plan
+  ```
+
+  El plan gratuito admite 1 hijo y el de pago hasta **10**. Con `'free'` en lugar de `'paid'` se le quita (los hijos que ya
+  creó se quedan). Para que la app lo note, la persona cierra y vuelve a abrir la app. Para varias personas a la vez:
+  `WHERE lower(email) IN (lower('a@…'), lower('b@…'))`.
 - **Datos de prueba:** quienes prueban comparten esta base. Se puede vaciar cuando haga falta (con cuidado: no es
   producción, pero tampoco hay respaldos).
 - **Costos y límites:** Cloudflare Pages es gratis. Railway cobra por uso (el plan de prueba da un crédito inicial y
@@ -210,7 +221,7 @@ desarrollo; es normal). En el teléfono sigue `PROBAR.md` (instalar, **Activar r
 | El navegador dice error de CORS | `FRONTEND_ORIGIN` no coincide **exactamente** con el origen de la página (sin `/` al final) |
 | La app dice «Falta terminar tu registro» | El usuario existe en Clerk pero no la cuenta de PediTrack (el `POST /accounts` falló, p. ej. por CORS). Pulsa **Terminar registro** |
 | «Could not resolve the session's email» (500) | La `sk_test_` del backend y la `pk_test_` del frontend son de instancias distintas de Clerk |
-| Los países/estados/síntomas salen como `MÃ©xico`, `CanadÃ¡` | Las migraciones se aplicaron con la codificación de Windows en vez de UTF-8. Arreglo: `export PGCLIENTENCODING=UTF8` y, en la base, `UPDATE countries SET name = convert_from(convert_to(name,'WIN1252'),'UTF8') WHERE name ~ 'Ã';` (igual con `states` y `symptoms`). Ejecuta el `UPDATE` **una sola vez** |
+| Los países/estados/síntomas salen como `MÃ©xico`, `CanadÃ¡` | Las migraciones se aplicaron con la codificación de Windows en vez de UTF-8. Arreglo: `export PGCLIENTENCODING=UTF8` y, en la base, `UPDATE countries SET name = convert_from(convert_to(name,'WIN1252'),'UTF8') WHERE position(chr(195) in name) > 0;` (igual con `states` y `symptoms`). Ejecuta el `UPDATE` **una sola vez**. No escribas la letra «Ã» en el comando: algunas terminales de Windows la mandan mal y el servidor responde `invalid byte sequence for encoding "UTF8"`; por eso se usa `chr(195)` |
 | Cambié `VITE_*` y la app no lo nota | Son de *build*: reintenta el despliegue en Cloudflare |
 | Cloudflare: «Verifying» eterno | Falta el CNAME `dev`, o el nombre quedó duplicado; revisa con `nslookup -type=CNAME dev.pedi-track.com 8.8.8.8` |
 | Railway: «Waiting for DNS update» | Falta el CNAME `api-dev` o el TXT `_railway-verify.api-dev` (valor completo) |
