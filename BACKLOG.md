@@ -142,74 +142,82 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
 - **Pantalla de planes de pago** — hoy `/planes` muestra un aviso "Estamos preparando los planes" (`MessagePage`) para que "Ver planes" no caiga en una pantalla en blanco. El modal de límite freemium (franja ámbar) es el punto de entrada
   visual ya establecido; la pantalla de planes debe continuarlo. Ver `specs/005-identidad-visual-front-end/spec.md`,
   "Adiciones Futuras Previstas".
-- **Qué incluye el plan de pago (premium)** — idea del 2026-10-05, **pulida pero con decisiones abiertas (abajo): no construir
-  hasta cerrarlas.** Junto con «Pantalla de planes de pago» define qué se cobra. Hoy `paid` solo sube el tope de hijos de 1 a 10
-  (spec 029) y se da a mano con SQL; no hay cobro.
-  - **1. Compartir con la pareja y con quien cuida** — con plan de pago, quien paga **invita** a su esposo/esposa y los dos
-    tienen **el mismo acceso**: ven los mismos hijos y consultas, y los dos pueden agregar hijos, consultas y marcar tomas.
-    Mejoras sobre la idea original:
-    - **Roles, no solo «pareja»:** *Tutor* (igual que quien invita: agrega y marca), *Cuidador* (abuela, niñera: ve y marca
-      tomas, no agrega ni invita; ya estaba en la memoria como palanca de «cuidador compartido») y *Hijo/hija* (ve **su**
-      tratamiento, recibe sus avisos y **marca sus propias tomas**, también desde el aviso con «Tomada»; no agrega ni invita
-      ni ve a sus hermanos). En permisos hay solo dos niveles: *completo* (Tutor) y *ver y marcar* (Cuidador e Hijo); el
-      Hijo se distingue por ver solo su perfil y por la edad mínima. Un tutor decide el rol al invitar y puede quitar el
-      acceso cuando quiera.
-    - **Lo que más vale de compartir es no dar dos veces la misma dosis:** que la toma que marcó uno aparezca ya marcada en el
-      teléfono del otro (la pantalla ya se actualiza cada 60 s) y **quién la marcó** («Marcada por Ana, 08:05» o «por Luis»,
-      cuando la marca el hijo; solo registra, Principio I). Un recordatorio no debe llegar a quien ya la vio marcada.
-    - **Invitación:** por correo o por liga de un solo uso que vence (7 días). La persona crea su cuenta (Clerk) o entra a la
-      suya y acepta; el tutor ve «Pendiente / Aceptada». Máximo de personas por familia (p. ej. 4).
-    - **El hijo como usuario:** solo desde cierta edad (p. ej. 13+, por las condiciones de Clerk y el aviso de privacidad de
-      menores) y con la aprobación del tutor; ve y marca sus tomas + avisos. Más sensible que los demás roles: revisar el aviso
-      legal antes (LFPDPPP, datos de salud de menores).
-    - **Consentimiento y aviso:** compartir significa que **otra persona ve datos médicos del menor**: texto nuevo en el aviso
-      «Antes de empezar» (subir `CurrentDisclaimerVersion`) y que quien acepta una invitación vea y confirme qué va a ver.
-    - **Qué pasa si se cancela el plan (decidir):** lo razonable es que **nadie pierda lo ya registrado**: los invitados
-      conservan lectura, y se pierde agregar y compartir de nuevo. No quitarles el acceso de golpe.
-    - **Impacto técnico (grande):** hoy todo cuelga de una cuenta (`children.account_id`, `ownership` = «mi `clerk_user_id`
-      es el de la cuenta dueña»). Compartir pide una tabla de membresías (`child_members`: hijo, cuenta, rol, quién
-      invitó, estado) y que `internal/ownership` y los `RequireOwner` de `internal/server` pregunten «¿tengo acceso a este
-      hijo?» en vez de «¿es mi cuenta?». Los recordatorios también cambian: `ClaimDueDoses` y `doses.reminder_sent_at` son
-      **por toma**, y con varias personas debe ser **por toma y por persona** (cada una con su dispositivo y su
-      `reminderDetail`). Hay que agregar `taken_by` a las tomas. Va en su propia spec, antes que el resto.
-  - **2. Qué ve y qué puede hacer cada plan** — la idea original era: gratis = solo la consulta actual, sin ver las pasadas ni
-    agregar previas; pago = ilimitado + historial. **Choca con lo decidido el 2026-07-18** (`peditrack-monetization.md`: «los
-    datos nunca se secuestran, premium es lo que la app *hace* con los datos, no el acceso», el error de Medisafe) y con el
-    uso real, que es por episodios: la segunda vez que el niño se enferma la familia ya tendría que pagar *por ver o
-    seguir usando lo que ella misma escribió*. Alternativa recomendada, que conserva la idea del muro sin ocultar datos:
-    - **Gratis:** **una consulta con tratamiento activo a la vez** (se deriva de las tomas, sin juicio médico). Cuando termina,
-      puede registrar la siguiente enfermedad: nunca se topa con el muro por uso normal. Lo que ya registró **siempre lo ve**
-      (lista simple por fecha). Recordatorios del tratamiento activo, 1 hijo.
-    - **Pago:** varias consultas a la vez, **consultas previas «solo registro»** (spec 024: pasar a la app el historial de
-      antes), **búsqueda y filtros**, compartir (punto 1), más hijos, y lo del punto 3.
-    - Si aun así se prefiere la versión original (gratis solo ve la actual), decidirlo sabiendo ese costo, y al menos **no
-      borrar** nada: lo anterior queda guardado y se muestra bloqueado, nunca perdido.
-  - **3. Búsqueda y filtros del historial (pago)** — una pantalla «Historial» por hijo (o de todos) con búsqueda de texto
-    (doctor, medicamento, notas) y filtros por **rango de fechas**, **doctor**, **síntoma** (usa el catálogo de la spec
-    012), **medicamento** y «con tratamiento / solo registro». Es solo lectura sobre datos que ya existen: un endpoint de
-    consulta con filtros (con índices por `child_id, consult_date`) y una pantalla; no cambia el modelo. Resultado = la
-    lista de consultas que ya existe. **Nunca** sugiere ni compara («esto parece…»): solo encuentra (Principio I).
-  - **4. Otras ideas del plan de pago (de la memoria y nuevas)**
-    - **Exportar el historial a PDF** para llevarlo al pediatra (el momento de más valor de la app); con filtros del punto 3.
-    - **Liga de solo lectura para el pediatra**, temporal y revocable, sin cuenta (se solapa con el Plan Consultorio).
-    - **Curvas de crecimiento OMS** con la talla y el peso que ya se guardan (informativo, sin interpretar).
-    - **Cartilla de vacunas** y **recordatorios de citas** (la fecha de la próxima consulta).
-    - **Varios dispositivos por persona** y un **resumen semanal** de tomas por correo (cuando exista proveedor de correo).
-  - **Decisiones abiertas (responder antes de la spec):**
-    1. ¿Gratis = «una consulta activa a la vez, con historial visible» (recomendado) o «solo la consulta actual» (original)?
-    2. ¿Quién paga? ¿El plan es de **la cuenta que paga** y cubre a los invitados, o cada tutor paga el suyo? (Recomendado: una
-       suscripción por familia, el invitado no paga.)
-    3. Si el que paga cancela: ¿los invitados conservan lectura? ¿cuánto tiempo?
-    4. Separación o disputa de custodia: ¿puede un tutor quitarle el acceso al otro? (Recomendado: solo quien creó al hijo,
-       y queda registro.) Conviene preguntarlo a alguien legal antes de lanzarlo.
-    5. Edad mínima y consentimiento para el rol *Hijo*. Lo que el hijo marca queda registrado como suyo («por Luis»): la app solo lo
-       registra, y el tutor puede verlo y desmarcarlo si se equivocó.
-    6. ¿Se cobra por familia, por hijos o por funciones? El corte de la memoria es por funciones y 2+ hijos (MX$399–499 al año).
-  - **Antes de cobrar algo hay que tener:** (a) un **proveedor de pagos** (Stripe con tarjeta y OXXO/SPEI, o Mercado Pago;
-    en una PWA no aplica la tienda de Apple/Google); (b) que el plan deje de ser un simple `free`/`paid` y guarde **estado,
-    vigencia y proveedor** (`plan_status`, `plan_renews_at`, `provider_customer_id`, con periodo de gracia al fallar un
-    cobro); (c) la pantalla de planes (`/planes`) y el aviso de privacidad y términos actualizados; (d) un correo del
-    dominio para recibos y soporte (`@pedi-track.com`, pendiente de proveedor).
+- **Qué incluye el plan de pago (premium)** — **decidido el 2026-10-05** con el dueño del producto; **falta construirlo**, en el
+  orden de «Orden sugerido» al final. Hoy `paid` solo sube el tope de hijos de 1 a 10 (spec 029) y se da a mano con SQL; no
+  hay cobro. Lo que sigue **abierto** está marcado «por confirmar».
+  - **Gratis y pago**
+    - **Gratis:** 1 hijo y **una consulta con tratamiento activo a la vez** («activo» se deriva de las tomas, sin juicio
+      médico: tiene una toma por delante y no se finalizó). Al terminar, o al finalizarlo (spec 016), puede registrar la
+      siguiente. **Lo anterior siempre lo ve** (lista por fecha) y los recordatorios del tratamiento activo siguen. No puede
+      guardar consultas previas «solo registro».
+    - **Pago:** varias consultas activas a la vez, consultas previas «solo registro» (spec 024), búsqueda y filtros, compartir,
+      hasta 10 hijos y los extras de abajo.
+    - **Regla técnica:** la revisa el **servidor** al crear la consulta, nunca solo el cliente. En gratis, con un tratamiento
+      activo (o con `recordOnly`) responde 422 con un mensaje neutro («Tu plan incluye un tratamiento activo a la vez. Puedes
+      finalizar el actual o ver los planes») y el aviso de planes. **Nunca** impide ver ni marcar tomas, y una cuenta que
+      baja de pago a gratis **no pierde ni oculta nada** de lo ya registrado.
+  - **Compartir con la pareja y con quien cuida**
+    - **Una suscripción por familia:** cuando paga una persona, **todas las que invita quedan incluidas** según su rol, sin
+      pagar. Quien paga es la cuenta dueña de los hijos.
+    - **Roles:** *Tutor* (esposo/esposa: mismo acceso que quien paga; agrega hijos y consultas, marca tomas, invita),
+      *Cuidador* (abuela, niñera: ve y marca tomas; no agrega ni invita) e *Hijo/hija* (**10 años o más y con el
+      consentimiento de un tutor**: ve **su** tratamiento, recibe sus avisos y **marca sus propias tomas**, también desde el
+      aviso con «Tomada»; no agrega ni invita ni ve a sus hermanos). En permisos hay dos niveles: *completo* (Tutor) y *ver y
+      marcar* (Cuidador e Hijo).
+    - **Invitación:** por correo o liga de un solo uso que vence (7 días). La persona crea su cuenta (Clerk) o entra a la
+      suya, ve **qué va a poder ver** y acepta; el tutor ve «Pendiente / Aceptada». Máximo de personas por familia (p. ej. 4).
+      Texto nuevo en el aviso «Antes de empezar» (subir `CurrentDisclaimerVersion`): compartir = otra persona ve datos
+      médicos del menor.
+    - **Lo que más vale es no dar dos veces la misma dosis:** lo que marca uno aparece ya marcado en el teléfono del otro
+      (las pantallas se actualizan cada 60 s) con **quién la marcó** («por Ana, 08:05» / «por Luis»; solo registra, Principio
+      I). Un recordatorio no debe llegar a quien ya vio la toma marcada. El tutor puede desmarcar lo que marcó el hijo.
+    - **Si quien paga cancela:** los invitados quedan en **solo lectura, sin poder agregar nada** (nadie pierde lo ya
+      registrado). Para volver a usar la app con normalidad, el invitado **pide su desvinculación** y después solo puede
+      **unirse a otra familia con plan de pago** (o ser invitado de nuevo por quien reactive el plan).
+    - **Desvincular — decidido: lo pide solo el invitado, nunca al revés.** Un tutor **no puede quitarle el acceso a otro
+      tutor** (separación, custodia): el que quiere salir es quien lo solicita. La única forma de «cortar» a alguien es que
+      el que paga cancele el plan, y entonces queda en solo lectura. **Por confirmar (propuestas):** (a) este «no se puede
+      quitar» vale entre **Tutores**; un *Cuidador* o un *Hijo* sí los puede quitar cualquier Tutor (si no, no se podría
+      despedir a una niñera); (b) la desvinculación se hace **al momento**, sin que nadie la apruebe (si el que paga tuviera
+      que aceptarla, tendría control indirecto); (c) **qué se lleva** quien sale: lo recomendable es nada de la familia
+      (los datos son de la cuenta dueña) pero con un aviso y la opción de **exportar antes**; (d) si en solo lectura puede
+      **seguir marcando tomas** (recomendado que sí: es seguridad, no «agregar», y la cuenta gratis también marca).
+    - **Pregunta legal pendiente** (antes de lanzarlo): que un tutor no pueda quitar al otro, y que el que paga siga viendo
+      a un ex-tutor con acceso de lectura, hay que confirmarlo con alguien legal (LFPDPPP, datos de salud de menores,
+      derechos del titular y de la patria potestad). El rol *Hijo* también: confirmar con Clerk si admite cuentas de menores
+      de 13 años; si no, el hijo entra con un acceso del tutor (liga o PIN en su dispositivo) en vez de cuenta propia.
+    - **Impacto técnico (grande, su propia spec):** hoy todo cuelga de una cuenta (`children.account_id`; `ownership` =
+      «mi `clerk_user_id` es el de la cuenta dueña»). Hace falta una tabla de membresías (`child_members`: hijo, cuenta,
+      rol, quién invitó, estado, fecha) y que `internal/ownership` y los `RequireOwner` de `internal/server` pregunten «¿tengo
+      acceso a este hijo, con qué rol?». Los recordatorios cambian: `ClaimDueDoses` y `doses.reminder_sent_at` son **por
+      toma** y deben ser **por toma y por persona** (cada una con su dispositivo y su `reminderDetail`). Hay que agregar
+      `taken_by` a las tomas y los roles de solo lectura/de marcar a las rutas de escritura.
+  - **Historial con búsqueda y filtros (pago)** — pantalla «Historial» por hijo (o de todos): búsqueda de texto (doctor,
+    medicamento, notas) y filtros por **rango de fechas**, **doctor**, **síntoma** (catálogo de la spec 012), **medicamento**
+    y «con tratamiento / solo registro». Es solo lectura sobre datos que ya existen: un endpoint con filtros (índice por
+    `child_id, consult_date`) y una pantalla. **Nunca** sugiere ni compara («esto parece…»): solo encuentra (Principio I).
+  - **Otras ideas del plan de pago (aprobadas para ir priorizando, no todas a la vez):** **exportar el historial a PDF** para
+    el pediatra (con los filtros), **liga de solo lectura para el pediatra** (temporal, revocable, sin cuenta; se solapa con
+    el Plan Consultorio), **curvas de crecimiento OMS** con la talla y el peso que ya se guardan (informativo),
+    **cartilla de vacunas** y **recordatorio de citas** (fecha de la próxima consulta), **varios dispositivos por persona**
+    y **resumen semanal** de tomas por correo (cuando haya proveedor).
+  - **Cobro con Mercado Pago (decidido)** — pendiente de construir y de **verificar en su documentación** antes de la spec:
+    (a) **Suscripciones** de Mercado Pago (cobro recurrente con tarjeta) o un **pago anual único** con aviso de renovación
+    (más simple; se podría empezar así); el precio principal es **anual** (MX$399–499, ver `peditrack-monetization.md`);
+    (b) un **webhook público** en el backend que Mercado Pago llama al cambiar un pago (se valida su firma, idempotente,
+    por el `Responder` como todo endpoint; sin sesión de Clerk, como `POST /reminders/actions/taken`); (c) el plan deja de
+    ser un simple `free`/`paid` y se **deriva de una suscripción**: tabla `subscriptions` (cuenta que paga, estado,
+    `provider_id`, vigencia `renews_at`, **periodo de gracia** si falla un cobro); (d) la pantalla `/planes` (hoy un aviso
+    «Estamos preparando los planes») y el **aviso de privacidad y términos** actualizados; (e) la cuenta de Mercado Pago
+    como vendedor y, con un contador, **facturación** (CFDI) para quien la pida; (f) las llaves de Mercado Pago son
+    secretos: solo en variables de Railway, nunca en el repositorio. En una PWA no aplica la tienda de Apple/Google.
+  - **Correo del dominio:** hace falta (`contacto@`/`soporte@`) para la cuenta de Mercado Pago, recibos y soporte; **se está
+    creando** (proveedor por decidir; no tocar los MX hasta decidirlo, ver «Despliegue»).
+  - **Orden sugerido:** 1) **reglas del plan gratis** (una consulta activa; sin «solo registro») con el historial siempre
+    visible: es chico, usa el `plan` que ya existe y se puede probar en DEV dando `paid`/`free` a los probadores;
+    2) **búsqueda y filtros** del historial (pago); 3) **compartir** (la spec grande de arriba); 4) **cobro con Mercado
+    Pago + `/planes`** (necesario antes de abrirlo al público); 5) los extras (PDF, liga del pediatra, curvas OMS,
+    vacunas/citas, resumen semanal).
 - **Patrocinios contextuales (publicidad sin perfilar al usuario)** — decidido en conversación 2026-09-22, no construir aún.
   Matiza (no revoca) la regla "sin anuncios" de `peditrack-monetization.md`: se permite mostrar patrocinios genéricos,
   siempre que ningún dato médico o del niño se use para elegirlos ni se comparta con el anunciante.
