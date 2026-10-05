@@ -1,0 +1,1671 @@
+definitions:
+  AccountNotFoundForSessionResponse:
+    properties:
+      error:
+        example: account_not_found_for_session
+        type: string
+      message:
+        example: No PediTrack account is linked to this session yet
+        type: string
+    type: object
+  AccountNotFoundResponse:
+    properties:
+      error:
+        example: account_not_found
+        type: string
+      message:
+        example: Account not found
+        type: string
+    type: object
+  ActiveTreatmentResponse:
+    properties:
+      endsAt:
+        example: "2026-01-18T22:00:00Z"
+        type: string
+      medicationName:
+        example: Amoxicilina
+        type: string
+      otherCount:
+        example: 0
+        type: integer
+    type: object
+  ChildNotFoundResponse:
+    properties:
+      error:
+        example: child_not_found
+        type: string
+      message:
+        example: Child not found
+        type: string
+    type: object
+  ChildOverviewResponse:
+    properties:
+      activeTreatment:
+        $ref: '#/definitions/ActiveTreatmentResponse'
+      childId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      doses:
+        items:
+          $ref: '#/definitions/OverviewDoseResponse'
+        type: array
+    type: object
+  ConsultationDetailResponse:
+    properties:
+      childId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      consultDate:
+        example: "2026-01-15"
+        type: string
+      doctorName:
+        example: Dra. López
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      medications:
+        items:
+          $ref: '#/definitions/MedicationResponse'
+        type: array
+      notes:
+        example: Comió mariscos el domingo; la fiebre empezó el lunes
+        type: string
+      photoBase64:
+        type: string
+      recordOnly:
+        description: 'RecordOnly: saved only as a record (specs/024) — its medications
+          have no start time and no doses.'
+        example: false
+        type: boolean
+      symptoms:
+        description: Symptoms are the marked symptoms in catalog order, retired ones
+          included.
+        items:
+          $ref: '#/definitions/SymptomResponse'
+        type: array
+    type: object
+  ConsultationFieldError:
+    properties:
+      field:
+        example: doctorName
+        type: string
+      message:
+        example: doctor name is required
+        type: string
+    type: object
+  ConsultationListResponse:
+    properties:
+      childId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      consultations:
+        items:
+          $ref: '#/definitions/ConsultationSummaryResponse'
+        type: array
+    type: object
+  ConsultationNotFoundResponse:
+    properties:
+      error:
+        example: consultation_not_found
+        type: string
+      message:
+        example: Consultation not found
+        type: string
+    type: object
+  ConsultationSessionErrorResponse:
+    properties:
+      error:
+        example: forbidden
+        type: string
+      message:
+        example: This resource does not belong to the current session
+        type: string
+    type: object
+  ConsultationSummaryResponse:
+    properties:
+      consultDate:
+        example: "2026-01-15"
+        type: string
+      doctorName:
+        example: Dra. López
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      medicationCount:
+        example: 2
+        type: integer
+      notes:
+        example: Comió mariscos el domingo; la fiebre empezó el lunes
+        type: string
+      recordOnly:
+        description: 'RecordOnly: saved only as a record (specs/024) — no schedule,
+          no doses, no reminders.'
+        example: false
+        type: boolean
+      symptomNames:
+        example:
+        - Fiebre
+        - Tos
+        items:
+          type: string
+        type: array
+    type: object
+  ConsultationValidationErrorResponse:
+    properties:
+      details:
+        items:
+          $ref: '#/definitions/ConsultationFieldError'
+        type: array
+      error:
+        example: validation_error
+        type: string
+      message:
+        example: One or more fields are invalid
+        type: string
+    type: object
+  DoseNotFoundResponse:
+    properties:
+      error:
+        example: dose_not_found
+        type: string
+      message:
+        example: Dose not found
+        type: string
+    type: object
+  DoseResponse:
+    properties:
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      scheduledAt:
+        example: "2026-01-15T08:00:00Z"
+        type: string
+      status:
+        description: |-
+          Status is derived by the server with its own clock (specs/013): pending, due ("por marcar"), taken or
+          unregistered ("sin registrar": the next dose of its medication came and it isn't marked).
+        enum:
+        - pending
+        - due
+        - taken
+        - unregistered
+        - canceled
+        example: due
+        type: string
+      taken:
+        example: false
+        type: boolean
+    type: object
+  EmailConflictResponse:
+    properties:
+      error:
+        example: email_already_exists
+        type: string
+      message:
+        example: Email is already in use
+        type: string
+    type: object
+  ErrorLogEntry:
+    properties:
+      accountId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      createdAt:
+        example: "2026-09-30T14:02:11Z"
+        type: string
+      endpoint:
+        example: /accounts
+        type: string
+      file:
+        example: internal/account/handler.go
+        type: string
+      httpStatus:
+        example: 400
+        type: integer
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      line:
+        example: 88
+        type: integer
+      message:
+        example: email is required
+        type: string
+    type: object
+  ErrorLogListResponse:
+    properties:
+      entries:
+        items:
+          $ref: '#/definitions/ErrorLogEntry'
+        type: array
+      nextCursor:
+        description: NextCursor is null on the last page.
+        example: MTc5MDc3MDAwMDAwMDAwMDAwMC5hMWIyYzNkNA
+        type: string
+    type: object
+  ErrorLogSummaryGroup:
+    properties:
+      count:
+        example: 42
+        type: integer
+      endpoint:
+        example: /accounts
+        type: string
+      firstSeen:
+        example: "2026-09-24T10:00:00Z"
+        type: string
+      httpStatus:
+        example: 400
+        type: integer
+      lastSeen:
+        example: "2026-09-30T13:58:02Z"
+        type: string
+      message:
+        example: email is required
+        type: string
+    type: object
+  ErrorLogSummaryResponse:
+    properties:
+      groups:
+        items:
+          $ref: '#/definitions/ErrorLogSummaryGroup'
+        type: array
+    type: object
+  ErrorLogValidationError:
+    properties:
+      details:
+        items:
+          properties:
+            field:
+              example: limit
+              type: string
+            message:
+              example: must be a whole number from 1 to 500
+              type: string
+          type: object
+        type: array
+      error:
+        example: validation_error
+        type: string
+      message:
+        example: One or more fields are invalid
+        type: string
+    type: object
+  ErrorResponse:
+    properties:
+      error:
+        example: internal_error
+        type: string
+      message:
+        example: Could not create account
+        type: string
+    type: object
+  ExtendTreatmentRequest:
+    properties:
+      doses:
+        description: 'Doses is how many doses to add to the end: a whole number from
+          1 to 60.'
+        example: 3
+        type: integer
+    type: object
+  ExtensionResponse:
+    properties:
+      addedDoses:
+        example: 3
+        type: integer
+      createdAt:
+        example: "2026-09-30T14:02:00Z"
+        type: string
+      manual:
+        description: Manual is true when the parent changed the number the app proposed.
+        example: true
+        type: boolean
+      proposedDoses:
+        example: 2
+        type: integer
+    type: object
+  FieldError:
+    properties:
+      field:
+        example: email
+        type: string
+      message:
+        example: invalid email format
+        type: string
+    type: object
+  FreemiumLimitResponse:
+    properties:
+      error:
+        example: freemium_child_limit_exceeded
+        type: string
+      limit:
+        example: 1
+        type: integer
+      message:
+        example: The free plan includes only one child per account
+        type: string
+      received:
+        example: 2
+        type: integer
+    type: object
+  MedicationNotFoundResponse:
+    properties:
+      error:
+        example: medication_not_found
+        type: string
+      message:
+        example: Medication not found
+        type: string
+    type: object
+  MedicationResponse:
+    properties:
+      doses:
+        items:
+          $ref: '#/definitions/DoseResponse'
+        type: array
+      durationDays:
+        example: 5
+        type: integer
+      endedAt:
+        description: EndedAt is when the parent ended the treatment early (specs/016);
+          null while it runs.
+        example: "2026-09-30T14:02:00Z"
+        type: string
+      extendableDoses:
+        description: |-
+          ExtendableDoses is how many unregistered doses haven't been covered by an extension yet (specs/020): the number the
+          app proposes adding; the button "Recorrer tratamiento" shows only when it is above 0. 0 once the treatment ended.
+        example: 2
+        type: integer
+      extensions:
+        description: Extensions are the parent's decisions to add doses to the end,
+          oldest first.
+        items:
+          $ref: '#/definitions/ExtensionResponse'
+        type: array
+      frequencyHours:
+        example: 8
+        type: integer
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      name:
+        example: Amoxicilina
+        type: string
+      startTime:
+        example: "08:00"
+        type: string
+    type: object
+  NotFoundResponse:
+    properties:
+      error:
+        example: country_not_found
+        type: string
+      message:
+        example: Country not found in catalog
+        type: string
+    type: object
+  OverviewDoseResponse:
+    properties:
+      consultationId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      medicationName:
+        example: Amoxicilina
+        type: string
+      scheduledAt:
+        example: "2026-01-15T14:00:00Z"
+        type: string
+      status:
+        description: Status as in DoseResponse (specs/013).
+        enum:
+        - pending
+        - due
+        - taken
+        - unregistered
+        - canceled
+        example: due
+        type: string
+      taken:
+        example: false
+        type: boolean
+    type: object
+  SymptomResponse:
+    properties:
+      category:
+        example: General
+        type: string
+      code:
+        example: fever
+        type: string
+      name:
+        example: Fiebre
+        type: string
+    type: object
+  ValidationErrorResponse:
+    properties:
+      details:
+        items:
+          $ref: '#/definitions/FieldError'
+        type: array
+      error:
+        example: validation_error
+        type: string
+      message:
+        example: One or more fields are invalid
+        type: string
+    type: object
+  internal_account.acceptDisclaimerRequest:
+    properties:
+      version:
+        example: "2026-09-26"
+        type: string
+    type: object
+  internal_account.accountResponse:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/internal_account.childResponse'
+        type: array
+      countryCode:
+        example: MX
+        type: string
+      disclaimerAccepted:
+        example: false
+        type: boolean
+      disclaimerVersion:
+        description: |-
+          DisclaimerVersion is the version of the "Antes de empezar" notice the client must show, and
+          DisclaimerAccepted whether this account already acknowledged it (specs/010-registro-aceptacion-aviso).
+        example: "2026-09-26"
+        type: string
+      email:
+        example: ana@example.com
+        type: string
+      firstName:
+        example: Ana
+        type: string
+      id:
+        example: e5f6a7b8-0000-0000-0000-000000000000
+        type: string
+      lastName:
+        example: Gómez
+        type: string
+      plan:
+        example: free
+        type: string
+      reminderDetail:
+        description: |-
+          ReminderDetail is what the dose reminders show, "detailed" or "generic"; null until the tutor
+          chooses on the first activation (specs/011-recordatorios-push).
+        example: generic
+        type: string
+      stateCode:
+        example: MX-JAL
+        type: string
+    type: object
+  internal_account.childResponse:
+    properties:
+      birthDate:
+        example: "2020-01-15"
+        type: string
+      firstName:
+        example: Luis
+        type: string
+      height:
+        example: 95.5
+        type: number
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      lastName:
+        example: Gómez
+        type: string
+      weight:
+        example: 14.2
+        type: number
+    type: object
+  internal_account.createAccountRequest:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/internal_account.createChildRequest'
+        type: array
+      countryCode:
+        example: MX
+        type: string
+      firstName:
+        example: Ana
+        type: string
+      lastName:
+        example: Gómez
+        type: string
+      stateCode:
+        example: MX-JAL
+        type: string
+    type: object
+  internal_account.createChildRequest:
+    properties:
+      birthDate:
+        example: "2020-01-15"
+        type: string
+      firstName:
+        example: Luis
+        type: string
+      height:
+        example: 95.5
+        type: number
+      lastName:
+        example: Gómez
+        type: string
+      weight:
+        example: 14.2
+        type: number
+    type: object
+  internal_account.disclaimerAcceptanceResponse:
+    properties:
+      acceptedAt:
+        example: "2026-09-26T18:04:05Z"
+        type: string
+      version:
+        example: "2026-09-26"
+        type: string
+    type: object
+  internal_account.reminderSettingsRequest:
+    properties:
+      reminderDetail:
+        example: generic
+        type: string
+    type: object
+  internal_catalog.countryResponse:
+    properties:
+      code:
+        example: MX
+        type: string
+      name:
+        example: México
+        type: string
+    type: object
+  internal_catalog.stateResponse:
+    properties:
+      code:
+        example: MX-JAL
+        type: string
+      name:
+        example: Jalisco
+        type: string
+    type: object
+  internal_consultation.createConsultationRequest:
+    properties:
+      consultDate:
+        example: "2026-01-15"
+        type: string
+      doctorName:
+        example: Dra. López
+        type: string
+      medications:
+        items:
+          $ref: '#/definitions/internal_consultation.createMedicationRequest'
+        type: array
+      notes:
+        example: Comió mariscos el domingo; la fiebre empezó el lunes
+        type: string
+      photoBase64:
+        type: string
+      recordOnly:
+        description: |-
+          RecordOnly saves the consultation only as a record (specs/024): optional, false by default. When true the
+          medications' "startTime" is not required and is discarded, so no doses (and no reminders) exist.
+        example: false
+        type: boolean
+      symptomCodes:
+        description: SymptomCodes are catalog codes (GET /catalog/symptoms); optional,
+          duplicates ignored.
+        example:
+        - fever
+        - cough
+        items:
+          type: string
+        type: array
+      utcOffsetMinutes:
+        description: |-
+          UTCOffsetMinutes is the parent's UTC offset, so "startTime" is read in
+          their own time zone. Optional: 0 (default) means UTC.
+        example: -360
+        type: integer
+    type: object
+  internal_consultation.createMedicationRequest:
+    properties:
+      durationDays:
+        example: 5
+        type: integer
+      frequencyHours:
+        example: 8
+        type: integer
+      name:
+        example: Amoxicilina
+        type: string
+      startTime:
+        example: "08:00"
+        type: string
+    type: object
+  internal_consultation.updateDoseRequest:
+    properties:
+      taken:
+        example: true
+        type: boolean
+    type: object
+  internal_reminder.actionRequest:
+    properties:
+      token:
+        example: ZG9zZS4uLg.c2lnbmF0dXJl
+        type: string
+    type: object
+  internal_reminder.configResponse:
+    properties:
+      available:
+        example: true
+        type: boolean
+      vapidPublicKey:
+        example: BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U
+        type: string
+    type: object
+  internal_reminder.deviceKeysRequest:
+    properties:
+      auth:
+        example: tBHItJI5svbpez7KI4CCXg
+        type: string
+      p256dh:
+        example: BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM
+        type: string
+    type: object
+  internal_reminder.deviceResponse:
+    properties:
+      activatedAt:
+        example: "2026-09-27T18:04:05Z"
+        type: string
+      active:
+        example: true
+        type: boolean
+      id:
+        example: 5f0c2e7a-0000-0000-0000-000000000000
+        type: string
+    type: object
+  internal_reminder.errorDoc:
+    properties:
+      error:
+        example: reminders_unavailable
+        type: string
+      message:
+        example: Reminders are not available on this server
+        type: string
+    type: object
+  internal_reminder.fieldErrorDoc:
+    properties:
+      field:
+        example: endpoint
+        type: string
+      message:
+        example: is required
+        type: string
+    type: object
+  internal_reminder.registerDeviceRequest:
+    properties:
+      endpoint:
+        example: https://fcm.googleapis.com/fcm/send/abc123
+        type: string
+      keys:
+        $ref: '#/definitions/internal_reminder.deviceKeysRequest'
+    type: object
+  internal_reminder.removeDeviceRequest:
+    properties:
+      endpoint:
+        example: https://fcm.googleapis.com/fcm/send/abc123
+        type: string
+    type: object
+  internal_reminder.validationErrorDoc:
+    properties:
+      details:
+        items:
+          $ref: '#/definitions/internal_reminder.fieldErrorDoc'
+        type: array
+      error:
+        example: validation_error
+        type: string
+      message:
+        example: One or more fields are invalid
+        type: string
+    type: object
+info:
+  contact: {}
+  description: |-
+    Backend API for account/children signup and the país/estado catalog.
+    See contracts/post-accounts.md and contracts/get-catalog.md under
+    specs/001-registro-cuenta-usuario/ for the source-of-truth prose contracts.
+  title: PediTrack API
+  version: "1.0"
+paths:
+  /accounts:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Creates a padre/tutor account, optionally with one or more children in the
+        same request, for the tutor who already completed sign-up with Clerk (correo+
+        contraseña or Google) — the caller's verified Clerk session is required, and its
+        email is what gets stored, never a client-supplied one (specs/008-autenticacion-cuenta).
+        A brand-new account always starts on the free plan, which allows at most 1 child
+        (FR-007) — enforced server-side regardless of what the client already validated.
+        Idempotent: if the session already has an account linked, returns it with 200
+        instead of creating a duplicate; an account created before authentication existed
+        with the same verified email is linked and returned with 200 too.
+      parameters:
+      - description: Account (and optional children) to create
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_account.createAccountRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: The session already had an account linked
+          schema:
+            $ref: '#/definitions/internal_account.accountResponse'
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_account.accountResponse'
+        "400":
+          description: Missing/invalid field, e.g. a future birth date
+          schema:
+            $ref: '#/definitions/ValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: The session's email address is not verified
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "409":
+          description: Email already in use
+          schema:
+            $ref: '#/definitions/EmailConflictResponse'
+        "422":
+          description: Free plan already has 1 child; upgrade required
+          schema:
+            $ref: '#/definitions/FreemiumLimitResponse'
+        "500":
+          description: Unexpected server error
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Create an account (tutor + optional children)
+      tags:
+      - accounts
+  /accounts/{accountId}:
+    get:
+      description: |-
+        Retrieves an account (tutor + children) by id (FR-001). Requires a Clerk session
+        that owns this account (specs/008-autenticacion-cuenta): 403 for any other.
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_account.accountResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/AccountNotFoundResponse'
+      security:
+      - ClerkSession: []
+      summary: Get an account and its children
+      tags:
+      - accounts
+  /accounts/{accountId}/children:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Adds a single child to an account already created, from the home page's
+        "Agregar hijo" modal (FR-004). Applies the same field validation and
+        freemium 1-child limit as POST /accounts.
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: Child to add
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_account.createChildRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_account.accountResponse'
+        "400":
+          description: Missing/invalid field
+          schema:
+            $ref: '#/definitions/ValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/AccountNotFoundResponse'
+        "422":
+          description: Free plan already has 1 child; upgrade required
+          schema:
+            $ref: '#/definitions/FreemiumLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: Add a child to an existing account
+      tags:
+      - accounts
+  /accounts/{accountId}/disclaimer-acceptance:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Stores which version of the notice this account acknowledged and when (audit trail).
+        Idempotent: acknowledging the same version again returns the original record.
+        The version must be the current one, the one every account response carries as
+        disclaimerVersion.
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: Version acknowledged
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_account.acceptDisclaimerRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_account.disclaimerAcceptanceResponse'
+        "400":
+          description: Missing or stale version
+          schema:
+            $ref: '#/definitions/ValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/AccountNotFoundResponse'
+      security:
+      - ClerkSession: []
+      summary: Record that the tutor acknowledged the "Antes de empezar" notice
+      tags:
+      - accounts
+  /accounts/{accountId}/reminder-devices:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Stores this browser's push subscription for the account. Idempotent by endpoint: an
+        endpoint already known (for this or another account) is updated and moved to this
+        account — a browser reminds one account at a time.
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: The browser's PushSubscription (toJSON())
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_reminder.registerDeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Already known, reactivated
+          schema:
+            $ref: '#/definitions/internal_reminder.deviceResponse'
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/internal_reminder.deviceResponse'
+        "400":
+          description: Missing keys, malformed JSON, or not a supported push service
+          schema:
+            $ref: '#/definitions/internal_reminder.validationErrorDoc'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+        "403":
+          description: The session does not own this account
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+        "404":
+          description: Malformed account id
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+        "503":
+          description: The server has no VAPID keys
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+      security:
+      - ClerkSession: []
+      summary: Turn reminders on for this browser
+      tags:
+      - reminders
+  /accounts/{accountId}/reminder-devices/remove:
+    post:
+      consumes:
+      - application/json
+      description: Idempotent. An endpoint that isn't this account's is left untouched
+        and not reported.
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: The browser's endpoint
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_reminder.removeDeviceRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Missing endpoint or malformed JSON
+          schema:
+            $ref: '#/definitions/internal_reminder.validationErrorDoc'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+        "403":
+          description: The session does not own this account
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+        "404":
+          description: Malformed account id
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+      security:
+      - ClerkSession: []
+      summary: Turn reminders off for this browser
+      tags:
+      - reminders
+  /accounts/{accountId}/reminder-settings:
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        "detailed" (medication, time and child) or "generic" ("Hay una toma programada").
+        Applies to every device of the account.
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: What reminders show
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_account.reminderSettingsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_account.accountResponse'
+        "400":
+          description: Not \"detailed\" or \"generic\", or malformed JSON
+          schema:
+            $ref: '#/definitions/ValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/AccountNotFoundResponse'
+      security:
+      - ClerkSession: []
+      summary: Choose what dose reminders show
+      tags:
+      - accounts
+  /accounts/me:
+    get:
+      description: |-
+        Resolves the account linked to the caller's verified Clerk session — the
+        replacement for a client-supplied accountId (specs/008-autenticacion-cuenta). An
+        account created before authentication existed, with the session's own verified
+        email, is linked on this first access. A 404 is the expected state right after a
+        brand-new Clerk sign-up, before POST /accounts has run.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_account.accountResponse'
+        "404":
+          description: No account is linked to this session yet
+          schema:
+            $ref: '#/definitions/AccountNotFoundForSessionResponse'
+      security:
+      - ClerkSession: []
+      summary: Get the authenticated tutor's own account
+      tags:
+      - accounts
+  /catalog/countries:
+    get:
+      description: Read-only catalog used to populate the país selector (contracts/get-catalog.md).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_catalog.countryResponse'
+            type: array
+        "500":
+          description: Unexpected server error
+          schema:
+            $ref: '#/definitions/NotFoundResponse'
+      summary: List countries
+      tags:
+      - catalog
+  /catalog/countries/{countryCode}/states:
+    get:
+      description: |-
+        Used to populate the estado selector. Returns an empty array if the country
+        has no subdivisions in the catalog (contracts/get-catalog.md).
+      parameters:
+      - description: ISO country code
+        example: MX
+        in: path
+        name: countryCode
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/internal_catalog.stateResponse'
+            type: array
+        "404":
+          description: countryCode not found in catalog
+          schema:
+            $ref: '#/definitions/NotFoundResponse'
+        "500":
+          description: Unexpected server error
+          schema:
+            $ref: '#/definitions/NotFoundResponse'
+      summary: List states/provinces for a country
+      tags:
+      - catalog
+  /catalog/symptoms:
+    get:
+      description: |-
+        Active symptoms of the catalog, in order, grouped by their category title; used by the
+        "Nueva consulta" form (specs/012-sintomas-notas-consulta/contracts/symptoms-api.md).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/SymptomResponse'
+            type: array
+        "500":
+          description: Unexpected server error
+          schema:
+            $ref: '#/definitions/NotFoundResponse'
+      summary: List the symptoms a parent can mark
+      tags:
+      - catalog
+  /children/{childId}/consultations:
+    get:
+      description: Lists a child's medical consultations (date, doctor, notes, marked
+        symptom names in catalog order and medication count), most recent first (FR-001).
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ConsultationListResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/ChildNotFoundResponse'
+      security:
+      - ClerkSession: []
+      summary: List a child's consultations
+      tags:
+      - consultations
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Registers a consultation with its prescription photo, medications, notes and marked symptoms
+        (FR-003, FR-004). At least one medication is required (FR-015), and each one needs
+        its startTime ("HH:MM"): all of its doses are generated at once from it (research.md).
+        Every symptomCodes entry must be an active catalog symptom, or 400 with details[].message "symptom_not_available" (specs/012).
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: Consultation to register
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_consultation.createConsultationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ConsultationDetailResponse'
+        "400":
+          description: Missing/invalid field
+          schema:
+            $ref: '#/definitions/ConsultationValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/ChildNotFoundResponse'
+      security:
+      - ClerkSession: []
+      summary: Register a new medical consultation
+      tags:
+      - consultations
+  /children/{childId}/overview:
+    get:
+      description: |-
+        Returns the doses scheduled in [from, to) (the parent's local "today"; the client
+        sends the window because only it knows its timezone) and the treatment still
+        running — the medication whose last scheduled dose is furthest ahead, derived only
+        from the dose schedule. The window may not exceed 48 hours.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: Window start, RFC 3339
+        example: "2026-01-15T00:00:00-06:00"
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: Window end (exclusive), RFC 3339
+        example: "2026-01-16T00:00:00-06:00"
+        in: query
+        name: to
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ChildOverviewResponse'
+        "400":
+          description: Missing/invalid window
+          schema:
+            $ref: '#/definitions/ConsultationValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/ChildNotFoundResponse'
+      security:
+      - ClerkSession: []
+      summary: A child's doses in a window and active treatment
+      tags:
+      - consultations
+  /consultations/{consultationId}:
+    get:
+      description: |-
+        Retrieves the prescription photo, doctor, date, medications (with their doses,
+        if any), notes and marked symptoms (catalog order, retired ones included) of a consultation (FR-013, specs/012).
+      parameters:
+      - description: Consultation UUID
+        in: path
+        name: consultationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ConsultationDetailResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "404":
+          description: No consultation exists for this id
+          schema:
+            $ref: '#/definitions/ConsultationNotFoundResponse'
+      security:
+      - ClerkSession: []
+      summary: Get a consultation's full detail
+      tags:
+      - consultations
+  /consultations/{consultationId}/doses/{doseId}:
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Sets a dose's taken status. No validation of scheduled date or treatment
+        status — a dose can be marked/unmarked at any time (FR-011, FR-016).
+      parameters:
+      - description: Consultation UUID
+        in: path
+        name: consultationId
+        required: true
+        type: string
+      - description: Dose UUID
+        in: path
+        name: doseId
+        required: true
+        type: string
+      - description: New taken status
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_consultation.updateDoseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/DoseResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "404":
+          description: No dose exists for this id
+          schema:
+            $ref: '#/definitions/DoseNotFoundResponse'
+      security:
+      - ClerkSession: []
+      summary: Mark or unmark a dose as taken
+      tags:
+      - consultations
+  /consultations/{consultationId}/medications/{medicationId}/end:
+    post:
+      description: |-
+        Records when the parent ended the treatment (irreversible). No dose is deleted: the ones whose
+        time hadn't come turn "canceled" and stop being reminded. Idempotent: ending it again returns the
+        same result (specs/016).
+      parameters:
+      - description: Consultation UUID
+        in: path
+        name: consultationId
+        required: true
+        type: string
+      - description: Medication UUID
+        in: path
+        name: medicationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/MedicationResponse'
+        "400":
+          description: 'Nothing left to end (details: nothing_to_end)'
+          schema:
+            $ref: '#/definitions/ConsultationValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "404":
+          description: No such medication in this consultation
+          schema:
+            $ref: '#/definitions/MedicationNotFoundResponse'
+      security:
+      - ClerkSession: []
+      summary: End a medication's treatment early
+      tags:
+      - consultations
+  /consultations/{consultationId}/medications/{medicationId}/extend:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Only because the parent decided so (their doctor told them to): adds `doses` doses after the last one, one
+        frequency apart, records who decided and what was proposed vs confirmed, and marks the unregistered doses as
+        covered so they are never proposed twice. Nothing that exists changes. Not idempotent on purpose: a second
+        attempt for the same doses gets nothing_to_extend (specs/020).
+      parameters:
+      - description: Consultation UUID
+        in: path
+        name: consultationId
+        required: true
+        type: string
+      - description: Medication UUID
+        in: path
+        name: medicationId
+        required: true
+        type: string
+      - description: How many doses to add
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/ExtendTreatmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/MedicationResponse'
+        "400":
+          description: 'doses out of range, or nothing to extend (details: nothing_to_extend)'
+          schema:
+            $ref: '#/definitions/ConsultationValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "404":
+          description: No such medication in this consultation
+          schema:
+            $ref: '#/definitions/MedicationNotFoundResponse'
+      security:
+      - ClerkSession: []
+      summary: Add doses to the end of a medication's treatment
+      tags:
+      - consultations
+  /ops/error-logs:
+    get:
+      description: |-
+        For the team that runs the service, not for parents: needs the operation key (`Authorization: Bearer
+        <OPS_API_KEY>`), and the route does not exist when the server has none. A wrong or missing key gets the
+        same 404 as an unknown route. Filters by period (default: the last 7 days), endpoint (exact or prefix such as
+        `job:`), status and account; paged by cursor (100 by default, at most 500).
+      parameters:
+      - description: 'RFC 3339; default: 7 days ago'
+        in: query
+        name: since
+        type: string
+      - description: 'RFC 3339; default: no upper bound'
+        in: query
+        name: until
+        type: string
+      - description: Exact endpoint, e.g. /accounts or job:reminders
+        in: query
+        name: endpoint
+        type: string
+      - description: 'Endpoint prefix, e.g. job:'
+        in: query
+        name: endpointPrefix
+        type: string
+      - description: HTTP status
+        in: query
+        name: status
+        type: integer
+      - description: Account UUID
+        in: query
+        name: accountId
+        type: string
+      - description: 1 to 500; default 100
+        in: query
+        name: limit
+        type: integer
+      - description: nextCursor of the previous page
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ErrorLogListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorLogValidationError'
+      security:
+      - OpsKey: []
+      summary: List the registered errors, newest first
+      tags:
+      - operations
+  /ops/error-logs/summary:
+    get:
+      description: |-
+        Groups by endpoint, status and message with how often each happened and when first and last; the most
+        frequent first (the most recent breaks a tie), up to 100 groups. Same key and filters as the list.
+      parameters:
+      - description: 'RFC 3339; default: 7 days ago'
+        in: query
+        name: since
+        type: string
+      - description: 'RFC 3339; default: no upper bound'
+        in: query
+        name: until
+        type: string
+      - description: Exact endpoint
+        in: query
+        name: endpoint
+        type: string
+      - description: 'Endpoint prefix, e.g. job:'
+        in: query
+        name: endpointPrefix
+        type: string
+      - description: HTTP status
+        in: query
+        name: status
+        type: integer
+      - description: Account UUID
+        in: query
+        name: accountId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ErrorLogSummaryResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/ErrorLogValidationError'
+      security:
+      - OpsKey: []
+      summary: Summarize the registered errors of a period
+      tags:
+      - operations
+  /reminders/actions/taken:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Public (no session). The token names one dose and the device that received it; it
+        only works while that device is on and belongs to the dose's account, and for 24 h.
+      parameters:
+      - description: The reminder's action token
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_reminder.actionRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Missing token or malformed JSON
+          schema:
+            $ref: '#/definitions/internal_reminder.validationErrorDoc'
+        "403":
+          description: Invalid, expired or no longer valid token
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+      summary: Mark a dose as taken from its reminder
+      tags:
+      - reminders
+  /reminders/config:
+    get:
+      description: |-
+        Whether this server can send reminders and the VAPID public key to subscribe with
+        (null when it can't).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_reminder.configResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+      security:
+      - ClerkSession: []
+      summary: What a browser needs to turn reminders on
+      tags:
+      - reminders
+securityDefinitions:
+  ClerkSession:
+    description: Clerk session token, sent as "Bearer <token>".
+    in: header
+    name: Authorization
+    type: apiKey
+  OpsKey:
+    description: Operation key (OPS_API_KEY), sent as "Bearer <key>"; only for the
+      team that runs the service.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

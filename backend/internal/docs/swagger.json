@@ -1,0 +1,2358 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Backend API for account/children signup and the país/estado catalog.\nSee contracts/post-accounts.md and contracts/get-catalog.md under\nspecs/001-registro-cuenta-usuario/ for the source-of-truth prose contracts.",
+        "title": "PediTrack API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "paths": {
+        "/accounts": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Creates a padre/tutor account, optionally with one or more children in the\nsame request, for the tutor who already completed sign-up with Clerk (correo+\ncontraseña or Google) — the caller's verified Clerk session is required, and its\nemail is what gets stored, never a client-supplied one (specs/008-autenticacion-cuenta).\nA brand-new account always starts on the free plan, which allows at most 1 child\n(FR-007) — enforced server-side regardless of what the client already validated.\nIdempotent: if the session already has an account linked, returns it with 200\ninstead of creating a duplicate; an account created before authentication existed\nwith the same verified email is linked and returned with 200 too.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Create an account (tutor + optional children)",
+                "parameters": [
+                    {
+                        "description": "Account (and optional children) to create",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.createAccountRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The session already had an account linked",
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.accountResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.accountResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing/invalid field, e.g. a future birth date",
+                        "schema": {
+                            "$ref": "#/definitions/ValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session's email address is not verified",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Email already in use",
+                        "schema": {
+                            "$ref": "#/definitions/EmailConflictResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Free plan already has 1 child; upgrade required",
+                        "schema": {
+                            "$ref": "#/definitions/FreemiumLimitResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected server error",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/me": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Resolves the account linked to the caller's verified Clerk session — the\nreplacement for a client-supplied accountId (specs/008-autenticacion-cuenta). An\naccount created before authentication existed, with the session's own verified\nemail, is linked on this first access. A 404 is the expected state right after a\nbrand-new Clerk sign-up, before POST /accounts has run.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Get the authenticated tutor's own account",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.accountResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account is linked to this session yet",
+                        "schema": {
+                            "$ref": "#/definitions/AccountNotFoundForSessionResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Retrieves an account (tutor + children) by id (FR-001). Requires a Clerk session\nthat owns this account (specs/008-autenticacion-cuenta): 403 for any other.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Get an account and its children",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.accountResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AccountNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}/children": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Adds a single child to an account already created, from the home page's\n\"Agregar hijo\" modal (FR-004). Applies the same field validation and\nfreemium 1-child limit as POST /accounts.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Add a child to an existing account",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Child to add",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.createChildRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.accountResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing/invalid field",
+                        "schema": {
+                            "$ref": "#/definitions/ValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AccountNotFoundResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Free plan already has 1 child; upgrade required",
+                        "schema": {
+                            "$ref": "#/definitions/FreemiumLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}/disclaimer-acceptance": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Stores which version of the notice this account acknowledged and when (audit trail).\nIdempotent: acknowledging the same version again returns the original record.\nThe version must be the current one, the one every account response carries as\ndisclaimerVersion.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Record that the tutor acknowledged the \"Antes de empezar\" notice",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Version acknowledged",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.acceptDisclaimerRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.disclaimerAcceptanceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or stale version",
+                        "schema": {
+                            "$ref": "#/definitions/ValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AccountNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}/reminder-devices": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Stores this browser's push subscription for the account. Idempotent by endpoint: an\nendpoint already known (for this or another account) is updated and moved to this\naccount — a browser reminds one account at a time.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reminders"
+                ],
+                "summary": "Turn reminders on for this browser",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The browser's PushSubscription (toJSON())",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.registerDeviceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Already known, reactivated",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.deviceResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.deviceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing keys, malformed JSON, or not a supported push service",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.validationErrorDoc"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this account",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    },
+                    "404": {
+                        "description": "Malformed account id",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    },
+                    "503": {
+                        "description": "The server has no VAPID keys",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}/reminder-devices/remove": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Idempotent. An endpoint that isn't this account's is left untouched and not reported.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reminders"
+                ],
+                "summary": "Turn reminders off for this browser",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The browser's endpoint",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.removeDeviceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Missing endpoint or malformed JSON",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.validationErrorDoc"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this account",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    },
+                    "404": {
+                        "description": "Malformed account id",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}/reminder-settings": {
+            "patch": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "\"detailed\" (medication, time and child) or \"generic\" (\"Hay una toma programada\").\nApplies to every device of the account.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Choose what dose reminders show",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "What reminders show",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.reminderSettingsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.accountResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Not \\\"detailed\\\" or \\\"generic\\\", or malformed JSON",
+                        "schema": {
+                            "$ref": "#/definitions/ValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AccountNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/catalog/countries": {
+            "get": {
+                "description": "Read-only catalog used to populate the país selector (contracts/get-catalog.md).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "summary": "List countries",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_catalog.countryResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected server error",
+                        "schema": {
+                            "$ref": "#/definitions/NotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/catalog/countries/{countryCode}/states": {
+            "get": {
+                "description": "Used to populate the estado selector. Returns an empty array if the country\nhas no subdivisions in the catalog (contracts/get-catalog.md).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "summary": "List states/provinces for a country",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "MX",
+                        "description": "ISO country code",
+                        "name": "countryCode",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/internal_catalog.stateResponse"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "countryCode not found in catalog",
+                        "schema": {
+                            "$ref": "#/definitions/NotFoundResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected server error",
+                        "schema": {
+                            "$ref": "#/definitions/NotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/catalog/symptoms": {
+            "get": {
+                "description": "Active symptoms of the catalog, in order, grouped by their category title; used by the\n\"Nueva consulta\" form (specs/012-sintomas-notas-consulta/contracts/symptoms-api.md).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "summary": "List the symptoms a parent can mark",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/SymptomResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected server error",
+                        "schema": {
+                            "$ref": "#/definitions/NotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/children/{childId}/consultations": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Lists a child's medical consultations (date, doctor, notes, marked symptom names in catalog order and medication count), most recent first (FR-001).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "List a child's consultations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ChildNotFoundResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Registers a consultation with its prescription photo, medications, notes and marked symptoms\n(FR-003, FR-004). At least one medication is required (FR-015), and each one needs\nits startTime (\"HH:MM\"): all of its doses are generated at once from it (research.md).\nEvery symptomCodes entry must be an active catalog symptom, or 400 with details[].message \"symptom_not_available\" (specs/012).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "Register a new medical consultation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Consultation to register",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_consultation.createConsultationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationDetailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing/invalid field",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ChildNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/children/{childId}/overview": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Returns the doses scheduled in [from, to) (the parent's local \"today\"; the client\nsends the window because only it knows its timezone) and the treatment still\nrunning — the medication whose last scheduled dose is furthest ahead, derived only\nfrom the dose schedule. The window may not exceed 48 hours.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "A child's doses in a window and active treatment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "2026-01-15T00:00:00-06:00",
+                        "description": "Window start, RFC 3339",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "2026-01-16T00:00:00-06:00",
+                        "description": "Window end (exclusive), RFC 3339",
+                        "name": "to",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ChildOverviewResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing/invalid window",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ChildNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/consultations/{consultationId}": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Retrieves the prescription photo, doctor, date, medications (with their doses,\nif any), notes and marked symptoms (catalog order, retired ones included) of a consultation (FR-013, specs/012).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "Get a consultation's full detail",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Consultation UUID",
+                        "name": "consultationId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationDetailResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No consultation exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/consultations/{consultationId}/doses/{doseId}": {
+            "patch": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Sets a dose's taken status. No validation of scheduled date or treatment\nstatus — a dose can be marked/unmarked at any time (FR-011, FR-016).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "Mark or unmark a dose as taken",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Consultation UUID",
+                        "name": "consultationId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Dose UUID",
+                        "name": "doseId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New taken status",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_consultation.updateDoseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/DoseResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No dose exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/DoseNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/consultations/{consultationId}/medications/{medicationId}/end": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Records when the parent ended the treatment (irreversible). No dose is deleted: the ones whose\ntime hadn't come turn \"canceled\" and stop being reminded. Idempotent: ending it again returns the\nsame result (specs/016).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "End a medication's treatment early",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Consultation UUID",
+                        "name": "consultationId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Medication UUID",
+                        "name": "medicationId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/MedicationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Nothing left to end (details: nothing_to_end)",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such medication in this consultation",
+                        "schema": {
+                            "$ref": "#/definitions/MedicationNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/consultations/{consultationId}/medications/{medicationId}/extend": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Only because the parent decided so (their doctor told them to): adds `doses` doses after the last one, one\nfrequency apart, records who decided and what was proposed vs confirmed, and marks the unregistered doses as\ncovered so they are never proposed twice. Nothing that exists changes. Not idempotent on purpose: a second\nattempt for the same doses gets nothing_to_extend (specs/020).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "Add doses to the end of a medication's treatment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Consultation UUID",
+                        "name": "consultationId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Medication UUID",
+                        "name": "medicationId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "How many doses to add",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ExtendTreatmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/MedicationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "doses out of range, or nothing to extend (details: nothing_to_extend)",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such medication in this consultation",
+                        "schema": {
+                            "$ref": "#/definitions/MedicationNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/error-logs": {
+            "get": {
+                "security": [
+                    {
+                        "OpsKey": []
+                    }
+                ],
+                "description": "For the team that runs the service, not for parents: needs the operation key (`Authorization: Bearer\n\u003cOPS_API_KEY\u003e`), and the route does not exist when the server has none. A wrong or missing key gets the\nsame 404 as an unknown route. Filters by period (default: the last 7 days), endpoint (exact or prefix such as\n`job:`), status and account; paged by cursor (100 by default, at most 500).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operations"
+                ],
+                "summary": "List the registered errors, newest first",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "RFC 3339; default: 7 days ago",
+                        "name": "since",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC 3339; default: no upper bound",
+                        "name": "until",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Exact endpoint, e.g. /accounts or job:reminders",
+                        "name": "endpoint",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Endpoint prefix, e.g. job:",
+                        "name": "endpointPrefix",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "HTTP status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "1 to 500; default 100",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "nextCursor of the previous page",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorLogListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorLogValidationError"
+                        }
+                    }
+                }
+            }
+        },
+        "/ops/error-logs/summary": {
+            "get": {
+                "security": [
+                    {
+                        "OpsKey": []
+                    }
+                ],
+                "description": "Groups by endpoint, status and message with how often each happened and when first and last; the most\nfrequent first (the most recent breaks a tie), up to 100 groups. Same key and filters as the list.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "operations"
+                ],
+                "summary": "Summarize the registered errors of a period",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "RFC 3339; default: 7 days ago",
+                        "name": "since",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC 3339; default: no upper bound",
+                        "name": "until",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Exact endpoint",
+                        "name": "endpoint",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Endpoint prefix, e.g. job:",
+                        "name": "endpointPrefix",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "HTTP status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorLogSummaryResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorLogValidationError"
+                        }
+                    }
+                }
+            }
+        },
+        "/reminders/actions/taken": {
+            "post": {
+                "description": "Public (no session). The token names one dose and the device that received it; it\nonly works while that device is on and belongs to the dose's account, and for 24 h.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reminders"
+                ],
+                "summary": "Mark a dose as taken from its reminder",
+                "parameters": [
+                    {
+                        "description": "The reminder's action token",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.actionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Missing token or malformed JSON",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.validationErrorDoc"
+                        }
+                    },
+                    "403": {
+                        "description": "Invalid, expired or no longer valid token",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    }
+                }
+            }
+        },
+        "/reminders/config": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Whether this server can send reminders and the VAPID public key to subscribe with\n(null when it can't).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reminders"
+                ],
+                "summary": "What a browser needs to turn reminders on",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.configResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "AccountNotFoundForSessionResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "account_not_found_for_session"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "No PediTrack account is linked to this session yet"
+                }
+            }
+        },
+        "AccountNotFoundResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "account_not_found"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Account not found"
+                }
+            }
+        },
+        "ActiveTreatmentResponse": {
+            "type": "object",
+            "properties": {
+                "endsAt": {
+                    "type": "string",
+                    "example": "2026-01-18T22:00:00Z"
+                },
+                "medicationName": {
+                    "type": "string",
+                    "example": "Amoxicilina"
+                },
+                "otherCount": {
+                    "type": "integer",
+                    "example": 0
+                }
+            }
+        },
+        "ChildNotFoundResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "child_not_found"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Child not found"
+                }
+            }
+        },
+        "ChildOverviewResponse": {
+            "type": "object",
+            "properties": {
+                "activeTreatment": {
+                    "$ref": "#/definitions/ActiveTreatmentResponse"
+                },
+                "childId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "doses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/OverviewDoseResponse"
+                    }
+                }
+            }
+        },
+        "ConsultationDetailResponse": {
+            "type": "object",
+            "properties": {
+                "childId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "consultDate": {
+                    "type": "string",
+                    "example": "2026-01-15"
+                },
+                "doctorName": {
+                    "type": "string",
+                    "example": "Dra. López"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "medications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/MedicationResponse"
+                    }
+                },
+                "notes": {
+                    "type": "string",
+                    "example": "Comió mariscos el domingo; la fiebre empezó el lunes"
+                },
+                "photoBase64": {
+                    "type": "string"
+                },
+                "recordOnly": {
+                    "description": "RecordOnly: saved only as a record (specs/024) — its medications have no start time and no doses.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "symptoms": {
+                    "description": "Symptoms are the marked symptoms in catalog order, retired ones included.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/SymptomResponse"
+                    }
+                }
+            }
+        },
+        "ConsultationFieldError": {
+            "type": "object",
+            "properties": {
+                "field": {
+                    "type": "string",
+                    "example": "doctorName"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "doctor name is required"
+                }
+            }
+        },
+        "ConsultationListResponse": {
+            "type": "object",
+            "properties": {
+                "childId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "consultations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ConsultationSummaryResponse"
+                    }
+                }
+            }
+        },
+        "ConsultationNotFoundResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "consultation_not_found"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Consultation not found"
+                }
+            }
+        },
+        "ConsultationSessionErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "forbidden"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "This resource does not belong to the current session"
+                }
+            }
+        },
+        "ConsultationSummaryResponse": {
+            "type": "object",
+            "properties": {
+                "consultDate": {
+                    "type": "string",
+                    "example": "2026-01-15"
+                },
+                "doctorName": {
+                    "type": "string",
+                    "example": "Dra. López"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "medicationCount": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "notes": {
+                    "type": "string",
+                    "example": "Comió mariscos el domingo; la fiebre empezó el lunes"
+                },
+                "recordOnly": {
+                    "description": "RecordOnly: saved only as a record (specs/024) — no schedule, no doses, no reminders.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "symptomNames": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "Fiebre",
+                        "Tos"
+                    ]
+                }
+            }
+        },
+        "ConsultationValidationErrorResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ConsultationFieldError"
+                    }
+                },
+                "error": {
+                    "type": "string",
+                    "example": "validation_error"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "One or more fields are invalid"
+                }
+            }
+        },
+        "DoseNotFoundResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "dose_not_found"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Dose not found"
+                }
+            }
+        },
+        "DoseResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "scheduledAt": {
+                    "type": "string",
+                    "example": "2026-01-15T08:00:00Z"
+                },
+                "status": {
+                    "description": "Status is derived by the server with its own clock (specs/013): pending, due (\"por marcar\"), taken or\nunregistered (\"sin registrar\": the next dose of its medication came and it isn't marked).",
+                    "type": "string",
+                    "enum": [
+                        "pending",
+                        "due",
+                        "taken",
+                        "unregistered",
+                        "canceled"
+                    ],
+                    "example": "due"
+                },
+                "taken": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "EmailConflictResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "email_already_exists"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Email is already in use"
+                }
+            }
+        },
+        "ErrorLogEntry": {
+            "type": "object",
+            "properties": {
+                "accountId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "createdAt": {
+                    "type": "string",
+                    "example": "2026-09-30T14:02:11Z"
+                },
+                "endpoint": {
+                    "type": "string",
+                    "example": "/accounts"
+                },
+                "file": {
+                    "type": "string",
+                    "example": "internal/account/handler.go"
+                },
+                "httpStatus": {
+                    "type": "integer",
+                    "example": 400
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "line": {
+                    "type": "integer",
+                    "example": 88
+                },
+                "message": {
+                    "type": "string",
+                    "example": "email is required"
+                }
+            }
+        },
+        "ErrorLogListResponse": {
+            "type": "object",
+            "properties": {
+                "entries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ErrorLogEntry"
+                    }
+                },
+                "nextCursor": {
+                    "description": "NextCursor is null on the last page.",
+                    "type": "string",
+                    "example": "MTc5MDc3MDAwMDAwMDAwMDAwMC5hMWIyYzNkNA"
+                }
+            }
+        },
+        "ErrorLogSummaryGroup": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer",
+                    "example": 42
+                },
+                "endpoint": {
+                    "type": "string",
+                    "example": "/accounts"
+                },
+                "firstSeen": {
+                    "type": "string",
+                    "example": "2026-09-24T10:00:00Z"
+                },
+                "httpStatus": {
+                    "type": "integer",
+                    "example": 400
+                },
+                "lastSeen": {
+                    "type": "string",
+                    "example": "2026-09-30T13:58:02Z"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "email is required"
+                }
+            }
+        },
+        "ErrorLogSummaryResponse": {
+            "type": "object",
+            "properties": {
+                "groups": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ErrorLogSummaryGroup"
+                    }
+                }
+            }
+        },
+        "ErrorLogValidationError": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "field": {
+                                "type": "string",
+                                "example": "limit"
+                            },
+                            "message": {
+                                "type": "string",
+                                "example": "must be a whole number from 1 to 500"
+                            }
+                        }
+                    }
+                },
+                "error": {
+                    "type": "string",
+                    "example": "validation_error"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "One or more fields are invalid"
+                }
+            }
+        },
+        "ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "internal_error"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Could not create account"
+                }
+            }
+        },
+        "ExtendTreatmentRequest": {
+            "type": "object",
+            "properties": {
+                "doses": {
+                    "description": "Doses is how many doses to add to the end: a whole number from 1 to 60.",
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
+        "ExtensionResponse": {
+            "type": "object",
+            "properties": {
+                "addedDoses": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "createdAt": {
+                    "type": "string",
+                    "example": "2026-09-30T14:02:00Z"
+                },
+                "manual": {
+                    "description": "Manual is true when the parent changed the number the app proposed.",
+                    "type": "boolean",
+                    "example": true
+                },
+                "proposedDoses": {
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "FieldError": {
+            "type": "object",
+            "properties": {
+                "field": {
+                    "type": "string",
+                    "example": "email"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "invalid email format"
+                }
+            }
+        },
+        "FreemiumLimitResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "freemium_child_limit_exceeded"
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "message": {
+                    "type": "string",
+                    "example": "The free plan includes only one child per account"
+                },
+                "received": {
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "MedicationNotFoundResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "medication_not_found"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Medication not found"
+                }
+            }
+        },
+        "MedicationResponse": {
+            "type": "object",
+            "properties": {
+                "doses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/DoseResponse"
+                    }
+                },
+                "durationDays": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "endedAt": {
+                    "description": "EndedAt is when the parent ended the treatment early (specs/016); null while it runs.",
+                    "type": "string",
+                    "example": "2026-09-30T14:02:00Z"
+                },
+                "extendableDoses": {
+                    "description": "ExtendableDoses is how many unregistered doses haven't been covered by an extension yet (specs/020): the number the\napp proposes adding; the button \"Recorrer tratamiento\" shows only when it is above 0. 0 once the treatment ended.",
+                    "type": "integer",
+                    "example": 2
+                },
+                "extensions": {
+                    "description": "Extensions are the parent's decisions to add doses to the end, oldest first.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ExtensionResponse"
+                    }
+                },
+                "frequencyHours": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Amoxicilina"
+                },
+                "startTime": {
+                    "type": "string",
+                    "example": "08:00"
+                }
+            }
+        },
+        "NotFoundResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "country_not_found"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Country not found in catalog"
+                }
+            }
+        },
+        "OverviewDoseResponse": {
+            "type": "object",
+            "properties": {
+                "consultationId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "medicationName": {
+                    "type": "string",
+                    "example": "Amoxicilina"
+                },
+                "scheduledAt": {
+                    "type": "string",
+                    "example": "2026-01-15T14:00:00Z"
+                },
+                "status": {
+                    "description": "Status as in DoseResponse (specs/013).",
+                    "type": "string",
+                    "enum": [
+                        "pending",
+                        "due",
+                        "taken",
+                        "unregistered",
+                        "canceled"
+                    ],
+                    "example": "due"
+                },
+                "taken": {
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "SymptomResponse": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string",
+                    "example": "General"
+                },
+                "code": {
+                    "type": "string",
+                    "example": "fever"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Fiebre"
+                }
+            }
+        },
+        "ValidationErrorResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/FieldError"
+                    }
+                },
+                "error": {
+                    "type": "string",
+                    "example": "validation_error"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "One or more fields are invalid"
+                }
+            }
+        },
+        "internal_account.acceptDisclaimerRequest": {
+            "type": "object",
+            "properties": {
+                "version": {
+                    "type": "string",
+                    "example": "2026-09-26"
+                }
+            }
+        },
+        "internal_account.accountResponse": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_account.childResponse"
+                    }
+                },
+                "countryCode": {
+                    "type": "string",
+                    "example": "MX"
+                },
+                "disclaimerAccepted": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "disclaimerVersion": {
+                    "description": "DisclaimerVersion is the version of the \"Antes de empezar\" notice the client must show, and\nDisclaimerAccepted whether this account already acknowledged it (specs/010-registro-aceptacion-aviso).",
+                    "type": "string",
+                    "example": "2026-09-26"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "ana@example.com"
+                },
+                "firstName": {
+                    "type": "string",
+                    "example": "Ana"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "e5f6a7b8-0000-0000-0000-000000000000"
+                },
+                "lastName": {
+                    "type": "string",
+                    "example": "Gómez"
+                },
+                "plan": {
+                    "type": "string",
+                    "example": "free"
+                },
+                "reminderDetail": {
+                    "description": "ReminderDetail is what the dose reminders show, \"detailed\" or \"generic\"; null until the tutor\nchooses on the first activation (specs/011-recordatorios-push).",
+                    "type": "string",
+                    "example": "generic"
+                },
+                "stateCode": {
+                    "type": "string",
+                    "example": "MX-JAL"
+                }
+            }
+        },
+        "internal_account.childResponse": {
+            "type": "object",
+            "properties": {
+                "birthDate": {
+                    "type": "string",
+                    "example": "2020-01-15"
+                },
+                "firstName": {
+                    "type": "string",
+                    "example": "Luis"
+                },
+                "height": {
+                    "type": "number",
+                    "example": 95.5
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "lastName": {
+                    "type": "string",
+                    "example": "Gómez"
+                },
+                "weight": {
+                    "type": "number",
+                    "example": 14.2
+                }
+            }
+        },
+        "internal_account.createAccountRequest": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_account.createChildRequest"
+                    }
+                },
+                "countryCode": {
+                    "type": "string",
+                    "example": "MX"
+                },
+                "firstName": {
+                    "type": "string",
+                    "example": "Ana"
+                },
+                "lastName": {
+                    "type": "string",
+                    "example": "Gómez"
+                },
+                "stateCode": {
+                    "type": "string",
+                    "example": "MX-JAL"
+                }
+            }
+        },
+        "internal_account.createChildRequest": {
+            "type": "object",
+            "properties": {
+                "birthDate": {
+                    "type": "string",
+                    "example": "2020-01-15"
+                },
+                "firstName": {
+                    "type": "string",
+                    "example": "Luis"
+                },
+                "height": {
+                    "type": "number",
+                    "example": 95.5
+                },
+                "lastName": {
+                    "type": "string",
+                    "example": "Gómez"
+                },
+                "weight": {
+                    "type": "number",
+                    "example": 14.2
+                }
+            }
+        },
+        "internal_account.disclaimerAcceptanceResponse": {
+            "type": "object",
+            "properties": {
+                "acceptedAt": {
+                    "type": "string",
+                    "example": "2026-09-26T18:04:05Z"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "2026-09-26"
+                }
+            }
+        },
+        "internal_account.reminderSettingsRequest": {
+            "type": "object",
+            "properties": {
+                "reminderDetail": {
+                    "type": "string",
+                    "example": "generic"
+                }
+            }
+        },
+        "internal_catalog.countryResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "MX"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "México"
+                }
+            }
+        },
+        "internal_catalog.stateResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "MX-JAL"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Jalisco"
+                }
+            }
+        },
+        "internal_consultation.createConsultationRequest": {
+            "type": "object",
+            "properties": {
+                "consultDate": {
+                    "type": "string",
+                    "example": "2026-01-15"
+                },
+                "doctorName": {
+                    "type": "string",
+                    "example": "Dra. López"
+                },
+                "medications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_consultation.createMedicationRequest"
+                    }
+                },
+                "notes": {
+                    "type": "string",
+                    "example": "Comió mariscos el domingo; la fiebre empezó el lunes"
+                },
+                "photoBase64": {
+                    "type": "string"
+                },
+                "recordOnly": {
+                    "description": "RecordOnly saves the consultation only as a record (specs/024): optional, false by default. When true the\nmedications' \"startTime\" is not required and is discarded, so no doses (and no reminders) exist.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "symptomCodes": {
+                    "description": "SymptomCodes are catalog codes (GET /catalog/symptoms); optional, duplicates ignored.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "fever",
+                        "cough"
+                    ]
+                },
+                "utcOffsetMinutes": {
+                    "description": "UTCOffsetMinutes is the parent's UTC offset, so \"startTime\" is read in\ntheir own time zone. Optional: 0 (default) means UTC.",
+                    "type": "integer",
+                    "example": -360
+                }
+            }
+        },
+        "internal_consultation.createMedicationRequest": {
+            "type": "object",
+            "properties": {
+                "durationDays": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "frequencyHours": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Amoxicilina"
+                },
+                "startTime": {
+                    "type": "string",
+                    "example": "08:00"
+                }
+            }
+        },
+        "internal_consultation.updateDoseRequest": {
+            "type": "object",
+            "properties": {
+                "taken": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "internal_reminder.actionRequest": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string",
+                    "example": "ZG9zZS4uLg.c2lnbmF0dXJl"
+                }
+            }
+        },
+        "internal_reminder.configResponse": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "vapidPublicKey": {
+                    "type": "string",
+                    "example": "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U"
+                }
+            }
+        },
+        "internal_reminder.deviceKeysRequest": {
+            "type": "object",
+            "properties": {
+                "auth": {
+                    "type": "string",
+                    "example": "tBHItJI5svbpez7KI4CCXg"
+                },
+                "p256dh": {
+                    "type": "string",
+                    "example": "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8QcYP7DkM"
+                }
+            }
+        },
+        "internal_reminder.deviceResponse": {
+            "type": "object",
+            "properties": {
+                "activatedAt": {
+                    "type": "string",
+                    "example": "2026-09-27T18:04:05Z"
+                },
+                "active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "id": {
+                    "type": "string",
+                    "example": "5f0c2e7a-0000-0000-0000-000000000000"
+                }
+            }
+        },
+        "internal_reminder.errorDoc": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "reminders_unavailable"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Reminders are not available on this server"
+                }
+            }
+        },
+        "internal_reminder.fieldErrorDoc": {
+            "type": "object",
+            "properties": {
+                "field": {
+                    "type": "string",
+                    "example": "endpoint"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "is required"
+                }
+            }
+        },
+        "internal_reminder.registerDeviceRequest": {
+            "type": "object",
+            "properties": {
+                "endpoint": {
+                    "type": "string",
+                    "example": "https://fcm.googleapis.com/fcm/send/abc123"
+                },
+                "keys": {
+                    "$ref": "#/definitions/internal_reminder.deviceKeysRequest"
+                }
+            }
+        },
+        "internal_reminder.removeDeviceRequest": {
+            "type": "object",
+            "properties": {
+                "endpoint": {
+                    "type": "string",
+                    "example": "https://fcm.googleapis.com/fcm/send/abc123"
+                }
+            }
+        },
+        "internal_reminder.validationErrorDoc": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_reminder.fieldErrorDoc"
+                    }
+                },
+                "error": {
+                    "type": "string",
+                    "example": "validation_error"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "One or more fields are invalid"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "ClerkSession": {
+            "description": "Clerk session token, sent as \"Bearer \u003ctoken\u003e\".",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        },
+        "OpsKey": {
+            "description": "Operation key (OPS_API_KEY), sent as \"Bearer \u003ckey\u003e\"; only for the team that runs the service.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

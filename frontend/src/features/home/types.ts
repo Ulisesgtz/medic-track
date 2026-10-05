@@ -1,0 +1,27 @@
+// Mirrors contracts/get-account.md's response shape — same body as
+// POST /accounts' 201 (specs/001-registro-cuenta-usuario).
+export interface Child {
+  id: string
+  firstName: string
+  lastName: string
+  birthDate: string
+  height: number | null
+  weight: number | null
+}
+
+export interface Account {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  countryCode: string | null
+  stateCode: string | null
+  plan: string
+  children: Child[]
+  // The version of the "Antes de empezar" notice to show, and whether this account already acknowledged it
+  // (specs/010-registro-aceptacion-aviso).
+  disclaimerVersion: string
+  disclaimerAccepted: boolean
+  // What dose reminders show; null until the tutor chooses on the first activation (specs/011).
+  reminderDetail: 'detailed' | 'generic' | null
+}

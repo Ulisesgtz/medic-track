@@ -1,0 +1,262 @@
+import { clerk } from '@clerk/testing/playwright'
+import { test, expect, allowClerkOn, designs, sessionToken, E2E_PASSWORD, fillSignup, finishEmailVerificationIfAsked, uniqueEmail } from './helpers'
+
+// Covers specs/001-registro-cuenta-usuario in both designs: the phone mock
+// (01) and the web mock (11). The first child is part of the form (as in the
+// mocks), and both have a password (which only Clerk ever receives) and a Google
+// button. Requires the backend running locally and Clerk's development instance
+// (`+clerk_test` addresses, the fixed 424242 code, the testing token that skips the
+// CAPTCHA) — this suite is a separate CI gate from the unit-test coverage gate
+// (constitution, Principio VI).
+
+for (const design of designs) {
+  test.describe(`Registro de cuenta — diseño ${design.name}`, () => {
+    test.use({ viewport: design.viewport })
+
+    test.beforeEach(async ({ page }) => {
+      await allowClerkOn(page)
+    })
+
+    test('muestra el diseño de su mock y nunca el del otro', async ({ page }) => {
+      await page.goto('/signup')
+
+      await expect(page.getByRole('heading', { level: 1 })).toHaveText('La bitácora médica de tus hijos, en un solo lugar.')
+      await expect(page.getByRole('button', { name: 'Crear cuenta' })).toBeVisible()
+      // Web mock 11 only: checklist + form title. Phone mock 01 only: its own subtitle.
+      const webOnly = page.getByText('Tu receta se lee en tu propio teléfono o computadora.')
+      const phoneOnly = page.getByText('Registra, nunca interpreta. Tu pediatra sigue siendo la única autoridad médica.')
+      await expect(webOnly).toHaveCount(design.isWeb ? 1 : 0)
+      await expect(phoneOnly).toHaveCount(design.isWeb ? 0 : 1)
+      await expect(page.getByRole('heading', { level: 2, name: 'Crear cuenta' })).toHaveCount(design.isWeb ? 1 : 0)
+      // Both mocks: the password field and the Google button.
+      await expect(page.getByLabel('Contraseña', { exact: true })).toHaveCount(1)
+      await expect(page.getByRole('button', { name: 'Registrarme con Google' })).toHaveCount(1)
+    })
+
+    test('crear cuenta con su primer hijo lleva al home', async ({ page }) => {
+      await page.goto('/signup')
+      await fillSignup(page)
+
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+      await finishEmailVerificationIfAsked(page)
+
+      // FR-003: a successful signup navigates straight to the home page.
+      await expect(page).toHaveURL(/\/home/)
+      await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
+    })
+
+    test('la cuenta nueva ve el aviso "Antes de empezar"; "Entendido" queda registrado y no vuelve, ni al reiniciar sesión', async ({ page }) => {
+      const email = uniqueEmail('aviso')
+      await page.goto('/signup')
+      await fillSignup(page, { email })
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+      await finishEmailVerificationIfAsked(page)
+      await expect(page).toHaveURL(/\/home/)
+
+      const notice = page.getByRole('region', { name: 'Antes de empezar' })
+      await expect(notice).toContainText('no sustituye una consulta médica')
+      await expect(notice).toContainText('acude siempre a tu médico')
+      const token = await sessionToken(page)
+      const me = () => page.context().request.get('http://localhost:8080/accounts/me', { headers: { Authorization: `Bearer ${token}` } })
+      expect((await (await me()).json()).disclaimerAccepted).toBe(false)
+
+      await page.getByRole('button', { name: 'Entendido' }).click()
+      await expect(notice).toHaveCount(0)
+      // Recorded in the backend, not just hidden in the page.
+      await expect.poll(async () => (await (await me()).json()).disclaimerAccepted).toBe(true)
+
+      await page.reload()
+      await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
+      await expect(notice).toHaveCount(0)
+
+      // Another session of the same tutor doesn't ask again.
+      await page.getByRole('button', { name: 'Cerrar sesión' }).first().click()
+      await expect(page).toHaveURL(/\/login/)
+      await page.getByLabel('Correo').fill(email)
+      await page.getByLabel('Contraseña', { exact: true }).fill(E2E_PASSWORD)
+      await page.getByRole('button', { name: 'Iniciar sesión' }).click()
+      await expect(page).toHaveURL(/\/home/, { timeout: 15_000 })
+      await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
+      await expect(notice).toHaveCount(0)
+    })
+
+    test('no hay forma de agregar un segundo hijo desde el registro (límite del plan gratuito)', async ({ page }) => {
+      await page.goto('/signup')
+
+      await expect(page.locator('#children\\.1\\.firstName')).toHaveCount(0)
+      await expect(page.getByRole('button', { name: /agregar hijo/i })).toHaveCount(0)
+    })
+
+    test('campos obligatorios: muestra todos los errores y no envía la solicitud (FR-001, FR-004)', async ({ page }) => {
+      let postCalled = false
+      await page.route('**/accounts', async (route) => {
+        postCalled = true
+        await route.continue()
+      })
+
+      await page.goto('/signup')
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+
+      await expect(page.getByText('El nombre es obligatorio')).toBeVisible()
+      await expect(page.getByText('El apellido es obligatorio')).toBeVisible()
+      await expect(page.getByText('Escribe un correo válido.')).toBeVisible()
+      await expect(page.getByText('La contraseña no cumple con las reglas.')).toBeVisible()
+      await expect(page.getByText('Escribe el nombre de tu hijo.')).toBeVisible()
+      await expect(page.getByText('El apellido del hijo es obligatorio')).toBeVisible()
+      await expect(page.getByText('Elige la fecha de nacimiento.')).toBeVisible()
+      expect(postCalled).toBe(false)
+    })
+
+    test('el primer campo inválido queda con el foco y el borde rojo', async ({ page }) => {
+      await page.goto('/signup')
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+
+      // The first field in the mocks' order (01 and 11): "Correo".
+      const first = page.getByLabel('Correo')
+      await expect(first).toBeFocused()
+      await expect(first).toHaveClass(/border-red-600/)
+    })
+
+    test('la fecha de nacimiento futura es rechazada por el servidor (FR-005)', async ({ page }) => {
+      await page.goto('/signup')
+      const future = new Date()
+      future.setFullYear(future.getFullYear() + 1)
+      await fillSignup(page, { child: { firstName: 'Luis', lastName: 'Gómez', birthDate: future.toISOString().slice(0, 10) } })
+
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+      await finishEmailVerificationIfAsked(page)
+
+      // The date input has no min/max, so this reaches the server, which must
+      // reject it: no navigation to /home and the server's message is shown.
+      await expect(page.getByRole('alert')).toBeVisible()
+      await expect(page).toHaveURL(/\/signup/)
+    })
+
+    test('nombre con caracteres no alfabéticos: muestra error y no envía la solicitud', async ({ page }) => {
+      let postCalled = false
+      await page.route('**/accounts', async (route) => {
+        postCalled = true
+        await route.continue()
+      })
+
+      await page.goto('/signup')
+      await fillSignup(page, { firstName: 'Ana123' })
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+
+      await expect(page.getByText('El nombre solo puede contener letras, espacios, guiones y apóstrofes')).toBeVisible()
+      expect(postCalled).toBe(false)
+    })
+
+    test('nombre que excede el máximo de 100 caracteres: muestra error y no envía la solicitud', async ({ page }) => {
+      let postCalled = false
+      await page.route('**/accounts', async (route) => {
+        postCalled = true
+        await route.continue()
+      })
+
+      await page.goto('/signup')
+      await fillSignup(page, { firstName: 'a'.repeat(101) })
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+
+      await expect(page.getByText('El nombre debe tener máximo 100 caracteres')).toBeVisible()
+      expect(postCalled).toBe(false)
+    })
+
+    test('correo duplicado: Clerk lo rechaza y el mensaje, en español, se muestra (FR-002)', async ({ page }) => {
+      const email = uniqueEmail('dup')
+
+      await page.goto('/signup')
+      await fillSignup(page, { email })
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+      await finishEmailVerificationIfAsked(page)
+      await expect(page).toHaveURL(/\/home/)
+
+      // A second account with the exact same email, from a browser with no session.
+      await clerk.signOut({ page })
+      await page.goto('/signup')
+      await fillSignup(page, { firstName: 'Otra', lastName: 'Persona', email })
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+
+      await expect(page.getByRole('alert')).toContainText('Ya existe una cuenta con este correo')
+      await expect(page).toHaveURL(/\/signup/)
+    })
+
+    test('quien ya tiene sesión y va a crear otra cuenta recibe un aviso con salida, no un error', async ({ page }) => {
+      await page.goto('/signup')
+      await fillSignup(page)
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+      await finishEmailVerificationIfAsked(page)
+      await expect(page).toHaveURL(/\/home/)
+
+      await page.goto('/signup')
+      await fillSignup(page)
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+
+      await expect(page.getByRole('status')).toContainText('Ya tienes una sesión iniciada')
+      await page.getByRole('link', { name: 'Ir a mi inicio' }).click()
+      await expect(page).toHaveURL(/\/home/)
+    })
+
+    test('un correo sin formato de correo es rechazado antes de enviar', async ({ page }) => {
+      let postCalled = false
+      await page.route('**/accounts', async (route) => {
+        postCalled = true
+        await route.continue()
+      })
+      await page.goto('/signup')
+      await fillSignup(page, { email: 'no-es-correo' })
+
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+
+      await expect(page.getByText('Escribe un correo válido.')).toBeVisible()
+      expect(postCalled).toBe(false)
+    })
+
+    test('elegir un país con estados muestra el selector de estado', async ({ page }) => {
+      await page.goto('/signup')
+
+      await expect(page.getByLabel(/Estado/)).toHaveCount(0)
+      await page.getByLabel(/País/).selectOption({ label: 'México' })
+
+      await expect(page.getByLabel(/Estado/)).toBeVisible()
+    })
+
+    test('la contraseña de menos de 8 caracteres se rechaza y nunca se envía al servidor', async ({ page }) => {
+      let body = ''
+      await page.route('**/accounts', async (route) => {
+        body = route.request().postData() ?? ''
+        await route.continue()
+      })
+      await page.goto('/signup')
+      await fillSignup(page)
+      await page.getByLabel('Contraseña', { exact: true }).fill('1234567')
+
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+      await expect(page.getByText('La contraseña no cumple con las reglas.')).toBeVisible()
+      expect(body).toBe('')
+
+      await page.getByLabel('Contraseña', { exact: true }).fill(E2E_PASSWORD)
+      await page.getByRole('button', { name: 'Crear cuenta' }).click()
+      await finishEmailVerificationIfAsked(page)
+      await expect(page).toHaveURL(/\/home/)
+      // The password goes to Clerk and only to Clerk: PediTrack's own POST /accounts never carries it.
+      expect(body).not.toContain(E2E_PASSWORD)
+      expect(body).not.toContain('password')
+    })
+
+    test('"Registrarme con Google" lleva a Google y no crea nada en PediTrack todavía', async ({ page }) => {
+      let posted = false
+      await page.route('**/accounts', async (route) => {
+        posted = true
+        await route.continue()
+      })
+      await page.goto('/signup')
+
+      await page.getByRole('button', { name: 'Registrarme con Google' }).click()
+
+      // The real OAuth redirect (the sign-in itself is Google's, not ours to automate).
+      await page.waitForURL(/accounts\.google\.com/, { timeout: 30_000 })
+      expect(posted).toBe(false)
+    })
+  })
+}

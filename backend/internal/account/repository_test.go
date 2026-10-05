@@ -1,0 +1,309 @@
+package account_test
+
+import (
+	"context"
+	"errors"
+	"os"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/stretchr/testify/require"
+
+	"github.com/Ulisesgtz/medic-track/backend/internal/account"
+)
+
+// closedPool returns a pool whose connection has already been closed, so any
+// query against it fails immediately. Used to exercise the internal-error
+// branches of Repository methods without needing to break the real database.
+func closedPool(t *testing.T, dsn string) *pgxpool.Pool {
+	t.Helper()
+	pool, err := pgxpool.New(context.Background(), dsn)
+	require.NoError(t, err)
+	pool.Close()
+	return pool
+}
+
+// TestRepository_Create_DuplicateEmail covers FR-002: creating a second
+// account with an email already in use must fail with ErrEmailAlreadyExists,
+// mapped by the handler to 409 Conflict.
+func TestRepository_Create_DuplicateEmail(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+
+	email := uniqueEmail("duplicate.repo.test")
+	first := &account.Account{FirstName: "Ana", LastName: "Gómez", Email: email, Plan: account.PlanFree}
+	require.NoError(t, repo.Create(context.Background(), first))
+
+	second := &account.Account{FirstName: "Otra", LastName: "Persona", Email: email, Plan: account.PlanFree}
+	err := repo.Create(context.Background(), second)
+
+	require.ErrorIs(t, err, account.ErrEmailAlreadyExists)
+}
+
+// TestRepository_EmailExists covers the read path used by Service before
+// attempting an insert.
+func TestRepository_EmailExists(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+
+	email := uniqueEmail("exists.repo.test")
+
+	exists, err := repo.EmailExists(context.Background(), email)
+	require.NoError(t, err)
+	require.False(t, exists)
+
+	acc := &account.Account{FirstName: "Ana", LastName: "Gómez", Email: email, Plan: account.PlanFree}
+	require.NoError(t, repo.Create(context.Background(), acc))
+
+	exists, err = repo.EmailExists(context.Background(), email)
+	require.NoError(t, err)
+	require.True(t, exists)
+}
+
+func TestRepository_EmailExists_ConnectionError(t *testing.T) {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Skip("DATABASE_URL not set; skipping test that requires a live database")
+	}
+	repo := account.NewRepository(closedPool(t, dsn))
+
+	_, err := repo.EmailExists(context.Background(), "irrelevant@example.com")
+
+	require.Error(t, err)
+}
+
+// TestRepository_Create_NameLengthCheckConstraint covers the defense-in-depth
+// DB CHECK constraint (migration 0004): a name exceeding 100 characters that
+// somehow bypasses service-layer validation must map to ErrInvalidNameFormat,
+// not a raw wrapped error the handler would turn into a 500.
+func TestRepository_Create_NameLengthCheckConstraint(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+
+	err := repo.Create(context.Background(), &account.Account{
+		FirstName: strings.Repeat("a", 101),
+		LastName:  "Gómez",
+		Email:     uniqueEmail("check-constraint.repo.test"),
+		Plan:      account.PlanFree,
+	})
+
+	require.ErrorIs(t, err, account.ErrInvalidNameFormat)
+}
+
+// TestRepository_GetByID_NotFound covers specs/003-home-listado-hijos FR-002:
+// an id with no matching account must map to ErrAccountNotFound, not an
+// opaque wrapped error.
+func TestRepository_GetByID_NotFound(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+
+	_, err := repo.GetByID(context.Background(), uuid.New())
+
+	require.ErrorIs(t, err, account.ErrAccountNotFound)
+}
+
+// TestRepository_GetByID_WithChildren covers the happy path: an account with
+// children returns them ordered oldest-first (spec.md's "mismo orden en que
+// fueron dados de alta").
+func TestRepository_GetByID_WithChildren(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+
+	acc := &account.Account{
+		FirstName: "Ana", LastName: "Gómez", Email: uniqueEmail("getbyid.repo.test"), Plan: account.PlanFree,
+		Children: []account.Child{
+			{FirstName: "Primero", LastName: "Gómez", BirthDate: mustParseDate(t, "2018-01-01")},
+		},
+	}
+	require.NoError(t, repo.Create(context.Background(), acc))
+
+	got, err := repo.GetByID(context.Background(), acc.ID)
+	require.NoError(t, err)
+	require.Equal(t, acc.Email, got.Email)
+	require.Len(t, got.Children, 1)
+	require.Equal(t, "Primero", got.Children[0].FirstName)
+}
+
+func TestRepository_GetByID_ConnectionError(t *testing.T) {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Skip("DATABASE_URL not set; skipping test that requires a live database")
+	}
+	repo := account.NewRepository(closedPool(t, dsn))
+
+	_, err := repo.GetByID(context.Background(), uuid.New())
+
+	require.Error(t, err)
+	require.False(t, errors.Is(err, account.ErrAccountNotFound))
+}
+
+// TestRepository_AddChildIfUnderLimit covers adding a child to an
+// already-existing account (specs/003-home-listado-hijos, "Agregar hijo"
+// from the home page).
+func TestRepository_AddChildIfUnderLimit(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+
+	acc := &account.Account{FirstName: "Ana", LastName: "Gómez", Email: uniqueEmail("addchildlimit.repo.test"), Plan: account.PlanFree}
+	require.NoError(t, repo.Create(context.Background(), acc))
+
+	got, err := repo.AddChildIfUnderLimit(context.Background(), acc.ID, account.CreateChildInput{
+		FirstName: "Luis", LastName: "Gómez", BirthDate: mustParseDate(t, "2020-01-15"),
+	}, 1)
+	require.NoError(t, err)
+	require.Len(t, got.Children, 1)
+	require.NotEqual(t, uuid.Nil, got.Children[0].ID)
+}
+
+// TestRepository_AddChildIfUnderLimit_LimitExceeded covers the atomic
+// check-then-insert rejecting a second child once the account is already at
+// the given limit, returning the actual counts via *FreemiumLimitError.
+func TestRepository_AddChildIfUnderLimit_LimitExceeded(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+
+	acc := &account.Account{
+		FirstName: "Carla", LastName: "Ruiz", Email: uniqueEmail("addchildlimit.exceeded.repo.test"), Plan: account.PlanFree,
+		Children: []account.Child{{FirstName: "Hijo Uno", LastName: "Ruiz", BirthDate: mustParseDate(t, "2018-01-01")}},
+	}
+	require.NoError(t, repo.Create(context.Background(), acc))
+
+	_, err := repo.AddChildIfUnderLimit(context.Background(), acc.ID, account.CreateChildInput{
+		FirstName: "Hijo Dos", LastName: "Ruiz", BirthDate: mustParseDate(t, "2021-01-01"),
+	}, 1)
+
+	require.ErrorIs(t, err, account.ErrFreemiumChildLimitExceeded)
+	var limitErr *account.FreemiumLimitError
+	require.ErrorAs(t, err, &limitErr)
+	require.Equal(t, 1, limitErr.Limit)
+	require.Equal(t, 2, limitErr.Received)
+
+	got, err := repo.GetByID(context.Background(), acc.ID)
+	require.NoError(t, err)
+	require.Len(t, got.Children, 1, "no second child must have been inserted")
+}
+
+func TestRepository_AddChildIfUnderLimit_AccountNotFound(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+
+	_, err := repo.AddChildIfUnderLimit(context.Background(), uuid.New(), account.CreateChildInput{
+		FirstName: "Luis", LastName: "Gómez", BirthDate: mustParseDate(t, "2020-01-15"),
+	}, 1)
+
+	require.ErrorIs(t, err, account.ErrAccountNotFound)
+}
+
+func TestRepository_AddChildIfUnderLimit_ConnectionError(t *testing.T) {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Skip("DATABASE_URL not set; skipping test that requires a live database")
+	}
+	repo := account.NewRepository(closedPool(t, dsn))
+
+	_, err := repo.AddChildIfUnderLimit(context.Background(), uuid.New(), account.CreateChildInput{
+		FirstName: "Luis", LastName: "Gómez", BirthDate: mustParseDate(t, "2020-01-15"),
+	}, 1)
+
+	require.Error(t, err)
+}
+
+func mustParseDate(t *testing.T, s string) time.Time {
+	t.Helper()
+	d, err := time.Parse("2006-01-02", s)
+	require.NoError(t, err)
+	return d
+}
+
+func TestRepository_Create_ConnectionError(t *testing.T) {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Skip("DATABASE_URL not set; skipping test that requires a live database")
+	}
+	repo := account.NewRepository(closedPool(t, dsn))
+
+	err := repo.Create(context.Background(), &account.Account{
+		FirstName: "Ana", LastName: "Gómez", Email: "irrelevant@example.com", Plan: account.PlanFree,
+	})
+
+	require.Error(t, err)
+}
+
+func newLegacyAccount(email string) *account.Account {
+	return &account.Account{
+		FirstName: "Ana", LastName: "Gómez", Email: email, Plan: account.PlanFree,
+		Children: []account.Child{{FirstName: "Luis", LastName: "Gómez", BirthDate: time.Now().AddDate(-5, 0, 0)}},
+	}
+}
+
+func TestRepository_Create_DuplicateClerkUserIDIsItsOwnError(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+	clerkID := uniqueClerkUserID("dup")
+	first := newLegacyAccount(uniqueEmail("repo.dupclerk1"))
+	first.ClerkUserID = &clerkID
+	require.NoError(t, repo.Create(context.Background(), first))
+
+	second := newLegacyAccount(uniqueEmail("repo.dupclerk2"))
+	second.ClerkUserID = &clerkID
+	err := repo.Create(context.Background(), second)
+
+	require.ErrorIs(t, err, account.ErrClerkUserAlreadyLinked)
+	require.NotErrorIs(t, err, account.ErrEmailAlreadyExists)
+}
+
+func TestRepository_LinkByEmail_LinksALegacyAccountIgnoringCase(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+	email := uniqueEmail("Repo.Legacy")
+	legacy := newLegacyAccount(email)
+	require.NoError(t, repo.Create(context.Background(), legacy))
+	clerkID := uniqueClerkUserID("link")
+
+	linked, err := repo.LinkByEmail(context.Background(), clerkID, strings.ToLower(email))
+
+	require.NoError(t, err)
+	require.Equal(t, legacy.ID, linked.ID)
+	require.NotNil(t, linked.ClerkUserID)
+	require.Equal(t, clerkID, *linked.ClerkUserID)
+	require.Len(t, linked.Children, 1)
+}
+
+func TestRepository_LinkByEmail_NothingToLink(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+
+	_, err := repo.LinkByEmail(context.Background(), uniqueClerkUserID("none"), uniqueEmail("repo.nobody"))
+
+	require.ErrorIs(t, err, account.ErrAccountNotFound)
+}
+
+func TestRepository_LinkByEmail_NeverStealsAnAccountAlreadyLinkedToAnotherUser(t *testing.T) {
+	pool := testPool(t)
+	repo := account.NewRepository(pool)
+	email := uniqueEmail("repo.taken")
+	ownerID := uniqueClerkUserID("owner")
+	owned := newLegacyAccount(email)
+	owned.ClerkUserID = &ownerID
+	require.NoError(t, repo.Create(context.Background(), owned))
+
+	_, err := repo.LinkByEmail(context.Background(), uniqueClerkUserID("intruder"), email)
+
+	require.ErrorIs(t, err, account.ErrAccountNotFound)
+}
+
+func TestRepository_LinkByEmail_ConnectionError(t *testing.T) {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		t.Skip("DATABASE_URL not set; skipping test that requires a live database")
+	}
+	repo := account.NewRepository(closedPool(t, dsn))
+
+	_, err := repo.LinkByEmail(context.Background(), "user_x", "x@example.com")
+
+	require.Error(t, err)
+	require.NotErrorIs(t, err, account.ErrAccountNotFound)
+}

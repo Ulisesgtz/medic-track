@@ -1,0 +1,50 @@
+@import url('https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'Figtree', system-ui, -apple-system, sans-serif;
+
+  /* Visual system — specs/005-identidad-visual-front-end/design-tokens.md */
+  --color-ink: #04252b;
+  --color-ink-soft: #0b3b44;
+  --color-action: #0e7490;
+  --color-bright: #22d3ee;
+  --color-confirmed: #047857;
+  --color-confirmed-soft: #d1fae5;
+  --color-pending: #f59e0b;
+  --color-pending-soft: #fef3c7;
+  --color-canvas: #f8feff;
+  --color-surface: #ffffff;
+  --color-hint: #ecfeff;
+  --color-hint-border: #a5f3fc;
+  /* Tinta de texto que el sistema fija sobre cada superficie de estado */
+  --color-on-pending: #451a03;
+  --color-pending-strong: #92400e;
+  --color-confirmed-strong: #065f46;
+  /* Colores de apoyo que las pantallas escribían como literales (BACKLOG, "Subir literales a @theme"): mismos valores,
+     ahora con nombre. Medidos en design-tokens.md ("Colores de apoyo"). */
+  --color-bright-soft: #67e8f9; /* cian claro: textos y bordes sobre tinta, borde del bloque del hijo */
+  --color-hint-edge: #cffafe; /* borde fino de las superficies hint y texto claro sobre tinta */
+  --color-body: #1f3d44; /* texto corrido sobre superficie */
+  --color-ink-muted: #62909d; /* texto inactivo sobre tinta (4.60:1; el mock da #5b8b94, 4.3:1) */
+  --color-ink-edge: #0b5763; /* borde punteado sobre tinta */
+  --color-on-pending-muted: #613102; /* texto secundario sobre ámbar (5.02:1) */
+  --color-mint: #a7f3d0; /* verde menta: avatar de hijo y borde del aviso de éxito */
+  /* Los tonos pizarra del diseño del calendario (spec 022). Valores exactos del diseño: los slate-500/700/800 de Tailwind v4
+     son oklch y salen 2-3 niveles distintos. */
+  --color-calendar-muted: #64748b; /* días de la semana y días fuera del tratamiento (4.76:1) */
+  --color-calendar-text: #334155; /* texto de la tarjeta «Cómo leer el calendario» */
+  --color-calendar-name: #1e293b; /* nombres de medicamento en la leyenda del calendario */
+  /* Un color por medicamento en el calendario del tratamiento (specs/019): sin rojo, verde, ámbar ni cian (esos ya
+     significan algo). El número de la marca es el segundo indicador. Medidos en specs/019 (contraste y daltonismo). */
+  --color-med-1: #0e7490;
+  --color-med-2: #7c3aed;
+  --color-med-3: #db2777;
+  --color-med-4: #2563eb;
+  --color-med-5: #475569;
+  --color-med-6: #78350f;
+}
+
+body {
+  @apply bg-canvas text-ink;
+}

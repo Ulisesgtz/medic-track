@@ -1,9 +1,10 @@
 <!--
 Sync Impact Report
-Version change: 1.2.0 → 1.6.0 (combines the 1.3.0 coverage-principle
+Version change: 1.2.0 → 1.7.0 (combines the 1.3.0 coverage-principle
   addition, the 1.3.1 PostgreSQL confirmation, the 1.4.0 E2E-testing
-  addition, the 1.5.0 backend-security-coder addition, and this 1.6.0
-  git-branching-strategy addition)
+  addition, the 1.5.0 backend-security-coder addition, the 1.6.0
+  git-branching-strategy addition, and this 1.7.0 code-language-policy
+  addition)
 Modified principles: Principio VI extended (see below); none renamed
 Added principles: VI. Cobertura de Pruebas Obligatoria (NON-NEGOTIABLE) — all
   written code (Go + React) MUST have unit tests with >90% coverage, enforced
@@ -22,9 +23,17 @@ Added sections: new "Control de Versiones (Git / GitHub)" subsection under
   branches off `develop`, PR to `develop` once a task's tests pass, `master`
   updated only on deploy and deploys always run off `master`.
 Removed sections: none
-Deferred items / TODOs: this Git workflow assumes a GitHub-backed git repo,
-  which this project does not have yet (confirmed not a git repo) — flagged
-  in the new subsection itself, to be set up before the first real branch/PR.
+Added content (1.7.0): new "Idioma del Código" subsection at the top of
+  "Convenciones de Código" — all code identifiers, comments, DB schema
+  (Go + React + PostgreSQL) MUST be in English; industry-standard reserved
+  words/conventions stay in English; project documentation (specs, plans,
+  constitution, user communication) stays in Spanish.
+Deferred items / TODOs: this Git workflow assumes a GitHub-backed git repo
+  — now resolved, repo connected to github.com/Ulisesgtz/medic-track with
+  master/develop branches created 2026-09-15. Separately, spec
+  001-registro-cuenta-usuario's already-written data-model.md/contracts used
+  Spanish field names before this rule existed — being corrected to English
+  as a follow-up to this amendment.
 -->
 
 # PediTrack Constitution
@@ -84,6 +93,20 @@ gate de coverage unitario — un cambio no se considera listo si rompe un flujo 
 el coverage unitario esté en verde.
 
 ## Convenciones de Código
+
+### Idioma del Código (aplica a Go, React y base de datos)
+- Todo identificador de código MUST estar en inglés: nombres de variables, funciones, tipos/structs/
+  interfaces, entidades de dominio, y tablas/columnas de base de datos, endpoints y rutas de API
+  (ej. `firstName`, `birthDate`, `email`, tabla `children`, columna `country_code` — no `nombre`,
+  `fecha_nacimiento`, tabla `hijos`).
+- Los comentarios en código, cuando sean necesarios, MUST estar en inglés.
+- Las palabras reservadas y convenciones estándar de la industria (`test`, `deploy`, `build`, nombres
+  de comandos/scripts, etc.) MUST seguir el estándar en inglés — no se traducen términos técnicos
+  establecidos.
+- La documentación del proyecto (specs, plans, tasks, checklists de Spec Kit, este archivo de
+  constitución, y comunicación con el usuario) SÍ se mantiene en español, como ya se viene haciendo
+  — esta regla de idioma aplica solo al código y sus artefactos técnicos (nombres de campos en
+  contratos de API, esquemas de base de datos), no a la prosa explicativa.
 
 ### Go (Backend)
 - **Estructura de proyecto:** layout estándar de la comunidad — `cmd/` (entrypoints), `internal/`
@@ -186,4 +209,4 @@ semántico: MAJOR para remoción/redefinición incompatible de principios; MINOR
 secciones nuevas; PATCH para aclaraciones, correcciones de redacción o reorganizaciones sin cambio
 de significado.
 
-**Version**: 1.6.0 | **Ratified**: 2026-09-14 | **Last Amended**: 2026-09-15
+**Version**: 1.7.0 | **Ratified**: 2026-09-14 | **Last Amended**: 2026-09-15

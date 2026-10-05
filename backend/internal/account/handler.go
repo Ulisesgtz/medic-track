@@ -1,0 +1,668 @@
+package account
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net/http"
+	"time"
+
+	clerkuser "github.com/clerk/clerk-sdk-go/v2/user"
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+
+	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
+	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
+)
+
+// Handler exposes the account HTTP endpoints.
+type Handler struct {
+	service   *Service
+	responder *httpx.Responder
+}
+
+// NewHandler creates an account Handler backed by the given service.
+func NewHandler(service *Service, responder *httpx.Responder) *Handler {
+	return &Handler{service: service, responder: responder}
+}
+
+type createChildRequest struct {
+	FirstName string   `json:"firstName" example:"Luis"`
+	LastName  string   `json:"lastName" example:"Gómez"`
+	BirthDate string   `json:"birthDate" example:"2020-01-15"`
+	Height    *float64 `json:"height" example:"95.5"`
+	Weight    *float64 `json:"weight" example:"14.2"`
+}
+
+type createAccountRequest struct {
+	FirstName   string               `json:"firstName" example:"Ana"`
+	LastName    string               `json:"lastName" example:"Gómez"`
+	CountryCode *string              `json:"countryCode" example:"MX"`
+	StateCode   *string              `json:"stateCode" example:"MX-JAL"`
+	Children    []createChildRequest `json:"children"`
+}
+
+type childResponse struct {
+	ID        string   `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	FirstName string   `json:"firstName" example:"Luis"`
+	LastName  string   `json:"lastName" example:"Gómez"`
+	BirthDate string   `json:"birthDate" example:"2020-01-15"`
+	Height    *float64 `json:"height" example:"95.5"`
+	Weight    *float64 `json:"weight" example:"14.2"`
+}
+
+type accountResponse struct {
+	ID          string          `json:"id" example:"e5f6a7b8-0000-0000-0000-000000000000"`
+	FirstName   string          `json:"firstName" example:"Ana"`
+	LastName    string          `json:"lastName" example:"Gómez"`
+	Email       string          `json:"email" example:"ana@example.com"`
+	CountryCode *string         `json:"countryCode" example:"MX"`
+	StateCode   *string         `json:"stateCode" example:"MX-JAL"`
+	Plan        string          `json:"plan" example:"free"`
+	Children    []childResponse `json:"children"`
+	// DisclaimerVersion is the version of the "Antes de empezar" notice the client must show, and
+	// DisclaimerAccepted whether this account already acknowledged it (specs/010-registro-aceptacion-aviso).
+	DisclaimerVersion  string `json:"disclaimerVersion" example:"2026-09-26"`
+	DisclaimerAccepted bool   `json:"disclaimerAccepted" example:"false"`
+	// ReminderDetail is what the dose reminders show, "detailed" or "generic"; null until the tutor
+	// chooses on the first activation (specs/011-recordatorios-push).
+	ReminderDetail *string `json:"reminderDetail" example:"generic"`
+}
+
+type reminderSettingsRequest struct {
+	ReminderDetail string `json:"reminderDetail" example:"generic"`
+}
+
+type acceptDisclaimerRequest struct {
+	Version string `json:"version" example:"2026-09-26"`
+}
+
+type disclaimerAcceptanceResponse struct {
+	Version    string `json:"version" example:"2026-09-26"`
+	AcceptedAt string `json:"acceptedAt" example:"2026-09-26T18:04:05Z"`
+}
+
+// fieldErrorDoc documents one entry of validationErrorResponse.Details.
+type fieldErrorDoc struct {
+	Field   string `json:"field" example:"email"`
+	Message string `json:"message" example:"invalid email format"`
+} // @name FieldError
+
+// validationErrorResponseDoc documents the 400 body shape (contracts/post-accounts.md).
+type validationErrorResponseDoc struct {
+	Error   string          `json:"error" example:"validation_error"`
+	Message string          `json:"message" example:"One or more fields are invalid"`
+	Details []fieldErrorDoc `json:"details"`
+} // @name ValidationErrorResponse
+
+// emailConflictResponseDoc documents the 409 body shape.
+type emailConflictResponseDoc struct {
+	Error   string `json:"error" example:"email_already_exists"`
+	Message string `json:"message" example:"Email is already in use"`
+} // @name EmailConflictResponse
+
+// errorResponseDoc documents the generic {error, message} shape used by
+// internal/httpx.WriteJSONError (e.g. the 500 internal_error case).
+type errorResponseDoc struct {
+	Error   string `json:"error" example:"internal_error"`
+	Message string `json:"message" example:"Could not create account"`
+} // @name ErrorResponse
+
+// freemiumLimitResponseDoc documents the 422 body shape (FR-007).
+type freemiumLimitResponseDoc struct {
+	Error    string `json:"error" example:"freemium_child_limit_exceeded"`
+	Message  string `json:"message" example:"The free plan includes only one child per account"`
+	Limit    int    `json:"limit" example:"1"`
+	Received int    `json:"received" example:"2"`
+} // @name FreemiumLimitResponse
+
+// accountNotFoundResponseDoc documents the 404 body shape
+// (specs/003-home-listado-hijos/contracts/get-account.md).
+type accountNotFoundResponseDoc struct {
+	Error   string `json:"error" example:"account_not_found"`
+	Message string `json:"message" example:"Account not found"`
+} // @name AccountNotFoundResponse
+
+// maxRequestBodyBytes caps the POST /accounts body to guard against
+// oversized-payload abuse (backend-security-coder: payload size limits).
+const maxRequestBodyBytes = 1 << 20 // 1 MiB
+
+// CreateAccount handles POST /accounts (contracts/post-accounts.md).
+//
+//	@Summary		Create an account (tutor + optional children)
+//	@Description	Creates a padre/tutor account, optionally with one or more children in the
+//	@Description	same request, for the tutor who already completed sign-up with Clerk (correo+
+//	@Description	contraseña or Google) — the caller's verified Clerk session is required, and its
+//	@Description	email is what gets stored, never a client-supplied one (specs/008-autenticacion-cuenta).
+//	@Description	A brand-new account always starts on the free plan, which allows at most 1 child
+//	@Description	(FR-007) — enforced server-side regardless of what the client already validated.
+//	@Description	Idempotent: if the session already has an account linked, returns it with 200
+//	@Description	instead of creating a duplicate; an account created before authentication existed
+//	@Description	with the same verified email is linked and returned with 200 too.
+//	@Tags			accounts
+//	@Accept			json
+//	@Produce		json
+//	@Security		ClerkSession
+//	@Param			payload	body		createAccountRequest	true	"Account (and optional children) to create"
+//	@Success		200		{object}	accountResponse	"The session already had an account linked"
+//	@Success		201		{object}	accountResponse
+//	@Failure		400		{object}	validationErrorResponseDoc	"Missing/invalid field, e.g. a future birth date"
+//	@Failure		401		{object}	errorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	errorResponseDoc	"The session's email address is not verified"
+//	@Failure		409		{object}	emailConflictResponseDoc	"Email already in use"
+//	@Failure		422		{object}	freemiumLimitResponseDoc	"Free plan already has 1 child; upgrade required"
+//	@Failure		500		{object}	errorResponseDoc	"Unexpected server error"
+//	@Router			/accounts [post]
+func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
+	clerkUserID, ok := authmw.ClerkUserIDFromContext(r.Context())
+	if !ok {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusUnauthorized, "unauthorized", "A valid session is required", nil)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+
+	var req createAccountRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusBadRequest, "validation_error", "Malformed JSON body", nil)
+		return
+	}
+
+	// A retried request for a session that already has its account (e.g. a 201
+	// that never reached the client) is an idempotent success, answered
+	// before spending a Clerk API call on an email nobody needs
+	// (contracts/post-accounts.md).
+	if existing, err := h.service.GetAccountByClerkUserID(r.Context(), clerkUserID); err == nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusOK, toAccountResponse(existing), &existing.ID)
+		return
+	} else if !errors.Is(err, ErrAccountNotFound) {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not look up the session's account", nil)
+		return
+	}
+
+	email, err := clerkPrimaryEmail(r.Context(), clerkUserID)
+	if err != nil {
+		if errors.Is(err, errEmailNotVerified) {
+			h.responder.WriteJSONError(r.Context(), w, http.StatusForbidden, "forbidden", "The session's email address is not verified", nil)
+			return
+		}
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not resolve the session's email", nil)
+		return
+	}
+
+	// An account created before authentication existed, with this same
+	// verified email, is this tutor's account: link it instead of failing on
+	// the duplicate email (Historia 5).
+	if linked, err := h.service.LinkLegacyAccount(r.Context(), clerkUserID, email); err == nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusOK, toAccountResponse(linked), &linked.ID)
+		return
+	} else if !errors.Is(err, ErrAccountNotFound) {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not link the existing account", nil)
+		return
+	}
+
+	input := CreateAccountInput{
+		FirstName:   req.FirstName,
+		LastName:    req.LastName,
+		Email:       email,
+		ClerkUserID: clerkUserID,
+		CountryCode: req.CountryCode,
+		StateCode:   req.StateCode,
+	}
+
+	for i, c := range req.Children {
+		var birthDate time.Time
+		if c.BirthDate != "" {
+			parsed, err := time.Parse("2006-01-02", c.BirthDate)
+			if err != nil {
+				// Called directly (not via a shared helper) so
+				// Responder.record's runtime.Caller attributes this entry to
+				// this exact line, distinct from the other validation-error
+				// call sites below — see backend/CLAUDE.md's warning about
+				// indirection between a handler and Responder.
+				h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody([]ValidationError{{
+					Field:   fieldIndex("children", i, "birthDate"),
+					Message: "birth date must be an ISO-8601 date (YYYY-MM-DD)",
+				}}, "One or more fields are invalid"), nil)
+				return
+			}
+			birthDate = parsed
+		}
+		input.Children = append(input.Children, CreateChildInput{
+			FirstName: c.FirstName,
+			LastName:  c.LastName,
+			BirthDate: birthDate,
+			Height:    c.Height,
+			Weight:    c.Weight,
+		})
+	}
+
+	acc, err := h.service.CreateAccount(r.Context(), input)
+	if err != nil {
+		if errors.Is(err, ErrAccountAlreadyLinked) {
+			// A retried request for a session that already created its account
+			// (e.g. a 201 that never reached the client) — idempotent success,
+			// not an error (contracts/post-accounts.md).
+			h.responder.WriteJSON(r.Context(), w, http.StatusOK, toAccountResponse(acc), &acc.ID)
+			return
+		}
+		h.writeCreateAccountError(r.Context(), w, err, len(input.Children))
+		return
+	}
+
+	h.responder.WriteJSON(r.Context(), w, http.StatusCreated, toAccountResponse(acc), &acc.ID)
+}
+
+// errEmailNotVerified is returned by clerkPrimaryEmail when the session's
+// primary email exists but Clerk has not verified it.
+var errEmailNotVerified = errors.New("the session's primary email is not verified")
+
+// clerkPrimaryEmail resolves the verified primary email for a Clerk user id
+// via the Backend API — the session token's own claims don't expose a
+// typed email field in this SDK version, and this is otherwise the
+// documented way to read a user's verified profile (research.md, punto 2).
+// An unverified address is refused (errEmailNotVerified): the email is used
+// to store the account and to link a pre-authentication one, so it must be
+// one the tutor has proven to control.
+func clerkPrimaryEmail(ctx context.Context, clerkUserID string) (string, error) {
+	clerkUser, err := clerkuser.Get(ctx, clerkUserID)
+	if err != nil {
+		return "", fmt.Errorf("fetching clerk user: %w", err)
+	}
+	if clerkUser.PrimaryEmailAddressID != nil {
+		for _, e := range clerkUser.EmailAddresses {
+			if e.ID == *clerkUser.PrimaryEmailAddressID {
+				if e.Verification == nil || e.Verification.Status != "verified" {
+					return "", errEmailNotVerified
+				}
+				return e.EmailAddress, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("clerk user %s has no primary email address", clerkUserID)
+}
+
+// writeCreateAccountError dispatches on the error kind and, for each kind,
+// calls h.responder directly from its own case branch (never through a
+// shared sub-helper) so Responder.record's runtime.Caller attributes every
+// error to the distinct line that actually decided it, not to one shared
+// call site — see backend/CLAUDE.md's warning about indirection between a
+// handler and Responder.
+func (h *Handler) writeCreateAccountError(ctx context.Context, w http.ResponseWriter, err error, receivedChildren int) {
+	var validationErrs ValidationErrors
+	switch {
+	case errors.As(err, &validationErrs):
+		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationErrorBody(validationErrs, "One or more fields are invalid"), nil)
+	case errors.Is(err, ErrEmailAlreadyExists):
+		// The conflicting account already exists, but its ID isn't looked up
+		// by this flow (EmailExists only returns a bool) — logged without an
+		// account_id rather than adding a lookup out of scope here.
+		h.responder.WriteJSON(ctx, w, http.StatusConflict, map[string]string{
+			"error":   "email_already_exists",
+			"message": "Email is already in use",
+		}, nil)
+	case errors.Is(err, ErrFreemiumChildLimitExceeded):
+		h.responder.WriteJSON(ctx, w, http.StatusUnprocessableEntity, freemiumLimitBody(freePlanChildLimit, receivedChildren), nil)
+	case errors.Is(err, ErrInvalidNameFormat):
+		// Defense-in-depth: the DB CHECK constraint on name format/length
+		// rejected the row even though the service-layer check passed (e.g. a
+		// bug or drift between the two). Surface it as a validation error
+		// rather than an opaque 500, since it's really an input problem.
+		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationErrorBody([]ValidationError{
+			{Field: "firstName", Message: "must contain only letters, spaces, hyphens or apostrophes, and be at most 100 characters"},
+		}, "One or more fields are invalid"), nil)
+	default:
+		h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", "Could not create account", nil)
+	}
+}
+
+// accountNotFoundForSessionResponseDoc documents the 404 body shape of
+// GET /accounts/me (contracts/get-accounts-me.md).
+type accountNotFoundForSessionResponseDoc struct {
+	Error   string `json:"error" example:"account_not_found_for_session"`
+	Message string `json:"message" example:"No PediTrack account is linked to this session yet"`
+} // @name AccountNotFoundForSessionResponse
+
+// GetMe handles GET /accounts/me (contracts/get-accounts-me.md).
+//
+//	@Summary		Get the authenticated tutor's own account
+//	@Description	Resolves the account linked to the caller's verified Clerk session — the
+//	@Description	replacement for a client-supplied accountId (specs/008-autenticacion-cuenta). An
+//	@Description	account created before authentication existed, with the session's own verified
+//	@Description	email, is linked on this first access. A 404 is the expected state right after a
+//	@Description	brand-new Clerk sign-up, before POST /accounts has run.
+//	@Tags			accounts
+//	@Produce		json
+//	@Security		ClerkSession
+//	@Success		200	{object}	accountResponse
+//	@Failure		404	{object}	accountNotFoundForSessionResponseDoc	"No account is linked to this session yet"
+//	@Router			/accounts/me [get]
+func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
+	clerkUserID, ok := authmw.ClerkUserIDFromContext(r.Context())
+	if !ok {
+		// RequireSession already rejects a request with no valid session
+		// before it reaches here — this only guards against this handler
+		// ever being wired without that middleware.
+		h.responder.WriteJSONError(r.Context(), w, http.StatusUnauthorized, "unauthorized", "A valid session is required", nil)
+		return
+	}
+
+	acc, err := h.service.GetAccountByClerkUserID(r.Context(), clerkUserID)
+	if errors.Is(err, ErrAccountNotFound) {
+		// No direct link yet. An account created before authentication, with
+		// the session's own verified email, becomes this tutor's on their first
+		// access (Historia 5); otherwise there is genuinely no account yet.
+		acc, err = h.linkLegacyAccountForSession(r.Context(), clerkUserID)
+		if errors.Is(err, ErrAccountNotFound) {
+			h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, map[string]string{
+				"error":   "account_not_found_for_session",
+				"message": "No PediTrack account is linked to this session yet",
+			}, nil)
+			return
+		}
+	}
+	if err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not fetch account", nil)
+		return
+	}
+
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, toAccountResponse(acc), &acc.ID)
+}
+
+// linkLegacyAccountForSession looks for a pre-authentication account with the
+// session's verified email and links it. It never writes a response: an
+// unverified email counts as "nothing to link" (ErrAccountNotFound), any other
+// failure is returned for the caller to answer.
+func (h *Handler) linkLegacyAccountForSession(ctx context.Context, clerkUserID string) (*Account, error) {
+	email, err := clerkPrimaryEmail(ctx, clerkUserID)
+	if err != nil {
+		if errors.Is(err, errEmailNotVerified) {
+			return nil, ErrAccountNotFound
+		}
+		return nil, err
+	}
+	return h.service.LinkLegacyAccount(ctx, clerkUserID, email)
+}
+
+// GetAccount handles GET /accounts/{accountId}
+// (specs/003-home-listado-hijos/contracts/get-account.md).
+//
+//	@Summary		Get an account and its children
+//	@Description	Retrieves an account (tutor + children) by id (FR-001). Requires a Clerk session
+//	@Description	that owns this account (specs/008-autenticacion-cuenta): 403 for any other.
+//	@Tags			accounts
+//	@Produce		json
+//	@Param			accountId	path		string	true	"Account UUID"
+//	@Success		200			{object}	accountResponse
+//	@Failure		404			{object}	accountNotFoundResponseDoc	"No account exists for this id"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	errorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	errorResponseDoc	"The session does not own this resource"
+//	@Router			/accounts/{accountId} [get]
+func (h *Handler) GetAccount(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "accountId"))
+	if err != nil {
+		// An id that isn't even a well-formed UUID is treated the same as
+		// "no account" (FR-002's edge case: a stale/corrupt saved id).
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, accountNotFoundBody(), nil)
+		return
+	}
+
+	acc, err := h.service.GetAccount(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrAccountNotFound) {
+			h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, accountNotFoundBody(), nil)
+			return
+		}
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not fetch account", nil)
+		return
+	}
+
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, toAccountResponse(acc), &acc.ID)
+}
+
+// AddChild handles POST /accounts/{accountId}/children
+// (specs/003-home-listado-hijos/contracts/post-account-children.md).
+//
+//	@Summary		Add a child to an existing account
+//	@Description	Adds a single child to an account already created, from the home page's
+//	@Description	"Agregar hijo" modal (FR-004). Applies the same field validation and
+//	@Description	freemium 1-child limit as POST /accounts.
+//	@Tags			accounts
+//	@Accept			json
+//	@Produce		json
+//	@Param			accountId	path		string				true	"Account UUID"
+//	@Param			payload		body		createChildRequest	true	"Child to add"
+//	@Success		201			{object}	accountResponse
+//	@Failure		400			{object}	validationErrorResponseDoc	"Missing/invalid field"
+//	@Failure		404			{object}	accountNotFoundResponseDoc	"No account exists for this id"
+//	@Failure		422			{object}	freemiumLimitResponseDoc	"Free plan already has 1 child; upgrade required"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	errorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	errorResponseDoc	"The session does not own this resource"
+//	@Router			/accounts/{accountId}/children [post]
+func (h *Handler) AddChild(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+
+	id, err := uuid.Parse(chi.URLParam(r, "accountId"))
+	if err != nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, accountNotFoundBody(), nil)
+		return
+	}
+
+	var req createChildRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusBadRequest, "validation_error", "Malformed JSON body", &id)
+		return
+	}
+
+	var birthDate time.Time
+	if req.BirthDate != "" {
+		parsed, err := time.Parse("2006-01-02", req.BirthDate)
+		if err != nil {
+			h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody([]ValidationError{{
+				Field:   "birthDate",
+				Message: "birth date must be an ISO-8601 date (YYYY-MM-DD)",
+			}}, "One or more fields are invalid"), &id)
+			return
+		}
+		birthDate = parsed
+	}
+
+	input := CreateChildInput{
+		FirstName: req.FirstName,
+		LastName:  req.LastName,
+		BirthDate: birthDate,
+		Height:    req.Height,
+		Weight:    req.Weight,
+	}
+
+	acc, err := h.service.AddChild(r.Context(), id, input)
+	if err != nil {
+		h.writeAddChildError(r.Context(), w, err, id)
+		return
+	}
+
+	h.responder.WriteJSON(r.Context(), w, http.StatusCreated, toAccountResponse(acc), &acc.ID)
+}
+
+// AcceptDisclaimer handles POST /accounts/{accountId}/disclaimer-acceptance
+// (specs/010-registro-aceptacion-aviso/contracts/post-disclaimer-acceptance.md).
+//
+//	@Summary		Record that the tutor acknowledged the "Antes de empezar" notice
+//	@Description	Stores which version of the notice this account acknowledged and when (audit trail).
+//	@Description	Idempotent: acknowledging the same version again returns the original record.
+//	@Description	The version must be the current one, the one every account response carries as
+//	@Description	disclaimerVersion.
+//	@Tags			accounts
+//	@Accept			json
+//	@Produce		json
+//	@Param			accountId	path		string					true	"Account UUID"
+//	@Param			payload		body		acceptDisclaimerRequest	true	"Version acknowledged"
+//	@Success		200			{object}	disclaimerAcceptanceResponse
+//	@Failure		400			{object}	validationErrorResponseDoc	"Missing or stale version"
+//	@Failure		404			{object}	accountNotFoundResponseDoc	"No account exists for this id"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	errorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	errorResponseDoc	"The session does not own this resource"
+//	@Router			/accounts/{accountId}/disclaimer-acceptance [post]
+func (h *Handler) AcceptDisclaimer(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+
+	id, err := uuid.Parse(chi.URLParam(r, "accountId"))
+	if err != nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, accountNotFoundBody(), nil)
+		return
+	}
+
+	var req acceptDisclaimerRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusBadRequest, "validation_error", "Malformed JSON body", &id)
+		return
+	}
+
+	acceptance, err := h.service.AcceptDisclaimer(r.Context(), id, req.Version)
+	var validationErrs ValidationErrors
+	switch {
+	case errors.As(err, &validationErrs):
+		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody(validationErrs, "One or more fields are invalid"), &id)
+	case errors.Is(err, ErrAccountNotFound):
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, accountNotFoundBody(), nil)
+	case err != nil:
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not record the acknowledgement", &id)
+	default:
+		h.responder.WriteJSON(r.Context(), w, http.StatusOK, disclaimerAcceptanceResponse{
+			Version:    acceptance.Version,
+			AcceptedAt: acceptance.AcceptedAt.UTC().Format(time.RFC3339),
+		}, &id)
+	}
+}
+
+// UpdateReminderSettings handles PATCH /accounts/{accountId}/reminder-settings
+// (specs/011-recordatorios-push/contracts/reminders-api.md).
+//
+//	@Summary		Choose what dose reminders show
+//	@Description	"detailed" (medication, time and child) or "generic" ("Hay una toma programada").
+//	@Description	Applies to every device of the account.
+//	@Tags			accounts
+//	@Accept			json
+//	@Produce		json
+//	@Param			accountId	path		string					true	"Account UUID"
+//	@Param			payload		body		reminderSettingsRequest	true	"What reminders show"
+//	@Success		200			{object}	accountResponse
+//	@Failure		400			{object}	validationErrorResponseDoc	"Not \"detailed\" or \"generic\", or malformed JSON"
+//	@Failure		404			{object}	accountNotFoundResponseDoc	"No account exists for this id"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	errorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	errorResponseDoc	"The session does not own this resource"
+//	@Router			/accounts/{accountId}/reminder-settings [patch]
+func (h *Handler) UpdateReminderSettings(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+
+	id, err := uuid.Parse(chi.URLParam(r, "accountId"))
+	if err != nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, accountNotFoundBody(), nil)
+		return
+	}
+	var req reminderSettingsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusBadRequest, "validation_error", "Malformed JSON body", &id)
+		return
+	}
+
+	acc, err := h.service.UpdateReminderDetail(r.Context(), id, req.ReminderDetail)
+	var validationErrs ValidationErrors
+	switch {
+	case errors.As(err, &validationErrs):
+		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody(validationErrs, "One or more fields are invalid"), &id)
+	case errors.Is(err, ErrAccountNotFound):
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, accountNotFoundBody(), nil)
+	case err != nil:
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not update the reminder settings", &id)
+	default:
+		h.responder.WriteJSON(r.Context(), w, http.StatusOK, toAccountResponse(acc), &id)
+	}
+}
+
+// writeAddChildError mirrors writeCreateAccountError's pattern of calling
+// h.responder directly from each case branch, for distinct error_logs
+// attribution per backend/CLAUDE.md.
+func (h *Handler) writeAddChildError(ctx context.Context, w http.ResponseWriter, err error, accountID uuid.UUID) {
+	var validationErrs ValidationErrors
+	var limitErr *FreemiumLimitError
+	switch {
+	case errors.As(err, &validationErrs):
+		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationErrorBody(validationErrs, "One or more fields are invalid"), &accountID)
+	case errors.Is(err, ErrAccountNotFound):
+		h.responder.WriteJSON(ctx, w, http.StatusNotFound, accountNotFoundBody(), nil)
+	case errors.As(err, &limitErr):
+		// Limit/Received come from the repository's actual row count at the
+		// time of the atomic check (AddChildIfUnderLimit), not a hardcoded
+		// guess — stays correct even if the freemium limit ever changes.
+		h.responder.WriteJSON(ctx, w, http.StatusUnprocessableEntity, freemiumLimitBody(limitErr.Limit, limitErr.Received), &accountID)
+	case errors.Is(err, ErrInvalidNameFormat):
+		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationErrorBody([]ValidationError{
+			{Field: "firstName", Message: "must contain only letters, spaces, hyphens or apostrophes, and be at most 100 characters"},
+		}, "One or more fields are invalid"), &accountID)
+	default:
+		h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", "Could not add child", &accountID)
+	}
+}
+
+func accountNotFoundBody() map[string]string {
+	return map[string]string{"error": "account_not_found", "message": "Account not found"}
+}
+
+// freemiumLimitBody builds the 422 response body shape (FR-007). Pure data
+// shaping only, same rationale as validationErrorBody — shared by both
+// writeCreateAccountError and writeAddChildError so the two 422 bodies can't
+// drift from each other.
+func freemiumLimitBody(limit, received int) map[string]any {
+	return map[string]any{
+		"error":    "freemium_child_limit_exceeded",
+		"message":  "The free plan includes only one child per account",
+		"limit":    limit,
+		"received": received,
+	}
+}
+
+// validationErrorBody builds the 400 response body shape. Pure data
+// shaping only — deliberately does NOT call the responder itself, so every
+// call site above invokes h.responder.WriteJSON directly and gets its own
+// distinct, correctly-attributed error_logs entry (see writeCreateAccountError).
+func validationErrorBody(errs []ValidationError, message string) map[string]any {
+	fields := make([]httpx.FieldError, 0, len(errs))
+	for _, e := range errs {
+		fields = append(fields, httpx.FieldError{Field: e.Field, Message: e.Message})
+	}
+	return httpx.ValidationBody(message, fields)
+}
+
+func toAccountResponse(acc *Account) accountResponse {
+	children := make([]childResponse, 0, len(acc.Children))
+	for _, c := range acc.Children {
+		children = append(children, childResponse{
+			ID:        c.ID.String(),
+			FirstName: c.FirstName,
+			LastName:  c.LastName,
+			BirthDate: c.BirthDate.Format("2006-01-02"),
+			Height:    c.Height,
+			Weight:    c.Weight,
+		})
+	}
+	return accountResponse{
+		ID:          acc.ID.String(),
+		FirstName:   acc.FirstName,
+		LastName:    acc.LastName,
+		Email:       acc.Email,
+		CountryCode: acc.CountryCode,
+		StateCode:   acc.StateCode,
+		Plan:        string(acc.Plan),
+		Children:    children,
+
+		DisclaimerVersion:  CurrentDisclaimerVersion,
+		DisclaimerAccepted: acc.DisclaimerAccepted,
+		ReminderDetail:     acc.ReminderDetail,
+	}
+}

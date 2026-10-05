@@ -1,0 +1,190 @@
+# Especificación: Homologar las pantallas a los mocks
+
+**Rama**: `feature/007-homologar-pantallas-a-mocks` | **Prioridad**: alta (la más importante del backlog)
+**Depende de**: 005 (sistema visual) y 006 (detalle del hijo)
+
+## Contexto
+
+Las pantallas de la app deben ser **iguales a los mocks entregados**, no una interpretación. La regla ya está
+en `CLAUDE.md`: se mide el mock (escala, ancho del marco, tamaños, posiciones), se renderiza la app al mismo
+ancho, se compara lado a lado sección por sección y se lista cada desviación con su motivo.
+
+## Mocks disponibles y estado
+
+Los mocks llegaron completos: el tablero `PediTrack Front-end.dc.html` (pantallas 1–8) y los archivos
+`repo-pr/mockups/01…15` (Tailwind). **Los diseños móvil y web son independientes y nunca se mezclan**
+(regla del usuario, 2026-09-20): la app decide con `useIsDesktop` (ventana ≥ 900 px = web) y renderiza uno u
+otro; no hay clases responsivas `lg:` que combinen ambos.
+
+| Mock | Pantalla | Diseño | Ruta en la app |
+|---|---|---|---|
+| 01 | Registro | móvil | `/signup` < 900 px |
+| 11 | Registro | web (pantalla partida) | `/signup` ≥ 900 px |
+| tablero 2 | Home · listado de hijos (saludo, avatar, chips) | móvil | `/home` < 900 px |
+| 15 (fondo) | Home "Hola, Ana / Tus hijos" con barra lateral | web | `/home` ≥ 900 px |
+| 02 | Detalle del hijo | móvil | `/children/:id` < 900 px |
+| tablero 6 | Escritorio · Home con detalle | web | `/children/:id` ≥ 900 px |
+| 03 | Detalle de consulta | móvil | `/consultations/:id` < 900 px |
+| 13 | Detalle de consulta | web | `/consultations/:id` ≥ 900 px |
+| 04 | Nueva consulta (OCR) | móvil | `/children/:id/consultations/new` < 900 px |
+| 14 | Nueva consulta | web | `/children/:id/consultations/new` ≥ 900 px |
+| tablero 7 | Modal agregar hijo | ambos | modal desde el home / barra lateral |
+| 05 / 15 | Modal límite del plan gratuito | móvil / web | modal al tocar "Agregar hijo" con el plan gratuito lleno |
+
+## Desviaciones respecto a los mocks (decididas o inevitables)
+
+Decidida por el usuario (spec 019, 2026-09-30): el selector «← Día anterior / Día siguiente →» bajo los chips de cada medicamento
+(descrito más abajo) se quitó; ahora el calendario del tratamiento lleva a las tomas de cualquier día.
+
+Con mock (spec 022, 2026-09-30): el calendario del tratamiento y la tarjeta «Cómo leer el calendario» siguen ahora el diseño de Claude Design
+(`specs/022-rebranding-calendario/referencia/`); las 12 desviaciones están en esa spec y las 11 primeras las aprobó el usuario.
+
+Sin mock (spec 020, 2026-09-30): el botón «Recorrer tratamiento», su diálogo (número de tomas editable con la nota de «ingresado
+manualmente»), la línea «Se recorrió el …» de la tarjeta y los círculos rellenos de inicio y fin del calendario no existen en los
+mocks; se diseñaron con los tokens y se muestran para aprobar.
+
+Sin mock (spec 019, 2026-09-30): el bloque «Calendario del tratamiento» del detalle de la consulta (cuadrícula del mes con los
+números de colores de cada medicamento, leyenda y lista de tomas del día) no existe en los mocks; se diseñó con los tokens
+(incluidos los seis `med-*` nuevos) y se muestra para aprobar.
+
+Sin mock (spec 017, 2026-09-30): el indicador de «jalar para actualizar» (píldora oscura arriba, «Jala/Suelta para actualizar»,
+«Actualizando…», y el aviso de falla) y la barra «Hay una versión nueva · Actualizar» (abajo en el móvil, tarjeta en la
+esquina en el web) no existen en los mocks; se diseñaron con los tokens (`ink`, texto blanco, botón de contorno).
+
+Decididas por el usuario:
+
+- **Sin la palabra "OCR" (2026-09-28)**: el primer punto de la lista del mock 11 ("El OCR de la receta corre en tu
+  dispositivo.") dice "Tu receta se lee en tu propio teléfono o computadora.", en el registro y en el login web: la
+  gente no sabe qué es un OCR. Por lo mismo, en Nueva consulta (mocks 04/14) el grupo dice "Leído de tu receta · revisa
+  y confirma" y en el detalle web (mock 13) "Leída en tu equipo".
+- **Lo que pasa con la foto, dicho con verdad (2026-09-28)**: los mocks 04/14/13 decían que la foto "no se envía a ningún
+  servidor" / "no sale del dispositivo" / "no salió de tu equipo". Es falso: solo la lectura del texto ocurre en el
+  dispositivo; la foto se guarda en la cuenta (spec 004). Ahora dicen "El texto se lee en tu teléfono/equipo; la foto se
+  guarda solo en tu cuenta." y "El texto se leyó en tu equipo; la foto se guarda solo en tu cuenta.", como el aviso
+  "Antes de empezar" (spec 009).
+- **Contraseña solo validada**: el campo del mock 11 está en el registro (móvil 01 y web 11; mínimo 8 caracteres) pero **no se envía ni se guarda**: la autenticación será con Clerk o AWS Cognito (BACKLOG).
+- **Botón "Registrarme con Google"** (no está en el mock; lo pidió el usuario) en ambos registros, tras un separador "o". Sin proveedor de autenticación no puede funcionar aún: al tocarlo avisa "El registro con Google estará disponible pronto."
+- Se **conservan los campos actuales**: tutor y hijo con nombre y apellido separados, país/estado (opcionales),
+  talla/peso (opcionales) — el mock 01/11 tiene "Correo, Contraseña, Nombre y apellido, Fecha". En ambos registros quedan dentro del orden del mock: Correo, Contraseña, luego Tu nombre/Tu apellido y País/Estado, y el bloque "Hijo 1 · Gratis" (en móvil, columna de máx. 430 px como el mock; Talla y Peso en dos columnas). Igual en el modal
+  "Agregar hijo" (el mock tiene "Nombre completo").
+- **"Primera toma"** (hora de inicio; se llamaba "Desde" hasta el 2026-09-29, poco claro) en cada medicamento de "Nueva
+  consulta", **obligatoria**; el detalle dice "Cada 8 horas · 3 días · primera toma 08:00". Frecuencia y duración llevan
+  uno o dos dígitos, así que en web tienen un ancho fijo angosto (112 px) y el nombre toma el resto (2026-09-29, a pedido del
+  usuario; cambia la proporción 2fr/1fr/1fr del mock 14). En móvil se quedan a media fila cada una, como el mock 04, y
+  "Primera toma" lleva su etiqueta arriba y va a todo el ancho: con campos angostos las filas quedaban descuadradas. Obligatoria desde el 2026-09-20 porque una consulta es inmutable,
+  así que una hora omitida no se podría completar después y sin ella no hay tomas ni tratamiento activo. El backend también
+  la exige; las consultas anteriores sin hora se quedan como están.
+
+Por límites de datos o del producto:
+
+- El mock 04/14 muestra el panel de OCR ya leyendo ("Leyendo receta · Listo"); la app arranca con el botón
+  **"Seleccionar archivo"** (hace falta un modo de elegir la foto) y pasa al progreso al elegirla. En móvil, ya
+  elegida la foto, el panel es exactamente el del mock (sin fila del selector ni nombre del archivo) y **"Cambiar
+  foto"** va en la fila superior, a la derecha de "← Cancelar" (en web, al extremo derecho del encabezado, igual sin costo de espacio).
+- **Finalizar tratamiento (spec 016, 2026-09-30)**: botón de contorno, diálogo de confirmación, línea "Terminado el …" y chip de toma cancelada en el detalle de la consulta, sin mock, con los tokens de diseño.
+- **Tomas por momento del día (spec 015, 2026-09-29)**: en el detalle de la consulta las tomas del día van en grupos Mañana/Tarde/Noche en vez de una sola fila de chips (los mocks 03/13 dibujan una fila); sin mock.
+- **Barra de progreso (spec 014, 2026-09-29)**: adición sin mock en el detalle de la consulta (móvil y web), entre el nombre del medicamento y su horario.
+- **Chip "sin registrar" (spec 013, 2026-09-29)**: los mocks 02/03/13 y el tablero solo tienen tomada, por marcar y pendiente. El cuarto estado es nuevo, sin mock: borde punteado `slate-400`, la hora y "sin registrar" debajo, sin rojo ni ámbar.
+- **Síntomas y notas (spec 012, 2026-09-29)**: los mocks 04/14 no tienen síntomas para elegir. En ambos diseños hay una
+  sección propia después del grupo "Leído de tu receta" y antes de los medicamentos: "¿Qué síntomas tuvo?" (chips por
+  categoría, sin mock, diseñados con los tokens) y "Notas previas a la consulta" (el antiguo cuadro "Síntomas"). En web
+  esto **saca el cuadro del grupo de la receta, donde lo dibujaba el mock 14**: la receta no trae síntomas y la lectura
+  nunca los llenó. En los detalles (mocks 03/13), "Síntomas registrados" pasa a ser "Síntomas" (pastillas) y "Notas
+  previas a la consulta"; en web van juntas en la tarjeta bajo los medicamentos. El grupo de la receta queda como el
+  mock: solo Doctor y Fecha.
+- El detalle de consulta muestra **una fila de chips por día**, con "← Día anterior / Día siguiente →" cuando
+  el tratamiento dura varios días (el mock enseña una sola fila fija); así toda toma queda alcanzable.
+- El mock 02 muestra una consulta "sin receta"; el backend exige al menos un medicamento por consulta, así que
+  hoy ese caso solo aparecería con datos antiguos (la tarjeta lo soporta).
+- Los mocks (tablero 2, 6, 13–15) muestran un segundo hijo ("Sofía") en el plan gratuito, que permite un solo
+  hijo; la app muestra los hijos reales.
+- Barra lateral de **280 px** (mocks 13/14/15 finales). El tablero declara 300 px pero, al no tener
+  `box-sizing: border-box`, se dibuja de 348 px: es un artefacto del tablero.
+- **Registro web (11)**: medido elemento por elemento contra el mock a 1440, 1280, 1024, 1000 y 900 px. Panel
+  oscuro, título, campos Correo y Contraseña, bloque "Hijo 1" (estilos), botón y texto legal: idénticos en
+  posición, tamaño, tipografía y color. Se adoptó la regla responsiva del propio mock (bajo 1024 px el panel se
+  apila sobre el formulario, con título de 36 px y márgenes menores; antes se apretaba la pantalla partida desde
+  900). El `select` de País mide igual que los campos (50 px). Diferencias: los campos extra (formulario más alto,
+  ver más arriba), el botón de Google y que al crear la cuenta se abre el home (el mock cambia el texto del botón).
+- **Detalle de consulta web (13)**: medido elemento por elemento a 1440, 1280, 1024 y 1000 px (barra lateral,
+  cabecera, columnas 1.5fr/1fr, tarjetas, foto, tratamiento activo): idéntico en posición, tamaño, tipografía y
+  color. Bajo 1024 px, como el mock, sin barra lateral, márgenes de 24 px y una sola columna. Diferencias: el
+  selector "← Día anterior / Día siguiente →" bajo los chips (+32 px por medicamento), el área táctil de 44 px de
+  "← Mateo Morales" y "Ver completa" (misma posición visual), la foto real en vez del dibujo, y "Tratamiento activo"
+  muestra el nombre completo del medicamento ("Amoxicilina 250 mg"; el mock dice "Amoxicilina": el nombre y la
+  dosis se guardan juntos).
+- **Nueva consulta web (14)**: medido elemento por elemento a 1440, 1280, 1024 y 1000 px: encabezado ("← Cancelar", título y
+  "Para Mateo Morales · 5 años 6 meses"), panel del OCR (137 px, separaciones de 16 px), grupo "Sugerido por OCR" (con
+  Síntomas, que en web sí está en el mock) y la fila de tres campos del medicamento (2fr/1fr/1fr) coinciden en posición,
+  tamaño, tipografía y color; bajo 1024 px, como el mock, sin barra lateral y con márgenes de 24 px. Diferencias: la fila del
+  medicamento (desde 2026-09-29 Frecuencia y Duración miden 112 px fijos y Nombre y dosis toma el resto; "Primera toma"
+  va como cuarta columna de 160 px cuando la tarjeta mide 720 px o más, y si no, debajo de Frecuencia y Duración), "Cambiar foto", el
+  estado inicial del panel (sin foto, con "Seleccionar archivo"), el área táctil de 44 px de "← Cancelar" y que al guardar
+  se abre el detalle de la consulta (el mock muestra "Consulta guardada ✓").
+- **Home web y pop-up del plan gratuito (15)**: medido a 1440, 1280, 1024 y 1000 px, cerrado y con el pop-up abierto (barra
+  lateral, "Hola, Ana / Tus hijos", tarjeta, recuadro "Tu plan incluye un hijo", diálogo, cabecera ámbar, textos, botones,
+  capa, sombra y foco inicial en "Ver planes"): idéntico. Se corrigió el margen vertical bajo 1024 px (32 px como el mock, sin
+  barra lateral). El foco vuelve al botón que abrió el pop-up, sea el de la página o el de la barra lateral. Diferencias: el
+  mock muestra un segundo hijo ("Sofía") en la barra lateral, con el plan gratuito de un solo hijo; la app muestra los
+  hijos reales, la edad inactiva de la barra en `#62909d` (contraste 4.5:1) y, en el mock, "Mateo" inactivo va en 800 de
+  peso mientras "Sofía" va en 700 (inconsistencia del mock; la app usa 700 para los inactivos). Al tocar "Ver planes" la app
+  abre `/planes` (el mock solo cambia el texto del botón).
+- **Detalle del hijo móvil (02)**: medido elemento por elemento contra el mock a 430 px (posiciones, tamaños,
+  tipografía, colores, y el estado verde tras "Marcar tomas"): idéntico. Solo difiere el área táctil de
+  "← Tus hijos" y "+ Nueva" (44 px con margen negativo, misma posición visual) y, por el dato del punto anterior,
+  "sin receta". Columna centrada de máx. 430 px, como el mock.
+- **Detalle de consulta móvil (03)**: medido elemento por elemento a 430 px; encabezado, tarjeta de la foto
+  (110 px), síntomas y medicamentos quedan en la misma posición y con las mismas medidas que el mock. Diferencias:
+  la miniatura muestra la foto real (el mock dibuja un documento), el área táctil de 44 px de "← Mateo Morales" y
+  "Ver completa" (margen negativo, misma posición visual), el selector "← Día anterior / Día siguiente →" bajo
+  los chips (+32 px por medicamento; el mock enseña una sola fila fija y sus tres chips no siguen una regla de
+  horario, p. ej. Paracetamol cada 6 h con 3 tomas), y el texto de la toma futura en `slate-600` por contraste.
+  Columna centrada de máx. 430 px.
+- **Nueva consulta móvil (04)**: medido elemento por elemento a 430 px; cabecera (286 px), panel del OCR, grupo
+  "Sugerido por OCR" y tarjeta de medicamento (nombre y dosis, c/8 h, 7 días) en la misma posición, con las mismas
+  medidas y `font-semibold` en Doctor y Fecha. Diferencias: "Cambiar foto", "Síntomas" y "Primera toma"
+  (extras decididos), etiquetas solo para lector de pantalla en los campos del medicamento, el estado inicial
+  del panel (sin foto) y que al guardar se abre el detalle de la consulta (el mock muestra "Consulta guardada ✓").
+  Columna centrada de máx. 430 px.
+- **Pop-up del plan gratuito móvil (05)**: medido a 430 px contra el mock abierto: diálogo, cabecera ámbar, texto,
+  botones, fondo, capa y foco inicial (en "Ver planes") idénticos; también el botón "+ Agregar hijo" y la nota del
+  fondo. El foco vuelve al botón que lo abrió aunque el navegador no lo enfoque al hacer clic (Safari), como en el
+  mock. Diferencia: el fondo del mock 05 es un home sin tarjeta de hijo y con encabezado sin saludo ni avatar; el
+  home real (con su hijo, que es lo que activa el límite) sigue la pantalla 2 del tablero (saludo, avatar, chips).
+  **Decidido por el usuario (2026-09-27): se queda así** — el home no se cambia para parecerse al fondo del mock 05.
+  Columna centrada de máx. 430 px. Al tocar "Ver planes" la app abre `/planes` (el mock solo cambia el texto).
+- Punto de corte web/móvil en **900 px** (el mock usa `lg` = 1024 px para su diseño de tabla). Entre 900 y 1023 px se
+  sigue el diseño responsivo del propio mock web: sin barra lateral y en una columna (mocks 11 y 13 ya lo hacen así;
+  los demás web, al revisarlos); la barra lateral aparece desde 1024 px.
+- Los registros son más altos que sus mocks por los campos conservados y el botón de Google: web 1219 vs 900 px
+  (a 1440 px de ancho; el formulario no queda centrado en vertical en ventanas bajas) y móvil ~1600 vs 921 px.
+
+Por accesibilidad (mínimo 4.5:1, prevalece sobre el mock; se marca, no se rompe en silencio):
+
+- Verde de confirmado `#047857` (el `#059669` del mock no llega a 4.5:1 con texto blanco).
+- Edad inactiva en la barra lateral `#62909d` (el `#5b8b94` del mock da 4.3:1 sobre el fondo oscuro).
+- Chip de toma futura con `text-slate-600`.
+
+## Requisitos
+
+- **FR-001**: Cada pantalla con mock DEBE quedar visualmente igual: mismas secciones, orden, textos, colores y
+  tamaños, medidos sobre el mock y comparados lado a lado al ancho del marco del mock.
+- **FR-002**: Si el mock muestra datos que la API no tiene, se construye el dato (endpoint + spec); no se
+  sustituye el contenido.
+- **FR-003**: Toda desviación (p. ej. un color que incumple 4.5:1) se lista con su motivo y la decide el usuario.
+- **FR-004**: Después de igualar cada pantalla se prueban **todos** sus botones y campos de texto en un
+  navegador real, a escritorio y a móvil (abrir/cerrar, validaciones, envío, foco, Escape, sin errores de consola).
+- **FR-005**: En web (≥ 900 px) `/home` es "Hola, Ana / Tus hijos" con la cuadrícula de hijos y la barra lateral
+  (mock 15); el detalle del hijo activo vive en `/children/:id` (tablero 6). Con cero hijos se muestra el estado
+  vacío. *(Corrige la primera versión, que redirigía `/home` al detalle y contradecía el mock 15.)*
+- **FR-006**: Los diseños móvil y web se renderizan por separado (`useIsDesktop`); ningún componente mezcla el
+  uno con el otro con clases responsivas.
+- **FR-007**: "Agregar hijo" con el plan gratuito lleno muestra de inmediato el pop-up del plan (mocks 05/15),
+  sin pedir llenar el formulario primero.
+- **FR-008**: "Nueva consulta" es una **página** (no un modal): "← Cancelar" vuelve al hijo y, si ya hay algo
+  capturado (campos o foto), pide confirmar antes de descartar.
+
+## Criterios de éxito
+
+- **SC-001**: Por cada mock, una comparación lado a lado (captura del mock y de la app al mismo ancho) sin diferencias de estructura.
+- **SC-002**: El recorrido automático de botones y campos no reporta desbordes, elementos tapados ni errores de consola.
