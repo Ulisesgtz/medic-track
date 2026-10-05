@@ -144,7 +144,7 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
   "Adiciones Futuras Previstas".
 - **Qué incluye el plan de pago (premium)** — **decidido el 2026-10-05** con el dueño del producto; **falta construirlo**, en el
   orden de «Orden sugerido» al final. Hoy `paid` solo sube el tope de hijos de 1 a 10 (spec 029) y se da a mano con SQL; no
-  hay cobro. Lo que sigue **abierto** está marcado «por confirmar».
+  hay cobro. Lo único abierto es la pregunta legal y lo de Clerk (abajo).
   - **Gratis y pago**
     - **Gratis:** 1 hijo y **una consulta con tratamiento activo a la vez** («activo» se deriva de las tomas, sin juicio
       médico: tiene una toma por delante y no se finalizó). Al terminar, o al finalizarlo (spec 016), puede registrar la
@@ -176,12 +176,12 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
       **unirse a otra familia con plan de pago** (o ser invitado de nuevo por quien reactive el plan).
     - **Desvincular — decidido: lo pide solo el invitado, nunca al revés.** Un tutor **no puede quitarle el acceso a otro
       tutor** (separación, custodia): el que quiere salir es quien lo solicita. La única forma de «cortar» a alguien es que
-      el que paga cancele el plan, y entonces queda en solo lectura. **Por confirmar (propuestas):** (a) este «no se puede
+      el que paga cancele el plan, y entonces queda en solo lectura. **Confirmado el 2026-10-05:** (a) este «no se puede
       quitar» vale entre **Tutores**; un *Cuidador* o un *Hijo* sí los puede quitar cualquier Tutor (si no, no se podría
       despedir a una niñera); (b) la desvinculación se hace **al momento**, sin que nadie la apruebe (si el que paga tuviera
-      que aceptarla, tendría control indirecto); (c) **qué se lleva** quien sale: lo recomendable es nada de la familia
-      (los datos son de la cuenta dueña) pero con un aviso y la opción de **exportar antes**; (d) si en solo lectura puede
-      **seguir marcando tomas** (recomendado que sí: es seguridad, no «agregar», y la cuenta gratis también marca).
+      que aceptarla, tendría control indirecto); (c) **qué se lleva** quien sale: nada de la familia
+      (los datos son de la cuenta dueña), con un aviso y la opción de **exportar antes**; (d) en solo lectura **sigue
+      pudiendo marcar tomas** (es seguridad, no «agregar», y la cuenta gratis también marca).
     - **Pregunta legal pendiente** (antes de lanzarlo): que un tutor no pueda quitar al otro, y que el que paga siga viendo
       a un ex-tutor con acceso de lectura, hay que confirmarlo con alguien legal (LFPDPPP, datos de salud de menores,
       derechos del titular y de la patria potestad). El rol *Hijo* también: confirmar con Clerk si admite cuentas de menores
