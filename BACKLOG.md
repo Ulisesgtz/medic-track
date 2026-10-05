@@ -149,15 +149,18 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
     tienen **el mismo acceso**: ven los mismos hijos y consultas, y los dos pueden agregar hijos, consultas y marcar tomas.
     Mejoras sobre la idea original:
     - **Roles, no solo «pareja»:** *Tutor* (igual que quien invita: agrega y marca), *Cuidador* (abuela, niñera: ve y marca
-      tomas, no agrega ni invita; ya estaba en la memoria como palanca de «cuidador compartido») y *Hijo/hija* (solo ve su
-      tratamiento y recibe sus avisos). Un tutor decide el rol al invitar y puede quitar el acceso cuando quiera.
+      tomas, no agrega ni invita; ya estaba en la memoria como palanca de «cuidador compartido») y *Hijo/hija* (ve **su**
+      tratamiento, recibe sus avisos y **marca sus propias tomas**, también desde el aviso con «Tomada»; no agrega ni invita
+      ni ve a sus hermanos). En permisos hay solo dos niveles: *completo* (Tutor) y *ver y marcar* (Cuidador e Hijo); el
+      Hijo se distingue por ver solo su perfil y por la edad mínima. Un tutor decide el rol al invitar y puede quitar el
+      acceso cuando quiera.
     - **Lo que más vale de compartir es no dar dos veces la misma dosis:** que la toma que marcó uno aparezca ya marcada en el
-      teléfono del otro (la pantalla ya se actualiza cada 60 s) y **quién la marcó** («Marcada por Ana, 08:05»; solo registra,
-      Principio I). Un recordatorio no debe llegar a quien ya la vio marcada.
+      teléfono del otro (la pantalla ya se actualiza cada 60 s) y **quién la marcó** («Marcada por Ana, 08:05» o «por Luis»,
+      cuando la marca el hijo; solo registra, Principio I). Un recordatorio no debe llegar a quien ya la vio marcada.
     - **Invitación:** por correo o por liga de un solo uso que vence (7 días). La persona crea su cuenta (Clerk) o entra a la
       suya y acepta; el tutor ve «Pendiente / Aceptada». Máximo de personas por familia (p. ej. 4).
     - **El hijo como usuario:** solo desde cierta edad (p. ej. 13+, por las condiciones de Clerk y el aviso de privacidad de
-      menores) y con la aprobación del tutor; solo lectura + avisos. Más sensible que los demás roles: revisar el aviso
+      menores) y con la aprobación del tutor; ve y marca sus tomas + avisos. Más sensible que los demás roles: revisar el aviso
       legal antes (LFPDPPP, datos de salud de menores).
     - **Consentimiento y aviso:** compartir significa que **otra persona ve datos médicos del menor**: texto nuevo en el aviso
       «Antes de empezar» (subir `CurrentDisclaimerVersion`) y que quien acepta una invitación vea y confirme qué va a ver.
@@ -199,7 +202,8 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
     3. Si el que paga cancela: ¿los invitados conservan lectura? ¿cuánto tiempo?
     4. Separación o disputa de custodia: ¿puede un tutor quitarle el acceso al otro? (Recomendado: solo quien creó al hijo,
        y queda registro.) Conviene preguntarlo a alguien legal antes de lanzarlo.
-    5. Edad mínima y consentimiento para el rol *Hijo*.
+    5. Edad mínima y consentimiento para el rol *Hijo*. Lo que el hijo marca queda registrado como suyo («por Luis»): la app solo lo
+       registra, y el tutor puede verlo y desmarcarlo si se equivocó.
     6. ¿Se cobra por familia, por hijos o por funciones? El corte de la memoria es por funciones y 2+ hijos (MX$399–499 al año).
   - **Antes de cobrar algo hay que tener:** (a) un **proveedor de pagos** (Stripe con tarjeta y OXXO/SPEI, o Mercado Pago;
     en una PWA no aplica la tienda de Apple/Google); (b) que el plan deje de ser un simple `free`/`paid` y guarde **estado,
