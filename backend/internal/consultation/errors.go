@@ -31,6 +31,10 @@ var (
 	// unregistered dose left to cover — also what a second attempt for the same doses gets, so nothing is ever added twice.
 	ErrNothingToExtend = errors.New("nothing to extend")
 
+	// ErrDoseForbidden is returned when someone unmarks a dose they may not: only the person who marked it, or someone who
+	// can do everything (the owner or a Tutor), unmarks it (specs/032).
+	ErrDoseForbidden = errors.New("not allowed to unmark this dose")
+
 	// ErrPlanLimit is what a *PlanLimitError matches with errors.Is: the account's plan doesn't include what the
 	// parent asked for (specs/030-reglas-plan-gratis).
 	ErrPlanLimit = errors.New("the free plan does not include this")

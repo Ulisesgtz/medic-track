@@ -48,7 +48,7 @@ for (const design of designs) {
       await old.click()
       await expect(page.getByText('1 / 3 tomas', { exact: true })).toBeVisible()
       await expect(old).toHaveAttribute('aria-pressed', 'true')
-      await expect(old).toHaveText('00:00 ✓')
+      await expect(old).toContainText('00:00 ✓')
 
       await old.click()
       await expect(old).toHaveAttribute('aria-pressed', 'false')

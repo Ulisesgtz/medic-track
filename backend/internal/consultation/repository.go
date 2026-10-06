@@ -358,18 +358,22 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Consultation, 
 	for i := range c.Medications {
 		med := &c.Medications[i]
 		doseRows, err := r.pool.Query(ctx, `
-			SELECT id, scheduled_at, taken, created_at, covered_by_extension_id IS NOT NULL
-			FROM doses WHERE medication_id = $1 ORDER BY scheduled_at ASC
+			SELECT d.id, d.scheduled_at, d.taken, d.created_at, d.covered_by_extension_id IS NOT NULL,
+			       d.taken_by_account_id, a.first_name, d.taken_at
+			FROM doses d LEFT JOIN accounts a ON a.id = d.taken_by_account_id
+			WHERE d.medication_id = $1 ORDER BY d.scheduled_at ASC
 		`, med.ID)
 		if err != nil {
 			return nil, fmt.Errorf("querying doses: %w", err)
 		}
 		for doseRows.Next() {
 			dose := Dose{MedicationID: med.ID}
-			if err := doseRows.Scan(&dose.ID, &dose.ScheduledAt, &dose.Taken, &dose.CreatedAt, &dose.Covered); err != nil {
+			var by markAuthor
+			if err := doseRows.Scan(&dose.ID, &dose.ScheduledAt, &dose.Taken, &dose.CreatedAt, &dose.Covered, &by.accountID, &by.name, &by.at); err != nil {
 				doseRows.Close()
 				return nil, fmt.Errorf("scanning dose: %w", err)
 			}
+			dose.TakenBy = by.takenBy()
 			dose.Status = StatusAt(dose.ScheduledAt, dose.Taken, med.FrequencyHours, med.EndedAt, now)
 			med.Doses = append(med.Doses, dose)
 		}
@@ -424,31 +428,103 @@ func extensionsOf(ctx context.Context, q rowsQuerier, medicationID uuid.UUID) ([
 	return out, rows.Err()
 }
 
-// UpdateDoseStatus sets a dose's taken status, with no validation of
-// scheduled_at or treatment status (FR-016). The update is scoped to
-// consultationID via medications' consultation_id, so a doseID that exists
-// but belongs to a different consultation is correctly treated as not found
-// — matching ErrDoseNotFound's own contract. Returns ErrDoseNotFound if no
-// matching dose exists. The returned Status is read after the change, so
-// unmarking a dose whose next one already came gives "unregistered" (specs/013).
-func (r *Repository) UpdateDoseStatus(ctx context.Context, consultationID, id uuid.UUID, taken bool) (*Dose, error) {
+// markAuthor is the nullable columns of who marked a dose, as the queries scan them.
+type markAuthor struct {
+	accountID *uuid.UUID
+	name      *string
+	at        *time.Time
+}
+
+// takenBy is nil unless the dose has an author (one marked before specs/032 has none).
+func (m markAuthor) takenBy() *TakenBy {
+	if m.accountID == nil || m.name == nil || m.at == nil {
+		return nil
+	}
+	return &TakenBy{AccountID: *m.accountID, Name: *m.name, At: *m.at}
+}
+
+// authorOrNil is what the doses table stores for who marked: no account (a session without one cannot reach here, but a
+// test without a session can) means no author.
+func authorOrNil(id uuid.UUID) *uuid.UUID {
+	if id == uuid.Nil {
+		return nil
+	}
+	return &id
+}
+
+// UpdateDoseStatus marks or unmarks a dose of the consultation (specs/004, specs/032). Marking is atomic and the FIRST
+// mark wins: it only acts if the dose wasn't marked, so two people marking at once leave one mark with the first one's
+// author, and the second sees the dose as it already was. Unmarking needs the person to have marked it or to be able to do
+// everything (a dose marked before the feature, with no author, only the latter); otherwise ErrDoseForbidden. It scopes
+// the update to consultationID, so a dose of another consultation is ErrDoseNotFound. The returned Status is read after the
+// change, so a dose marked after its time reads taken.
+func (r *Repository) UpdateDoseStatus(ctx context.Context, consultationID, id uuid.UUID, taken bool, actor Actor) (*Dose, error) {
+	author := authorOrNil(actor.AccountID)
+
+	var query string
+	var args []any
+	if taken {
+		query = `
+			UPDATE doses SET taken = true, taken_by_account_id = $3, taken_at = now()
+			FROM medications m
+			WHERE doses.id = $1 AND m.id = doses.medication_id AND m.consultation_id = $2 AND NOT doses.taken
+			RETURNING doses.medication_id, doses.scheduled_at, doses.created_at, m.frequency_hours, m.ended_at,
+			          doses.taken_by_account_id, (SELECT first_name FROM accounts WHERE id = doses.taken_by_account_id), doses.taken_at`
+		args = []any{id, consultationID, author}
+	} else {
+		query = `
+			UPDATE doses SET taken = false, taken_by_account_id = NULL, taken_at = NULL
+			FROM medications m
+			WHERE doses.id = $1 AND m.id = doses.medication_id AND m.consultation_id = $2
+			  AND (NOT doses.taken OR $3::boolean OR doses.taken_by_account_id = $4)
+			RETURNING doses.medication_id, doses.scheduled_at, doses.created_at, m.frequency_hours, m.ended_at,
+			          doses.taken_by_account_id, (SELECT first_name FROM accounts WHERE id = doses.taken_by_account_id), doses.taken_at`
+		args = []any{id, consultationID, actor.Full, author}
+	}
+
 	dose := &Dose{ID: id, Taken: taken}
 	var frequencyHours int
 	var endedAt *time.Time
-	err := r.pool.QueryRow(ctx, `
-		UPDATE doses SET taken = $1
-		FROM medications m
-		WHERE doses.id = $2
-		  AND m.id = doses.medication_id
-		  AND m.consultation_id = $3
-		RETURNING doses.medication_id, doses.scheduled_at, doses.created_at, m.frequency_hours, m.ended_at
-	`, taken, id, consultationID).Scan(&dose.MedicationID, &dose.ScheduledAt, &dose.CreatedAt, &frequencyHours, &endedAt)
+	var by markAuthor
+	err := r.pool.QueryRow(ctx, query, args...).Scan(&dose.MedicationID, &dose.ScheduledAt, &dose.CreatedAt, &frequencyHours, &endedAt, &by.accountID, &by.name, &by.at)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// Nothing changed: the dose isn't there, it was already marked (marking: the first wins, return it as it is) or the
+		// person may not unmark it.
+		return r.unchangedDose(ctx, consultationID, id, taken)
+	}
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrDoseNotFound
-		}
 		return nil, fmt.Errorf("updating dose: %w", err)
 	}
+	dose.TakenBy = by.takenBy()
+	dose.Status = StatusAt(dose.ScheduledAt, dose.Taken, frequencyHours, endedAt, r.now())
+	return dose, nil
+}
+
+// unchangedDose answers an update that changed nothing: ErrDoseNotFound if there is no such dose of that consultation; for
+// a mark that found the dose already marked, the dose as it is; for an unmark it may not do, ErrDoseForbidden.
+func (r *Repository) unchangedDose(ctx context.Context, consultationID, id uuid.UUID, wantedTaken bool) (*Dose, error) {
+	dose := &Dose{ID: id}
+	var frequencyHours int
+	var endedAt *time.Time
+	var by markAuthor
+	err := r.pool.QueryRow(ctx, `
+		SELECT d.medication_id, d.scheduled_at, d.created_at, d.taken, m.frequency_hours, m.ended_at,
+		       d.taken_by_account_id, a.first_name, d.taken_at
+		FROM doses d
+		JOIN medications m ON m.id = d.medication_id
+		LEFT JOIN accounts a ON a.id = d.taken_by_account_id
+		WHERE d.id = $1 AND m.consultation_id = $2
+	`, id, consultationID).Scan(&dose.MedicationID, &dose.ScheduledAt, &dose.CreatedAt, &dose.Taken, &frequencyHours, &endedAt, &by.accountID, &by.name, &by.at)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrDoseNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("reading dose: %w", err)
+	}
+	if !wantedTaken && dose.Taken {
+		return nil, ErrDoseForbidden
+	}
+	dose.TakenBy = by.takenBy()
 	dose.Status = StatusAt(dose.ScheduledAt, dose.Taken, frequencyHours, endedAt, r.now())
 	return dose, nil
 }
@@ -605,10 +681,12 @@ func (r *Repository) GetOverview(ctx context.Context, childID uuid.UUID, from, t
 	}
 
 	doseRows, err := r.pool.Query(ctx, `
-		SELECT d.id, m.consultation_id, m.name, d.scheduled_at, d.taken, m.frequency_hours
+		SELECT d.id, m.consultation_id, m.name, d.scheduled_at, d.taken, m.frequency_hours,
+		       d.taken_by_account_id, a.first_name, d.taken_at
 		FROM doses d
 		JOIN medications m ON m.id = d.medication_id
 		JOIN consultations c ON c.id = m.consultation_id
+		LEFT JOIN accounts a ON a.id = d.taken_by_account_id
 		WHERE c.child_id = $1 AND d.scheduled_at >= $2 AND d.scheduled_at < $3
 		  -- A dose canceled by ending the treatment early is not one of today's (specs/016).
 		  AND NOT (m.ended_at IS NOT NULL AND d.scheduled_at > m.ended_at AND NOT d.taken)
@@ -623,9 +701,11 @@ func (r *Repository) GetOverview(ctx context.Context, childID uuid.UUID, from, t
 	for doseRows.Next() {
 		var d DoseOverview
 		var frequencyHours int
-		if err := doseRows.Scan(&d.ID, &d.ConsultationID, &d.MedicationName, &d.ScheduledAt, &d.Taken, &frequencyHours); err != nil {
+		var by markAuthor
+		if err := doseRows.Scan(&d.ID, &d.ConsultationID, &d.MedicationName, &d.ScheduledAt, &d.Taken, &frequencyHours, &by.accountID, &by.name, &by.at); err != nil {
 			return nil, fmt.Errorf("scanning dose: %w", err)
 		}
+		d.TakenBy = by.takenBy()
 		d.Status = StatusAt(d.ScheduledAt, d.Taken, frequencyHours, nil, now) // canceled ones are filtered out above
 		overview.Doses = append(overview.Doses, d)
 	}

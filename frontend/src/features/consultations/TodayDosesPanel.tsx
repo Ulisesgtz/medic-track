@@ -1,10 +1,12 @@
 import { formatTime } from '../../shared/date'
 import { useDoseToggle } from './useDoseToggle'
-import { DOSE_CHIP_STYLE, UNREGISTERED_LABEL, isUnregistered } from './doseStatus'
+import { DOSE_CHIP_STYLE, UNREGISTERED_LABEL, canUnmarkDose, isUnregistered, takenByText } from './doseStatus'
 import type { OverviewDose } from './types'
 
 interface DoseRowProps {
   dose: OverviewDose
+  /** Whether the session can take back a mark somebody else made (specs/032). */
+  canManage: boolean
 }
 
 /**
@@ -14,7 +16,7 @@ interface DoseRowProps {
  * never a medical alert (Principio I). A dose "sin registrar" (specs/013)
  * says so on its chip, still marks it when tapped.
  */
-function DoseRow({ dose }: DoseRowProps) {
+function DoseRow({ dose, canManage }: DoseRowProps) {
   const time = formatTime(dose.scheduledAt)
   const mutation = useDoseToggle(dose.consultationId, dose.id)
   const unregistered = isUnregistered(dose)
@@ -24,8 +26,11 @@ function DoseRow({ dose }: DoseRowProps) {
 
   return (
     <li className="flex min-h-11 items-center justify-between gap-3">
-      <span className="min-w-0 truncate text-[15px] font-bold text-ink">
-        {time} {dose.medicationName}
+      <span className="min-w-0 text-[15px] font-bold text-ink">
+        <span className="block truncate">
+          {time} {dose.medicationName}
+        </span>
+        {dose.taken && dose.takenBy && <span className="block truncate text-xs font-semibold text-slate-600">{takenByText(dose.takenBy)}</span>}
       </span>
       <button
         type="button"
@@ -34,7 +39,7 @@ function DoseRow({ dose }: DoseRowProps) {
         aria-pressed={dose.taken}
         aria-label={`Toma de ${time} ${dose.medicationName}`}
         aria-describedby={unregistered ? stateId : undefined}
-        disabled={mutation.isPending}
+        disabled={mutation.isPending || !canUnmarkDose(dose, canManage)}
         onClick={() => mutation.mutate(!dose.taken)}
         className="flex min-h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center focus:outline-none disabled:cursor-not-allowed disabled:opacity-60 [&:focus-visible>span]:ring-2 [&:focus-visible>span]:ring-action [&:focus-visible>span]:ring-offset-2"
       >
@@ -59,10 +64,12 @@ interface TodayDosesPanelProps {
   /** Overview still loading, or it failed: shown instead of the list. */
   status: 'ready' | 'loading' | 'error'
   className?: string
+  /** Whether the session can take back a mark somebody else made (specs/032). Absent = yes. */
+  canManage?: boolean
 }
 
 /** The "Tomas de hoy" panel of the desktop child detail (board screen 6): today's doses, markable in place. */
-export function TodayDosesPanel({ doses, status, className = '' }: TodayDosesPanelProps) {
+export function TodayDosesPanel({ doses, status, className = '', canManage = true }: TodayDosesPanelProps) {
   return (
     <section
       aria-labelledby="today-doses-title"
@@ -81,7 +88,7 @@ export function TodayDosesPanel({ doses, status, className = '' }: TodayDosesPan
       {status === 'ready' && doses.length > 0 && (
         <ul className="mt-3 flex flex-col">
           {doses.map((dose) => (
-            <DoseRow key={dose.id} dose={dose} />
+            <DoseRow key={dose.id} dose={dose} canManage={canManage} />
           ))}
         </ul>
       )}

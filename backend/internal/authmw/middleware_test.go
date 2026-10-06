@@ -13,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/Ulisesgtz/medic-track/backend/internal/access"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw/authmwtest"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
@@ -173,4 +174,91 @@ func TestRequireOwner_WithoutASessionIs401(t *testing.T) {
 	rec := getThing(router, "/no-session/"+uuid.NewString(), "")
 
 	require.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+// specs/032: RequireAccess generalizes RequireOwner to "what can the session do with it?".
+
+func newAccessRouter(t *testing.T, min access.Level, check authmw.AccessCheck, next http.HandlerFunc) (http.Handler, *authmwtest.Verifier) {
+	t.Helper()
+	responder := newTestResponder()
+	verifier := authmwtest.NewVerifier(t, responder)
+	r := chi.NewRouter()
+	r.With(verifier.Middleware, authmw.RequireAccess(responder, "id", min, check)).Get("/things/{id}", next)
+	r.With(authmw.RequireAccess(responder, "id", min, check)).Get("/no-session/{id}", next)
+	return r, verifier
+}
+
+func levelCheck(level access.Level) authmw.AccessCheck {
+	return func(context.Context, string, uuid.UUID) (access.Access, error) {
+		return access.Access{Level: level, ActorAccountID: uuid.MustParse("00000000-0000-0000-0000-0000000000aa")}, nil
+	}
+}
+
+func TestRequireAccess_ALevelThatReachesTheMinimumPassesAndTheHandlerKnowsWhoActs(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		have, need access.Level
+	}{
+		{"mark for mark", access.Mark, access.Mark},
+		{"full for mark", access.Full, access.Mark},
+		{"full for full", access.Full, access.Full},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var got access.Access
+			router, verifier := newAccessRouter(t, tc.need, levelCheck(tc.have), func(w http.ResponseWriter, r *http.Request) {
+				got, _ = access.FromContext(r.Context())
+				w.WriteHeader(http.StatusNoContent)
+			})
+
+			rec := getThing(router, "/things/"+uuid.NewString(), verifier.Token(t, "user_x"))
+
+			require.Equal(t, http.StatusNoContent, rec.Code)
+			require.Equal(t, tc.have, got.Level)
+			require.Equal(t, uuid.MustParse("00000000-0000-0000-0000-0000000000aa"), got.ActorAccountID)
+		})
+	}
+}
+
+func TestRequireAccess_ALowerLevelOrNoneIs403AndNeverReachesTheHandler(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		have, need access.Level
+	}{
+		{"mark for full", access.Mark, access.Full},
+		{"none for mark", access.None, access.Mark},
+		{"none for full", access.None, access.Full},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			router, verifier := newAccessRouter(t, tc.need, levelCheck(tc.have), func(http.ResponseWriter, *http.Request) {
+				t.Fatal("handler must not run when the level is not enough")
+			})
+
+			rec := getThing(router, "/things/"+uuid.NewString(), verifier.Token(t, "user_x"))
+
+			require.Equal(t, http.StatusForbidden, rec.Code)
+			var body map[string]string
+			require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+			require.Equal(t, "forbidden", body["error"])
+		})
+	}
+}
+
+func TestRequireAccess_CheckFailureIs500(t *testing.T) {
+	router, verifier := newAccessRouter(t, access.Mark, func(context.Context, string, uuid.UUID) (access.Access, error) {
+		return access.Access{}, errors.New("db down")
+	}, func(http.ResponseWriter, *http.Request) { t.Fatal("handler must not run when access can't be verified") })
+
+	rec := getThing(router, "/things/"+uuid.NewString(), verifier.Token(t, "user_x"))
+
+	require.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestRequireAccess_MalformedIDFallsThroughAndNoSessionIs401(t *testing.T) {
+	router, verifier := newAccessRouter(t, access.Mark, func(context.Context, string, uuid.UUID) (access.Access, error) {
+		t.Fatal("the check must not run for a malformed id or without a session")
+		return access.Access{}, nil
+	}, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) })
+
+	require.Equal(t, http.StatusNotFound, getThing(router, "/things/not-a-uuid", verifier.Token(t, "user_x")).Code)
+	require.Equal(t, http.StatusUnauthorized, getThing(router, "/no-session/"+uuid.NewString(), "").Code)
 }

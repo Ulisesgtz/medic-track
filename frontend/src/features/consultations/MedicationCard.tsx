@@ -26,13 +26,18 @@ interface MedicationCardProps {
   day: string | null
   /** The parent's local today, `YYYY-MM-DD`. */
   today: string
+  /**
+   * Whether the session can end or extend the treatment (specs/032: only who can do everything in the family; a Caregiver
+   * only marks doses). The server enforces it; this keeps the buttons from being offered. Absent = yes.
+   */
+  canManage?: boolean
 }
 
 /**
  * A medication with its schedule line and the chips of the day chosen in the treatment calendar (specs/023), grouped by
  * moment of the day (specs/015). Progress and the end/extend state always count the whole medication.
  */
-export function MedicationCard({ consultationId, medication, variant, day, today }: MedicationCardProps) {
+export function MedicationCard({ consultationId, medication, variant, day, today, canManage = true }: MedicationCardProps) {
   const chips = day ? dosesOfDay(medication, day) : []
 
   // specs/016: ending the treatment early. Offered while it runs and has doses still ahead; afterwards the card says
@@ -41,7 +46,7 @@ export function MedicationCard({ consultationId, medication, variant, day, today
   const endButton = useRef<HTMLButtonElement>(null)
   const endMutation = useEndTreatment(consultationId, medication.id)
   const closeConfirm = useCallback(() => setConfirming(false), [setConfirming])
-  const canEnd = !medication.endedAt && medication.doses.some((d) => d.status === 'pending')
+  const canEnd = canManage && !medication.endedAt && medication.doses.some((d) => d.status === 'pending')
 
   // specs/020: adding doses to the end, only when the parent decides (their doctor said so). Offered while there are
   // unregistered doses not covered yet; the card says afterwards that it was done.
@@ -52,7 +57,7 @@ export function MedicationCard({ consultationId, medication, variant, day, today
   // A backend that predates spec 020 (both versions are deployed for a while) sends neither field: nothing to offer.
   const extendable = medication.extendableDoses ?? 0
   const extensions = medication.extensions ?? []
-  const canExtend = !medication.endedAt && extendable > 0
+  const canExtend = canManage && !medication.endedAt && extendable > 0
   const lastExtension = extensions[extensions.length - 1]
   // Another device extended it while the dialog was open: nothing is left to cover, so the dialog closes for good —
   // otherwise it would pop up again the day new doses turn unregistered.
@@ -86,7 +91,7 @@ export function MedicationCard({ consultationId, medication, variant, day, today
           </p>
           <div className="mt-2 flex flex-wrap gap-2.5">
             {group.doses.map((dose) => (
-              <DoseChip key={dose.id} consultationId={consultationId} dose={dose} />
+              <DoseChip key={dose.id} consultationId={consultationId} dose={dose} canManage={canManage} />
             ))}
           </div>
         </div>

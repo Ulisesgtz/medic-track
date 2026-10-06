@@ -207,7 +207,7 @@ func TestRepository_UpdateDoseStatus(t *testing.T) {
 	require.NoError(t, repo.Create(context.Background(), childID, created))
 	doseID := created.Medications[0].Doses[0].ID
 
-	updated, err := repo.UpdateDoseStatus(context.Background(), created.ID, doseID, true)
+	updated, err := repo.UpdateDoseStatus(context.Background(), created.ID, doseID, true, anyone)
 
 	require.NoError(t, err)
 	require.True(t, updated.Taken)
@@ -217,7 +217,7 @@ func TestRepository_UpdateDoseStatus_NotFound(t *testing.T) {
 	pool := testPool(t)
 	repo := consultation.NewRepository(pool)
 
-	_, err := repo.UpdateDoseStatus(context.Background(), uuid.New(), uuid.New(), true)
+	_, err := repo.UpdateDoseStatus(context.Background(), uuid.New(), uuid.New(), true, anyone)
 
 	require.ErrorIs(t, err, consultation.ErrDoseNotFound)
 }
@@ -239,7 +239,7 @@ func TestRepository_UpdateDoseStatus_WrongConsultation(t *testing.T) {
 	require.NoError(t, repo.Create(context.Background(), childID, created))
 	doseID := created.Medications[0].Doses[0].ID
 
-	_, err := repo.UpdateDoseStatus(context.Background(), uuid.New(), doseID, true)
+	_, err := repo.UpdateDoseStatus(context.Background(), uuid.New(), doseID, true, anyone)
 
 	require.ErrorIs(t, err, consultation.ErrDoseNotFound)
 
@@ -294,7 +294,7 @@ func TestRepository_UpdateDoseStatus_ConnectionError(t *testing.T) {
 	}
 	repo := consultation.NewRepository(closedPool(t, dsn))
 
-	_, err := repo.UpdateDoseStatus(context.Background(), uuid.New(), uuid.New(), true)
+	_, err := repo.UpdateDoseStatus(context.Background(), uuid.New(), uuid.New(), true, anyone)
 
 	require.Error(t, err)
 }

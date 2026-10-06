@@ -6,6 +6,8 @@ import { HomePage } from './features/home/HomePage'
 import { ChildDetailPage } from './features/consultations/ChildDetailPage'
 import { ConsultationDetailPage } from './features/consultations/ConsultationDetailPage'
 import { HistoryPage } from './features/consultations/HistoryPage'
+import { FamilyPage } from './features/family/FamilyPage'
+import { InvitationPage } from './features/family/InvitationPage'
 import { NewConsultationPage } from './features/consultations/NewConsultationPage'
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage'
 import { LoginPage } from './features/auth/LoginPage'
@@ -79,6 +81,16 @@ function App() {
               </RequireSession>
             }
           />
+          <Route
+            path="/familia"
+            element={
+              <RequireSession>
+                <FamilyPage />
+              </RequireSession>
+            }
+          />
+          {/* Public on purpose: an invitation is opened before the person has a session; the page itself asks for one. */}
+          <Route path="/familia/invitacion" element={<InvitationPage />} />
           <Route path="/" element={<Navigate to="/signup" replace />} />
           {/* "Ver planes" of the freemium pop-up lands here until the plans screen exists (BACKLOG). */}
           <Route

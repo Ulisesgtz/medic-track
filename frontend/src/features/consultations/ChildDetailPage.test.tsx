@@ -521,3 +521,88 @@ describe('ChildDetailPage, the history entry (specs/031)', () => {
     expect(await screen.findByRole('dialog', { name: 'Historial con búsqueda y filtros' })).toBeInTheDocument()
   })
 })
+
+// specs/032: the web panel of today's doses says who marked a dose.
+describe('ChildDetailPage, who marked the doses of the day (specs/032)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 8, 16, 12))
+    useSession()
+    useWeb()
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+    window.localStorage.clear()
+  })
+
+  it('shows "por Ana, 08:05" under a marked dose and nothing under the others', async () => {
+    const marked = { ...dose('d1', 8, 'Amoxicilina', true), takenBy: { name: 'Ana', at: new Date(2026, 8, 16, 8, 5).toISOString() } }
+    const open = dose('d2', 16, 'Amoxicilina', false)
+    stubApi({ overview: { childId: 'child-1', doses: [marked, open], activeTreatment: null } })
+    renderPage()
+
+    expect(await screen.findByText('por Ana, 08:05')).toBeInTheDocument()
+    expect(screen.getAllByText(/^por /)).toHaveLength(1)
+  })
+})
+
+// specs/032: what the session can do depends on its role over THIS child and on the plan of the child's FAMILY.
+describe('ChildDetailPage, shared children (specs/032)', () => {
+  const own = account.children[0]
+  const running = {
+    childId: 'child-1',
+    doses: [],
+    activeTreatment: { medicationName: 'Amoxicilina', endsAt: new Date(2026, 8, 18, 8).toISOString(), otherCount: 0 },
+  }
+  const share = (extra: Record<string, unknown>) => {
+    account.children[0] = { ...own, accountId: 'owner-1', ...extra } as typeof own
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 8, 16, 12))
+    useSession()
+    useWeb()
+  })
+  afterEach(() => {
+    account.plan = 'free'
+    account.children[0] = own
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+    window.localStorage.clear()
+  })
+
+  it.each([
+    ['a Caregiver', { role: 'caregiver', plan: 'paid', readOnly: false }],
+    ['a child-role member', { role: 'child', plan: 'paid', readOnly: false }],
+    ['a Tutor of a family that stopped paying', { role: 'tutor', plan: 'free', readOnly: true }],
+  ])('offers %s no "Nueva consulta", but the list and the history are there', async (_who, extra) => {
+    share(extra)
+    stubApi()
+    renderPage()
+
+    expect(await screen.findByText('Dra. Laura Cázares')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Nueva consulta' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Nueva consulta' })).not.toBeInTheDocument()
+  })
+
+  it('does not block a Tutor on a free account inside a paid family: the plan is the family\'s', async () => {
+    account.plan = 'free'
+    share({ role: 'tutor', plan: 'paid', readOnly: false })
+    stubApi({ overview: running })
+    renderPage()
+
+    expect(await screen.findByRole('link', { name: 'Nueva consulta' })).toHaveAttribute('href', '/children/child-1/consultations/new')
+    expect(screen.getByRole('link', { name: /Buscar en el historial/ })).toBeInTheDocument()
+  })
+
+  it('blocks a paid account\'s Tutor when the child\'s family is free and a treatment runs', async () => {
+    account.plan = 'paid'
+    share({ role: 'tutor', plan: 'free', readOnly: false })
+    stubApi({ overview: running })
+    renderPage()
+
+    expect(await screen.findByRole('button', { name: 'Nueva consulta' })).toBeInTheDocument()
+  })
+})

@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Ulisesgtz/medic-track/backend/internal/access"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
@@ -325,6 +326,23 @@ func TestRouter_ConsultationsAreImmutable(t *testing.T) {
 // routerWithPool mirrors newTestRouter but also returns the pool, for tests
 // that need to assert on database state directly.
 func routerWithPool(t *testing.T) (http.Handler, *pgxpool.Pool) {
+	// By default whoever calls can do everything and has no account of their own (so no author is stored on a mark).
+	return routerAs(t, access.Access{Level: access.Full})
+}
+
+// routerAs is routerWithPool with the session's access already resolved, as RequireAccess does in production
+// (specs/032): what the session can do, and the account that acts (whose name goes on a dose it marks).
+func routerAs(t *testing.T, who access.Access) (http.Handler, *pgxpool.Pool) {
+	return routerWith(t, &who)
+}
+
+// routerWithoutAccess is the handlers with nothing in front of them (no RequireAccess): they must fail closed.
+func routerWithoutAccess(t *testing.T) http.Handler {
+	router, _ := routerWith(t, nil)
+	return router
+}
+
+func routerWith(t *testing.T, who *access.Access) (http.Handler, *pgxpool.Pool) {
 	pool := testPool(t)
 	repo := consultation.NewRepository(pool)
 	svc := consultation.NewService(repo)
@@ -332,6 +350,13 @@ func routerWithPool(t *testing.T) (http.Handler, *pgxpool.Pool) {
 	h := consultation.NewHandler(svc, responder)
 
 	r := chi.NewRouter()
+	if who != nil {
+		r.Use(func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				next.ServeHTTP(w, req.WithContext(access.WithAccess(req.Context(), *who)))
+			})
+		})
+	}
 	r.Get("/children/{childId}/consultations", h.ListConsultations)
 	r.Post("/children/{childId}/consultations/search", h.SearchConsultations)
 	r.Get("/children/{childId}/history-options", h.HistoryOptions)

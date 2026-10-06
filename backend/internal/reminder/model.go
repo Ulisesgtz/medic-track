@@ -32,15 +32,17 @@ type Device struct {
 	ActivatedAt time.Time
 }
 
-// DueDose is a dose claimed for its reminder, with what the reminder needs to say.
+// DueDose is a dose claimed for the reminder of ONE person (specs/032: a dose is reminded to each person with access and
+// an active device, once each), with what that reminder needs to say.
 type DueDose struct {
 	DoseID         uuid.UUID
 	ConsultationID uuid.UUID
+	// AccountID is the person this reminder is for (the account whose devices receive it), not the child's owner.
 	AccountID      uuid.UUID
 	ScheduledAt    time.Time
 	MedicationName string
 	ChildFirstName string
-	// Detail is the account's choice; nil while the tutor hasn't chosen (treated as generic,
+	// Detail is that person's own choice; nil while they haven't chosen (treated as generic,
 	// the most private option).
 	Detail *DetailMode
 }

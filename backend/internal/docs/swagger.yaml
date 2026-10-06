@@ -165,6 +165,33 @@ definitions:
         example: One or more fields are invalid
         type: string
     type: object
+  CreatedFamilyInvitationResponse:
+    properties:
+      email:
+        example: papa@ejemplo.com
+        type: string
+      expiresAt:
+        example: "2026-10-13T14:00:00Z"
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      role:
+        enum:
+        - tutor
+        - caregiver
+        - child
+        example: tutor
+        type: string
+      status:
+        example: pending
+        type: string
+      token:
+        description: Token is the secret of the link; it is returned only here (and
+          when resent) and goes in the fragment of the link.
+        example: 3hF9…
+        type: string
+    type: object
   DoseNotFoundResponse:
     properties:
       error:
@@ -197,6 +224,11 @@ definitions:
       taken:
         example: false
         type: boolean
+      takenBy:
+        allOf:
+        - $ref: '#/definitions/TakenByResponse'
+        description: 'TakenBy: who marked it and when (specs/032); null if it isn''t
+          marked or was marked before that feature.'
     type: object
   EmailConflictResponse:
     properties:
@@ -326,6 +358,200 @@ definitions:
         example: 2
         type: integer
     type: object
+  FamilyCapacityResponse:
+    properties:
+      max:
+        example: 4
+        type: integer
+      used:
+        example: 2
+        type: integer
+    type: object
+  FamilyErrorResponse:
+    properties:
+      error:
+        example: invitation_not_found
+        type: string
+      message:
+        example: Invitation not found
+        type: string
+    type: object
+  FamilyInvitationResponse:
+    properties:
+      childId:
+        type: string
+      email:
+        example: papa@ejemplo.com
+        type: string
+      expiresAt:
+        example: "2026-10-13T14:00:00Z"
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      role:
+        enum:
+        - tutor
+        - caregiver
+        - child
+        example: tutor
+        type: string
+      status:
+        enum:
+        - pending
+        - expired
+        example: pending
+        type: string
+    type: object
+  FamilyMemberResponse:
+    properties:
+      canRemove:
+        description: 'CanRemove: the session can remove this person (it can do everything
+          and the person is not a Tutor).'
+        example: false
+        type: boolean
+      childId:
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      name:
+        example: Luis
+        type: string
+      role:
+        enum:
+        - tutor
+        - caregiver
+        - child
+        example: tutor
+        type: string
+      since:
+        example: "2026-10-06T14:00:00Z"
+        type: string
+      you:
+        description: 'You: this person is the session''s own account.'
+        example: false
+        type: boolean
+    type: object
+  FamilyMembershipInfo:
+    properties:
+      ownerAccountId:
+        example: e5f6a7b8-0000-0000-0000-000000000000
+        type: string
+      ownerName:
+        example: Ana
+        type: string
+      plan:
+        enum:
+        - free
+        - paid
+        example: paid
+        type: string
+      readOnly:
+        example: false
+        type: boolean
+      role:
+        enum:
+        - tutor
+        - caregiver
+        - child
+        example: tutor
+        type: string
+    type: object
+  FamilyMembershipResponse:
+    properties:
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      name:
+        example: Luis
+        type: string
+      role:
+        example: tutor
+        type: string
+    type: object
+  FamilyOwnerResponse:
+    properties:
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      name:
+        example: Ana
+        type: string
+    type: object
+  FamilyPlanLimitResponse:
+    properties:
+      error:
+        example: freemium_consultation_limit_exceeded
+        type: string
+      message:
+        example: Sharing with the family is part of the paid plan
+        type: string
+      reason:
+        example: family
+        type: string
+    type: object
+  FamilyResponse:
+    properties:
+      capacity:
+        $ref: '#/definitions/FamilyCapacityResponse'
+      invitations:
+        items:
+          $ref: '#/definitions/FamilyInvitationResponse'
+        type: array
+      members:
+        items:
+          $ref: '#/definitions/FamilyMemberResponse'
+        type: array
+      owner:
+        $ref: '#/definitions/FamilyOwnerResponse'
+      plan:
+        enum:
+        - free
+        - paid
+        example: paid
+        type: string
+      readOnly:
+        example: false
+        type: boolean
+      role:
+        enum:
+        - owner
+        - tutor
+        - caregiver
+        - child
+        example: owner
+        type: string
+    type: object
+  FamilySessionErrorResponse:
+    properties:
+      error:
+        example: unauthorized
+        type: string
+      message:
+        example: A valid session is required
+        type: string
+    type: object
+  FamilyValidationErrorResponse:
+    properties:
+      details:
+        items:
+          properties:
+            field:
+              example: email
+              type: string
+            message:
+              example: must be a valid e-mail address
+              type: string
+          type: object
+        type: array
+      error:
+        example: validation_error
+        type: string
+      message:
+        example: One or more fields are invalid
+        type: string
+    type: object
   FieldError:
     properties:
       field:
@@ -366,6 +592,60 @@ definitions:
         items:
           type: string
         type: array
+    type: object
+  InvitationPreviewResponse:
+    properties:
+      childFirstName:
+        type: string
+      childrenFirstNames:
+        description: 'ChildrenFirstNames: whom the invitation asks the person to look
+          after (first names only).'
+        example:
+        - Mateo
+        - Sofía
+        items:
+          type: string
+        type: array
+      email:
+        example: papa@ejemplo.com
+        type: string
+      emailMatches:
+        description: 'EmailMatches: the session''s verified e-mail is the invited
+          one (only that account can accept).'
+        example: true
+        type: boolean
+      expiresAt:
+        example: "2026-10-13T14:00:00Z"
+        type: string
+      ownerName:
+        example: Ana
+        type: string
+      role:
+        example: tutor
+        type: string
+    type: object
+  InvitationTokenRequest:
+    properties:
+      token:
+        description: Token is the secret of the invitation's link.
+        type: string
+    type: object
+  InviteRequest:
+    properties:
+      childId:
+        type: string
+      consent:
+        type: boolean
+      email:
+        example: papa@ejemplo.com
+        type: string
+      role:
+        description: Role is "tutor" or "caregiver" ("child" is not available yet).
+        enum:
+        - tutor
+        - caregiver
+        example: tutor
+        type: string
     type: object
   MedicationNotFoundResponse:
     properties:
@@ -451,6 +731,10 @@ definitions:
       taken:
         example: false
         type: boolean
+      takenBy:
+        allOf:
+        - $ref: '#/definitions/TakenByResponse'
+        description: TakenBy as in DoseResponse (specs/032).
     type: object
   PlanLimitResponse:
     properties:
@@ -522,6 +806,21 @@ definitions:
         example: Fiebre
         type: string
     type: object
+  TakenByResponse:
+    properties:
+      at:
+        example: "2026-01-15T14:05:00Z"
+        type: string
+      mine:
+        description: |-
+          Mine: the session's own account marked it (it may take its own mark back; anybody else's only a person who can do
+          everything may).
+        example: false
+        type: boolean
+      name:
+        example: Ana
+        type: string
+    type: object
   ValidationErrorResponse:
     properties:
       details:
@@ -562,6 +861,12 @@ definitions:
       email:
         example: ana@example.com
         type: string
+      family:
+        allOf:
+        - $ref: '#/definitions/FamilyMembershipInfo'
+        description: |-
+          Family is present only when the session is an invited person of another account's family; its children are then
+          in Children, after the account's own.
       firstName:
         example: Ana
         type: string
@@ -586,6 +891,13 @@ definitions:
     type: object
   internal_account.childResponse:
     properties:
+      accountId:
+        description: |-
+          AccountID is the account the child belongs to (the family's owner), Role the session's role over this child
+          ("owner" for its own children), Plan the plan of that family and ReadOnly whether the session can only see and mark
+          (specs/032-compartir-con-familia).
+        example: e5f6a7b8-0000-0000-0000-000000000000
+        type: string
       birthDate:
         example: "2020-01-15"
         type: string
@@ -600,6 +912,23 @@ definitions:
         type: string
       lastName:
         example: Gómez
+        type: string
+      plan:
+        enum:
+        - free
+        - paid
+        example: free
+        type: string
+      readOnly:
+        example: false
+        type: boolean
+      role:
+        enum:
+        - owner
+        - tutor
+        - caregiver
+        - child
+        example: owner
         type: string
       weight:
         example: 14.2
@@ -1539,6 +1868,8 @@ paths:
       description: |-
         Sets a dose's taken status. No validation of scheduled date or treatment
         status — a dose can be marked/unmarked at any time (FR-011, FR-016).
+        Marking is first-come: a dose already marked answers 200 as it is, with who marked it (takenBy, specs/032).
+        Unmarking is for who marked it or for someone who can do everything (the owner or a Tutor); anyone else gets 403.
       parameters:
       - description: Consultation UUID
         in: path
@@ -1679,6 +2010,318 @@ paths:
       summary: Add doses to the end of a medication's treatment
       tags:
       - consultations
+  /family:
+    get:
+      description: |-
+        The session's role in its family (owner for the owner account and for someone who shares nothing), the
+        family's plan, whether the session is read-only because that plan is no longer paid, the people, and — to
+        who can do everything — the invitations waiting and the places taken (specs/032-compartir-con-familia).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/FamilyResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/FamilySessionErrorResponse'
+        "409":
+          description: The session has no PediTrack account yet
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: The session's family
+      tags:
+      - family
+  /family/invitations:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Invites an e-mail as a Tutor or a Caregiver. Only who can do everything (the owner or a Tutor) and only when the
+        owner is on the paid plan. The invitation expires in 7 days; the token of its link is returned here, once.
+        Only the account whose verified e-mail is the invited one can accept it.
+      parameters:
+      - description: Who to invite and as what
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/InviteRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/CreatedFamilyInvitationResponse'
+        "400":
+          description: Invalid e-mail or role
+          schema:
+            $ref: '#/definitions/FamilyValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/FamilySessionErrorResponse'
+        "403":
+          description: The session can't invite
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "409":
+          description: Already a member, or an invitation is pending
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "422":
+          description: The family is not on the paid plan, or it is full (family_full)
+          schema:
+            $ref: '#/definitions/FamilyPlanLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: Invite someone to the family
+      tags:
+      - family
+  /family/invitations/{invitationId}/cancel:
+    post:
+      parameters:
+      - description: Invitation UUID
+        in: path
+        name: invitationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/FamilySessionErrorResponse'
+        "403":
+          description: The session can't invite
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "404":
+          description: Not a pending invitation of this family
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Cancel a pending invitation
+      tags:
+      - family
+  /family/invitations/{invitationId}/resend:
+    post:
+      description: Gives a pending invitation a new token and a new date; the old
+        link stops working.
+      parameters:
+      - description: Invitation UUID
+        in: path
+        name: invitationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/CreatedFamilyInvitationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/FamilySessionErrorResponse'
+        "403":
+          description: The session can't invite
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "404":
+          description: Not a pending invitation of this family
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "422":
+          description: Not paid, or the family is full
+          schema:
+            $ref: '#/definitions/FamilyPlanLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: Send an invitation again
+      tags:
+      - family
+  /family/invitations/accept:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Makes the session's person a member of the family. Only the account whose verified e-mail is the invited one
+        (403 email_mismatch), with a PediTrack account (409 account_required), not already in a family (409
+        already_in_family), and while the family's owner is on the paid plan (422). The same person accepting again
+        gets their membership back.
+      parameters:
+      - description: The invitation's token
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/InvitationTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/FamilyMembershipResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/FamilySessionErrorResponse'
+        "403":
+          description: The e-mail is not the invited one, or is not verified
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "404":
+          description: Invitation not found
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "409":
+          description: No account yet, or already in a family
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "422":
+          description: The family's owner is no longer on the paid plan
+          schema:
+            $ref: '#/definitions/FamilyPlanLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: Accept an invitation
+      tags:
+      - family
+  /family/invitations/decline:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: The invitation's token
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/InvitationTokenRequest'
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/FamilySessionErrorResponse'
+        "403":
+          description: The e-mail is not the invited one
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "404":
+          description: Invitation not found
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Decline an invitation
+      tags:
+      - family
+  /family/invitations/preview:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Only what a person needs to decide: who invites, the role, the invited e-mail, when it expires and whether the
+        session's verified e-mail is that one. The token goes in the body (never in an address). An unknown, used,
+        expired or canceled token is one 404, with nothing about the family.
+      parameters:
+      - description: The invitation's token
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/InvitationTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/InvitationPreviewResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/FamilySessionErrorResponse'
+        "404":
+          description: Invitation not found
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: What an invitation offers, before accepting it
+      tags:
+      - family
+  /family/leave:
+    post:
+      description: |-
+        The invited person leaves their family: immediate, no approval. What they registered stays in the family's
+        account. The owner can't leave their own family.
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/FamilySessionErrorResponse'
+        "403":
+          description: The owner can't leave (owner_cannot_leave)
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "404":
+          description: The session belongs to no family as an invited person
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Leave the family
+      tags:
+      - family
+  /family/members/{memberId}/remove:
+    post:
+      description: |-
+        Only who can do everything in the family (the owner or a Tutor of a paid family). A Tutor can't be removed by
+        anybody — not even by the owner —; the only way to cut a Tutor's access is for the owner to stop paying.
+        What the person registered stays. Takes effect at once.
+      parameters:
+      - description: Member UUID (from GET /family)
+        in: path
+        name: memberId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/FamilySessionErrorResponse'
+        "403":
+          description: The session can't remove, or the member is a Tutor (cannot_remove_tutor)
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "404":
+          description: Not an active member of this family
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Remove a Caregiver or a Child-role member
+      tags:
+      - family
   /ops/error-logs:
     get:
       description: |-

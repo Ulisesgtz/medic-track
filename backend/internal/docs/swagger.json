@@ -1029,7 +1029,7 @@
                         "ClerkSession": []
                     }
                 ],
-                "description": "Sets a dose's taken status. No validation of scheduled date or treatment\nstatus — a dose can be marked/unmarked at any time (FR-011, FR-016).",
+                "description": "Sets a dose's taken status. No validation of scheduled date or treatment\nstatus — a dose can be marked/unmarked at any time (FR-011, FR-016).\nMarking is first-come: a dose already marked answers 200 as it is, with who marked it (takenBy, specs/032).\nUnmarking is for who marked it or for someone who can do everything (the owner or a Tutor); anyone else gets 403.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1230,6 +1230,471 @@
                         "description": "No such medication in this consultation",
                         "schema": {
                             "$ref": "#/definitions/MedicationNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/family": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The session's role in its family (owner for the owner account and for someone who shares nothing), the\nfamily's plan, whether the session is read-only because that plan is no longer paid, the people, and — to\nwho can do everything — the invitations waiting and the places taken (specs/032-compartir-con-familia).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "family"
+                ],
+                "summary": "The session's family",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/FamilySessionErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "The session has no PediTrack account yet",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/family/invitations": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Invites an e-mail as a Tutor or a Caregiver. Only who can do everything (the owner or a Tutor) and only when the\nowner is on the paid plan. The invitation expires in 7 days; the token of its link is returned here, once.\nOnly the account whose verified e-mail is the invited one can accept it.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "family"
+                ],
+                "summary": "Invite someone to the family",
+                "parameters": [
+                    {
+                        "description": "Who to invite and as what",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/InviteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/CreatedFamilyInvitationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid e-mail or role",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/FamilySessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't invite",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Already a member, or an invitation is pending",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "The family is not on the paid plan, or it is full (family_full)",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyPlanLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/family/invitations/accept": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Makes the session's person a member of the family. Only the account whose verified e-mail is the invited one\n(403 email_mismatch), with a PediTrack account (409 account_required), not already in a family (409\nalready_in_family), and while the family's owner is on the paid plan (422). The same person accepting again\ngets their membership back.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "family"
+                ],
+                "summary": "Accept an invitation",
+                "parameters": [
+                    {
+                        "description": "The invitation's token",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/InvitationTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyMembershipResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/FamilySessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The e-mail is not the invited one, or is not verified",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Invitation not found",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "No account yet, or already in a family",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "The family's owner is no longer on the paid plan",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyPlanLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/family/invitations/decline": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "family"
+                ],
+                "summary": "Decline an invitation",
+                "parameters": [
+                    {
+                        "description": "The invitation's token",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/InvitationTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/FamilySessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The e-mail is not the invited one",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Invitation not found",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/family/invitations/preview": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Only what a person needs to decide: who invites, the role, the invited e-mail, when it expires and whether the\nsession's verified e-mail is that one. The token goes in the body (never in an address). An unknown, used,\nexpired or canceled token is one 404, with nothing about the family.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "family"
+                ],
+                "summary": "What an invitation offers, before accepting it",
+                "parameters": [
+                    {
+                        "description": "The invitation's token",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/InvitationTokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/InvitationPreviewResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/FamilySessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Invitation not found",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/family/invitations/{invitationId}/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "family"
+                ],
+                "summary": "Cancel a pending invitation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invitation UUID",
+                        "name": "invitationId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/FamilySessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't invite",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not a pending invitation of this family",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/family/invitations/{invitationId}/resend": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Gives a pending invitation a new token and a new date; the old link stops working.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "family"
+                ],
+                "summary": "Send an invitation again",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Invitation UUID",
+                        "name": "invitationId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/CreatedFamilyInvitationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/FamilySessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't invite",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not a pending invitation of this family",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Not paid, or the family is full",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyPlanLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/family/leave": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The invited person leaves their family: immediate, no approval. What they registered stays in the family's\naccount. The owner can't leave their own family.",
+                "tags": [
+                    "family"
+                ],
+                "summary": "Leave the family",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/FamilySessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The owner can't leave (owner_cannot_leave)",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "The session belongs to no family as an invited person",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/family/members/{memberId}/remove": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Only who can do everything in the family (the owner or a Tutor of a paid family). A Tutor can't be removed by\nanybody — not even by the owner —; the only way to cut a Tutor's access is for the owner to stop paying.\nWhat the person registered stays. Takes effect at once.",
+                "tags": [
+                    "family"
+                ],
+                "summary": "Remove a Caregiver or a Child-role member",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Member UUID (from GET /family)",
+                        "name": "memberId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/FamilySessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't remove, or the member is a Tutor (cannot_remove_tutor)",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not an active member of this family",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
                         }
                     }
                 }
@@ -1691,6 +2156,41 @@
                 }
             }
         },
+        "CreatedFamilyInvitationResponse": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "papa@ejemplo.com"
+                },
+                "expiresAt": {
+                    "type": "string",
+                    "example": "2026-10-13T14:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "tutor",
+                        "caregiver",
+                        "child"
+                    ],
+                    "example": "tutor"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "pending"
+                },
+                "token": {
+                    "description": "Token is the secret of the link; it is returned only here (and when resent) and goes in the fragment of the link.",
+                    "type": "string",
+                    "example": "3hF9…"
+                }
+            }
+        },
         "DoseNotFoundResponse": {
             "type": "object",
             "properties": {
@@ -1730,6 +2230,14 @@
                 "taken": {
                     "type": "boolean",
                     "example": false
+                },
+                "takenBy": {
+                    "description": "TakenBy: who marked it and when (specs/032); null if it isn't marked or was marked before that feature.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/TakenByResponse"
+                        }
+                    ]
                 }
             }
         },
@@ -1913,6 +2421,276 @@
                 }
             }
         },
+        "FamilyCapacityResponse": {
+            "type": "object",
+            "properties": {
+                "max": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "used": {
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "FamilyErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "invitation_not_found"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Invitation not found"
+                }
+            }
+        },
+        "FamilyInvitationResponse": {
+            "type": "object",
+            "properties": {
+                "childId": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "papa@ejemplo.com"
+                },
+                "expiresAt": {
+                    "type": "string",
+                    "example": "2026-10-13T14:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "tutor",
+                        "caregiver",
+                        "child"
+                    ],
+                    "example": "tutor"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "pending",
+                        "expired"
+                    ],
+                    "example": "pending"
+                }
+            }
+        },
+        "FamilyMemberResponse": {
+            "type": "object",
+            "properties": {
+                "canRemove": {
+                    "description": "CanRemove: the session can remove this person (it can do everything and the person is not a Tutor).",
+                    "type": "boolean",
+                    "example": false
+                },
+                "childId": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Luis"
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "tutor",
+                        "caregiver",
+                        "child"
+                    ],
+                    "example": "tutor"
+                },
+                "since": {
+                    "type": "string",
+                    "example": "2026-10-06T14:00:00Z"
+                },
+                "you": {
+                    "description": "You: this person is the session's own account.",
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "FamilyMembershipInfo": {
+            "type": "object",
+            "properties": {
+                "ownerAccountId": {
+                    "type": "string",
+                    "example": "e5f6a7b8-0000-0000-0000-000000000000"
+                },
+                "ownerName": {
+                    "type": "string",
+                    "example": "Ana"
+                },
+                "plan": {
+                    "type": "string",
+                    "enum": [
+                        "free",
+                        "paid"
+                    ],
+                    "example": "paid"
+                },
+                "readOnly": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "tutor",
+                        "caregiver",
+                        "child"
+                    ],
+                    "example": "tutor"
+                }
+            }
+        },
+        "FamilyMembershipResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Luis"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "tutor"
+                }
+            }
+        },
+        "FamilyOwnerResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Ana"
+                }
+            }
+        },
+        "FamilyPlanLimitResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "freemium_consultation_limit_exceeded"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Sharing with the family is part of the paid plan"
+                },
+                "reason": {
+                    "type": "string",
+                    "example": "family"
+                }
+            }
+        },
+        "FamilyResponse": {
+            "type": "object",
+            "properties": {
+                "capacity": {
+                    "$ref": "#/definitions/FamilyCapacityResponse"
+                },
+                "invitations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/FamilyInvitationResponse"
+                    }
+                },
+                "members": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/FamilyMemberResponse"
+                    }
+                },
+                "owner": {
+                    "$ref": "#/definitions/FamilyOwnerResponse"
+                },
+                "plan": {
+                    "type": "string",
+                    "enum": [
+                        "free",
+                        "paid"
+                    ],
+                    "example": "paid"
+                },
+                "readOnly": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "owner",
+                        "tutor",
+                        "caregiver",
+                        "child"
+                    ],
+                    "example": "owner"
+                }
+            }
+        },
+        "FamilySessionErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "unauthorized"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "A valid session is required"
+                }
+            }
+        },
+        "FamilyValidationErrorResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "field": {
+                                "type": "string",
+                                "example": "email"
+                            },
+                            "message": {
+                                "type": "string",
+                                "example": "must be a valid e-mail address"
+                            }
+                        }
+                    }
+                },
+                "error": {
+                    "type": "string",
+                    "example": "validation_error"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "One or more fields are invalid"
+                }
+            }
+        },
         "FieldError": {
             "type": "object",
             "properties": {
@@ -1969,6 +2747,79 @@
                         "Amoxicilina 250 mg",
                         "Paracetamol"
                     ]
+                }
+            }
+        },
+        "InvitationPreviewResponse": {
+            "type": "object",
+            "properties": {
+                "childFirstName": {
+                    "type": "string"
+                },
+                "childrenFirstNames": {
+                    "description": "ChildrenFirstNames: whom the invitation asks the person to look after (first names only).",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "Mateo",
+                        "Sofía"
+                    ]
+                },
+                "email": {
+                    "type": "string",
+                    "example": "papa@ejemplo.com"
+                },
+                "emailMatches": {
+                    "description": "EmailMatches: the session's verified e-mail is the invited one (only that account can accept).",
+                    "type": "boolean",
+                    "example": true
+                },
+                "expiresAt": {
+                    "type": "string",
+                    "example": "2026-10-13T14:00:00Z"
+                },
+                "ownerName": {
+                    "type": "string",
+                    "example": "Ana"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "tutor"
+                }
+            }
+        },
+        "InvitationTokenRequest": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "description": "Token is the secret of the invitation's link.",
+                    "type": "string"
+                }
+            }
+        },
+        "InviteRequest": {
+            "type": "object",
+            "properties": {
+                "childId": {
+                    "type": "string"
+                },
+                "consent": {
+                    "type": "boolean"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "papa@ejemplo.com"
+                },
+                "role": {
+                    "description": "Role is \"tutor\" or \"caregiver\" (\"child\" is not available yet).",
+                    "type": "string",
+                    "enum": [
+                        "tutor",
+                        "caregiver"
+                    ],
+                    "example": "tutor"
                 }
             }
         },
@@ -2080,6 +2931,14 @@
                 "taken": {
                     "type": "boolean",
                     "example": false
+                },
+                "takenBy": {
+                    "description": "TakenBy as in DoseResponse (specs/032).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/TakenByResponse"
+                        }
+                    ]
                 }
             }
         },
@@ -2168,6 +3027,24 @@
                 }
             }
         },
+        "TakenByResponse": {
+            "type": "object",
+            "properties": {
+                "at": {
+                    "type": "string",
+                    "example": "2026-01-15T14:05:00Z"
+                },
+                "mine": {
+                    "description": "Mine: the session's own account marked it (it may take its own mark back; anybody else's only a person who can do\neverything may).",
+                    "type": "boolean",
+                    "example": false
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Ana"
+                }
+            }
+        },
         "ValidationErrorResponse": {
             "type": "object",
             "properties": {
@@ -2222,6 +3099,14 @@
                     "type": "string",
                     "example": "ana@example.com"
                 },
+                "family": {
+                    "description": "Family is present only when the session is an invited person of another account's family; its children are then\nin Children, after the account's own.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/FamilyMembershipInfo"
+                        }
+                    ]
+                },
                 "firstName": {
                     "type": "string",
                     "example": "Ana"
@@ -2252,6 +3137,11 @@
         "internal_account.childResponse": {
             "type": "object",
             "properties": {
+                "accountId": {
+                    "description": "AccountID is the account the child belongs to (the family's owner), Role the session's role over this child\n(\"owner\" for its own children), Plan the plan of that family and ReadOnly whether the session can only see and mark\n(specs/032-compartir-con-familia).",
+                    "type": "string",
+                    "example": "e5f6a7b8-0000-0000-0000-000000000000"
+                },
                 "birthDate": {
                     "type": "string",
                     "example": "2020-01-15"
@@ -2271,6 +3161,28 @@
                 "lastName": {
                     "type": "string",
                     "example": "Gómez"
+                },
+                "plan": {
+                    "type": "string",
+                    "enum": [
+                        "free",
+                        "paid"
+                    ],
+                    "example": "free"
+                },
+                "readOnly": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "owner",
+                        "tutor",
+                        "caregiver",
+                        "child"
+                    ],
+                    "example": "owner"
                 },
                 "weight": {
                     "type": "number",

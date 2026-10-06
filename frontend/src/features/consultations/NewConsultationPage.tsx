@@ -5,6 +5,7 @@ import { formatAgeLong } from '../../shared/age'
 import { useUnsavedWork } from '../../shared/appVersion/unsavedWork'
 import { AppShell } from '../home/AppShell'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
+import { useChildAccess } from '../family/useChildAccess'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { ConsultationForm } from './ConsultationForm'
 
@@ -30,6 +31,8 @@ export function NewConsultationPage() {
 
   const accountQuery = useCurrentAccount()
   const child = accountQuery.data?.children.find((c) => c.id === childId)
+  // Specs/032: the plan is the child's family's, not the session's own.
+  const access = useChildAccess(accountQuery.data, childId)
   const childLabel = child ? `${child.firstName} ${child.lastName} · ${formatAgeLong(child.birthDate)}` : undefined
 
   if (!childId) return null
@@ -47,7 +50,7 @@ export function NewConsultationPage() {
           }
           onDirtyChange={handleDirtyChange}
           // specs/030: only the free plan lacks it; until the account loads the server decides.
-          recordOnlyAvailable={accountQuery.data?.plan !== 'free'}
+          recordOnlyAvailable={!access.isFree}
           onSuccess={(consultationId) => {
             dirtyRef.current = false
             queryClient.invalidateQueries({ queryKey: ['consultations', childId] })

@@ -151,6 +151,34 @@ describe('AddChildModal', () => {
     expect((init as RequestInit).headers).toMatchObject({ Authorization: 'Bearer test-token' })
   })
 
+  it('a Tutor adding to the account of the family does not replace their own account with the owner one (specs/032)', async () => {
+    const user = userEvent.setup()
+    const mine = { id: 'tutor-1', firstName: 'Luis', lastName: 'Pérez', plan: 'free', children: [] }
+    const calls: string[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+        calls.push(`${init?.method ?? 'GET'} ${String(input)}`)
+        // The answer to the POST is the OWNER account; me is still the tutor.
+        return { ok: true, json: async () => (init?.method === 'POST' ? savedAccount : mine) } as Response
+      }),
+    )
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    queryClient.setQueryData(['accounts', 'me'], mine)
+    const onClose = vi.fn()
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AddChildModal accountId="account-1" onClose={onClose} />
+      </QueryClientProvider>,
+    )
+
+    await fillValid(user)
+    await user.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled())
+    expect(queryClient.getQueryData<{ id: string }>(['accounts', 'me'])?.id).not.toBe('account-1')
+  })
+
   it('turns "Guardar" into "Guardando…" and disables it while saving', async () => {
     const user = userEvent.setup()
     vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))

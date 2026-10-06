@@ -215,7 +215,7 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
     creando** (proveedor por decidir; no tocar los MX hasta decidirlo, ver «Despliegue»).
   - **Orden sugerido:** 1) ~~**reglas del plan gratis**~~ **hecho (`specs/030-reglas-plan-gratis/`)**: una consulta activa a la vez y sin «solo registro»,
     con el historial siempre visible; se prueba en DEV dando `paid`/`free` a los probadores;
-    2) ~~**búsqueda y filtros** del historial (pago)~~ **hecho (`specs/031-historial-busqueda-filtros/`)**: un Historial por hijo; el de todos los hijos queda como futuro; 3) **compartir** (la spec grande de arriba); 4) **cobro con Mercado
+    2) ~~**búsqueda y filtros** del historial (pago)~~ **hecho (`specs/031-historial-busqueda-filtros/`)**: un Historial por hijo; el de todos los hijos queda como futuro; 3) ~~**compartir**~~ **Entrega 1 hecha (`specs/032-compartir-con-familia/`): Tutores** — invitar por liga, aceptar con el correo verificado, «por Ana» en cada toma, recordatorios por persona, salir/quitar, solo lectura sin plan. **Quedan: Cuidador (Entrega 2, `tasks.md` fase 9), Hijo (Entrega 3, antes hay que confirmar lo legal de menores y si Clerk admite menores de 13), el correo saliente al invitar (hoy se copia la liga a mano; falta proveedor de correo) y el PDF/exportar al salir de la familia (hoy solo el aviso)**; 4) **cobro con Mercado
     Pago + `/planes`** (necesario antes de abrirlo al público); 5) los extras (PDF, liga del pediatra, curvas OMS,
     vacunas/citas, resumen semanal).
 - **Patrocinios contextuales (publicidad sin perfilar al usuario)** — decidido en conversación 2026-09-22, no construir aún.

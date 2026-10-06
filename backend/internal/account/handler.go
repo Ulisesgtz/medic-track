@@ -50,7 +50,23 @@ type childResponse struct {
 	BirthDate string   `json:"birthDate" example:"2020-01-15"`
 	Height    *float64 `json:"height" example:"95.5"`
 	Weight    *float64 `json:"weight" example:"14.2"`
+	// AccountID is the account the child belongs to (the family's owner), Role the session's role over this child
+	// ("owner" for its own children), Plan the plan of that family and ReadOnly whether the session can only see and mark
+	// (specs/032-compartir-con-familia).
+	AccountID string `json:"accountId" example:"e5f6a7b8-0000-0000-0000-000000000000"`
+	Role      string `json:"role" enums:"owner,tutor,caregiver,child" example:"owner"`
+	Plan      string `json:"plan" enums:"free,paid" example:"free"`
+	ReadOnly  bool   `json:"readOnly" example:"false"`
 }
+
+// familyMembershipResponse is the place of the session in somebody else's family (only when it has one).
+type familyMembershipResponse struct {
+	Role           string `json:"role" enums:"tutor,caregiver,child" example:"tutor"`
+	OwnerAccountID string `json:"ownerAccountId" example:"e5f6a7b8-0000-0000-0000-000000000000"`
+	OwnerName      string `json:"ownerName" example:"Ana"`
+	Plan           string `json:"plan" enums:"free,paid" example:"paid"`
+	ReadOnly       bool   `json:"readOnly" example:"false"`
+} // @name FamilyMembershipInfo
 
 type accountResponse struct {
 	ID          string          `json:"id" example:"e5f6a7b8-0000-0000-0000-000000000000"`
@@ -68,6 +84,9 @@ type accountResponse struct {
 	// ReminderDetail is what the dose reminders show, "detailed" or "generic"; null until the tutor
 	// chooses on the first activation (specs/011-recordatorios-push).
 	ReminderDetail *string `json:"reminderDetail" example:"generic"`
+	// Family is present only when the session is an invited person of another account's family; its children are then
+	// in Children, after the account's own.
+	Family *familyMembershipResponse `json:"family,omitempty"`
 }
 
 type reminderSettingsRequest struct {
@@ -642,6 +661,11 @@ func validationErrorBody(errs []ValidationError, message string) map[string]any 
 func toAccountResponse(acc *Account) accountResponse {
 	children := make([]childResponse, 0, len(acc.Children))
 	for _, c := range acc.Children {
+		// Children the account owns carry no role of their own: "owner", with the account's plan.
+		role, plan, ownerID := c.Role, c.Plan, c.AccountID
+		if role == "" {
+			role, plan, ownerID = "owner", acc.Plan, acc.ID
+		}
 		children = append(children, childResponse{
 			ID:        c.ID.String(),
 			FirstName: c.FirstName,
@@ -649,7 +673,18 @@ func toAccountResponse(acc *Account) accountResponse {
 			BirthDate: c.BirthDate.Format("2006-01-02"),
 			Height:    c.Height,
 			Weight:    c.Weight,
+			AccountID: ownerID.String(),
+			Role:      role,
+			Plan:      string(plan),
+			ReadOnly:  c.ReadOnly,
 		})
+	}
+	var membership *familyMembershipResponse
+	if acc.Family != nil {
+		membership = &familyMembershipResponse{
+			Role: acc.Family.Role, OwnerAccountID: acc.Family.OwnerAccountID.String(), OwnerName: acc.Family.OwnerName,
+			Plan: string(acc.Family.OwnerPlan), ReadOnly: acc.Family.ReadOnly(),
+		}
 	}
 	return accountResponse{
 		ID:          acc.ID.String(),
@@ -664,5 +699,6 @@ func toAccountResponse(acc *Account) accountResponse {
 		DisclaimerVersion:  CurrentDisclaimerVersion,
 		DisclaimerAccepted: acc.DisclaimerAccepted,
 		ReminderDetail:     acc.ReminderDetail,
+		Family:             membership,
 	}
 }

@@ -19,7 +19,7 @@ import (
 func TestEndTreatment_CancelsTheDosesAheadAndKeepsTheRest(t *testing.T) {
 	svc, _, c := yesterdaysConsultation(t)
 	med := c.Medications[0]
-	require.NoError(t, func() error { _, err := svc.MarkDose(context.Background(), c.ID, med.Doses[0].ID, true); return err }())
+	require.NoError(t, func() error { _, err := svc.MarkDose(context.Background(), c.ID, med.Doses[0].ID, true, anyone); return err }())
 
 	ended, err := svc.EndTreatment(context.Background(), c.ID, med.ID)
 
@@ -30,7 +30,7 @@ func TestEndTreatment_CancelsTheDosesAheadAndKeepsTheRest(t *testing.T) {
 	require.Equal(t, consultation.DoseStatusCanceled, ended.Doses[5].Status, "tomorrow 00:00 had not come")
 	require.True(t, ended.Doses[0].Taken)
 	// The doses that had already come keep their own status and can still be marked.
-	marked, err := svc.MarkDose(context.Background(), c.ID, med.Doses[1].ID, true)
+	marked, err := svc.MarkDose(context.Background(), c.ID, med.Doses[1].ID, true, anyone)
 	require.NoError(t, err)
 	require.Equal(t, consultation.DoseStatusTaken, marked.Status)
 	// A canceled dose read again is still canceled (unless the parent marks it).

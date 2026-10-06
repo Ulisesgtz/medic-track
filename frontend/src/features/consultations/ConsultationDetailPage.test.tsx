@@ -1087,3 +1087,40 @@ describe('ConsultationDetailPage', () => {
     })
   })
 })
+
+// specs/032: a Caregiver (or a child-role member) marks doses but cannot add, end or extend anything.
+describe('ConsultationDetailPage, shared children (specs/032)', () => {
+  const own = account.children[0]
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 0, 15, 12))
+    useDesktop()
+  })
+  afterEach(() => {
+    account.children[0] = own
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+    window.localStorage.clear()
+  })
+
+  it('shows a Caregiver the doses to mark, with no "Finalizar tratamiento" and no "Nueva consulta"', async () => {
+    account.children[0] = { ...own, accountId: 'owner-1', role: 'caregiver', plan: 'paid', readOnly: false } as typeof own
+    stubApi(consultation())
+    renderPage()
+
+    expect(await screen.findByRole('heading', { name: 'Dra. López' })).toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /Amoxicilina/ }).length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: 'Finalizar tratamiento' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Nueva consulta' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Nueva consulta' })).not.toBeInTheDocument()
+  })
+
+  it('keeps all of it for a Tutor', async () => {
+    account.children[0] = { ...own, accountId: 'owner-1', role: 'tutor', plan: 'paid', readOnly: false } as typeof own
+    stubApi(consultation())
+    renderPage()
+
+    expect(await screen.findByRole('button', { name: 'Finalizar tratamiento' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Nueva consulta' })).toBeInTheDocument()
+  })
+})

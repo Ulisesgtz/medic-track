@@ -30,11 +30,21 @@ export interface ConsultationSummary {
 export type DoseStatus = 'pending' | 'due' | 'taken' | 'unregistered' | 'canceled'
 
 // Mirrors contracts/get-consultation-detail.md's response shape.
+/** Who marked a dose and when (specs/032): the first name of the person, never their e-mail. */
+export interface TakenBy {
+  name: string
+  at: string
+  /** The session's own account marked it: it may take its own mark back (anybody else's only who can do everything may). */
+  mine?: boolean
+}
+
 export interface Dose {
   id: string
   scheduledAt: string
   taken: boolean
   status: DoseStatus
+  /** Who marked it; null if it isn't marked or was marked before the family could share. Optional: an older backend doesn't send it. */
+  takenBy?: TakenBy | null
 }
 
 /** One time the parent added doses to the end of a medication (specs/020). */
@@ -85,6 +95,7 @@ export interface OverviewDose {
   scheduledAt: string
   taken: boolean
   status: DoseStatus
+  takenBy?: TakenBy | null
 }
 
 export interface ActiveTreatment {

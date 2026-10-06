@@ -28,12 +28,14 @@ import (
 	clerk "github.com/clerk/clerk-sdk-go/v2"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 
+	"github.com/Ulisesgtz/medic-track/backend/internal/access"
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	_ "github.com/Ulisesgtz/medic-track/backend/internal/docs"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
+	"github.com/Ulisesgtz/medic-track/backend/internal/family"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/jobreport"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ops"
@@ -75,6 +77,16 @@ func main() {
 	consultationService := consultation.NewService(consultationRepo)
 	consultationHandler := consultation.NewHandler(consultationService, responder)
 
+	// Sharing with the family (specs/032): who can accept an invitation is decided by the session's verified e-mail.
+	familyService := family.NewService(family.NewRepository(pool), access.NewRepository(pool), family.EmailFunc(func(ctx context.Context, clerkUserID string) (string, error) {
+		email, err := account.VerifiedEmail(ctx, clerkUserID)
+		if account.IsEmailNotVerified(err) {
+			return "", family.ErrEmailNotVerified
+		}
+		return email, err
+	}))
+	familyHandler := family.NewHandler(familyService, responder)
+
 	// Dose reminders (specs/011): without VAPID keys the API still runs, reminders are just unavailable.
 	reminderConfig := reminder.ConfigFromEnv()
 	reminderService := reminder.NewService(reminder.NewRepository(pool), reminder.NewWebPushSender(reminderConfig, nil), reminderConfig)
@@ -111,9 +123,11 @@ func main() {
 		Account:        accountHandler,
 		Consultation:   consultationHandler,
 		Reminder:       reminderHandler,
+		Family:         familyHandler,
 		Ops:            opsHandler,
 		OpsKey:         opsKey,
 		Ownership:      ownership.NewRepository(pool),
+		Access:         access.NewRepository(pool),
 		FrontendOrigin: frontendOrigin,
 		RequireSession: authmw.RequireSession(responder),
 	})

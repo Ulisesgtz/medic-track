@@ -405,3 +405,67 @@ describe('HomePage', () => {
     })
   })
 })
+
+// specs/032-compartir-con-familia: the home of somebody who shares children with a family.
+describe('HomePage, family (specs/032)', () => {
+  const shared = (role: string, familyPlan = 'paid', readOnly = false) => ({
+    id: 'me', firstName: 'Luis', lastName: 'Pérez', email: 'luis@example.com',
+    countryCode: null, stateCode: null, plan: 'free',
+    children: [{ id: 'k1', firstName: 'Mía', lastName: 'Gómez', birthDate: '2020-01-15', height: null, weight: null, accountId: 'owner', role, plan: familyPlan, readOnly }],
+    family: { role, ownerAccountId: 'owner', ownerName: 'Ana', plan: familyPlan, readOnly },
+  })
+
+  beforeEach(() => {
+    sessionStorage.clear()
+    vi.mocked(useAuth).mockReturnValue({
+      isLoaded: true, isSignedIn: true, getToken: async () => 'test-token', signOut: vi.fn(),
+    } as unknown as ReturnType<typeof useAuth>)
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    sessionStorage.clear()
+  })
+
+  it('links to «Familia» from the home', async () => {
+    stubApi(shared('tutor'))
+    renderHome()
+    expect(await screen.findByRole('link', { name: /Familia/ })).toHaveAttribute('href', '/familia')
+  })
+
+  it.each([
+    ['a Caregiver', shared('caregiver')],
+    ['a child-role member', shared('child')],
+    ['a Tutor of a family that stopped paying', shared('tutor', 'free', true)],
+  ])('does not offer %s to add a child, but still shows the shared child', async (_who, account) => {
+    stubApi(account)
+    renderHome()
+    expect(await screen.findByText('Mía Gómez')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Agregar hijo/ })).not.toBeInTheDocument()
+    expect(screen.queryByText('El plan gratuito incluye un hijo.')).not.toBeInTheDocument()
+  })
+
+  it('lets a Tutor of a paid family add a child (to the family\'s account) without the free plan\'s limit', async () => {
+    const user = userEvent.setup()
+    stubApi(shared('tutor'))
+    renderHome()
+    await user.click(await screen.findByRole('button', { name: /Agregar hijo/ }))
+    expect(await screen.findByRole('dialog', { name: 'Agregar hijo' })).toBeInTheDocument()
+  })
+
+  it('takes somebody who opened an invitation before logging in back to it, once', async () => {
+    sessionStorage.setItem('invitacion-pendiente', 'TOKEN')
+    stubApi(shared('tutor'))
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/home']}>
+          <Routes>
+            <Route path="/home" element={<HomePage />} />
+            <Route path="/familia/invitacion" element={<p>pantalla de la invitación</p>} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    )
+    expect(await screen.findByText('pantalla de la invitación')).toBeInTheDocument()
+  })
+})

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { DOSE_CHIP_STYLE, DOSE_REFETCH_MS, UNREGISTERED_LABEL, isUnmarked, isUnregistered, statusOf, unregisteredText } from './doseStatus'
+import { DOSE_CHIP_STYLE, canUnmarkDose, DOSE_REFETCH_MS, UNREGISTERED_LABEL, isUnmarked, isUnregistered, statusOf, takenByText, unregisteredText } from './doseStatus'
 
 const at = { taken: false, scheduledAt: '2026-01-15T08:00:00Z' }
 
@@ -35,5 +35,27 @@ describe('doseStatus (specs/013)', () => {
     expect(unregisteredText(1)).toBe('1 sin registrar')
     expect(unregisteredText(3)).toBe('3 sin registrar')
     expect(DOSE_REFETCH_MS).toBe(60_000)
+  })
+})
+
+describe('canUnmarkDose (specs/032)', () => {
+  it('lets anybody mark an unmarked dose, who can do everything take any mark back, and the rest only their own', () => {
+    expect(canUnmarkDose({ taken: false }, false)).toBe(true)
+    expect(canUnmarkDose({ taken: true, takenBy: { mine: false } }, true)).toBe(true)
+    expect(canUnmarkDose({ taken: true, takenBy: { mine: true } }, false)).toBe(true)
+    expect(canUnmarkDose({ taken: true, takenBy: { mine: false } }, false)).toBe(false)
+    expect(canUnmarkDose({ taken: true, takenBy: null }, false)).toBe(false)
+    expect(canUnmarkDose({ taken: true }, false)).toBe(false)
+  })
+})
+
+describe('takenByText (specs/032)', () => {
+  it('says who and at what local time, only a record', () => {
+    expect(takenByText({ name: 'Ana', at: new Date(2026, 9, 1, 8, 5).toISOString() })).toBe('por Ana, 08:05')
+  })
+
+  it('is empty when nobody is known', () => {
+    expect(takenByText(null)).toBe('')
+    expect(takenByText(undefined)).toBe('')
   })
 })

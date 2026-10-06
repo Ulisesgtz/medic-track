@@ -1,17 +1,19 @@
-import { useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { useLogout } from '../auth/useLogout'
 import { MeApiError } from '../auth/api'
 import { ChildCard } from './ChildCard'
 import { AddChildDialogs } from './AddChildDialogs'
-import { atFreePlanLimit } from './plan'
+import { addChildTarget, atFreePlanLimit } from './plan'
 import { AppHeader } from '../../shared/ui/AppHeader'
 import { AppShell } from './AppShell'
 import { useSidebarSession } from './useSidebarSession'
 import { Logo } from '../../shared/ui/Logo'
 import { WelcomeDisclaimer } from './WelcomeDisclaimer'
 import { RemindersCard } from '../reminders/RemindersCard'
+import { readPendingInvitation } from '../family/pendingInvitation'
+import { FamilyEntry } from '../family/FamilyEntry'
 
 /**
  * The parent's home page: lists their children (FR-001), or an invitation to
@@ -33,6 +35,13 @@ export function HomePage() {
   const logout = useLogout()
 
   const query = useCurrentAccount()
+  const navigate = useNavigate()
+
+  // Specs/032: someone who opened an invitation before logging in or signing up is taken back to it, once.
+  const signedInWithAccount = query.isSuccess
+  useEffect(() => {
+    if (signedInWithAccount && readPendingInvitation()) navigate('/familia/invitacion', { replace: true })
+  }, [signedInWithAccount, navigate])
 
   const accountNotFound =
     query.isError && query.error instanceof MeApiError && query.error.kind === 'not_found_for_session'
@@ -98,8 +107,6 @@ export function HomePage() {
     )
   }
 
-  const accountId = query.data?.id ?? null
-
   if (query.isPending) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-canvas px-5 py-10">
@@ -111,10 +118,12 @@ export function HomePage() {
   const account = query.data
   const children = account?.children ?? []
   const atLimit = account ? atFreePlanLimit(account) : false
+  // Specs/032: a Caregiver, a child-role member and a Tutor of a lapsed family can't add children.
+  const target = account ? addChildTarget(account) : undefined
+  const canAddChild = target?.allowed ?? true
 
   const dialogs = (
     <AddChildDialogs
-      accountId={accountId!}
       account={account}
       open={showAddChild}
       onClose={() => setShowAddChild(false)}
@@ -148,14 +157,16 @@ export function HomePage() {
                 >
                   Cerrar sesión
                 </button>
-                <button
-                  ref={addChildButton}
-                  type="button"
-                  onClick={() => setShowAddChild(true)}
-                  className="min-h-11 cursor-pointer rounded-2xl bg-confirmed px-6 py-3.5 text-[15px] font-extrabold text-white transition-colors hover:bg-emerald-800"
-                >
-                  Agregar hijo
-                </button>
+                {canAddChild && (
+                  <button
+                    ref={addChildButton}
+                    type="button"
+                    onClick={() => setShowAddChild(true)}
+                    className="min-h-11 cursor-pointer rounded-2xl bg-confirmed px-6 py-3.5 text-[15px] font-extrabold text-white transition-colors hover:bg-emerald-800"
+                  >
+                    Agregar hijo
+                  </button>
+                )}
               </div>
             </div>
 
@@ -176,6 +187,7 @@ export function HomePage() {
               </div>
             )}
 
+            {account && <FamilyEntry variant="desktop" />}
             <RemindersCard account={account} />
           </div>
           {dialogs}
@@ -226,18 +238,25 @@ export function HomePage() {
             </div>
           )}
 
-          <button
-            ref={addChildButton}
-            type="button"
-            onClick={() => setShowAddChild(true)}
-            className="mt-4 min-h-11 w-full cursor-pointer rounded-3xl border-2 border-dashed border-bright-soft py-5 text-base font-extrabold text-action transition-colors hover:bg-hint"
-          >
-            + Agregar hijo
-          </button>
-          {account?.plan === 'free' && (
+          {canAddChild && (
+            <button
+              ref={addChildButton}
+              type="button"
+              onClick={() => setShowAddChild(true)}
+              className="mt-4 min-h-11 w-full cursor-pointer rounded-3xl border-2 border-dashed border-bright-soft py-5 text-base font-extrabold text-action transition-colors hover:bg-hint"
+            >
+              + Agregar hijo
+            </button>
+          )}
+          {canAddChild && target?.plan === 'free' && (
             <p className="mt-4 text-center text-[13px] text-slate-500">El plan gratuito incluye un hijo.</p>
           )}
-          <div className="mt-6">
+          {account && (
+            <div className="mt-6">
+              <FamilyEntry variant="phone" />
+            </div>
+          )}
+          <div className="mt-4">
             <RemindersCard account={account} />
           </div>
         </div>

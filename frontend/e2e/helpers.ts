@@ -216,3 +216,63 @@ export async function seedChild(
   }
   return { accountId: account.id as string, childId, consultationId, medicationId, token, email }
 }
+
+// ---- specs/032-compartir-con-familia: two people, each in their own browser.
+
+/** The invitation the API gave back (the token is only returned here). */
+export interface Invitation {
+  id: string
+  email: string
+  token: string
+}
+
+/** The link a person opens to accept: the token in the `#`, as the app builds it. */
+export const invitationUrl = (invitation: Invitation) => `/familia/invitacion#${invitation.token}`
+
+/** Invites an e-mail to the family of the tutor whose token this is, through the API. */
+export async function inviteViaApi(request: APIRequestContext, token: string, email: string, role: 'tutor' | 'caregiver' = 'tutor'): Promise<Invitation> {
+  return apiPost(request, token, '/family/invitations', { email, role })
+}
+
+/**
+ * A second person: a real Clerk user in a browser context of their own, signed in, with (unless told otherwise) their own
+ * PediTrack account and no children. `account: false` leaves them without one, as somebody who arrives from an invitation.
+ */
+export async function secondPerson(
+  browser: import('@playwright/test').Browser,
+  design: { viewport: { width: number; height: number } },
+  { email = uniqueEmail('familia'), firstName = 'Luis', account = true }: { email?: string; firstName?: string; account?: boolean } = {},
+) {
+  const context = await browser.newContext({ viewport: design.viewport })
+  const page = await context.newPage()
+  await allowClerkOn(page)
+  await createClerkUser(email)
+  await signInAs(page, email)
+  const token = await sessionToken(page)
+  let accountId: string | undefined
+  if (account) {
+    const created = await apiPost(context.request, token, '/accounts', { firstName, lastName: 'Pérez', children: [] })
+    accountId = created.id
+    // So the "Antes de empezar" notice doesn't sit on top of the screens a test is about.
+    await apiPost(context.request, token, `/accounts/${created.id}/disclaimer-acceptance`, { version: created.disclaimerVersion })
+  }
+  return { context, page, token, email, accountId }
+}
+
+/** Accepts an invitation through the API as the person whose token this is. */
+export async function acceptViaApi(request: APIRequestContext, token: string, invitation: Invitation) {
+  return apiPost(request, token, '/family/invitations/accept', { token: invitation.token })
+}
+
+/** Runs a query on the backend's database (test accounts only): what the API doesn't show, like who was reminded of a dose. */
+export async function queryDb<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> {
+  const client = new Client({
+    connectionString: process.env.DATABASE_URL ?? 'postgres://root:abcd1234@localhost:5432/pediTrack?sslmode=disable',
+  })
+  await client.connect()
+  try {
+    return (await client.query(sql, params)).rows as T[]
+  } finally {
+    await client.end()
+  }
+}
