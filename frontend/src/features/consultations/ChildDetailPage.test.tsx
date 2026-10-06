@@ -471,3 +471,53 @@ describe('ChildDetailPage, "Nueva consulta" and the free plan (specs/030)', () =
     expect(await screen.findByRole('link', { name: 'Nueva consulta' })).toHaveAttribute('href', '/children/child-1/consultations/new')
   })
 })
+
+// specs/031: "Buscar en el historial" is the paid plan's; the list itself is the same for every plan.
+describe('ChildDetailPage, the history entry (specs/031)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 8, 16, 12))
+    useSession()
+  })
+  afterEach(() => {
+    account.plan = 'free'
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+    window.localStorage.clear()
+  })
+
+  it.each([
+    ['phone', () => {}],
+    ['web', useWeb],
+  ] as const)('on the %s it is a link to the history on the paid plan', async (_design, setup) => {
+    account.plan = 'paid'
+    setup()
+    stubApi()
+    renderPage()
+
+    const link = await screen.findByRole('link', { name: 'Buscar en el historial' })
+    expect(link).toHaveAttribute('href', '/children/child-1/historial')
+    expect(screen.queryByRole('button', { name: /Buscar en el historial/ })).not.toBeInTheDocument() // (the web sidebar also says "Plan completo")
+  })
+
+  it.each([
+    ['phone', () => {}],
+    ['web', useWeb],
+  ] as const)('on the %s it is a button marked "Plan completo" that opens the plan notice on the free plan, and the list is whole', async (_design, setup) => {
+    const user = userEvent.setup({ advanceTimers: () => {} })
+    setup()
+    stubApi()
+    renderPage()
+
+    const button = await screen.findByRole('button', { name: /Buscar en el historial/ })
+    expect(screen.queryByRole('link', { name: 'Buscar en el historial' })).not.toBeInTheDocument()
+    expect(within(button).getByText('Plan completo')).toBeInTheDocument()
+    // Every consultation is still listed.
+    expect(screen.getByRole('link', { name: /Dra. Laura Cázares/ })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Dr. Iván Robles/ })).toBeInTheDocument()
+
+    await user.click(button)
+
+    expect(await screen.findByRole('dialog', { name: 'Historial con búsqueda y filtros' })).toBeInTheDocument()
+  })
+})

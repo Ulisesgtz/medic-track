@@ -1,6 +1,7 @@
 import { ApiError, type ValidationErrorDetail } from '../../shared/apiError'
 import { withAuthHeader } from '../../shared/auth/withAuthHeader'
-import type { ChildOverview, ConsultationDetail, ConsultationSummary, Dose, Medication } from './types'
+import type { HistorySearchRequest } from './historyCriteria'
+import type { ChildOverview, ConsultationDetail, ConsultationSummary, Dose, HistoryOptions, Medication } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 
@@ -8,7 +9,7 @@ export type { ValidationErrorDetail }
 
 /** Discriminated error thrown by this feature's api functions. */
 export class ConsultationApiError extends ApiError<
-  'child_not_found' | 'consultation_not_found' | 'dose_not_found' | 'medication_not_found' | 'nothing_to_extend' | 'validation_error' | 'symptom_not_available' | 'plan_limit_active_treatment' | 'plan_limit_record_only' | 'unknown'
+  'child_not_found' | 'consultation_not_found' | 'dose_not_found' | 'medication_not_found' | 'nothing_to_extend' | 'validation_error' | 'symptom_not_available' | 'plan_limit_active_treatment' | 'plan_limit_record_only' | 'plan_limit_history_search' | 'unknown'
 > {}
 
 // contracts/get-consultations.md
@@ -97,6 +98,52 @@ export async function createConsultation(
     )
   }
   throw new ConsultationApiError('unknown', body.message ?? 'Unexpected error creating consultation')
+}
+
+/**
+ * What the history's two endpoints answer when it isn't a 200 (specs/031, contracts/history-search.md): the free plan
+ * (422 `history_search`), a bad criterion (400, a symptom the catalog never had apart) or a child that isn't there.
+ */
+function historyError(status: number, body: { error?: string; reason?: string; message?: string; details?: ValidationErrorDetail[] }, fallback: string) {
+  if (status === 404 || status === 403) {
+    return new ConsultationApiError('child_not_found', body.message ?? 'Child not found')
+  }
+  if (status === 400 && body.details?.some((d) => d.message === 'symptom_not_available')) {
+    return new ConsultationApiError('symptom_not_available', body.message ?? 'Symptom not available', body.details)
+  }
+  if (status === 400) {
+    return new ConsultationApiError('validation_error', body.message ?? 'Validation error', body.details)
+  }
+  if (status === 422 && body.error === 'freemium_consultation_limit_exceeded' && body.reason === 'history_search') {
+    return new ConsultationApiError('plan_limit_history_search', body.message ?? 'The history is part of the paid plan')
+  }
+  return new ConsultationApiError('unknown', body.message ?? fallback)
+}
+
+// contracts/history-search.md — the paid plan's history. A POST so the typed text stays out of the address.
+export async function searchConsultations(childId: string, request: HistorySearchRequest, token: string | null): Promise<ConsultationSummary[]> {
+  const res = await fetch(`${API_BASE_URL}/children/${childId}/consultations/search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...withAuthHeader(token) },
+    body: JSON.stringify(request),
+  })
+  const body = await res.json()
+
+  if (res.ok) {
+    return body.consultations as ConsultationSummary[]
+  }
+  throw historyError(res.status, body, 'Unexpected error searching the history')
+}
+
+// contracts/history-search.md — the doctors and medications already registered, for the filters' choice lists.
+export async function fetchHistoryOptions(childId: string, token: string | null): Promise<HistoryOptions> {
+  const res = await fetch(`${API_BASE_URL}/children/${childId}/history-options`, { headers: withAuthHeader(token) })
+  const body = await res.json()
+
+  if (res.ok) {
+    return body as HistoryOptions
+  }
+  throw historyError(res.status, body, 'Unexpected error fetching the history options')
 }
 
 // contracts/get-consultation-detail.md

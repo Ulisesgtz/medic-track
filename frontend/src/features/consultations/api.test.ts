@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { fetchConsultations, fetchChildOverview, createConsultation, fetchConsultationDetail, updateDoseStatus, endTreatment, extendTreatment, ConsultationApiError } from './api'
+import { searchConsultations, fetchHistoryOptions, fetchConsultations, fetchChildOverview, createConsultation, fetchConsultationDetail, updateDoseStatus, endTreatment, extendTreatment, ConsultationApiError } from './api'
 
 const medicationPayload = { name: 'Amoxicilina', frequencyHours: 8, durationDays: 3, startTime: '08:00' }
 
@@ -280,5 +280,70 @@ describe('session token and 403', () => {
     expect((await createConsultation('c', {} as never, 't').catch((e) => e)).kind).toBe('child_not_found')
     expect((await fetchConsultationDetail('k', 't').catch((e) => e)).kind).toBe('consultation_not_found')
     expect((await updateDoseStatus('k', 'd', true, 't').catch((e) => e)).kind).toBe('dose_not_found')
+  })
+})
+
+describe('the history (specs/031)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  const answer = (status: number, body: object) =>
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: status < 300, status, json: async () => body } as Response)
+
+  it('posts the criteria in the body to the search route, with the session, and returns the consultations', async () => {
+    const found = [{ id: 'c1', doctorName: 'Dra. López', consultDate: '2026-01-15', notes: '', symptomNames: [], medicationCount: 1 }]
+    answer(200, { childId: 'child-1', consultations: found })
+
+    expect(await searchConsultations('child-1', { q: 'amox', kind: 'record' }, 'tok')).toEqual(found)
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0]
+    expect(String(url)).toMatch(/\/children\/child-1\/consultations\/search$/)
+    expect(String(url)).not.toContain('?') // what was typed is not part of the address
+    expect(init?.method).toBe('POST')
+    expect(init?.headers).toMatchObject({ Authorization: 'Bearer tok', 'Content-Type': 'application/json' })
+    expect(JSON.parse(String(init?.body))).toEqual({ q: 'amox', kind: 'record' })
+  })
+
+  it('asks for the choice lists with a GET and the session', async () => {
+    answer(200, { doctors: ['Dra. López'], medications: ['Paracetamol'] })
+
+    expect(await fetchHistoryOptions('child-1', 'tok')).toEqual({ doctors: ['Dra. López'], medications: ['Paracetamol'] })
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0]
+    expect(String(url)).toMatch(/\/children\/child-1\/history-options$/)
+    expect(init?.headers).toMatchObject({ Authorization: 'Bearer tok' })
+  })
+
+  it.each([
+    ['searchConsultations', () => searchConsultations('child-1', {}, 'tok')],
+    ['fetchHistoryOptions', () => fetchHistoryOptions('child-1', 'tok')],
+  ])('%s maps the failures to their own kinds', async (_name, call) => {
+    answer(404, { error: 'child_not_found' })
+    expect((await call().catch((e) => e)).kind).toBe('child_not_found')
+    answer(403, {})
+    expect((await call().catch((e) => e)).kind).toBe('child_not_found')
+
+    answer(400, { message: 'bad', details: [{ field: 'kind', message: 'must be all, treatment or record' }] })
+    const bad = await call().catch((e) => e)
+    expect(bad.kind).toBe('validation_error')
+    expect(bad.details).toEqual([{ field: 'kind', message: 'must be all, treatment or record' }])
+
+    answer(400, { details: [{ field: 'symptomCodes', message: 'symptom_not_available' }] })
+    expect((await call().catch((e) => e)).kind).toBe('symptom_not_available')
+
+    answer(422, { error: 'freemium_consultation_limit_exceeded', reason: 'history_search', message: 'paid plan' })
+    const plan = await call().catch((e) => e)
+    expect(plan).toBeInstanceOf(ConsultationApiError)
+    expect(plan.kind).toBe('plan_limit_history_search')
+    expect(plan.message).toBe('paid plan')
+
+    answer(422, { error: 'freemium_consultation_limit_exceeded', reason: 'record_only' })
+    expect((await call().catch((e) => e)).kind).toBe('unknown')
+    answer(500, {})
+    expect((await call().catch((e) => e)).kind).toBe('unknown')
   })
 })

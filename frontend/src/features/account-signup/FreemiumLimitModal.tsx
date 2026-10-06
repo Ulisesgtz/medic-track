@@ -4,9 +4,9 @@ import { useIsDesktop } from '../../shared/ui/useIsDesktop'
 
 /**
  * What the free plan stopped (specs/030 adds the last two): a second child, a second consultation while one treatment is
- * still active, or a consultation saved only as a record.
+ * still active, a consultation saved only as a record, or (specs/031) searching and filtering the history.
  */
-export type PlanLimitReason = 'children' | 'active_treatment' | 'record_only'
+export type PlanLimitReason = 'children' | 'active_treatment' | 'record_only' | 'history_search'
 
 // The words are neutral: they say what the plan includes, never what to do about the child's health (Principio I), and
 // always that what was already saved stays.
@@ -18,6 +18,10 @@ const COPY: Record<Exclude<PlanLimitReason, 'children'>, { title: string; body: 
   record_only: {
     title: 'Consultas anteriores en el plan completo',
     body: 'Guardar una consulta anterior solo como registro es parte del plan completo. Todo lo que ya registraste se mantiene intacto.',
+  },
+  history_search: {
+    title: 'Historial con búsqueda y filtros',
+    body: 'Buscar y filtrar el historial es parte del plan completo. Todo lo que ya registraste se mantiene y lo sigues viendo en tu lista.',
   },
 }
 

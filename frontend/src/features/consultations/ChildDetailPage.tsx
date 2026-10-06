@@ -9,6 +9,7 @@ import { useSidebarSession } from '../home/useSidebarSession'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { fetchChildOverview, fetchConsultations, ConsultationApiError } from './api'
 import { ConsultationCard } from './ConsultationCard'
+import { HistoryEntry } from './HistoryEntry'
 import { NewConsultationEntry } from './NewConsultationEntry'
 import { SummaryCard } from './SummaryCard'
 import { TodayDosesBlock } from './TodayDosesBlock'
@@ -84,6 +85,9 @@ export function ChildDetailPage() {
 
   const consultations = query.data ?? []
   const newConsultationPath = `/children/${childId}/consultations/new`
+  // specs/031: searching the history is the paid plan's; the list itself is the same for every plan.
+  const historyPath = `/children/${childId}/historial`
+  const historyIsFree = accountQuery.data?.plan === 'free'
 
   const overviewStatus = overviewQuery.isPending ? 'loading' : overviewQuery.isError ? 'error' : 'ready'
   const overview = overviewQuery.data
@@ -170,7 +174,16 @@ export function ChildDetailPage() {
 
             <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-start gap-[22px]">
               <section className="flex min-w-0 flex-col gap-4">
-                <h2 className="text-xl font-black tracking-[-0.02em] text-ink">Consultas</h2>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h2 className="text-xl font-black tracking-[-0.02em] text-ink">Consultas</h2>
+                  <HistoryEntry
+                    to={historyPath}
+                    free={historyIsFree}
+                    className="inline-flex min-h-11 cursor-pointer items-center rounded-2xl border-2 border-action px-4 text-[14px] font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+                  >
+                    Buscar en el historial
+                  </HistoryEntry>
+                </div>
                 {consultationList('desktop')}
               </section>
               <TodayDosesPanel doses={todayDoses} status={overviewStatus} />
@@ -227,6 +240,13 @@ export function ChildDetailPage() {
               + Nueva
             </NewConsultationEntry>
           </div>
+          <HistoryEntry
+            to={historyPath}
+            free={historyIsFree}
+            className="mt-3 inline-flex min-h-11 cursor-pointer items-center rounded-2xl border-[1.5px] border-slate-300 bg-surface px-4 text-sm font-extrabold text-action transition-colors duration-200 hover:border-action hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+          >
+            Buscar en el historial
+          </HistoryEntry>
           <div className="mt-4 flex flex-col gap-3.5">{consultationList('phone')}</div>
         </section>
       </main>

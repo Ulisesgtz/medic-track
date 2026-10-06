@@ -5,6 +5,7 @@ import { CompleteGoogleSignupPage } from './features/account-signup/CompleteGoog
 import { HomePage } from './features/home/HomePage'
 import { ChildDetailPage } from './features/consultations/ChildDetailPage'
 import { ConsultationDetailPage } from './features/consultations/ConsultationDetailPage'
+import { HistoryPage } from './features/consultations/HistoryPage'
 import { NewConsultationPage } from './features/consultations/NewConsultationPage'
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage'
 import { LoginPage } from './features/auth/LoginPage'
@@ -51,6 +52,14 @@ function App() {
             element={
               <RequireSession>
                 <ChildDetailPage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/children/:childId/historial"
+            element={
+              <RequireSession>
+                <HistoryPage />
               </RequireSession>
             }
           />
