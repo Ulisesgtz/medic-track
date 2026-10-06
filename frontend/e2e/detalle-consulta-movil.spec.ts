@@ -70,7 +70,8 @@ test.describe('Detalle de consulta — diseño móvil (mock 03)', () => {
 
     await chip.click()
     await expect(chip).toHaveAttribute('aria-pressed', 'true')
-    await expect(chip).toHaveText('16:00 ✓')
+    await expect(chip).toContainText('16:00 ✓')
+    await expect(chip).toContainText('por Ana') // who marked it (specs/032): the account that is signed in
     await expect(chip).toHaveClass(/bg-confirmed/)
 
     await page.reload()

@@ -194,7 +194,7 @@ func TestService_MarkDose(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	dose, err := svc.MarkDose(context.Background(), c.ID, c.Medications[0].Doses[0].ID, true)
+	dose, err := svc.MarkDose(context.Background(), c.ID, c.Medications[0].Doses[0].ID, true, anyone)
 
 	require.NoError(t, err)
 	require.True(t, dose.Taken)
@@ -204,7 +204,7 @@ func TestService_MarkDose_NotFound(t *testing.T) {
 	pool := testPool(t)
 	svc := consultation.NewService(consultation.NewRepository(pool))
 
-	_, err := svc.MarkDose(context.Background(), uuid.New(), uuid.New(), true)
+	_, err := svc.MarkDose(context.Background(), uuid.New(), uuid.New(), true, anyone)
 
 	require.ErrorIs(t, err, consultation.ErrDoseNotFound)
 }

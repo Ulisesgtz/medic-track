@@ -197,6 +197,11 @@ definitions:
       taken:
         example: false
         type: boolean
+      takenBy:
+        allOf:
+        - $ref: '#/definitions/TakenByResponse'
+        description: 'TakenBy: who marked it and when (specs/032); null if it isn''t
+          marked or was marked before that feature.'
     type: object
   EmailConflictResponse:
     properties:
@@ -451,6 +456,10 @@ definitions:
       taken:
         example: false
         type: boolean
+      takenBy:
+        allOf:
+        - $ref: '#/definitions/TakenByResponse'
+        description: TakenBy as in DoseResponse (specs/032).
     type: object
   PlanLimitResponse:
     properties:
@@ -520,6 +529,15 @@ definitions:
         type: string
       name:
         example: Fiebre
+        type: string
+    type: object
+  TakenByResponse:
+    properties:
+      at:
+        example: "2026-01-15T14:05:00Z"
+        type: string
+      name:
+        example: Ana
         type: string
     type: object
   ValidationErrorResponse:
@@ -1539,6 +1557,8 @@ paths:
       description: |-
         Sets a dose's taken status. No validation of scheduled date or treatment
         status — a dose can be marked/unmarked at any time (FR-011, FR-016).
+        Marking is first-come: a dose already marked answers 200 as it is, with who marked it (takenBy, specs/032).
+        Unmarking is for who marked it or for someone who can do everything (the owner or a Tutor); anyone else gets 403.
       parameters:
       - description: Consultation UUID
         in: path

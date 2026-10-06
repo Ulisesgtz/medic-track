@@ -160,8 +160,8 @@ func (s *Service) ExtendTreatment(ctx context.Context, consultationID, medicatio
 // scheduled date or the treatment's duration (FR-011, FR-016). The update
 // is scoped to consultationID — a doseID that exists but belongs to a
 // different consultation is treated as not found (ErrDoseNotFound).
-func (s *Service) MarkDose(ctx context.Context, consultationID, doseID uuid.UUID, taken bool) (*Dose, error) {
-	return s.repo.UpdateDoseStatus(ctx, consultationID, doseID, taken)
+func (s *Service) MarkDose(ctx context.Context, consultationID, doseID uuid.UUID, taken bool, actor Actor) (*Dose, error) {
+	return s.repo.UpdateDoseStatus(ctx, consultationID, doseID, taken, actor)
 }
 
 func validateCreateConsultationInput(input CreateConsultationInput) ValidationErrors {

@@ -55,3 +55,31 @@ describe('DoseChip (specs/013)', () => {
     expect(screen.getByRole('button')).toHaveAttribute('aria-pressed', 'false')
   })
 })
+
+// specs/032: who marked a dose, as a line under the time ("por Ana, 08:05"), recorded and never judged.
+describe('DoseChip, who marked it (specs/032)', () => {
+  const taken = (takenBy?: Dose['takenBy']): Dose => ({ id: 'd-taken', scheduledAt: at(8), taken: true, status: 'taken', takenBy })
+
+  it('says who marked it and when, under the time, and keeps its fixed name', () => {
+    renderChip(taken({ name: 'Ana', at: at(8) }))
+
+    const chip = screen.getByRole('button', { name: 'Toma de 08:00' })
+    expect(chip).toHaveTextContent('08:00 ✓')
+    expect(chip).toHaveTextContent('por Ana, 08:00')
+    expect(chip).toHaveAccessibleDescription('Marcada por Ana, 08:00')
+  })
+
+  it('says nothing about who when the dose has no author (marked before the family could share)', () => {
+    renderChip(taken(null))
+
+    const chip = screen.getByRole('button', { name: 'Toma de 08:00' })
+    expect(chip).not.toHaveTextContent('por ')
+    expect(chip).not.toHaveAccessibleDescription()
+  })
+
+  it('says nothing about who on a dose that is not marked, even if an author were sent', () => {
+    renderChip({ id: 'd-due', scheduledAt: at(8), taken: false, status: 'due', takenBy: { name: 'Ana', at: at(8) } })
+
+    expect(screen.getByRole('button')).not.toHaveTextContent('por Ana')
+  })
+})

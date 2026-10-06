@@ -521,3 +521,28 @@ describe('ChildDetailPage, the history entry (specs/031)', () => {
     expect(await screen.findByRole('dialog', { name: 'Historial con búsqueda y filtros' })).toBeInTheDocument()
   })
 })
+
+// specs/032: the web panel of today's doses says who marked a dose.
+describe('ChildDetailPage, who marked the doses of the day (specs/032)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 8, 16, 12))
+    useSession()
+    useWeb()
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+    window.localStorage.clear()
+  })
+
+  it('shows "por Ana, 08:05" under a marked dose and nothing under the others', async () => {
+    const marked = { ...dose('d1', 8, 'Amoxicilina', true), takenBy: { name: 'Ana', at: new Date(2026, 8, 16, 8, 5).toISOString() } }
+    const open = dose('d2', 16, 'Amoxicilina', false)
+    stubApi({ overview: { childId: 'child-1', doses: [marked, open], activeTreatment: null } })
+    renderPage()
+
+    expect(await screen.findByText('por Ana, 08:05')).toBeInTheDocument()
+    expect(screen.getAllByText(/^por /)).toHaveLength(1)
+  })
+})

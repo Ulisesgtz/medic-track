@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"github.com/Ulisesgtz/medic-track/backend/internal/access"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 )
@@ -38,7 +39,22 @@ type doseResponse struct {
 	// Status is derived by the server with its own clock (specs/013): pending, due ("por marcar"), taken or
 	// unregistered ("sin registrar": the next dose of its medication came and it isn't marked).
 	Status string `json:"status" enums:"pending,due,taken,unregistered,canceled" example:"due"`
+	// TakenBy: who marked it and when (specs/032); null if it isn't marked or was marked before that feature.
+	TakenBy *takenByResponse `json:"takenBy"`
 } // @name DoseResponse
+
+// takenByResponse says who marked a dose: the first name of their account (never their e-mail) and when.
+type takenByResponse struct {
+	Name string `json:"name" example:"Ana"`
+	At   string `json:"at" example:"2026-01-15T14:05:00Z"`
+} // @name TakenByResponse
+
+func toTakenByResponse(t *TakenBy) *takenByResponse {
+	if t == nil {
+		return nil
+	}
+	return &takenByResponse{Name: t.Name, At: t.At.Format(time.RFC3339)}
+}
 
 type medicationResponse struct {
 	ID             string  `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
@@ -220,6 +236,8 @@ type overviewDoseResponse struct {
 	Taken          bool   `json:"taken" example:"false"`
 	// Status as in DoseResponse (specs/013).
 	Status string `json:"status" enums:"pending,due,taken,unregistered,canceled" example:"due"`
+	// TakenBy as in DoseResponse (specs/032).
+	TakenBy *takenByResponse `json:"takenBy"`
 } // @name OverviewDoseResponse
 
 type activeTreatmentResponse struct {
@@ -298,6 +316,7 @@ func (h *Handler) GetChildOverview(w http.ResponseWriter, r *http.Request) {
 			ScheduledAt:    d.ScheduledAt.Format(time.RFC3339),
 			Taken:          d.Taken,
 			Status:         string(d.Status),
+			TakenBy:        toTakenByResponse(d.TakenBy),
 		})
 	}
 	resp := childOverviewResponse{ChildID: childID.String(), Doses: doses}
@@ -664,6 +683,8 @@ type updateDoseRequest struct {
 //	@Summary		Mark or unmark a dose as taken
 //	@Description	Sets a dose's taken status. No validation of scheduled date or treatment
 //	@Description	status — a dose can be marked/unmarked at any time (FR-011, FR-016).
+//	@Description	Marking is first-come: a dose already marked answers 200 as it is, with who marked it (takenBy, specs/032).
+//	@Description	Unmarking is for who marked it or for someone who can do everything (the owner or a Tutor); anyone else gets 403.
 //	@Tags			consultations
 //	@Accept			json
 //	@Produce		json
@@ -700,10 +721,22 @@ func (h *Handler) UpdateDose(w http.ResponseWriter, r *http.Request) {
 	// Scoping the update to consultationID (not just doseID) is what makes
 	// a dose from a different consultation correctly 404 instead of
 	// silently succeeding — see repository.go's UpdateDoseStatus.
-	dose, err := h.service.MarkDose(r.Context(), consultationID, doseID, req.Taken)
+	// Who is marking: RequireAccess put it in the context (specs/032). Without it nothing is allowed (fail closed).
+	got, ok := access.FromContext(r.Context())
+	if !ok {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not update dose", nil)
+		return
+	}
+	actor := Actor{AccountID: got.ActorAccountID, Full: got.Level == access.Full}
+
+	dose, err := h.service.MarkDose(r.Context(), consultationID, doseID, req.Taken, actor)
 	if err != nil {
 		if errors.Is(err, ErrDoseNotFound) {
 			h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, doseNotFoundBody(), nil)
+			return
+		}
+		if errors.Is(err, ErrDoseForbidden) {
+			h.responder.WriteJSONError(r.Context(), w, http.StatusForbidden, "forbidden", "Only who marked a dose, or a tutor, can unmark it", nil)
 			return
 		}
 		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not update dose", nil)
@@ -897,6 +930,7 @@ func toDoseResponse(d *Dose) doseResponse {
 		ScheduledAt: d.ScheduledAt.Format(time.RFC3339),
 		Taken:       d.Taken,
 		Status:      string(d.Status),
+		TakenBy:     toTakenByResponse(d.TakenBy),
 	}
 }
 

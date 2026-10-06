@@ -1,4 +1,5 @@
-import type { DoseStatus } from './types'
+import { formatTime } from '../../shared/date'
+import type { DoseStatus, TakenBy } from './types'
 
 // What each dose looks like to the parent (specs/013). The status comes from the server, computed with its own clock,
 // so every device shows the same and the phone's clock never decides it.
@@ -54,4 +55,9 @@ export function isUnregistered(dose: DoseLike): boolean {
 /** "1 sin registrar" / "3 sin registrar". */
 export function unregisteredText(count: number): string {
   return `${count} sin registrar`
+}
+
+/** "por Ana, 08:05": who marked a dose and at what time (local), or '' if nobody is known (specs/032). It only records. */
+export function takenByText(takenBy: TakenBy | null | undefined): string {
+  return takenBy ? `por ${takenBy.name}, ${formatTime(takenBy.at)}` : ''
 }

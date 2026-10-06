@@ -242,7 +242,7 @@ func TestExtendTreatment_TheAddedDosesAreOrdinaryDoses(t *testing.T) {
 	lastAdded := extended.Doses[len(extended.Doses)-1]
 
 	// The parent can mark one like any other.
-	marked, err := svc.MarkDose(context.Background(), c.ID, lastAdded.ID, true)
+	marked, err := svc.MarkDose(context.Background(), c.ID, lastAdded.ID, true, anyone)
 	require.NoError(t, err)
 	require.Equal(t, consultation.DoseStatusTaken, marked.Status)
 

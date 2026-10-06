@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
+	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 )
 
 func testPool(t *testing.T) *pgxpool.Pool {
@@ -69,3 +70,7 @@ func createChildren(t *testing.T, pool *pgxpool.Pool, plan account.Plan, n int) 
 }
 
 func strPtr(s string) *string { return &s }
+
+// anyone is who marks in the tests that aren't about who marked: someone who can do everything, with no account of their own
+// (so no author is stored).
+var anyone = consultation.Actor{Full: true}

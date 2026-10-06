@@ -67,16 +67,16 @@ func TestStatus_MarkAndUnmarkAnUnregisteredDose(t *testing.T) {
 	svc, _, c := yesterdaysConsultation(t)
 	old := c.Medications[0].Doses[0]
 
-	marked, err := svc.MarkDose(context.Background(), c.ID, old.ID, true)
+	marked, err := svc.MarkDose(context.Background(), c.ID, old.ID, true, anyone)
 	require.NoError(t, err)
 	require.Equal(t, consultation.DoseStatusTaken, marked.Status)
 
-	unmarked, err := svc.MarkDose(context.Background(), c.ID, old.ID, false)
+	unmarked, err := svc.MarkDose(context.Background(), c.ID, old.ID, false, anyone)
 	require.NoError(t, err)
 	require.Equal(t, consultation.DoseStatusUnregistered, unmarked.Status)
 
 	future := c.Medications[0].Doses[5]
-	unmarkedFuture, err := svc.MarkDose(context.Background(), c.ID, future.ID, false)
+	unmarkedFuture, err := svc.MarkDose(context.Background(), c.ID, future.ID, false, anyone)
 	require.NoError(t, err)
 	require.Equal(t, consultation.DoseStatusPending, unmarkedFuture.Status)
 }

@@ -273,3 +273,70 @@ func TestRepository_UpsertDevice_KeepsTheActivationOfAnActiveDeviceOfTheSameAcco
 	require.False(t, created)
 	require.True(t, past.Equal(again.ActivatedAt), "the app re-registers on every visit; that must not move the cutoff")
 }
+
+// specs/032: the "Tomada" button marks on behalf of the account of the DEVICE that got the reminder, and only while that
+// account still has access to the child.
+func TestRepository_MarkTakenByAction_MarksOnBehalfOfTheDevicesPerson(t *testing.T) {
+	pool := testPool(t)
+	repo := reminder.NewRepository(pool)
+	ctx := context.Background()
+	owner := newFamily(t, pool, nil)
+	caregiver := owner.addMember(t, pool, "caregiver", "active", nil)
+	tutor := owner.addMember(t, pool, "tutor", "active", nil)
+	dose := owner.dose(t, pool, time.Now(), false)
+
+	require.NoError(t, repo.MarkTakenByAction(ctx, dose, caregiver.device(t, repo, uniqueEndpoint()).ID))
+
+	require.True(t, doseTaken(t, pool, dose))
+	author, at := doseAuthor(t, pool, dose)
+	require.NotNil(t, author)
+	require.Equal(t, caregiver.accountID, *author, "the person whose device it was, not the owner")
+	require.NotNil(t, at)
+
+	// A second tap, from another person's device, changes nothing: the first mark keeps its author.
+	require.NoError(t, repo.MarkTakenByAction(ctx, dose, tutor.device(t, repo, uniqueEndpoint()).ID))
+	again, _ := doseAuthor(t, pool, dose)
+	require.Equal(t, caregiver.accountID, *again)
+}
+
+func TestRepository_MarkTakenByAction_TheOwnersDeviceStillMarksAsTheOwner(t *testing.T) {
+	pool := testPool(t)
+	repo := reminder.NewRepository(pool)
+	owner := newFamily(t, pool, nil)
+	dose := owner.dose(t, pool, time.Now(), false)
+
+	require.NoError(t, repo.MarkTakenByAction(context.Background(), dose, owner.device(t, repo, uniqueEndpoint()).ID))
+
+	author, _ := doseAuthor(t, pool, dose)
+	require.NotNil(t, author)
+	require.Equal(t, owner.accountID, *author)
+}
+
+// FR-019 / SC-007: someone who left or was removed can't mark any more, even with the device still registered.
+func TestRepository_MarkTakenByAction_APersonWhoLostTheAccessCannotMark(t *testing.T) {
+	pool := testPool(t)
+	repo := reminder.NewRepository(pool)
+	owner := newFamily(t, pool, nil)
+	left := owner.addMember(t, pool, "tutor", "left", nil)
+	removed := owner.addMember(t, pool, "caregiver", "removed", nil)
+	dose := owner.dose(t, pool, time.Now(), false)
+
+	for _, p := range []family{left, removed} {
+		require.ErrorIs(t, repo.MarkTakenByAction(context.Background(), dose, p.device(t, repo, uniqueEndpoint()).ID), reminder.ErrInvalidActionToken)
+	}
+	require.False(t, doseTaken(t, pool, dose))
+}
+
+// A Child-role member marks their own child's doses; the family is the child's, so it works through the same check.
+func TestRepository_MarkTakenByAction_AChildRoleMemberMarksTheirOwnChildsDose(t *testing.T) {
+	pool := testPool(t)
+	repo := reminder.NewRepository(pool)
+	owner := newFamily(t, pool, nil)
+	kid := owner.addMember(t, pool, "child", "active", nil)
+	dose := owner.dose(t, pool, time.Now(), false)
+
+	require.NoError(t, repo.MarkTakenByAction(context.Background(), dose, kid.device(t, repo, uniqueEndpoint()).ID))
+
+	author, _ := doseAuthor(t, pool, dose)
+	require.Equal(t, kid.accountID, *author)
+}

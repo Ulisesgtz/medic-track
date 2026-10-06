@@ -1,6 +1,6 @@
 import { useId } from 'react'
 import { formatTime } from '../../shared/date'
-import { CANCELED_LABEL, DOSE_CHIP_STYLE, UNREGISTERED_LABEL, statusOf } from './doseStatus'
+import { CANCELED_LABEL, DOSE_CHIP_STYLE, UNREGISTERED_LABEL, statusOf, takenByText } from './doseStatus'
 import type { Dose } from './types'
 import { useDoseToggle } from './useDoseToggle'
 
@@ -17,17 +17,20 @@ export function DoseChip({ consultationId, dose }: { consultationId: string; dos
   const unregistered = status === 'unregistered'
   const canceled = status === 'canceled'
   const stateId = `${useId()}-state`
+  // Who marked it (specs/032): a line under the time, and its sentence as part of the accessible description.
+  const author = dose.taken ? takenByText(dose.takenBy) : ''
+  const described = unregistered || canceled || author !== ''
 
   return (
     <button
       type="button"
       aria-pressed={dose.taken}
       aria-label={`Toma de ${time}`}
-      aria-describedby={unregistered || canceled ? stateId : undefined}
+      aria-describedby={described ? stateId : undefined}
       disabled={mutation.isPending || canceled}
       onClick={() => mutation.mutate(!dose.taken)}
       className={`flex min-h-11 min-w-[76px] max-w-40 flex-1 cursor-pointer flex-col items-center justify-center rounded-xl text-sm font-extrabold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
-        unregistered || canceled ? 'py-1.5 leading-tight' : 'py-3'
+        described ? 'py-1.5 leading-tight' : 'py-3'
       } ${canceled ? 'disabled:opacity-100' : ''} ${DOSE_CHIP_STYLE[status]}`}
     >
       <span className={canceled ? 'line-through' : undefined}>
@@ -41,6 +44,16 @@ export function DoseChip({ consultationId, dose }: { consultationId: string; dos
           </span>
           <span id={stateId} className="sr-only">
             {canceled ? CANCELED_LABEL : UNREGISTERED_LABEL}
+          </span>
+        </>
+      )}
+      {author && !unregistered && !canceled && (
+        <>
+          <span aria-hidden="true" className="max-w-full truncate px-1 text-xs font-bold">
+            {author}
+          </span>
+          <span id={stateId} className="sr-only">
+            {`Marcada ${author}`}
           </span>
         </>
       )}

@@ -80,6 +80,21 @@ type Extension struct {
 // Manual says the parent changed the number the app proposed.
 func (e Extension) Manual() bool { return e.AddedDoses != e.ProposedDoses }
 
+// TakenBy says who marked a dose and when (specs/032-compartir-con-familia): the first name of the person's account, never
+// their e-mail. A dose marked before that feature has none ("tomada", without "por …").
+type TakenBy struct {
+	AccountID uuid.UUID
+	Name      string
+	At        time.Time
+}
+
+// Actor is who changes a dose mark: the session's own account and whether it can do everything (the owner or a Tutor) or
+// only see and mark.
+type Actor struct {
+	AccountID uuid.UUID
+	Full      bool
+}
+
 // Dose represents one expected occurrence of a Medication, generated only
 // when the Medication has a StartTime (FR-009/FR-010). Taken is the only
 // mutable field in the whole domain (FR-016).
@@ -93,6 +108,8 @@ type Dose struct {
 	Status DoseStatus
 	// Covered: an extension already took this unregistered dose into account (specs/020); it is not proposed again.
 	Covered bool
+	// TakenBy: who marked it and when; nil if it isn't marked or was marked before specs/032.
+	TakenBy *TakenBy
 }
 
 // DoseOverview is one dose of any of a child's consultations, joined with its
@@ -105,6 +122,8 @@ type DoseOverview struct {
 	Taken          bool
 	// Status is derived when read (specs/013).
 	Status DoseStatus
+	// TakenBy as in Dose (specs/032).
+	TakenBy *TakenBy
 }
 
 // ActiveTreatment is the medication whose last scheduled dose is furthest in

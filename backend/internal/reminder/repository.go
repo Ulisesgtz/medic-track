@@ -2,11 +2,15 @@ package reminder
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/Ulisesgtz/medic-track/backend/internal/access"
 )
 
 // Repository persists reminder devices and claims the doses to remind.
@@ -164,28 +168,41 @@ func (r *Repository) ActiveDevicesFor(ctx context.Context, accountID uuid.UUID, 
 	return devices, nil
 }
 
-// MarkTakenByAction marks the dose as taken for the "Tomada" action of a reminder, only if the
-// device that received it is still active and belongs to the account that owns the dose
-// (research.md R7). Idempotent: an already taken dose still counts. Anything else is
-// ErrInvalidActionToken.
+// MarkTakenByAction marks a dose taken from the "Tomada" button of a reminder, on behalf of the account of the DEVICE that
+// received it (specs/032): that person is the author the others see ("por Ana"), and they must still have access to the
+// dose's child (at least to see and mark) — someone who left or was removed can't mark any more. ErrInvalidActionToken if
+// the device is off or unknown, the dose doesn't exist or the access is gone. Marking an already marked dose is a success
+// that changes nothing (the first mark keeps its author).
 func (r *Repository) MarkTakenByAction(ctx context.Context, doseID, deviceID uuid.UUID) error {
-	tag, err := r.pool.Exec(ctx, `
-		UPDATE doses SET taken = true
-		WHERE doses.id = $1
-		  AND EXISTS (
-			SELECT 1
-			FROM medications m
-			JOIN consultations c ON c.id = m.consultation_id
-			JOIN children ch ON ch.id = c.child_id
-			JOIN reminder_devices rd ON rd.account_id = ch.account_id
-			WHERE m.id = doses.medication_id AND rd.id = $2 AND rd.active
-		  )
-	`, doseID, deviceID)
-	if err != nil {
-		return fmt.Errorf("marking dose taken: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
+	var accountID, childID uuid.UUID
+	err := r.pool.QueryRow(ctx, `
+		SELECT rd.account_id, ch.id
+		FROM reminder_devices rd, doses d
+		JOIN medications m ON m.id = d.medication_id
+		JOIN consultations c ON c.id = m.consultation_id
+		JOIN children ch ON ch.id = c.child_id
+		WHERE d.id = $1 AND rd.id = $2 AND rd.active
+	`, doseID, deviceID).Scan(&accountID, &childID)
+	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrInvalidActionToken
+	}
+	if err != nil {
+		return fmt.Errorf("finding the dose and the device: %w", err)
+	}
+
+	level, err := access.NewRepository(r.pool).OfAccountOnChild(ctx, accountID, childID)
+	if err != nil {
+		return fmt.Errorf("checking access to the child: %w", err)
+	}
+	if !level.AtLeast(access.Mark) {
+		return ErrInvalidActionToken
+	}
+
+	if _, err := r.pool.Exec(ctx, `
+		UPDATE doses SET taken = true, taken_by_account_id = $2, taken_at = now()
+		WHERE id = $1 AND NOT taken
+	`, doseID, accountID); err != nil {
+		return fmt.Errorf("marking dose taken: %w", err)
 	}
 	return nil
 }

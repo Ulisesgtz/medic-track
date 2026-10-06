@@ -108,7 +108,8 @@ test.describe('Detalle de consulta — diseño web (mock 13)', () => {
     await expect(chip).toHaveAttribute('aria-pressed', 'false')
     await chip.click()
     await expect(chip).toHaveAttribute('aria-pressed', 'true')
-    await expect(chip).toHaveText('00:00 ✓')
+    await expect(chip).toContainText('00:00 ✓')
+    await expect(chip).toContainText('por Ana') // who marked it (specs/032)
 
     await page.reload()
     await expect(page.getByRole('button', { name: 'Toma de 00:00' })).toHaveAttribute('aria-pressed', 'true')

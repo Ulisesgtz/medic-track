@@ -168,3 +168,32 @@ func doseTaken(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) bool {
 }
 
 func strPtr(s string) *string { return &s }
+
+// addMember makes a new person (their own account) a member of f's family with the role, and returns a `family` that has
+// that person's account — so `.device(...)` registers a device for THEM — and f's child, consultation and medication
+// (specs/032). `status` 'active' joins; anything else is a member who already left or was removed.
+func (f family) addMember(t *testing.T, pool *pgxpool.Pool, role, status string, detail *string) family {
+	t.Helper()
+	ctx := context.Background()
+	m := f
+	email := fmt.Sprintf("reminder.member.%s@example.com", uuid.NewString())
+	require.NoError(t, pool.QueryRow(ctx, `
+		INSERT INTO accounts (first_name, last_name, email, plan, reminder_detail) VALUES ('Luis', 'Gómez', $1, 'free', $2) RETURNING id
+	`, email, detail).Scan(&m.accountID))
+	var childID *uuid.UUID
+	if role == "child" {
+		childID = &f.childID
+	}
+	_, err := pool.Exec(ctx, `
+		INSERT INTO family_members (family_account_id, account_id, role, child_id, invited_by_account_id, status, ended_at)
+		VALUES ($1, $2, $3, $4, $1, $5, CASE WHEN $5 = 'active' THEN NULL ELSE now() END)
+	`, f.accountID, m.accountID, role, childID, status)
+	require.NoError(t, err)
+	return m
+}
+
+func doseAuthor(t *testing.T, pool *pgxpool.Pool, id uuid.UUID) (author *uuid.UUID, at *time.Time) {
+	t.Helper()
+	require.NoError(t, pool.QueryRow(context.Background(), `SELECT taken_by_account_id, taken_at FROM doses WHERE id = $1`, id).Scan(&author, &at))
+	return author, at
+}

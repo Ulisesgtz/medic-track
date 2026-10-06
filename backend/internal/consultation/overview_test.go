@@ -57,7 +57,7 @@ func TestRepository_GetOverview_DosesInWindow(t *testing.T) {
 	require.Equal(t, c.ID, got.Doses[0].ConsultationID)
 	require.False(t, got.Doses[0].Taken)
 
-	_, err = repo.UpdateDoseStatus(context.Background(), c.ID, second.ID, true)
+	_, err = repo.UpdateDoseStatus(context.Background(), c.ID, second.ID, true, anyone)
 	require.NoError(t, err)
 	got, err = repo.GetOverview(context.Background(), childID, first.ScheduledAt, first.ScheduledAt.Add(9*time.Hour), time.Now())
 	require.NoError(t, err)

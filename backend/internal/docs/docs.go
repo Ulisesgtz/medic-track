@@ -1037,7 +1037,7 @@ const docTemplate = `{
                         "ClerkSession": []
                     }
                 ],
-                "description": "Sets a dose's taken status. No validation of scheduled date or treatment\nstatus — a dose can be marked/unmarked at any time (FR-011, FR-016).",
+                "description": "Sets a dose's taken status. No validation of scheduled date or treatment\nstatus — a dose can be marked/unmarked at any time (FR-011, FR-016).\nMarking is first-come: a dose already marked answers 200 as it is, with who marked it (takenBy, specs/032).\nUnmarking is for who marked it or for someone who can do everything (the owner or a Tutor); anyone else gets 403.",
                 "consumes": [
                     "application/json"
                 ],
@@ -1738,6 +1738,14 @@ const docTemplate = `{
                 "taken": {
                     "type": "boolean",
                     "example": false
+                },
+                "takenBy": {
+                    "description": "TakenBy: who marked it and when (specs/032); null if it isn't marked or was marked before that feature.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/TakenByResponse"
+                        }
+                    ]
                 }
             }
         },
@@ -2088,6 +2096,14 @@ const docTemplate = `{
                 "taken": {
                     "type": "boolean",
                     "example": false
+                },
+                "takenBy": {
+                    "description": "TakenBy as in DoseResponse (specs/032).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/TakenByResponse"
+                        }
+                    ]
                 }
             }
         },
@@ -2173,6 +2189,19 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "example": "Fiebre"
+                }
+            }
+        },
+        "TakenByResponse": {
+            "type": "object",
+            "properties": {
+                "at": {
+                    "type": "string",
+                    "example": "2026-01-15T14:05:00Z"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Ana"
                 }
             }
         },

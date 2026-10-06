@@ -1,6 +1,6 @@
 import { formatTime } from '../../shared/date'
 import { useDoseToggle } from './useDoseToggle'
-import { DOSE_CHIP_STYLE, UNREGISTERED_LABEL, isUnregistered } from './doseStatus'
+import { DOSE_CHIP_STYLE, UNREGISTERED_LABEL, isUnregistered, takenByText } from './doseStatus'
 import type { OverviewDose } from './types'
 
 interface DoseRowProps {
@@ -24,8 +24,11 @@ function DoseRow({ dose }: DoseRowProps) {
 
   return (
     <li className="flex min-h-11 items-center justify-between gap-3">
-      <span className="min-w-0 truncate text-[15px] font-bold text-ink">
-        {time} {dose.medicationName}
+      <span className="min-w-0 text-[15px] font-bold text-ink">
+        <span className="block truncate">
+          {time} {dose.medicationName}
+        </span>
+        {dose.taken && dose.takenBy && <span className="block truncate text-xs font-semibold text-slate-600">{takenByText(dose.takenBy)}</span>}
       </span>
       <button
         type="button"
