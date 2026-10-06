@@ -54,7 +54,14 @@ export function WelcomeDisclaimer({ account }: { account: Account | undefined })
         <strong>no la interpretamos y no autollenamos ningún campo</strong>: los capturas tú. Así no interpretamos nada
         por ti.
       </p>
-      <p>La lectura se hace en tu teléfono; la foto se guarda solo en tu cuenta y no se comparte con nadie.</p>
+      <p>
+        La lectura se hace en tu teléfono; la foto se guarda en tu cuenta y solo la ven las personas a las que tú invites
+        a tu familia.
+      </p>
+      <p>
+        <strong>Compartir significa que otra persona ve los datos médicos del menor</strong>: sus consultas, recetas,
+        síntomas y tomas. Compártelos solo con quien cuida de tu hijo y quita el acceso cuando ya no haga falta.
+      </p>
       {mutation.isError && (
         <p role="alert" className="font-semibold text-red-700">
           No pudimos guardar tu confirmación. Revisa tu conexión e inténtalo de nuevo.

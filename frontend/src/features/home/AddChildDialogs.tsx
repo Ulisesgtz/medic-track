@@ -2,11 +2,10 @@ import { useCallback, useEffect, useRef, type RefObject } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
 import { AddChildModal } from './AddChildModal'
-import { atFreePlanLimit } from './plan'
+import { addChildTarget, atFreePlanLimit } from './plan'
 import type { Account } from './types'
 
 interface AddChildDialogsProps {
-  accountId: string
   account: Account | undefined
   open: boolean
   onClose: () => void
@@ -22,7 +21,7 @@ interface AddChildDialogsProps {
  * form just to be told no (mocks 05/15). Otherwise the add-child form opens.
  * Shared by the home and the desktop sidebar so both behave the same.
  */
-export function AddChildDialogs({ accountId, account, open, onClose, showChildName = false, opener }: AddChildDialogsProps) {
+export function AddChildDialogs({ account, open, onClose, showChildName = false, opener }: AddChildDialogsProps) {
   const navigate = useNavigate()
 
   // A stable close: the dialogs re-run their focus setup whenever their `onClose` changes identity,
@@ -36,17 +35,20 @@ export function AddChildDialogs({ accountId, account, open, onClose, showChildNa
     latest.current.opener?.current?.focus()
   }, [])
 
-  if (!open) return null
+  if (!open || !account) return null
 
-  if (account && atFreePlanLimit(account)) {
+  // Specs/032: the child is added to the account the family's plan belongs to (the session's own, or the owner's for a Tutor).
+  const target = addChildTarget(account)
+  if (!target.allowed) return null
+  if (atFreePlanLimit(account)) {
     return (
       <FreemiumLimitModal
-        childName={showChildName ? account.children[0]?.firstName : undefined}
+        childName={showChildName ? target.children[0]?.firstName : undefined}
         onStayFree={close}
         onViewPlans={() => navigate('/planes')}
         opener={opener}
       />
     )
   }
-  return <AddChildModal accountId={accountId} onClose={close} />
+  return <AddChildModal accountId={target.accountId} onClose={close} />
 }

@@ -693,3 +693,113 @@ func TestHandler_GetMe_ClerkDownForASessionWithoutAnAccountIs500(t *testing.T) {
 
 	require.Equal(t, http.StatusInternalServerError, rec.Code)
 }
+
+// ---- Specs/032-compartir-con-familia: GET /accounts/me with the children shared by a family.
+
+func getMe(t *testing.T, router http.Handler, token string) map[string]any {
+	t.Helper()
+	rec := doGetAuthed(t, router, "/accounts/me", token)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	return body
+}
+
+func TestHandler_GetMe_ChildrenOfTheAccountAreItsOwnAndCarryTheirPlan(t *testing.T) {
+	router, verifier := newTestRouter(t)
+	token := newAuthedRequestSetup(t, verifier, uniqueEmail("handler.getme.own"))
+	created := doPost(t, router, token, map[string]any{"firstName": "Ana", "lastName": "Gómez", "children": []map[string]any{{"firstName": "Luis", "lastName": "Gómez", "birthDate": "2020-01-15"}}})
+	require.Equal(t, http.StatusCreated, created.Code)
+
+	me := getMe(t, router, token)
+	children := me["children"].([]any)
+	require.Len(t, children, 1)
+	child := children[0].(map[string]any)
+	require.Equal(t, "owner", child["role"])
+	require.Equal(t, "free", child["plan"])
+	require.Equal(t, false, child["readOnly"])
+	require.Equal(t, me["id"], child["accountId"])
+	require.NotContains(t, me, "family")
+}
+
+func TestHandler_GetMe_ASharedChildComesAfterTheOwnOnesWithTheFamilysPlanAndRole(t *testing.T) {
+	router, pool, verifier := newTestRouterWithPool(t)
+	ownerToken := newAuthedRequestSetup(t, verifier, uniqueEmail("handler.getme.family.owner"))
+	created := doPost(t, router, ownerToken, map[string]any{"firstName": "Ana", "lastName": "Gómez", "children": []map[string]any{{"firstName": "Luis", "lastName": "Gómez", "birthDate": "2020-01-15"}}})
+	require.Equal(t, http.StatusCreated, created.Code)
+	var ownerBody map[string]any
+	require.NoError(t, json.Unmarshal(created.Body.Bytes(), &ownerBody))
+	ownerID := ownerBody["id"].(string)
+	sharedChildID := ownerBody["children"].([]any)[0].(map[string]any)["id"].(string)
+
+	tutorToken := newAuthedRequestSetup(t, verifier, uniqueEmail("handler.getme.family.tutor"))
+	own := doPost(t, router, tutorToken, map[string]any{"firstName": "Beto", "lastName": "Pérez", "children": []map[string]any{{"firstName": "Mía", "lastName": "Pérez", "birthDate": "2019-05-01"}}})
+	require.Equal(t, http.StatusCreated, own.Code)
+	var tutorBody map[string]any
+	require.NoError(t, json.Unmarshal(own.Body.Bytes(), &tutorBody))
+	tutorID := tutorBody["id"].(string)
+
+	_, err := pool.Exec(context.Background(), `INSERT INTO family_members (family_account_id, account_id, role, invited_by_account_id) VALUES ($1, $2, 'tutor', $1)`, ownerID, tutorID)
+	require.NoError(t, err)
+
+	me := getMe(t, router, tutorToken)
+	children := me["children"].([]any)
+	require.Len(t, children, 2)
+	first, second := children[0].(map[string]any), children[1].(map[string]any)
+	require.Equal(t, "owner", first["role"], "own children first")
+	require.Equal(t, "tutor", second["role"])
+	require.Equal(t, sharedChildID, second["id"])
+	require.Equal(t, ownerID, second["accountId"])
+	require.Equal(t, "free", second["plan"])
+	require.Equal(t, true, second["readOnly"], "the family's owner is not on the paid plan")
+	family := me["family"].(map[string]any)
+	require.Equal(t, "tutor", family["role"])
+	require.Equal(t, ownerID, family["ownerAccountId"])
+	require.Equal(t, "Ana", family["ownerName"])
+	require.Equal(t, true, family["readOnly"])
+
+	// The owner pays: the same person is no longer read-only and sees the paid plan on that child.
+	_, err = pool.Exec(context.Background(), `UPDATE accounts SET plan = 'paid' WHERE id = $1`, ownerID)
+	require.NoError(t, err)
+	me = getMe(t, router, tutorToken)
+	second = me["children"].([]any)[1].(map[string]any)
+	require.Equal(t, "paid", second["plan"])
+	require.Equal(t, false, second["readOnly"])
+	require.Equal(t, "free", me["children"].([]any)[0].(map[string]any)["plan"], "own children keep the account's own plan")
+
+	// A Child-role member sees only their own child.
+	kidToken := newAuthedRequestSetup(t, verifier, uniqueEmail("handler.getme.family.kid"))
+	kid := doPost(t, router, kidToken, map[string]any{"firstName": "Kid", "lastName": "Gómez"})
+	require.Equal(t, http.StatusCreated, kid.Code)
+	var kidBody map[string]any
+	require.NoError(t, json.Unmarshal(kid.Body.Bytes(), &kidBody))
+	_, err = pool.Exec(context.Background(), `
+		INSERT INTO children (account_id, first_name, last_name, birth_date) VALUES ($1, 'Otro', 'Gómez', '2018-01-01')`, ownerID)
+	require.NoError(t, err)
+	_, err = pool.Exec(context.Background(), `INSERT INTO family_members (family_account_id, account_id, role, child_id, invited_by_account_id) VALUES ($1, $2, 'child', $3, $1)`, ownerID, kidBody["id"], sharedChildID)
+	require.NoError(t, err)
+	kidChildren := getMe(t, router, kidToken)["children"].([]any)
+	require.Len(t, kidChildren, 1)
+	require.Equal(t, sharedChildID, kidChildren[0].(map[string]any)["id"])
+	require.Equal(t, "child", kidChildren[0].(map[string]any)["role"])
+}
+
+func TestHandler_GetMe_APersonWhoLeftSeesNoSharedChildren(t *testing.T) {
+	router, pool, verifier := newTestRouterWithPool(t)
+	ownerToken := newAuthedRequestSetup(t, verifier, uniqueEmail("handler.getme.left.owner"))
+	created := doPost(t, router, ownerToken, map[string]any{"firstName": "Ana", "lastName": "Gómez", "children": []map[string]any{{"firstName": "Luis", "lastName": "Gómez", "birthDate": "2020-01-15"}}})
+	var ownerBody map[string]any
+	require.NoError(t, json.Unmarshal(created.Body.Bytes(), &ownerBody))
+	memberToken := newAuthedRequestSetup(t, verifier, uniqueEmail("handler.getme.left.member"))
+	m := doPost(t, router, memberToken, map[string]any{"firstName": "Cuca", "lastName": "Gómez"})
+	var memberBody map[string]any
+	require.NoError(t, json.Unmarshal(m.Body.Bytes(), &memberBody))
+	_, err := pool.Exec(context.Background(), `
+		INSERT INTO family_members (family_account_id, account_id, role, invited_by_account_id, status, ended_at)
+		VALUES ($1, $2, 'caregiver', $1, 'left', now())`, ownerBody["id"], memberBody["id"])
+	require.NoError(t, err)
+
+	me := getMe(t, router, memberToken)
+	require.Len(t, me["children"], 0)
+	require.NotContains(t, me, "family")
+}

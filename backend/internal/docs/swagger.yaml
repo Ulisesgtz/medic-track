@@ -429,6 +429,31 @@ definitions:
         example: "2026-10-06T14:00:00Z"
         type: string
     type: object
+  FamilyMembershipInfo:
+    properties:
+      ownerAccountId:
+        example: e5f6a7b8-0000-0000-0000-000000000000
+        type: string
+      ownerName:
+        example: Ana
+        type: string
+      plan:
+        enum:
+        - free
+        - paid
+        example: paid
+        type: string
+      readOnly:
+        example: false
+        type: boolean
+      role:
+        enum:
+        - tutor
+        - caregiver
+        - child
+        example: tutor
+        type: string
+    type: object
   FamilyMembershipResponse:
     properties:
       id:
@@ -817,6 +842,12 @@ definitions:
       email:
         example: ana@example.com
         type: string
+      family:
+        allOf:
+        - $ref: '#/definitions/FamilyMembershipInfo'
+        description: |-
+          Family is present only when the session is an invited person of another account's family; its children are then
+          in Children, after the account's own.
       firstName:
         example: Ana
         type: string
@@ -841,6 +872,13 @@ definitions:
     type: object
   internal_account.childResponse:
     properties:
+      accountId:
+        description: |-
+          AccountID is the account the child belongs to (the family's owner), Role the session's role over this child
+          ("owner" for its own children), Plan the plan of that family and ReadOnly whether the session can only see and mark
+          (specs/032-compartir-con-familia).
+        example: e5f6a7b8-0000-0000-0000-000000000000
+        type: string
       birthDate:
         example: "2020-01-15"
         type: string
@@ -855,6 +893,23 @@ definitions:
         type: string
       lastName:
         example: Gómez
+        type: string
+      plan:
+        enum:
+        - free
+        - paid
+        example: free
+        type: string
+      readOnly:
+        example: false
+        type: boolean
+      role:
+        enum:
+        - owner
+        - tutor
+        - caregiver
+        - child
+        example: owner
         type: string
       weight:
         example: 14.2

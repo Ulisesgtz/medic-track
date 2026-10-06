@@ -5,9 +5,9 @@ import { Logo } from '../../shared/ui/Logo'
 import { useLogout } from '../auth/useLogout'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { AddChildDialogs } from './AddChildDialogs'
+import { addChildTarget } from './plan'
 
 interface ChildrenSidebarProps {
-  accountId: string
   /** The child whose screen is open, highlighted in the list. */
   activeChildId?: string
 }
@@ -19,7 +19,7 @@ interface ChildrenSidebarProps {
  * "+ Agregar hijo" and the tutor with the plan at the bottom. Reads the same
  * ['accounts', 'me'] query the home uses, so it costs no extra request.
  */
-export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarProps) {
+export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
   const [showAddChild, setShowAddChild] = useState(false)
   const addChildButton = useRef<HTMLButtonElement>(null)
   const logout = useLogout()
@@ -60,15 +60,24 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
           )
         })}
 
-        <button
-          ref={addChildButton}
-          type="button"
-          onClick={() => setShowAddChild(true)}
-          className="cursor-pointer rounded-2xl border-[1.5px] border-dashed border-ink-edge px-4 py-3.5 text-center text-sm font-bold text-bright-soft transition-colors duration-200 hover:bg-ink-soft"
-        >
-          + Agregar hijo
-        </button>
+        {(!account || addChildTarget(account).allowed) && (
+          <button
+            ref={addChildButton}
+            type="button"
+            onClick={() => setShowAddChild(true)}
+            className="cursor-pointer rounded-2xl border-[1.5px] border-dashed border-ink-edge px-4 py-3.5 text-center text-sm font-bold text-bright-soft transition-colors duration-200 hover:bg-ink-soft"
+          >
+            + Agregar hijo
+          </button>
+        )}
       </nav>
+
+      <Link
+        to="/familia"
+        className="-my-3 flex min-h-11 items-center rounded-2xl px-4 text-sm font-bold text-bright-soft transition-colors duration-200 hover:bg-ink-soft"
+      >
+        Familia
+      </Link>
 
       {account && (
         <div className="mt-auto flex flex-col gap-3 border-t border-ink-soft pt-5">
@@ -85,7 +94,7 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
                 {account.firstName} {account.lastName}
               </span>
               <span className="block text-xs text-bright-soft">
-                {account.plan === 'free' ? 'Plan gratuito' : 'Plan completo'}
+                {(account.family?.plan ?? account.plan) === 'free' ? 'Plan gratuito' : 'Plan completo'}
               </span>
             </span>
           </div>
@@ -100,7 +109,6 @@ export function ChildrenSidebar({ accountId, activeChildId }: ChildrenSidebarPro
       )}
 
       <AddChildDialogs
-        accountId={accountId}
         account={account}
         open={showAddChild}
         onClose={() => setShowAddChild(false)}

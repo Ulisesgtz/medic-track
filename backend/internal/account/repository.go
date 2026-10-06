@@ -257,10 +257,51 @@ func (r *Repository) GetByClerkUserID(ctx context.Context, clerkUserID string) (
 	}
 	rows.Close()
 
+	if err := r.addSharedChildren(ctx, acc); err != nil {
+		return nil, err
+	}
 	if acc.DisclaimerAccepted, err = disclaimerAccepted(ctx, r.pool, id); err != nil {
 		return nil, err
 	}
 	return acc, nil
+}
+
+// addSharedChildren fills Family and appends the children shared with the account (specs/032-compartir-con-familia): a
+// Tutor or Caregiver gets every child of the family, a Child-role member only their own. They come after the account's
+// own children, oldest first. Each carries the role and the plan of the family it belongs to.
+func (r *Repository) addSharedChildren(ctx context.Context, acc *Account) error {
+	var m FamilyMembership
+	var childID *uuid.UUID
+	err := r.pool.QueryRow(ctx, `
+		SELECT m.role, m.family_account_id, o.first_name, o.plan, m.child_id
+		FROM family_members m JOIN accounts o ON o.id = m.family_account_id
+		WHERE m.account_id = $1 AND m.status = 'active'
+	`, acc.ID).Scan(&m.Role, &m.OwnerAccountID, &m.OwnerName, &m.OwnerPlan, &childID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("querying the family membership: %w", err)
+	}
+	acc.Family = &m
+
+	rows, err := r.pool.Query(ctx, `
+		SELECT id, first_name, last_name, birth_date, height, weight, created_at
+		FROM children WHERE account_id = $1 AND ($2::uuid IS NULL OR id = $2)
+		ORDER BY created_at ASC
+	`, m.OwnerAccountID, childID)
+	if err != nil {
+		return fmt.Errorf("querying the shared children: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		child := Child{AccountID: m.OwnerAccountID, Role: m.Role, Plan: m.OwnerPlan, ReadOnly: m.ReadOnly()}
+		if err := rows.Scan(&child.ID, &child.FirstName, &child.LastName, &child.BirthDate, &child.Height, &child.Weight, &child.CreatedAt); err != nil {
+			return fmt.Errorf("scanning a shared child: %w", err)
+		}
+		acc.Children = append(acc.Children, child)
+	}
+	return rows.Err()
 }
 
 // LinkByEmail links the oldest account that has no Clerk user yet and whose

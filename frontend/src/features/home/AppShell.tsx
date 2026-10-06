@@ -35,7 +35,7 @@ export function AppShell({ activeChildId, children }: AppShellProps) {
   return (
     <>
       <div className={sidebar ? 'flex min-h-screen' : undefined}>
-        {sidebar && <ChildrenSidebar accountId={accountId} activeChildId={activeChildId} />}
+        {sidebar && <ChildrenSidebar activeChildId={activeChildId} />}
         <div className={sidebar ? 'min-w-0 flex-1' : undefined}>{children}</div>
       </div>
       {!isDesktop && <PullIndicator state={pull} />}

@@ -4,6 +4,7 @@ import { formatAgeLong } from '../../shared/age'
 import { Notice } from '../../shared/ui/Notice'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
+import { useChildAccess } from '../family/useChildAccess'
 import { AppShell } from '../home/AppShell'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { ActiveCriteria } from './ActiveCriteria'
@@ -37,7 +38,8 @@ function HistoryScreen({ childId }: { childId: string }) {
   const { isDesktop } = useSidebarSession()
   const accountQuery = useCurrentAccount()
   const child = accountQuery.data?.children.find((c) => c.id === childId)
-  const free = accountQuery.data?.plan === 'free'
+  // Specs/032: searching is the paid plan's — of the child's FAMILY (a Tutor on a free account in a paid family searches).
+  const free = useChildAccess(accountQuery.data, childId).isFree
   // Nothing is asked of the server until the plan is known (a free account is never asked); if the account itself can't
   // be read the server decides, with its 422.
   const canSearch = !free && (accountQuery.isSuccess || accountQuery.isError)

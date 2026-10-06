@@ -7,6 +7,7 @@ import { useLocalDay } from '../../shared/useLocalDay'
 import { AppShell } from '../home/AppShell'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
+import { useChildAccess } from '../family/useChildAccess'
 import { NewConsultationEntry } from './NewConsultationEntry'
 import { fetchChildOverview, fetchConsultationDetail, ConsultationApiError } from './api'
 import { sniffImageMimeType } from './imageMime'
@@ -52,6 +53,8 @@ export function ConsultationDetailPage() {
   // sidebar (`useCurrentAccount`, `GET /accounts/me`).
   const accountQuery = useCurrentAccount()
   const child = accountQuery.data?.children.find((c) => c.id === childId)
+  // Specs/032: the plan is the child's family's, and only who can do everything adds consultations or ends treatments.
+  const access = useChildAccess(accountQuery.data, childId)
   const today = useLocalDay()
   const overviewQuery = useQuery({
     queryKey: ['overview', childId, today.from.toISOString()],
@@ -147,6 +150,7 @@ export function ConsultationDetailPage() {
       variant={isDesktop ? 'desktop' : 'phone'}
       day={selectedDay}
       today={todayKey}
+      canManage={access.canAdd}
     />
   ))
 
@@ -170,14 +174,16 @@ export function ConsultationDetailPage() {
                 </p>
                 <h1 className="mt-1 text-4xl font-black tracking-tight text-ink">{consultation.doctorName}</h1>
               </div>
-              <NewConsultationEntry
-                to={`${childPath}/consultations/new`}
-                // specs/030: the free plan with a treatment still running gets the plan pop-up, not a form it can't save.
-                blocked={accountQuery.data?.plan === 'free' && treatment !== undefined && treatment !== null}
-                className="min-h-11 cursor-pointer rounded-2xl bg-confirmed px-6 py-3.5 text-[15px] font-extrabold text-white transition-colors hover:bg-emerald-800"
-              >
-                Nueva consulta
-              </NewConsultationEntry>
+              {access.canAdd && (
+                <NewConsultationEntry
+                  to={`${childPath}/consultations/new`}
+                  // specs/030: the free plan with a treatment still running gets the plan pop-up, not a form it can't save.
+                  blocked={access.isFree && treatment !== undefined && treatment !== null}
+                  className="min-h-11 cursor-pointer rounded-2xl bg-confirmed px-6 py-3.5 text-[15px] font-extrabold text-white transition-colors hover:bg-emerald-800"
+                >
+                  Nueva consulta
+                </NewConsultationEntry>
+              )}
             </div>
 
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">

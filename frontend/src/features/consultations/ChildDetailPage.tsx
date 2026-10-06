@@ -7,6 +7,7 @@ import { useLocalDay } from '../../shared/useLocalDay'
 import { AppShell } from '../home/AppShell'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
+import { useChildAccess } from '../family/useChildAccess'
 import { fetchChildOverview, fetchConsultations, ConsultationApiError } from './api'
 import { ConsultationCard } from './ConsultationCard'
 import { HistoryEntry } from './HistoryEntry'
@@ -35,6 +36,8 @@ export function ChildDetailPage() {
   // in it), the header falls back to the generic title.
   const accountQuery = useCurrentAccount()
   const child = accountQuery.data?.children.find((c) => c.id === childId)
+  // Specs/032: what the session can do with THIS child — the plan is its family's, and a Caregiver can't add.
+  const access = useChildAccess(accountQuery.data, childId)
 
   // "Today" is the parent's local day (it rolls over at midnight, even with the
   // app left open); only the client knows its time zone, so it sends the window.
@@ -87,7 +90,7 @@ export function ChildDetailPage() {
   const newConsultationPath = `/children/${childId}/consultations/new`
   // specs/031: searching the history is the paid plan's; the list itself is the same for every plan.
   const historyPath = `/children/${childId}/historial`
-  const historyIsFree = accountQuery.data?.plan === 'free'
+  const historyIsFree = access.isFree
 
   const overviewStatus = overviewQuery.isPending ? 'loading' : overviewQuery.isError ? 'error' : 'ready'
   const overview = overviewQuery.data
@@ -98,7 +101,7 @@ export function ChildDetailPage() {
   const treatment = overview?.activeTreatment ?? null
   // specs/030: on the free plan a treatment still running means the next consultation has to wait (or the treatment
   // be finished), so the pop-up opens right away instead of a form the server would refuse. Paid accounts: never.
-  const newConsultationBlocked = accountQuery.data?.plan === 'free' && treatment !== null
+  const newConsultationBlocked = access.isFree && treatment !== null
   const sinceYear = consultations
     .reduce<string | null>((min, c) => (min === null || c.consultDate < min ? c.consultDate : min), null)
     ?.slice(0, 4)
@@ -131,13 +134,15 @@ export function ChildDetailPage() {
                   {child ? formatAgeLong(child.birthDate) : 'Consultas médicas'}
                 </h1>
               </div>
-              <NewConsultationEntry
-                to={newConsultationPath}
-                blocked={newConsultationBlocked}
-                className="min-h-12 shrink-0 cursor-pointer rounded-[14px] bg-confirmed px-[22px] py-[15px] text-[15px] font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-confirmed focus-visible:ring-offset-2"
-              >
-                Nueva consulta
-              </NewConsultationEntry>
+              {access.canAdd && (
+                <NewConsultationEntry
+                  to={newConsultationPath}
+                  blocked={newConsultationBlocked}
+                  className="min-h-12 shrink-0 cursor-pointer rounded-[14px] bg-confirmed px-[22px] py-[15px] text-[15px] font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-confirmed focus-visible:ring-offset-2"
+                >
+                  Nueva consulta
+                </NewConsultationEntry>
+              )}
             </div>
 
             <div className="grid grid-cols-3 gap-[18px]">
@@ -232,13 +237,15 @@ export function ChildDetailPage() {
         <section className="px-6 pt-7">
           <div className="flex items-baseline justify-between">
             <h2 className="text-xl font-black tracking-tight text-ink">Consultas</h2>
-            <NewConsultationEntry
-              to={newConsultationPath}
-              blocked={newConsultationBlocked}
-              className="-my-3 inline-flex min-h-11 cursor-pointer items-center text-sm font-bold text-action"
-            >
-              + Nueva
-            </NewConsultationEntry>
+            {access.canAdd && (
+              <NewConsultationEntry
+                to={newConsultationPath}
+                blocked={newConsultationBlocked}
+                className="-my-3 inline-flex min-h-11 cursor-pointer items-center text-sm font-bold text-action"
+              >
+                + Nueva
+              </NewConsultationEntry>
+            )}
           </div>
           <HistoryEntry
             to={historyPath}

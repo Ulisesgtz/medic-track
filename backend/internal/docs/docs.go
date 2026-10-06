@@ -2443,6 +2443,40 @@ const docTemplate = `{
                 }
             }
         },
+        "FamilyMembershipInfo": {
+            "type": "object",
+            "properties": {
+                "ownerAccountId": {
+                    "type": "string",
+                    "example": "e5f6a7b8-0000-0000-0000-000000000000"
+                },
+                "ownerName": {
+                    "type": "string",
+                    "example": "Ana"
+                },
+                "plan": {
+                    "type": "string",
+                    "enum": [
+                        "free",
+                        "paid"
+                    ],
+                    "example": "paid"
+                },
+                "readOnly": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "tutor",
+                        "caregiver",
+                        "child"
+                    ],
+                    "example": "tutor"
+                }
+            }
+        },
         "FamilyMembershipResponse": {
             "type": "object",
             "properties": {
@@ -2969,6 +3003,14 @@ const docTemplate = `{
                     "type": "string",
                     "example": "ana@example.com"
                 },
+                "family": {
+                    "description": "Family is present only when the session is an invited person of another account's family; its children are then\nin Children, after the account's own.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/FamilyMembershipInfo"
+                        }
+                    ]
+                },
                 "firstName": {
                     "type": "string",
                     "example": "Ana"
@@ -2999,6 +3041,11 @@ const docTemplate = `{
         "internal_account.childResponse": {
             "type": "object",
             "properties": {
+                "accountId": {
+                    "description": "AccountID is the account the child belongs to (the family's owner), Role the session's role over this child\n(\"owner\" for its own children), Plan the plan of that family and ReadOnly whether the session can only see and mark\n(specs/032-compartir-con-familia).",
+                    "type": "string",
+                    "example": "e5f6a7b8-0000-0000-0000-000000000000"
+                },
                 "birthDate": {
                     "type": "string",
                     "example": "2020-01-15"
@@ -3018,6 +3065,28 @@ const docTemplate = `{
                 "lastName": {
                     "type": "string",
                     "example": "Gómez"
+                },
+                "plan": {
+                    "type": "string",
+                    "enum": [
+                        "free",
+                        "paid"
+                    ],
+                    "example": "free"
+                },
+                "readOnly": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "owner",
+                        "tutor",
+                        "caregiver",
+                        "child"
+                    ],
+                    "example": "owner"
                 },
                 "weight": {
                     "type": "number",
