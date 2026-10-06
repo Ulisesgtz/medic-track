@@ -21,6 +21,27 @@ describe('FreemiumLimitModal', () => {
     expect(screen.getByText(/Mateo sigue disponible sin cambios/)).toBeInTheDocument()
   })
 
+  it('says why a second consultation has to wait while one treatment is active (specs/030)', () => {
+    render(<FreemiumLimitModal reason="active_treatment" onViewPlans={() => {}} onStayFree={() => {}} />)
+
+    expect(screen.getByRole('dialog', { name: 'Ya tienes un tratamiento activo' })).toBeInTheDocument()
+    expect(screen.getByText('Plan gratuito')).toBeInTheDocument()
+    expect(screen.getByText(/un tratamiento activo a la vez/)).toBeInTheDocument()
+    expect(screen.getByText(/si lo finalizas/)).toBeInTheDocument()
+    expect(screen.getByText(/Todo lo que ya registraste se mantiene y lo sigues viendo/)).toBeInTheDocument()
+    expect(screen.queryByText(/otro hijo/)).not.toBeInTheDocument()
+  })
+
+  it('says that saving a past consultation only as a record is part of the full plan (specs/030)', () => {
+    render(<FreemiumLimitModal reason="record_only" childName="Mateo" onViewPlans={() => {}} onStayFree={() => {}} />)
+
+    expect(screen.getByRole('dialog', { name: 'Consultas anteriores en el plan completo' })).toBeInTheDocument()
+    expect(screen.getByText(/solo como registro es parte del plan completo/)).toBeInTheDocument()
+    expect(screen.getByText(/Todo lo que ya registraste se mantiene intacto/)).toBeInTheDocument()
+    // The child's name belongs to the child-limit text only.
+    expect(screen.queryByText(/Mateo/)).not.toBeInTheDocument()
+  })
+
   it('renders into <body>, outside whatever opened it', () => {
     const { container } = render(<FreemiumLimitModal onViewPlans={() => {}} onStayFree={() => {}} />)
 

@@ -22,7 +22,7 @@ const at = (h: number, day = 15) => new Date(2026, 0, day, h).toISOString()
 
 const account = {
   id: 'a1', firstName: 'Ana', lastName: 'Morales', email: 'ana@example.com',
-  countryCode: null, stateCode: null, plan: 'free',
+  countryCode: null, stateCode: null, plan: 'free' as string,
   children: [{ id: 'child-1', firstName: 'Mateo', lastName: 'Morales', birthDate: '2021-03-14', height: null, weight: null }],
 }
 
@@ -75,6 +75,7 @@ describe('ConsultationDetailPage', () => {
   })
 
   afterEach(() => {
+    account.plan = 'free'
     vi.unstubAllGlobals()
     vi.useRealTimers()
     window.localStorage.clear()
@@ -452,6 +453,7 @@ describe('ConsultationDetailPage', () => {
 
     it('shows the header row with "Nueva consulta", the photo card and the active treatment', async () => {
       useDesktop()
+      account.plan = 'paid' // on the free plan a running treatment turns "Nueva consulta" into the plan pop-up (specs/030)
       stubApi(consultation(), {
         childId: 'child-1',
         doses: [],
@@ -468,6 +470,22 @@ describe('ConsultationDetailPage', () => {
       expect(within(treatment).getByText('Amoxicilina')).toBeInTheDocument()
       expect(within(treatment).getByText('termina el 19 ene')).toBeInTheDocument()
       expect(screen.getByRole('navigation', { name: 'Tus hijos' })).toBeInTheDocument()
+    })
+
+    it('on the free plan, with a treatment running, "Nueva consulta" opens the plan pop-up instead of the form (specs/030)', async () => {
+      useDesktop()
+      stubApi(consultation(), {
+        childId: 'child-1',
+        doses: [],
+        activeTreatment: { medicationName: 'Amoxicilina', endsAt: new Date(2026, 0, 19, 8).toISOString(), otherCount: 0 },
+      })
+      renderPage()
+
+      const button = await screen.findByRole('button', { name: 'Nueva consulta' })
+      expect(screen.queryByRole('link', { name: 'Nueva consulta' })).not.toBeInTheDocument()
+      await userEvent.setup().click(button)
+
+      expect(await screen.findByRole('dialog', { name: 'Ya tienes un tratamiento activo' })).toBeInTheDocument()
     })
 
     it('shows the symptoms and the notes in one card on the left, and each only when it has something', async () => {

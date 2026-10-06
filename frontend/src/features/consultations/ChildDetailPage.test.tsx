@@ -22,7 +22,7 @@ function renderPage(childId = 'child-1') {
 
 const account = {
   id: 'a1', firstName: 'Ana', lastName: 'Morales', email: 'ana@example.com',
-  countryCode: null, stateCode: null, plan: 'free',
+  countryCode: null, stateCode: null, plan: 'free' as string,
   children: [{ id: 'child-1', firstName: 'Mateo', lastName: 'Morales', birthDate: '2021-03-14', height: null, weight: null }],
 }
 
@@ -415,5 +415,59 @@ describe('ChildDetailPage', () => {
 
       expect(await screen.findAllByText('Consultas médicas')).toHaveLength(2)
     })
+  })
+})
+
+// specs/030: on the free plan a treatment still running means the next consultation waits; the pop-up opens right away.
+describe('ChildDetailPage, "Nueva consulta" and the free plan (specs/030)', () => {
+  const running = {
+    childId: 'child-1',
+    doses: [],
+    activeTreatment: { medicationName: 'Amoxicilina', endsAt: new Date(2026, 8, 18, 8).toISOString(), otherCount: 0 },
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 8, 16, 12))
+    useSession()
+  })
+  afterEach(() => {
+    account.plan = 'free'
+    vi.unstubAllGlobals()
+    vi.useRealTimers()
+    window.localStorage.clear()
+  })
+
+  it.each([
+    ['phone', '+ Nueva', () => {}],
+    ['web', 'Nueva consulta', useWeb],
+  ] as const)('on the %s it opens the plan pop-up instead of the form', async (_design, name, setup) => {
+    const user = userEvent.setup({ advanceTimers: () => {} })
+    setup()
+    stubApi({ overview: running })
+    renderPage()
+
+    const button = await screen.findByRole('button', { name })
+    expect(screen.queryByRole('link', { name })).not.toBeInTheDocument()
+    await user.click(button)
+
+    expect(await screen.findByRole('dialog', { name: 'Ya tienes un tratamiento activo' })).toBeInTheDocument()
+  })
+
+  it('stays a link when nothing is running', async () => {
+    useWeb()
+    stubApi()
+    renderPage()
+
+    expect(await screen.findByRole('link', { name: 'Nueva consulta' })).toHaveAttribute('href', '/children/child-1/consultations/new')
+  })
+
+  it('stays a link on the paid plan, even with a treatment running', async () => {
+    account.plan = 'paid'
+    useWeb()
+    stubApi({ overview: running })
+    renderPage()
+
+    expect(await screen.findByRole('link', { name: 'Nueva consulta' })).toHaveAttribute('href', '/children/child-1/consultations/new')
   })
 })

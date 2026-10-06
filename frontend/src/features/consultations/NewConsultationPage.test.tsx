@@ -173,3 +173,37 @@ describe('NewConsultationPage', () => {
     expect(container).toBeEmptyDOMElement()
   })
 })
+
+// specs/030: "guardar solo como registro" is part of the paid plan; the page tells the form which plan the account has.
+describe('NewConsultationPage, "solo registro" and the plan (specs/030)', () => {
+  beforeEach(() => {
+    window.localStorage.setItem('peditrack.accountId', 'a1')
+    stubMatchMedia(false)
+    vi.stubGlobal('fetch', vi.fn())
+    mockApi()
+  })
+
+  afterEach(() => {
+    account.plan = 'free'
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+    window.localStorage.clear()
+  })
+
+  const checkbox = () => screen.getByRole('checkbox', { name: 'Consulta anterior: guardar solo como registro' })
+
+  it('is disabled for a free account', async () => {
+    renderPage()
+
+    await waitFor(() => expect(checkbox()).toBeDisabled())
+    expect(screen.getByText(/Disponible en el plan completo/)).toBeInTheDocument()
+  })
+
+  it('is available for a paid account', async () => {
+    account.plan = 'paid'
+    renderPage()
+
+    await waitFor(() => expect(screen.getByText(/No se crearán horarios de tomas ni avisos/)).toBeInTheDocument())
+    expect(checkbox()).toBeEnabled()
+  })
+})

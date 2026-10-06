@@ -9,6 +9,7 @@ import { useSidebarSession } from '../home/useSidebarSession'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { fetchChildOverview, fetchConsultations, ConsultationApiError } from './api'
 import { ConsultationCard } from './ConsultationCard'
+import { NewConsultationEntry } from './NewConsultationEntry'
 import { SummaryCard } from './SummaryCard'
 import { TodayDosesBlock } from './TodayDosesBlock'
 import { TodayDosesPanel } from './TodayDosesPanel'
@@ -91,6 +92,9 @@ export function ChildDetailPage() {
   const unregistered = todayDoses.filter(isUnregistered).length
   const unregisteredSuffix = unregistered > 0 ? ` · ${unregisteredText(unregistered)}` : ''
   const treatment = overview?.activeTreatment ?? null
+  // specs/030: on the free plan a treatment still running means the next consultation has to wait (or the treatment
+  // be finished), so the pop-up opens right away instead of a form the server would refuse. Paid accounts: never.
+  const newConsultationBlocked = accountQuery.data?.plan === 'free' && treatment !== null
   const sinceYear = consultations
     .reduce<string | null>((min, c) => (min === null || c.consultDate < min ? c.consultDate : min), null)
     ?.slice(0, 4)
@@ -123,12 +127,13 @@ export function ChildDetailPage() {
                   {child ? formatAgeLong(child.birthDate) : 'Consultas médicas'}
                 </h1>
               </div>
-              <Link
+              <NewConsultationEntry
                 to={newConsultationPath}
+                blocked={newConsultationBlocked}
                 className="min-h-12 shrink-0 cursor-pointer rounded-[14px] bg-confirmed px-[22px] py-[15px] text-[15px] font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-confirmed focus-visible:ring-offset-2"
               >
                 Nueva consulta
-              </Link>
+              </NewConsultationEntry>
             </div>
 
             <div className="grid grid-cols-3 gap-[18px]">
@@ -214,12 +219,13 @@ export function ChildDetailPage() {
         <section className="px-6 pt-7">
           <div className="flex items-baseline justify-between">
             <h2 className="text-xl font-black tracking-tight text-ink">Consultas</h2>
-            <Link
+            <NewConsultationEntry
               to={newConsultationPath}
-              className="-my-3 inline-flex min-h-11 items-center text-sm font-bold text-action"
+              blocked={newConsultationBlocked}
+              className="-my-3 inline-flex min-h-11 cursor-pointer items-center text-sm font-bold text-action"
             >
               + Nueva
-            </Link>
+            </NewConsultationEntry>
           </div>
           <div className="mt-4 flex flex-col gap-3.5">{consultationList('phone')}</div>
         </section>

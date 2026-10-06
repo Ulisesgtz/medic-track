@@ -1,5 +1,6 @@
 import { clerk, setupClerkTestingToken } from '@clerk/testing/playwright'
 import { expect, test as base, type APIRequestContext, type Page } from '@playwright/test'
+import { Client } from 'pg'
 import { createClerkUser, deleteUsersByEmail, E2E_MARKER, E2E_PASSWORD, E2E_VERIFICATION_CODE, pruneOldE2EUsers, retryWhileRateLimited } from './clerkApi'
 
 export { E2E_PASSWORD, expect }
@@ -34,6 +35,26 @@ export const designs = [
 ] as const
 
 const API = 'http://localhost:8080'
+
+/** The plan of an account (specs/029). The seeds are `paid` unless a test is about what the free plan leaves out. */
+export type Plan = 'free' | 'paid'
+
+/**
+ * Gives an account the plan straight in the database the backend uses (CI's `DATABASE_URL`; locally the dev database
+ * of backend/CLAUDE.md): there is no endpoint to change a plan, payments are future work. Test accounts only.
+ */
+export async function setAccountPlan(accountId: string, plan: Plan) {
+  const client = new Client({
+    connectionString: process.env.DATABASE_URL ?? 'postgres://root:abcd1234@localhost:5432/pediTrack?sslmode=disable',
+  })
+  await client.connect()
+  try {
+    const result = await client.query('UPDATE accounts SET plan = $1 WHERE id = $2', [plan, accountId])
+    expect(result.rowCount, `the account ${accountId} exists`).toBe(1)
+  } finally {
+    await client.end()
+  }
+}
 
 /**
  * A fresh, recognisable test address: the marker lets the global teardown delete every user
@@ -134,18 +155,22 @@ export const PNG_BASE64 =
  * Creates a real Clerk user, signs the page in as them and creates their PediTrack account (with
  * the given children) straight through the API, having already acknowledged the "Antes de empezar"
  * notice unless told otherwise. Returns the session token so a test can keep
- * calling the API as that tutor.
+ * calling the API as that tutor. The account is `paid` by default, so the free plan's rules (one child, one active
+ * treatment at a time, no "solo registro") don't get in the way of tests about something else; pass `plan: 'free'`
+ * for the ones about those rules.
  */
 export async function seedAccount(
   page: Page,
   children: { firstName: string; lastName: string; birthDate: string }[],
-  { acknowledgeDisclaimer = true }: { acknowledgeDisclaimer?: boolean } = {},
+  { acknowledgeDisclaimer = true, plan = 'paid' }: { acknowledgeDisclaimer?: boolean; plan?: Plan } = {},
 ) {
   const email = uniqueEmail('seed')
   await createClerkUser(email)
   await signInAs(page, email)
   const token = await sessionToken(page)
   const account = await apiPost(page.context().request, token, '/accounts', { firstName: 'Ana', lastName: 'Morales', children })
+  // A new account is always free; `seedAccount` changes it before anything else reads it.
+  if (plan !== 'free') await setAccountPlan(account.id, plan)
   if (acknowledgeDisclaimer) {
     // So the "Antes de empezar" notice doesn't sit on top of every screen a test is about.
     await apiPost(page.context().request, token, `/accounts/${account.id}/disclaimer-acceptance`, {
@@ -167,12 +192,14 @@ export async function seedChild(
     withConsultation = true,
     durationDays = 1,
     frequencyHours = 8,
-  }: { withConsultation?: boolean; durationDays?: number; frequencyHours?: number } = {},
+    plan = 'paid',
+  }: { withConsultation?: boolean; durationDays?: number; frequencyHours?: number; plan?: Plan } = {},
 ) {
-  const { account, token, email } = await seedAccount(page, [{ firstName: 'Mateo', lastName: 'Morales', birthDate: '2021-03-14' }])
+  const { account, token, email } = await seedAccount(page, [{ firstName: 'Mateo', lastName: 'Morales', birthDate: '2021-03-14' }], { plan })
   const request = page.context().request
   const childId: string = account.children[0].id
   let consultationId: string | undefined
+  let medicationId: string | undefined
   if (withConsultation) {
     const now = new Date()
     const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
@@ -185,6 +212,7 @@ export async function seedChild(
       medications: [{ name: 'Amoxicilina', frequencyHours, durationDays, startTime: '00:00' }],
     })
     consultationId = created.id
+    medicationId = created.medications[0].id
   }
-  return { accountId: account.id as string, childId, consultationId, token, email }
+  return { accountId: account.id as string, childId, consultationId, medicationId, token, email }
 }

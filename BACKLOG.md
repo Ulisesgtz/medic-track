@@ -213,8 +213,8 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
     secretos: solo en variables de Railway, nunca en el repositorio. En una PWA no aplica la tienda de Apple/Google.
   - **Correo del dominio:** hace falta (`contacto@`/`soporte@`) para la cuenta de Mercado Pago, recibos y soporte; **se está
     creando** (proveedor por decidir; no tocar los MX hasta decidirlo, ver «Despliegue»).
-  - **Orden sugerido:** 1) **reglas del plan gratis** (una consulta activa; sin «solo registro») con el historial siempre
-    visible: es chico, usa el `plan` que ya existe y se puede probar en DEV dando `paid`/`free` a los probadores;
+  - **Orden sugerido:** 1) ~~**reglas del plan gratis**~~ **hecho (`specs/030-reglas-plan-gratis/`)**: una consulta activa a la vez y sin «solo registro»,
+    con el historial siempre visible; se prueba en DEV dando `paid`/`free` a los probadores;
     2) **búsqueda y filtros** del historial (pago); 3) **compartir** (la spec grande de arriba); 4) **cobro con Mercado
     Pago + `/planes`** (necesario antes de abrirlo al público); 5) los extras (PDF, liga del pediatra, curvas OMS,
     vacunas/citas, resumen semanal).

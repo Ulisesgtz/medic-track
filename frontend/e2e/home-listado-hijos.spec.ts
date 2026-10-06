@@ -71,7 +71,7 @@ for (const design of designs) {
     test('cuenta sin hijos: el modal "Agregar hijo" (mock 7) guarda al hijo y el siguiente ya topa con el límite', async ({
       page,
     }) => {
-      await seedAccount(page, [])
+      await seedAccount(page, [], { plan: 'free' }) // the limit it reaches is the free plan's
       await page.goto('/home')
       await expect(page.getByText(/todavía no tienes hijos/i)).toBeVisible()
 

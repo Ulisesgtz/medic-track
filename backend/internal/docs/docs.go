@@ -701,7 +701,7 @@ const docTemplate = `{
                         "ClerkSession": []
                     }
                 ],
-                "description": "Registers a consultation with its prescription photo, medications, notes and marked symptoms\n(FR-003, FR-004). At least one medication is required (FR-015), and each one needs\nits startTime (\"HH:MM\"): all of its doses are generated at once from it (research.md).\nEvery symptomCodes entry must be an active catalog symptom, or 400 with details[].message \"symptom_not_available\" (specs/012).",
+                "description": "Registers a consultation with its prescription photo, medications, notes and marked symptoms\n(FR-003, FR-004). At least one medication is required (FR-015), and each one needs\nits startTime (\"HH:MM\"): all of its doses are generated at once from it (research.md).\nEvery symptomCodes entry must be an active catalog symptom, or 400 with details[].message \"symptom_not_available\" (specs/012).\nOn the free plan, a consultation is refused with 422 \"freemium_consultation_limit_exceeded\" while any child of the account\nstill has an active treatment (reason \"active_treatment\") and when recordOnly is true (reason \"record_only\"); paid accounts have neither limit (specs/030).",
                 "consumes": [
                     "application/json"
                 ],
@@ -759,6 +759,12 @@ const docTemplate = `{
                         "description": "No child exists for this id",
                         "schema": {
                             "$ref": "#/definitions/ChildNotFoundResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Free plan: another treatment is still active, or recordOnly (specs/030)",
+                        "schema": {
+                            "$ref": "#/definitions/PlanLimitResponse"
                         }
                     }
                 }
@@ -1923,6 +1929,24 @@ const docTemplate = `{
                 "taken": {
                     "type": "boolean",
                     "example": false
+                }
+            }
+        },
+        "PlanLimitResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "freemium_consultation_limit_exceeded"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "The free plan includes one active treatment at a time"
+                },
+                "reason": {
+                    "description": "Reason is \"active_treatment\" (another treatment is still running) or \"record_only\" (saving only as a record).",
+                    "type": "string",
+                    "example": "active_treatment"
                 }
             }
         },

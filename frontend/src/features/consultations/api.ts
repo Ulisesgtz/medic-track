@@ -8,7 +8,7 @@ export type { ValidationErrorDetail }
 
 /** Discriminated error thrown by this feature's api functions. */
 export class ConsultationApiError extends ApiError<
-  'child_not_found' | 'consultation_not_found' | 'dose_not_found' | 'medication_not_found' | 'nothing_to_extend' | 'validation_error' | 'symptom_not_available' | 'unknown'
+  'child_not_found' | 'consultation_not_found' | 'dose_not_found' | 'medication_not_found' | 'nothing_to_extend' | 'validation_error' | 'symptom_not_available' | 'plan_limit_active_treatment' | 'plan_limit_record_only' | 'unknown'
 > {}
 
 // contracts/get-consultations.md
@@ -88,6 +88,13 @@ export async function createConsultation(
   }
   if (res.status === 400) {
     throw new ConsultationApiError('validation_error', body.message ?? 'Validation error', body.details)
+  }
+  if (res.status === 422 && body.error === 'freemium_consultation_limit_exceeded') {
+    // The free plan: another treatment is still active, or "solo registro" (specs/030).
+    throw new ConsultationApiError(
+      body.reason === 'record_only' ? 'plan_limit_record_only' : 'plan_limit_active_treatment',
+      body.message ?? 'The free plan does not include this',
+    )
   }
   throw new ConsultationApiError('unknown', body.message ?? 'Unexpected error creating consultation')
 }

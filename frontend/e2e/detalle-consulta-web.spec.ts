@@ -61,7 +61,7 @@ test.describe('Detalle de consulta — diseño web (mock 13)', () => {
     await expect(sidebar.getByRole('link', { name: /^Mateo/ })).toHaveAttribute('aria-current', 'page')
     await expect(sidebar.getByRole('button', { name: '+ Agregar hijo' })).toBeVisible()
     await expect(sidebar.getByText('Ana Morales')).toBeVisible()
-    await expect(sidebar.getByText('Plan gratuito')).toBeVisible()
+    await expect(sidebar.getByText('Plan completo')).toBeVisible()
 
     await expect(page.getByRole('link', { name: '← Mateo Morales' })).toBeVisible()
     await expect(page.getByRole('heading', { level: 1, name: 'Dra. Laura Cázares' })).toBeVisible()
@@ -134,12 +134,7 @@ test.describe('Detalle de consulta — diseño web (mock 13)', () => {
     await expect(viewer).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(viewer).toBeHidden()
-
-    // The sidebar's "+ Agregar hijo" opens the free-plan pop-up (the account has its one child) above the page.
-    await page.locator('aside').getByRole('button', { name: '+ Agregar hijo' }).click()
-    await expect(page.getByRole('dialog', { name: 'Llegaste a un hijo registrado' })).toBeVisible()
-    await page.keyboard.press('Escape')
-    await expect(page.getByRole('dialog')).toBeHidden()
+    // (The free-plan pop-up opened from the sidebar has its own specs: modal-plan-gratuito-web and nueva-consulta-web.)
   })
 
   test('el tratamiento activo dice "Ninguno" cuando no queda nada por delante', async ({ page }) => {

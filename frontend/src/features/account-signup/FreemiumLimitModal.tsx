@@ -2,7 +2,28 @@ import { useEffect, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { useIsDesktop } from '../../shared/ui/useIsDesktop'
 
+/**
+ * What the free plan stopped (specs/030 adds the last two): a second child, a second consultation while one treatment is
+ * still active, or a consultation saved only as a record.
+ */
+export type PlanLimitReason = 'children' | 'active_treatment' | 'record_only'
+
+// The words are neutral: they say what the plan includes, never what to do about the child's health (Principio I), and
+// always that what was already saved stays.
+const COPY: Record<Exclude<PlanLimitReason, 'children'>, { title: string; body: string }> = {
+  active_treatment: {
+    title: 'Ya tienes un tratamiento activo',
+    body: 'El plan gratuito incluye un tratamiento activo a la vez. Cuando termine —o si lo finalizas— podrás registrar la siguiente consulta. Todo lo que ya registraste se mantiene y lo sigues viendo.',
+  },
+  record_only: {
+    title: 'Consultas anteriores en el plan completo',
+    body: 'Guardar una consulta anterior solo como registro es parte del plan completo. Todo lo que ya registraste se mantiene intacto.',
+  },
+}
+
 interface FreemiumLimitModalProps {
+  /** Why the plan stopped the parent; the child limit (the mocks' text) when omitted. */
+  reason?: PlanLimitReason
   onViewPlans: () => void
   onStayFree: () => void
   /** Wide layouts add "<name> sigue disponible sin cambios" to the message (mock 15). */
@@ -31,7 +52,7 @@ interface FreemiumLimitModalProps {
  * Rendered into <body> so it can be opened from the sticky sidebar without
  * being painted under the page.
  */
-export function FreemiumLimitModal({ onViewPlans, onStayFree, childName, opener }: FreemiumLimitModalProps) {
+export function FreemiumLimitModal({ reason = 'children', onViewPlans, onStayFree, childName, opener }: FreemiumLimitModalProps) {
   const stayButtonRef = useRef<HTMLButtonElement>(null)
   const viewPlansButtonRef = useRef<HTMLButtonElement>(null)
   const [opening, setOpening] = useState(false)
@@ -90,14 +111,20 @@ export function FreemiumLimitModal({ onViewPlans, onStayFree, childName, opener 
             id="freemium-limit-title"
             className={`font-black tracking-tight text-on-pending ${desktop ? 'mt-2 text-3xl' : 'mt-1.5 text-2xl'}`}
           >
-            Llegaste a un hijo registrado
+            {reason === 'children' ? 'Llegaste a un hijo registrado' : COPY[reason].title}
           </h2>
         </div>
 
         <div className={desktop ? 'px-8 pt-7 pb-8' : 'px-7 pt-6 pb-7'}>
           <p id="freemium-limit-body" className={`leading-relaxed text-body ${desktop ? 'text-[17px]' : 'text-base'}`}>
-            Para dar de alta a otro hijo necesitas ampliar tu plan. Tus datos actuales se mantienen intactos
-            {childName ? ` y ${childName} sigue disponible sin cambios` : ''}.
+            {reason === 'children' ? (
+              <>
+                Para dar de alta a otro hijo necesitas ampliar tu plan. Tus datos actuales se mantienen intactos
+                {childName ? ` y ${childName} sigue disponible sin cambios` : ''}.
+              </>
+            ) : (
+              COPY[reason].body
+            )}
           </p>
 
           <div className={`flex flex-wrap justify-end gap-3 ${desktop ? 'mt-7' : 'mt-6'}`}>

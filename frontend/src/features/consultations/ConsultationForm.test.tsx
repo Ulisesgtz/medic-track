@@ -45,6 +45,7 @@ function renderForm(variant: Variant = 'phone', extra: Partial<Parameters<typeof
             }
           />
           <Route path="/hijo" element={<p>DETALLE DEL HIJO</p>} />
+          <Route path="/planes" element={<p>PLANES</p>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -848,5 +849,83 @@ describe('ConsultationForm, record only (specs/024)', () => {
     expect(await screen.findByRole('status')).toHaveTextContent(
       'Falta: la foto de la receta, el doctor, la fecha, el nombre del medicamento, cada cuántas horas, cuántos días.',
     )
+  })
+})
+
+describe('ConsultationForm, free plan (specs/030)', () => {
+  beforeEach(() => recognizeAs(''))
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.clearAllMocks()
+  })
+
+  const checkbox = () => screen.getByRole('checkbox', { name: 'Consulta anterior: guardar solo como registro' })
+  const refuse = (reason: string) => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 422,
+      json: async () => ({ error: 'freemium_consultation_limit_exceeded', reason, message: 'plan' }),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    return fetchMock
+  }
+
+  it('shows "solo registro" but disabled, and says it is part of the full plan', () => {
+    renderForm('phone', { recordOnlyAvailable: false })
+
+    expect(checkbox()).toBeDisabled()
+    expect(checkbox()).not.toBeChecked()
+    expect(screen.getByText(/Disponible en el plan completo/)).toBeInTheDocument()
+    expect(screen.queryByText(/No se crearán horarios de tomas ni avisos/)).not.toBeInTheDocument()
+  })
+
+  it('keeps it available by default (paid plan, or the account not loaded yet)', () => {
+    renderForm('desktop')
+
+    expect(checkbox()).toBeEnabled()
+    expect(screen.getByText(/No se crearán horarios de tomas ni avisos/)).toBeInTheDocument()
+  })
+
+  it.each(['phone', 'desktop'] as const)(
+    'opens the plan pop-up on %s when the server refuses a second active treatment, keeping what was typed',
+    async (variant) => {
+      const user = userEvent.setup()
+      refuse('active_treatment')
+      renderForm(variant)
+
+      await fillValid(user)
+      await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
+
+      expect(await screen.findByRole('dialog', { name: 'Ya tienes un tratamiento activo' })).toBeInTheDocument()
+      expect(screen.getByLabelText('Doctor')).toHaveValue('Dra. López')
+      expect(byId('medications.0.name')).toHaveValue('Amoxicilina 250 mg')
+
+      await user.click(screen.getByRole('button', { name: 'Entendido' }))
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(screen.getByLabelText('Doctor')).toHaveValue('Dra. López')
+    },
+  )
+
+  it('words the pop-up for "solo registro" when that is what the server refused', async () => {
+    const user = userEvent.setup()
+    refuse('record_only')
+    renderForm('phone')
+
+    await fillValid(user)
+    await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
+
+    expect(await screen.findByRole('dialog', { name: 'Consultas anteriores en el plan completo' })).toBeInTheDocument()
+  })
+
+  it('"Ver planes" leaves for the plans screen', async () => {
+    const user = userEvent.setup()
+    refuse('active_treatment')
+    renderForm('phone')
+    await fillValid(user)
+    await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
+
+    await user.click(await screen.findByRole('button', { name: 'Ver planes' }))
+
+    expect(screen.getByText('PLANES')).toBeInTheDocument()
   })
 })
