@@ -20,6 +20,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
+	"github.com/Ulisesgtz/medic-track/backend/internal/family"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
 	"github.com/Ulisesgtz/medic-track/backend/internal/reminder"
@@ -40,6 +41,8 @@ type world struct {
 	// Specs/032: people of A's family (and one who left), each with their own account and no children of their own.
 	clerkTutor, clerkCaregiver, clerkKid, clerkRemoved string
 	pool                                              *pgxpool.Pool
+	// emails is each session's verified e-mail, what the (fake) Clerk answers to the family's invitations.
+	emails map[string]string
 	accountA       uuid.UUID
 	childA         uuid.UUID
 	consultationA  uuid.UUID
@@ -72,6 +75,7 @@ func newWorld(t *testing.T) *world {
 		clerkCaregiver: fmt.Sprintf("user_router_caregiver_%d", suffix),
 		clerkKid:       fmt.Sprintf("user_router_kid_%d", suffix),
 		clerkRemoved:   fmt.Sprintf("user_router_removed_%d", suffix),
+		emails:         map[string]string{},
 	}
 	create := func(clerkID, name string) *account.Account {
 		acc := &account.Account{
@@ -80,6 +84,7 @@ func newWorld(t *testing.T) *world {
 			Children: []account.Child{{FirstName: "Hijo", LastName: name, BirthDate: time.Now().AddDate(-5, 0, 0)}},
 		}
 		require.NoError(t, accountRepo.Create(context.Background(), acc))
+		w.emails[clerkID] = acc.Email
 		return acc
 	}
 	a := create(w.clerkA, "Ana")
@@ -88,6 +93,7 @@ func newWorld(t *testing.T) *world {
 	member := func(clerkID, name, role string, childID *uuid.UUID, status string) {
 		acc := &account.Account{FirstName: name, LastName: "Prueba", Email: fmt.Sprintf("%s.%d@example.com", name, suffix), Plan: account.PlanFree, ClerkUserID: &clerkID}
 		require.NoError(t, accountRepo.Create(context.Background(), acc))
+		w.emails[clerkID] = acc.Email
 		_, err := pool.Exec(context.Background(), `
 			INSERT INTO family_members (family_account_id, account_id, role, child_id, invited_by_account_id, status, ended_at)
 			VALUES ($1, $2, $3, $4, $1, $5, CASE WHEN $5 = 'active' THEN NULL ELSE now() END)`, a.ID, acc.ID, role, childID, status)
@@ -115,6 +121,13 @@ func newWorld(t *testing.T) *world {
 		Reminder: reminder.NewHandler(reminder.NewService(reminder.NewRepository(pool), nil, reminder.Config{
 			VAPIDPublicKey: "test-public", VAPIDPrivateKey: "test-private", VAPIDSubject: "test@example.com", ActionSecret: "test-secret",
 		}), responder),
+		Family: family.NewHandler(family.NewService(family.NewRepository(pool), access.NewRepository(pool),
+			family.EmailFunc(func(_ context.Context, clerkUserID string) (string, error) {
+				if email, ok := w.emails[clerkUserID]; ok {
+					return email, nil
+				}
+				return "", family.ErrEmailNotVerified
+			})), responder),
 		Ownership:      ownership.NewRepository(pool),
 		Access:         access.NewRepository(pool),
 		FrontendOrigin: "http://localhost:5173",

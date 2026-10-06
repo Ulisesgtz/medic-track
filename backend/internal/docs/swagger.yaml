@@ -165,6 +165,33 @@ definitions:
         example: One or more fields are invalid
         type: string
     type: object
+  CreatedFamilyInvitationResponse:
+    properties:
+      email:
+        example: papa@ejemplo.com
+        type: string
+      expiresAt:
+        example: "2026-10-13T14:00:00Z"
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      role:
+        enum:
+        - tutor
+        - caregiver
+        - child
+        example: tutor
+        type: string
+      status:
+        example: pending
+        type: string
+      token:
+        description: Token is the secret of the link; it is returned only here (and
+          when resent) and goes in the fragment of the link.
+        example: 3hF9…
+        type: string
+    type: object
   DoseNotFoundResponse:
     properties:
       error:
@@ -331,6 +358,171 @@ definitions:
         example: 2
         type: integer
     type: object
+  FamilyCapacityResponse:
+    properties:
+      max:
+        example: 4
+        type: integer
+      used:
+        example: 2
+        type: integer
+    type: object
+  FamilyErrorResponse:
+    properties:
+      error:
+        example: invitation_not_found
+        type: string
+      message:
+        example: Invitation not found
+        type: string
+    type: object
+  FamilyInvitationResponse:
+    properties:
+      childId:
+        type: string
+      email:
+        example: papa@ejemplo.com
+        type: string
+      expiresAt:
+        example: "2026-10-13T14:00:00Z"
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      role:
+        enum:
+        - tutor
+        - caregiver
+        - child
+        example: tutor
+        type: string
+      status:
+        enum:
+        - pending
+        - expired
+        example: pending
+        type: string
+    type: object
+  FamilyMemberResponse:
+    properties:
+      canRemove:
+        description: 'CanRemove: the session can remove this person (it can do everything
+          and the person is not a Tutor).'
+        example: false
+        type: boolean
+      childId:
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      name:
+        example: Luis
+        type: string
+      role:
+        enum:
+        - tutor
+        - caregiver
+        - child
+        example: tutor
+        type: string
+      since:
+        example: "2026-10-06T14:00:00Z"
+        type: string
+    type: object
+  FamilyMembershipResponse:
+    properties:
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      name:
+        example: Luis
+        type: string
+      role:
+        example: tutor
+        type: string
+    type: object
+  FamilyOwnerResponse:
+    properties:
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      name:
+        example: Ana
+        type: string
+    type: object
+  FamilyPlanLimitResponse:
+    properties:
+      error:
+        example: freemium_consultation_limit_exceeded
+        type: string
+      message:
+        example: Sharing with the family is part of the paid plan
+        type: string
+      reason:
+        example: family
+        type: string
+    type: object
+  FamilyResponse:
+    properties:
+      capacity:
+        $ref: '#/definitions/FamilyCapacityResponse'
+      invitations:
+        items:
+          $ref: '#/definitions/FamilyInvitationResponse'
+        type: array
+      members:
+        items:
+          $ref: '#/definitions/FamilyMemberResponse'
+        type: array
+      owner:
+        $ref: '#/definitions/FamilyOwnerResponse'
+      plan:
+        enum:
+        - free
+        - paid
+        example: paid
+        type: string
+      readOnly:
+        example: false
+        type: boolean
+      role:
+        enum:
+        - owner
+        - tutor
+        - caregiver
+        - child
+        example: owner
+        type: string
+    type: object
+  FamilySessionErrorResponse:
+    properties:
+      error:
+        example: unauthorized
+        type: string
+      message:
+        example: A valid session is required
+        type: string
+    type: object
+  FamilyValidationErrorResponse:
+    properties:
+      details:
+        items:
+          properties:
+            field:
+              example: email
+              type: string
+            message:
+              example: must be a valid e-mail address
+              type: string
+          type: object
+        type: array
+      error:
+        example: validation_error
+        type: string
+      message:
+        example: One or more fields are invalid
+        type: string
+    type: object
   FieldError:
     properties:
       field:
@@ -371,6 +563,51 @@ definitions:
         items:
           type: string
         type: array
+    type: object
+  InvitationPreviewResponse:
+    properties:
+      childFirstName:
+        type: string
+      email:
+        example: papa@ejemplo.com
+        type: string
+      emailMatches:
+        description: 'EmailMatches: the session''s verified e-mail is the invited
+          one (only that account can accept).'
+        example: true
+        type: boolean
+      expiresAt:
+        example: "2026-10-13T14:00:00Z"
+        type: string
+      ownerName:
+        example: Ana
+        type: string
+      role:
+        example: tutor
+        type: string
+    type: object
+  InvitationTokenRequest:
+    properties:
+      token:
+        description: Token is the secret of the invitation's link.
+        type: string
+    type: object
+  InviteRequest:
+    properties:
+      childId:
+        type: string
+      consent:
+        type: boolean
+      email:
+        example: papa@ejemplo.com
+        type: string
+      role:
+        description: Role is "tutor" or "caregiver" ("child" is not available yet).
+        enum:
+        - tutor
+        - caregiver
+        example: tutor
+        type: string
     type: object
   MedicationNotFoundResponse:
     properties:
@@ -1699,6 +1936,261 @@ paths:
       summary: Add doses to the end of a medication's treatment
       tags:
       - consultations
+  /family:
+    get:
+      description: |-
+        The session's role in its family (owner for the owner account and for someone who shares nothing), the
+        family's plan, whether the session is read-only because that plan is no longer paid, the people, and — to
+        who can do everything — the invitations waiting and the places taken (specs/032-compartir-con-familia).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/FamilyResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/FamilySessionErrorResponse'
+        "409":
+          description: The session has no PediTrack account yet
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: The session's family
+      tags:
+      - family
+  /family/invitations:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Invites an e-mail as a Tutor or a Caregiver. Only who can do everything (the owner or a Tutor) and only when the
+        owner is on the paid plan. The invitation expires in 7 days; the token of its link is returned here, once.
+        Only the account whose verified e-mail is the invited one can accept it.
+      parameters:
+      - description: Who to invite and as what
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/InviteRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/CreatedFamilyInvitationResponse'
+        "400":
+          description: Invalid e-mail or role
+          schema:
+            $ref: '#/definitions/FamilyValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/FamilySessionErrorResponse'
+        "403":
+          description: The session can't invite
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "409":
+          description: Already a member, or an invitation is pending
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "422":
+          description: The family is not on the paid plan, or it is full (family_full)
+          schema:
+            $ref: '#/definitions/FamilyPlanLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: Invite someone to the family
+      tags:
+      - family
+  /family/invitations/{invitationId}/cancel:
+    post:
+      parameters:
+      - description: Invitation UUID
+        in: path
+        name: invitationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/FamilySessionErrorResponse'
+        "403":
+          description: The session can't invite
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "404":
+          description: Not a pending invitation of this family
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Cancel a pending invitation
+      tags:
+      - family
+  /family/invitations/{invitationId}/resend:
+    post:
+      description: Gives a pending invitation a new token and a new date; the old
+        link stops working.
+      parameters:
+      - description: Invitation UUID
+        in: path
+        name: invitationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/CreatedFamilyInvitationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/FamilySessionErrorResponse'
+        "403":
+          description: The session can't invite
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "404":
+          description: Not a pending invitation of this family
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "422":
+          description: Not paid, or the family is full
+          schema:
+            $ref: '#/definitions/FamilyPlanLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: Send an invitation again
+      tags:
+      - family
+  /family/invitations/accept:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Makes the session's person a member of the family. Only the account whose verified e-mail is the invited one
+        (403 email_mismatch), with a PediTrack account (409 account_required), not already in a family (409
+        already_in_family), and while the family's owner is on the paid plan (422). The same person accepting again
+        gets their membership back.
+      parameters:
+      - description: The invitation's token
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/InvitationTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/FamilyMembershipResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/FamilySessionErrorResponse'
+        "403":
+          description: The e-mail is not the invited one, or is not verified
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "404":
+          description: Invitation not found
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "409":
+          description: No account yet, or already in a family
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "422":
+          description: The family's owner is no longer on the paid plan
+          schema:
+            $ref: '#/definitions/FamilyPlanLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: Accept an invitation
+      tags:
+      - family
+  /family/invitations/decline:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: The invitation's token
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/InvitationTokenRequest'
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/FamilySessionErrorResponse'
+        "403":
+          description: The e-mail is not the invited one
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "404":
+          description: Invitation not found
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Decline an invitation
+      tags:
+      - family
+  /family/invitations/preview:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Only what a person needs to decide: who invites, the role, the invited e-mail, when it expires and whether the
+        session's verified e-mail is that one. The token goes in the body (never in an address). An unknown, used,
+        expired or canceled token is one 404, with nothing about the family.
+      parameters:
+      - description: The invitation's token
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/InvitationTokenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/InvitationPreviewResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/FamilySessionErrorResponse'
+        "404":
+          description: Invitation not found
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: What an invitation offers, before accepting it
+      tags:
+      - family
   /ops/error-logs:
     get:
       description: |-

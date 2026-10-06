@@ -17,6 +17,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
+	"github.com/Ulisesgtz/medic-track/backend/internal/family"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ops"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
@@ -30,6 +31,7 @@ type Deps struct {
 	Account        *account.Handler
 	Consultation   *consultation.Handler
 	Reminder       *reminder.Handler
+	Family         *family.Handler
 	// Ops and OpsKey: the read-only queries over error_logs for the team that runs the service (specs/021). Without
 	// both the routes are not registered at all: there is no open door by default.
 	Ops            *ops.Handler
@@ -98,6 +100,16 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(ownsAccount).Patch("/accounts/{accountId}/reminder-settings", d.Account.UpdateReminderSettings)
 		r.With(ownsAccount).Post("/accounts/{accountId}/reminder-devices", d.Reminder.RegisterDevice)
 		r.With(ownsAccount).Post("/accounts/{accountId}/reminder-devices/remove", d.Reminder.RemoveDevice)
+
+		// Sharing with the family (specs/032): no id in the route names a resource; the family's rules (who can invite, whose
+		// e-mail can accept) are enforced by the service from the session itself.
+		r.Get("/family", d.Family.GetFamily)
+		r.Post("/family/invitations", d.Family.CreateInvitation)
+		r.Post("/family/invitations/preview", d.Family.PreviewInvitation)
+		r.Post("/family/invitations/accept", d.Family.AcceptInvitation)
+		r.Post("/family/invitations/decline", d.Family.DeclineInvitation)
+		r.Post("/family/invitations/{invitationId}/resend", d.Family.ResendInvitation)
+		r.Post("/family/invitations/{invitationId}/cancel", d.Family.CancelInvitation)
 
 		r.Get("/reminders/config", d.Reminder.GetConfig)
 
