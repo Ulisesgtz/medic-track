@@ -67,6 +67,21 @@ func (s *Service) ListConsultations(ctx context.Context, childID uuid.UUID) ([]C
 	return s.repo.GetByChild(ctx, childID)
 }
 
+// SearchConsultations searches and filters a child's history (specs/031): the criteria are checked first — an invalid one
+// never reaches the database — then the repository applies the plan (paid only) and the search.
+func (s *Service) SearchConsultations(ctx context.Context, childID uuid.UUID, in HistorySearch) ([]Consultation, error) {
+	search, errs := validateHistorySearch(in)
+	if errs.HasErrors() {
+		return nil, errs
+	}
+	return s.repo.Search(ctx, childID, search)
+}
+
+// HistoryOptions lists the doctors and medications already registered for the child, for the history's choice lists.
+func (s *Service) HistoryOptions(ctx context.Context, childID uuid.UUID) (*HistoryOptions, error) {
+	return s.repo.HistoryOptions(ctx, childID)
+}
+
 // maxOverviewWindow caps the doses window: the overview is meant for "today"
 // (a local day is at most 25h around DST), not for arbitrary ranges.
 const maxOverviewWindow = 48 * time.Hour

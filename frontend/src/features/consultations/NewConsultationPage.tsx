@@ -52,6 +52,9 @@ export function NewConsultationPage() {
             dirtyRef.current = false
             queryClient.invalidateQueries({ queryKey: ['consultations', childId] })
             queryClient.invalidateQueries({ queryKey: ['overview'] })
+            // The paid plan's history (specs/031) and its doctor/medication lists.
+            queryClient.invalidateQueries({ queryKey: ['history', childId] })
+            queryClient.invalidateQueries({ queryKey: ['history-options', childId] })
             // replace: "back" from the saved consultation lands on the child, not on an already-sent form.
             navigate(`/consultations/${consultationId}`, { replace: true })
           }}

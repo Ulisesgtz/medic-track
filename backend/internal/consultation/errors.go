@@ -36,11 +36,12 @@ var (
 	ErrPlanLimit = errors.New("the free plan does not include this")
 )
 
-// The two things the free plan leaves out (specs/030): a second consultation while one treatment is still active,
-// and saving a consultation only as a record. Their names are the `reason` the API sends.
+// What the free plan leaves out. Specs/030: a second consultation while one treatment is still active, and saving a
+// consultation only as a record. Specs/031: searching and filtering the history. Their names are the `reason` the API sends.
 const (
 	PlanLimitActiveTreatment = "active_treatment"
 	PlanLimitRecordOnly      = "record_only"
+	PlanLimitHistorySearch   = "history_search"
 )
 
 // PlanLimitError says which rule of the free plan stopped a consultation from being saved.

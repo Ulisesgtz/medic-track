@@ -770,6 +770,140 @@ const docTemplate = `{
                 }
             }
         },
+        "/children/{childId}/consultations/search": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The paid plan's history: lists the child's consultations that meet every criterion given (text, date range,\ndoctor, medication, symptoms, kind), most recent first, in the same shape as the plain list. It only finds what\nwas registered. It is a POST so the typed text is not part of the address. A free account always gets 422\n\"freemium_consultation_limit_exceeded\" with reason \"history_search\" and no consultations.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "Search and filter a child's consultations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Criteria (all optional)",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/SearchConsultationsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed body or an invalid criterion",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ChildNotFoundResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Free plan: searching the history is part of the paid plan",
+                        "schema": {
+                            "$ref": "#/definitions/PlanLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/children/{childId}/history-options": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The distinct doctor and medication names already registered for the child, as written, sorted without telling\napart case or accents: the choices of the history's filters. A free account gets 422 \"history_search\".",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "List the doctors and medications registered for a child",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/HistoryOptionsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ChildNotFoundResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Free plan: the history is part of the paid plan",
+                        "schema": {
+                            "$ref": "#/definitions/PlanLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/children/{childId}/overview": {
             "get": {
                 "security": [
@@ -1821,6 +1955,31 @@ const docTemplate = `{
                 }
             }
         },
+        "HistoryOptionsResponse": {
+            "type": "object",
+            "properties": {
+                "doctors": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "Dr. Iván Robles",
+                        "Dra. Laura Cázares"
+                    ]
+                },
+                "medications": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "Amoxicilina 250 mg",
+                        "Paracetamol"
+                    ]
+                }
+            }
+        },
         "MedicationNotFoundResponse": {
             "type": "object",
             "properties": {
@@ -1944,9 +2103,59 @@ const docTemplate = `{
                     "example": "The free plan includes one active treatment at a time"
                 },
                 "reason": {
-                    "description": "Reason is \"active_treatment\" (another treatment is still running) or \"record_only\" (saving only as a record).",
+                    "description": "Reason is \"active_treatment\" (another treatment is still running), \"record_only\" (saving only as a record) or\n\"history_search\" (searching and filtering the history, specs/031).",
                     "type": "string",
                     "example": "active_treatment"
+                }
+            }
+        },
+        "SearchConsultationsRequest": {
+            "type": "object",
+            "properties": {
+                "doctor": {
+                    "description": "Doctor is a doctor's name exactly as registered (see history-options).",
+                    "type": "string",
+                    "example": "Dra. López"
+                },
+                "from": {
+                    "description": "From and To bound the consultation date, both ends included (\"YYYY-MM-DD\"); To must not be before From.",
+                    "type": "string",
+                    "example": "2026-01-01"
+                },
+                "kind": {
+                    "description": "Kind narrows to \"treatment\" (with a schedule) or \"record\" (saved only as a record); \"all\" or empty doesn't filter.",
+                    "type": "string",
+                    "enum": [
+                        "all",
+                        "treatment",
+                        "record"
+                    ],
+                    "example": "all"
+                },
+                "medication": {
+                    "description": "Medication is a medication's name exactly as registered (see history-options).",
+                    "type": "string",
+                    "example": "Amoxicilina 250 mg"
+                },
+                "q": {
+                    "description": "Q matches the doctor, the notes or the name of any medication, ignoring case and accents, as a part of the text (up to 100 characters).",
+                    "type": "string",
+                    "example": "amox"
+                },
+                "symptomCodes": {
+                    "description": "SymptomCodes are catalog codes; the consultation must have all of them (retired ones included).",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "fever",
+                        "cough"
+                    ]
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-06-30"
                 }
             }
         },

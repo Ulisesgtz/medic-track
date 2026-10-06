@@ -3,6 +3,12 @@ import type { Symptom } from '../../shared/catalog/api'
 export type { Symptom }
 
 // Mirrors contracts/get-consultations.md's response shape (+ specs/012: notes, symptomNames).
+/** The names already registered for a child, for the history's choice lists (specs/031). */
+export interface HistoryOptions {
+  doctors: string[]
+  medications: string[]
+}
+
 export interface ConsultationSummary {
   id: string
   doctorName: string

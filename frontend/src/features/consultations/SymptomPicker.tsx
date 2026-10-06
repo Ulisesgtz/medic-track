@@ -8,6 +8,8 @@ interface SymptomPickerProps {
   value: string[]
   onChange: (codes: string[]) => void
   variant: 'phone' | 'desktop'
+  /** The group's heading; "¿Qué síntomas tuvo?" in "Nueva consulta" (the default). */
+  legend?: string
 }
 
 /**
@@ -37,7 +39,7 @@ const chipOn = 'border-action bg-action text-white'
  * `aria-pressed`; the marked one is filled and carries a check, so it doesn't rely on color alone.
  * If the catalog can't load, the consultation can still be saved (FR-016).
  */
-export function SymptomPicker({ value, onChange, variant }: SymptomPickerProps) {
+export function SymptomPicker({ value, onChange, variant, legend = '¿Qué síntomas tuvo?' }: SymptomPickerProps) {
   const { data, isPending, isError } = useSymptoms()
   const baseId = useId()
   const selected = new Set(value)
@@ -49,7 +51,7 @@ export function SymptomPicker({ value, onChange, variant }: SymptomPickerProps) 
   return (
     <fieldset className={`flex min-w-0 flex-col ${variant === 'desktop' ? 'gap-4' : 'gap-3.5'}`}>
       {/* A legend isn't a flex item, so the fieldset's gap doesn't reach it. */}
-      <legend className="mb-3 text-xs font-extrabold tracking-[0.1em] text-action uppercase">¿Qué síntomas tuvo?</legend>
+      <legend className="mb-3 text-xs font-extrabold tracking-[0.1em] text-action uppercase">{legend}</legend>
       {isPending && <p className="text-[13px] font-semibold text-slate-600">Cargando síntomas…</p>}
       {isError && (
         <Notice tone="info">

@@ -333,6 +333,8 @@ func routerWithPool(t *testing.T) (http.Handler, *pgxpool.Pool) {
 
 	r := chi.NewRouter()
 	r.Get("/children/{childId}/consultations", h.ListConsultations)
+	r.Post("/children/{childId}/consultations/search", h.SearchConsultations)
+	r.Get("/children/{childId}/history-options", h.HistoryOptions)
 	r.Get("/children/{childId}/overview", h.GetChildOverview)
 	r.Post("/children/{childId}/consultations", h.CreateConsultation)
 	r.Get("/consultations/{consultationId}", h.GetConsultation)
@@ -358,6 +360,8 @@ func newBrokenRouter(t *testing.T) http.Handler {
 
 	r := chi.NewRouter()
 	r.Get("/children/{childId}/consultations", h.ListConsultations)
+	r.Post("/children/{childId}/consultations/search", h.SearchConsultations)
+	r.Get("/children/{childId}/history-options", h.HistoryOptions)
 	r.Get("/children/{childId}/overview", h.GetChildOverview)
 	r.Post("/children/{childId}/consultations", h.CreateConsultation)
 	r.Get("/consultations/{consultationId}", h.GetConsultation)
