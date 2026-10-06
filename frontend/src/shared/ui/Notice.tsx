@@ -47,7 +47,7 @@ export function Notice({
         </svg>
       </span>
       <div className="min-w-0 text-sm leading-relaxed font-semibold text-ink">
-        <p>{children}</p>
+        <p className="break-words">{children}</p>
         {action && (
           <Link to={action.to} className={`mt-1.5 inline-block font-extrabold underline underline-offset-2 ${styles.link}`}>
             {action.label}

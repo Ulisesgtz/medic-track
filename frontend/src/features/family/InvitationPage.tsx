@@ -260,7 +260,7 @@ function Offer({ token }: { token: string }) {
         Aceptar significa que verás los <strong>datos médicos de los hijos de {offer.ownerName}</strong>: consultas, recetas,
         síntomas y tomas. Acepta solo si los conoces y esta invitación es para ti.
       </Notice>
-      <p className="text-sm text-ink-soft">
+      <p className="text-sm break-words text-ink-soft">
         La invitación es para <strong>{offer.email}</strong> y vence el {formatDayMonth(offer.expiresAt)}.
       </p>
       {!offer.emailMatches && (

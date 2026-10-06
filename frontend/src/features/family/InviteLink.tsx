@@ -23,7 +23,7 @@ export function InviteLink({ invitation, onDone }: { invitation: CreatedInvitati
 
   return (
     <section aria-label="Invitación creada" className="flex flex-col gap-3 rounded-3xl border border-hint-border bg-hint p-5">
-      <h3 className="text-base font-extrabold tracking-tight text-ink">Liga lista para {invitation.email}</h3>
+      <h3 className="text-base font-extrabold tracking-tight break-words text-ink">Liga lista para {invitation.email}</h3>
       <p className="text-sm leading-relaxed text-body">
         Envíasela tú (por mensaje, por ejemplo). Solo sirve para esa persona, entrando con ese correo, y vence el{' '}
         {formatDayMonth(invitation.expiresAt)}. Esta liga solo se muestra ahora: si la pierdes, vuelve a enviarla.
