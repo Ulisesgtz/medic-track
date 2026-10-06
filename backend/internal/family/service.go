@@ -78,31 +78,28 @@ func validateInvite(in InviteInput) (InviteInput, ValidationErrors) {
 	return in, errs
 }
 
-// actorAndFamily is the session's account, the owner account of its family and what the session can do with it.
-func (s *Service) actorAndFamily(ctx context.Context, clerkUserID string) (actorID, familyID uuid.UUID, level access.Level, err error) {
+// actorAndFamily is the session's account, the owner account of its family, its role in it ("owner" for somebody who shares
+// nothing) and what the session can do with that account.
+func (s *Service) actorAndFamily(ctx context.Context, clerkUserID string) (actorID, familyID uuid.UUID, role string, level access.Level, err error) {
 	actorID, err = s.repo.AccountIDByClerk(ctx, clerkUserID)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, access.None, err
+		return uuid.Nil, uuid.Nil, "", access.None, err
 	}
-	familyID, _, err = s.repo.FamilyOf(ctx, actorID)
+	familyID, role, err = s.repo.FamilyOf(ctx, actorID)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, access.None, err
+		return uuid.Nil, uuid.Nil, "", access.None, err
 	}
 	got, err := s.access.OnAccount(ctx, clerkUserID, familyID)
 	if err != nil {
-		return uuid.Nil, uuid.Nil, access.None, err
+		return uuid.Nil, uuid.Nil, "", access.None, err
 	}
-	return actorID, familyID, got.Level, nil
+	return actorID, familyID, role, got.Level, nil
 }
 
 // View is what the session sees of its family (GET /family): its role and the family's plan, the people, and — to who can
 // do everything — the invitations waiting.
 func (s *Service) View(ctx context.Context, clerkUserID string) (*View, error) {
-	actorID, familyID, level, err := s.actorAndFamily(ctx, clerkUserID)
-	if err != nil {
-		return nil, err
-	}
-	_, role, err := s.repo.FamilyOf(ctx, actorID)
+	actorID, familyID, role, level, err := s.actorAndFamily(ctx, clerkUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +149,7 @@ func (s *Service) Invite(ctx context.Context, clerkUserID string, in InviteInput
 	if errs.HasErrors() {
 		return nil, errs
 	}
-	actorID, familyID, level, err := s.actorAndFamily(ctx, clerkUserID)
+	actorID, familyID, _, level, err := s.actorAndFamily(ctx, clerkUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +170,7 @@ func (s *Service) Invite(ctx context.Context, clerkUserID string, in InviteInput
 
 // Resend gives a pending invitation a new link (the old one stops working).
 func (s *Service) Resend(ctx context.Context, clerkUserID string, invitationID uuid.UUID) (*Invitation, error) {
-	_, familyID, level, err := s.actorAndFamily(ctx, clerkUserID)
+	_, familyID, _, level, err := s.actorAndFamily(ctx, clerkUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -194,7 +191,7 @@ func (s *Service) Resend(ctx context.Context, clerkUserID string, invitationID u
 
 // Cancel closes a pending invitation of the session's family.
 func (s *Service) Cancel(ctx context.Context, clerkUserID string, invitationID uuid.UUID) error {
-	_, familyID, level, err := s.actorAndFamily(ctx, clerkUserID)
+	_, familyID, _, level, err := s.actorAndFamily(ctx, clerkUserID)
 	if err != nil {
 		return err
 	}
@@ -257,7 +254,7 @@ func (s *Service) Leave(ctx context.Context, clerkUserID string) error {
 // RemoveMember removes a Caregiver or a Child-role member. Only who can do everything in the family asks it, and never for a
 // Tutor.
 func (s *Service) RemoveMember(ctx context.Context, clerkUserID string, memberID uuid.UUID) error {
-	actorID, familyID, level, err := s.actorAndFamily(ctx, clerkUserID)
+	actorID, familyID, _, level, err := s.actorAndFamily(ctx, clerkUserID)
 	if err != nil {
 		return err
 	}

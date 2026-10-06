@@ -803,3 +803,28 @@ func TestHandler_GetMe_APersonWhoLeftSeesNoSharedChildren(t *testing.T) {
 	require.Len(t, me["children"], 0)
 	require.NotContains(t, me, "family")
 }
+
+// GET /accounts/{id} (and the notice and the reminder settings, which answer with the same account) is what the client
+// replaces its own account with: it must carry the shared children and the family too, or a person who changes a setting
+// would lose the shared children on screen until the next read.
+func TestHandler_GetAccount_CarriesTheSharedChildrenAndTheFamilyToo(t *testing.T) {
+	router, pool, verifier := newTestRouterWithPool(t)
+	ownerToken := newAuthedRequestSetup(t, verifier, uniqueEmail("handler.getaccount.family.owner"))
+	created := doPost(t, router, ownerToken, map[string]any{"firstName": "Ana", "lastName": "Gómez", "children": []map[string]any{{"firstName": "Luis", "lastName": "Gómez", "birthDate": "2020-01-15"}}})
+	var ownerBody map[string]any
+	require.NoError(t, json.Unmarshal(created.Body.Bytes(), &ownerBody))
+	memberToken := newAuthedRequestSetup(t, verifier, uniqueEmail("handler.getaccount.family.member"))
+	m := doPost(t, router, memberToken, map[string]any{"firstName": "Cuca", "lastName": "Gómez"})
+	var memberBody map[string]any
+	require.NoError(t, json.Unmarshal(m.Body.Bytes(), &memberBody))
+	_, err := pool.Exec(context.Background(), `INSERT INTO family_members (family_account_id, account_id, role, invited_by_account_id) VALUES ($1, $2, 'caregiver', $1)`, ownerBody["id"], memberBody["id"])
+	require.NoError(t, err)
+
+	rec := doGetAuthed(t, router, "/accounts/"+memberBody["id"].(string), "")
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var body map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Len(t, body["children"], 1)
+	require.Equal(t, "caregiver", body["children"].([]any)[0].(map[string]any)["role"])
+	require.Equal(t, "caregiver", body["family"].(map[string]any)["role"])
+}

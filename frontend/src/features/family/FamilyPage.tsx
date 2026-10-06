@@ -136,9 +136,11 @@ export function FamilyPage() {
     setDialogError(null)
     try {
       await leaveFamily(await getToken())
-      // The children shared with this person are no longer theirs: everything cached about them goes.
+      // The children shared with this person are no longer theirs: what was cached about them goes, and "me" is read again.
+      for (const key of ['family', 'consultations', 'consultation', 'overview', 'history', 'history-options']) {
+        queryClient.removeQueries({ queryKey: [key] })
+      }
       await queryClient.invalidateQueries({ queryKey: ['accounts', 'me'] })
-      queryClient.removeQueries({ queryKey: ['family'] })
       navigate('/home', { replace: true })
     } catch (e) {
       if (e instanceof FamilyApiError && (e.kind === 'member_not_found' || e.kind === 'owner_cannot_leave')) {

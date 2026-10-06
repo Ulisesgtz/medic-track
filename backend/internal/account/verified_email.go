@@ -5,10 +5,8 @@ import (
 	"errors"
 )
 
-// ErrEmailNotVerified is what VerifiedEmail returns when the session's primary address exists but Clerk hasn't verified it.
-var ErrEmailNotVerified = errEmailNotVerified
-
-// IsEmailNotVerified reports whether err is the "address not verified" refusal.
+// IsEmailNotVerified reports whether err (from VerifiedEmail) is the "address not verified" refusal: the session's primary
+// address exists but Clerk hasn't verified it.
 func IsEmailNotVerified(err error) bool { return errors.Is(err, errEmailNotVerified) }
 
 // VerifiedEmail is the session's verified primary e-mail, read from Clerk. internal/family compares it with the address an

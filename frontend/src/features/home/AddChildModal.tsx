@@ -62,7 +62,11 @@ export function AddChildModal({ accountId, onClose }: AddChildModalProps) {
         weight: values.weight ? Number(values.weight) : undefined,
       }, await getToken()),
     onSuccess: (account) => {
-      queryClient.setQueryData(['accounts', 'me'], account)
+      // Specs/032: a Tutor adds to the FAMILY's account, so the answer is the owner's account, not the session's own: it
+      // must not replace "me" (it would make the Tutor look like the owner). Read "me" again instead.
+      const me = queryClient.getQueryData<{ id: string }>(['accounts', 'me'])
+      if (me && me.id !== account.id) void queryClient.invalidateQueries({ queryKey: ['accounts', 'me'] })
+      else queryClient.setQueryData(['accounts', 'me'], account)
       onClose()
     },
   })

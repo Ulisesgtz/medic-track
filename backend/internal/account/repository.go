@@ -126,6 +126,11 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Account, error
 	}
 	rows.Close()
 
+	// The answer to GET /accounts/{id}, the notice and the reminder settings is the same account as GET /accounts/me:
+	// the client replaces what it has with it, so it must carry the shared children too (specs/032).
+	if err := r.addSharedChildren(ctx, acc); err != nil {
+		return nil, err
+	}
 	if acc.DisclaimerAccepted, err = disclaimerAccepted(ctx, r.pool, id); err != nil {
 		return nil, err
 	}
