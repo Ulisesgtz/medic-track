@@ -13,7 +13,7 @@ const box = async (locator: ReturnType<Page['locator']>) => {
 }
 
 async function open(page: Page, width: number) {
-  await seedChild(page, { withConsultation: false })
+  await seedChild(page, { withConsultation: false, plan: 'free' })
   await page.setViewportSize({ width, height: 900 })
   await page.goto('/home')
   await page.evaluate(() => document.fonts.ready)

@@ -315,6 +315,8 @@ type createConsultationRequest struct {
 //	@Description	(FR-003, FR-004). At least one medication is required (FR-015), and each one needs
 //	@Description	its startTime ("HH:MM"): all of its doses are generated at once from it (research.md).
 //	@Description	Every symptomCodes entry must be an active catalog symptom, or 400 with details[].message "symptom_not_available" (specs/012).
+//	@Description	On the free plan, a consultation is refused with 422 "freemium_consultation_limit_exceeded" while any child of the account
+//	@Description	still has an active treatment (reason "active_treatment") and when recordOnly is true (reason "record_only"); paid accounts have neither limit (specs/030).
 //	@Tags			consultations
 //	@Accept			json
 //	@Produce		json
@@ -323,6 +325,7 @@ type createConsultationRequest struct {
 //	@Success		201		{object}	consultationDetailResponse
 //	@Failure		400		{object}	validationErrorResponseDoc	"Missing/invalid field"
 //	@Failure		404		{object}	childNotFoundResponseDoc	"No child exists for this id"
+//	@Failure		422		{object}	planLimitResponseDoc	"Free plan: another treatment is still active, or recordOnly (specs/030)"
 //	@Security		ClerkSession
 //	@Failure		401		{object}	sessionErrorResponseDoc	"No valid Clerk session"
 //	@Failure		403		{object}	sessionErrorResponseDoc	"The session does not own this resource"
@@ -411,6 +414,7 @@ func notesOf(req createConsultationRequest) string {
 
 func (h *Handler) writeCreateConsultationError(ctx context.Context, w http.ResponseWriter, err error) {
 	var validationErrs ValidationErrors
+	var planErr *PlanLimitError
 	switch {
 	case errors.As(err, &validationErrs):
 		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationErrorBody(validationErrs, "One or more fields are invalid"), nil)
@@ -419,11 +423,31 @@ func (h *Handler) writeCreateConsultationError(ctx context.Context, w http.Respo
 			Field:   "symptomCodes",
 			Message: "symptom_not_available",
 		}}, "One or more fields are invalid"), nil)
+	case errors.As(err, &planErr):
+		h.responder.WriteJSON(ctx, w, http.StatusUnprocessableEntity, planLimitBody(planErr.Reason), nil)
 	case errors.Is(err, ErrChildNotFound):
 		h.responder.WriteJSON(ctx, w, http.StatusNotFound, childNotFoundBody(), nil)
 	default:
 		h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", "Could not create consultation", nil)
 	}
+}
+
+// planLimitResponseDoc documents the 422 body of a consultation the free plan doesn't include (specs/030).
+type planLimitResponseDoc struct {
+	Error   string `json:"error" example:"freemium_consultation_limit_exceeded"`
+	Message string `json:"message" example:"The free plan includes one active treatment at a time"`
+	// Reason is "active_treatment" (another treatment is still running) or "record_only" (saving only as a record).
+	Reason string `json:"reason" example:"active_treatment"`
+} // @name PlanLimitResponse
+
+// planLimitBody builds the 422 body for a consultation the free plan doesn't include (specs/030). The error code
+// follows the child limit's (`freemium_child_limit_exceeded`); the reason says which rule applied.
+func planLimitBody(reason string) map[string]string {
+	message := "The free plan includes one active treatment at a time"
+	if reason == PlanLimitRecordOnly {
+		message = "Saving a consultation only as a record is part of the paid plan"
+	}
+	return map[string]string{"error": "freemium_consultation_limit_exceeded", "message": message, "reason": reason}
 }
 
 // GetConsultation handles GET /consultations/{consultationId}

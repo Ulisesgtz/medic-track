@@ -46,6 +46,8 @@ export function NewConsultationPage() {
             !dirtyRef.current || window.confirm('¿Descartar la consulta? Se perderá lo que capturaste.')
           }
           onDirtyChange={handleDirtyChange}
+          // specs/030: only the free plan lacks it; until the account loads the server decides.
+          recordOnlyAvailable={accountQuery.data?.plan !== 'free'}
           onSuccess={(consultationId) => {
             dirtyRef.current = false
             queryClient.invalidateQueries({ queryKey: ['consultations', childId] })

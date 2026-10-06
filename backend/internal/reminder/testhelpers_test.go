@@ -63,7 +63,7 @@ func newFamily(t *testing.T, pool *pgxpool.Pool, detail *string) family {
 	var f family
 	email := fmt.Sprintf("reminder.%s@example.com", uuid.NewString())
 	require.NoError(t, pool.QueryRow(ctx, `
-		INSERT INTO accounts (first_name, last_name, email, plan, reminder_detail) VALUES ('Ana', 'Gómez', $1, 'free', $2) RETURNING id
+		INSERT INTO accounts (first_name, last_name, email, plan, reminder_detail) VALUES ('Ana', 'Gómez', $1, 'paid', $2) RETURNING id
 	`, email, detail).Scan(&f.accountID))
 	require.NoError(t, pool.QueryRow(ctx, `
 		INSERT INTO children (account_id, first_name, last_name, birth_date) VALUES ($1, 'Mateo', 'Gómez', '2021-03-14') RETURNING id

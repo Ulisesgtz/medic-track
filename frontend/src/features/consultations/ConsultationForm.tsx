@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { errorClass, fieldMultiline, fieldProposed, labelClass } from '../../shared/ui/formStyles'
 import { useAuth } from '@clerk/react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Controller, useForm, useFieldArray, useWatch, type Path } from 'react-hook-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchSymptoms } from '../../shared/catalog/api'
@@ -12,6 +12,7 @@ import { useOcrSuggestion } from './useOcrSuggestion'
 import { createConsultation, ConsultationApiError, type CreateConsultationPayload } from './api'
 import { missingFieldsText } from './missingFields'
 import { SymptomPicker } from './SymptomPicker'
+import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
 
 export interface MedicationFormValues {
   name: string
@@ -164,6 +165,8 @@ interface ConsultationFormProps {
   confirmLeave?: () => boolean
   /** Tells the parent whether the form holds anything the user would lose. */
   onDirtyChange?: (dirty: boolean) => void
+  /** False on the free plan (specs/030): "guardar solo como registro" is shown but can't be marked. Default: true. */
+  recordOnlyAvailable?: boolean
 }
 
 const MEDICATION_STAGGER_MS = 180
@@ -195,7 +198,12 @@ export function ConsultationForm({
   onSuccess,
   confirmLeave,
   onDirtyChange,
+  recordOnlyAvailable = true,
 }: ConsultationFormProps) {
+  const navigate = useNavigate()
+  // The free plan's pop-up (specs/030) when the server refuses to save: the form and what was typed stay as they are.
+  const [planLimit, setPlanLimit] = useState<'active_treatment' | 'record_only' | null>(null)
+  const closePlanLimit = useCallback(() => setPlanLimit(null), [])
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   // Set when the parent tries to save without a photo; it shows with the other missing-field errors.
   const [photoMissing, setPhotoMissing] = useState(false)
@@ -257,6 +265,8 @@ export function ConsultationForm({
     },
     onSuccess: (consultation) => onSuccess(consultation.id),
     onError: async (error) => {
+      if (error instanceof ConsultationApiError && error.kind === 'plan_limit_active_treatment') setPlanLimit('active_treatment')
+      if (error instanceof ConsultationApiError && error.kind === 'plan_limit_record_only') setPlanLimit('record_only')
       if (!(error instanceof ConsultationApiError) || error.kind !== 'symptom_not_available') return
       // A chosen symptom was retired meanwhile: reload the catalog and drop what it no longer offers,
       // keeping everything else the parent entered.
@@ -520,19 +530,21 @@ export function ConsultationForm({
   )
 
   // specs/024: an old consultation kept only as a record. Decided here, once: consultations are immutable.
+  // specs/030: part of the paid plan; on the free plan it is shown (so the parent knows it exists) but can't be marked.
   const recordOnlyField = (
     <label
       htmlFor="recordOnly"
-      className={`flex min-h-11 min-w-0 cursor-pointer items-start gap-3 rounded-2xl border-[1.5px] border-slate-200 bg-surface ${
-        desktop ? 'p-5' : 'p-4'
-      }`}
+      className={`flex min-h-11 min-w-0 items-start gap-3 rounded-2xl border-[1.5px] border-slate-200 bg-surface ${
+        recordOnlyAvailable ? 'cursor-pointer' : 'cursor-not-allowed bg-slate-50'
+      } ${desktop ? 'p-5' : 'p-4'}`}
     >
       <input
         id="recordOnly"
         type="checkbox"
+        disabled={!recordOnlyAvailable}
         aria-labelledby="recordOnly-title"
         aria-describedby="recordOnly-help"
-        className="mt-0.5 h-6 w-6 shrink-0 cursor-pointer accent-action"
+        className={`mt-0.5 h-6 w-6 shrink-0 accent-action ${recordOnlyAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
         {...register('recordOnly')}
       />
       <span className="flex min-w-0 flex-col gap-1">
@@ -540,7 +552,9 @@ export function ConsultationForm({
           Consulta anterior: guardar solo como registro
         </span>
         <span id="recordOnly-help" className="text-[13px] font-semibold text-slate-600">
-          No se crearán horarios de tomas ni avisos. Esto no se puede cambiar después.
+          {recordOnlyAvailable
+            ? 'No se crearán horarios de tomas ni avisos. Esto no se puede cambiar después.'
+            : 'Disponible en el plan completo. Con el plan gratuito registras la consulta actual, con sus horarios y avisos.'}
         </span>
       </span>
     </label>
@@ -635,9 +649,14 @@ export function ConsultationForm({
     </p>
   )
 
+  const planLimitModal = planLimit && (
+    <FreemiumLimitModal reason={planLimit} onStayFree={closePlanLimit} onViewPlans={() => navigate('/planes')} />
+  )
+
   if (desktop) {
     return (
       <div className="mx-auto flex max-w-4xl flex-col gap-7">
+        {planLimitModal}
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             {cancelLink}
@@ -664,6 +683,7 @@ export function ConsultationForm({
 
   return (
     <>
+      {planLimitModal}
       <header className="bg-ink px-6 pt-6 pb-7">
         <div className="flex min-h-6 items-center justify-between">
           {cancelLink}

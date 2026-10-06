@@ -10,7 +10,7 @@ test.describe('Pop-up del plan gratuito — diseño móvil (mock 05)', () => {
   test.use({ viewport: { width: 390, height: 844 } })
 
   test.beforeEach(async ({ page }) => {
-    await seedChild(page, { withConsultation: false })
+    await seedChild(page, { withConsultation: false, plan: 'free' })
     await page.goto('/home')
   })
 

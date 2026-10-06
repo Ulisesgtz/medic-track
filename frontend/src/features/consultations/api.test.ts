@@ -34,6 +34,40 @@ describe('fetchConsultations', () => {
   })
 })
 
+describe('createConsultation, free plan (specs/030)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn())
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  const payload = { doctorName: 'X', consultDate: '2026-01-15', photoBase64: 'x', utcOffsetMinutes: 0, medications: [] }
+  const refuse = (body: object, status = 422) =>
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status, json: async () => body } as Response)
+
+  it('maps the 422 to the rule that applied', async () => {
+    refuse({ error: 'freemium_consultation_limit_exceeded', reason: 'active_treatment', message: 'one at a time' })
+    const active = await createConsultation('child-1', payload, 'tok').catch((e) => e)
+    expect(active).toBeInstanceOf(ConsultationApiError)
+    expect(active.kind).toBe('plan_limit_active_treatment')
+    expect(active.message).toBe('one at a time')
+
+    refuse({ error: 'freemium_consultation_limit_exceeded', reason: 'record_only', message: 'paid' })
+    expect((await createConsultation('child-1', payload, 'tok').catch((e) => e)).kind).toBe('plan_limit_record_only')
+  })
+
+  it('without a reason it reads as the active treatment, and another 422 is unknown', async () => {
+    refuse({ error: 'freemium_consultation_limit_exceeded' })
+    const err = await createConsultation('child-1', payload, 'tok').catch((e) => e)
+    expect(err.kind).toBe('plan_limit_active_treatment')
+    expect(err.message).toBe('The free plan does not include this')
+
+    refuse({ error: 'something_else' })
+    expect((await createConsultation('child-1', payload, 'tok').catch((e) => e)).kind).toBe('unknown')
+  })
+})
+
 describe('createConsultation', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn())

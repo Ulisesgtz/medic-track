@@ -30,7 +30,28 @@ var (
 	// ErrNothingToExtend is returned when a medication can't be extended (specs/020): it was ended, or it has no
 	// unregistered dose left to cover — also what a second attempt for the same doses gets, so nothing is ever added twice.
 	ErrNothingToExtend = errors.New("nothing to extend")
+
+	// ErrPlanLimit is what a *PlanLimitError matches with errors.Is: the account's plan doesn't include what the
+	// parent asked for (specs/030-reglas-plan-gratis).
+	ErrPlanLimit = errors.New("the free plan does not include this")
 )
+
+// The two things the free plan leaves out (specs/030): a second consultation while one treatment is still active,
+// and saving a consultation only as a record. Their names are the `reason` the API sends.
+const (
+	PlanLimitActiveTreatment = "active_treatment"
+	PlanLimitRecordOnly      = "record_only"
+)
+
+// PlanLimitError says which rule of the free plan stopped a consultation from being saved.
+type PlanLimitError struct {
+	Reason string
+}
+
+func (e *PlanLimitError) Error() string { return ErrPlanLimit.Error() + ": " + e.Reason }
+
+// Unwrap lets errors.Is(err, ErrPlanLimit) match, like account.FreemiumLimitError does for its sentinel.
+func (e *PlanLimitError) Unwrap() error { return ErrPlanLimit }
 
 // ValidationError describes a single field-level validation failure.
 type ValidationError struct {

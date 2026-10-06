@@ -134,6 +134,9 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, c *Consultat
 
 	c.ChildID = childID
 	now := r.now() // one reading for every dose's status in this response
+	if err := checkPlan(ctx, tx, childID, c, now); err != nil {
+		return err
+	}
 	err = tx.QueryRow(ctx, `
 		INSERT INTO consultations (child_id, doctor_name, consult_date, photo, notes, record_only)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -202,6 +205,54 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, c *Consultat
 
 	if err := tx.Commit(ctx); err != nil {
 		return fmt.Errorf("committing transaction: %w", err)
+	}
+	return nil
+}
+
+// planPaid is the value of accounts.plan that lifts the free plan's consultation rules (account.PlanPaid; this package
+// reads the column directly, as it does the children's, so it doesn't import account).
+const planPaid = "paid"
+
+// checkPlan applies the free plan's rules to a consultation about to be saved (specs/030-reglas-plan-gratis): a free
+// account can't save a consultation only as a record, and can't start another while any of its children still has a
+// treatment running (a medication not ended with a dose still ahead — the same "active" as the child's overview).
+// It locks the account row first, so two requests of the same account are checked one after the other and both can't
+// start a treatment. Paid accounts pass untouched; nothing already saved is ever hidden or changed.
+func checkPlan(ctx context.Context, tx pgx.Tx, childID uuid.UUID, c *Consultation, now time.Time) error {
+	var accountID uuid.UUID
+	var plan string
+	err := tx.QueryRow(ctx, `
+		SELECT a.id, a.plan::text
+		FROM accounts a JOIN children ch ON ch.account_id = a.id
+		WHERE ch.id = $1
+		FOR UPDATE OF a
+	`, childID).Scan(&accountID, &plan)
+	if err != nil {
+		return fmt.Errorf("reading the account's plan: %w", err)
+	}
+	if plan == planPaid {
+		return nil
+	}
+	if c.RecordOnly {
+		return &PlanLimitError{Reason: PlanLimitRecordOnly}
+	}
+
+	var active bool
+	err = tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM doses d
+			JOIN medications m ON m.id = d.medication_id
+			JOIN consultations co ON co.id = m.consultation_id
+			JOIN children ch ON ch.id = co.child_id
+			WHERE ch.account_id = $1 AND m.ended_at IS NULL AND d.scheduled_at > $2
+		)
+	`, accountID, now).Scan(&active)
+	if err != nil {
+		return fmt.Errorf("looking for an active treatment: %w", err)
+	}
+	if active {
+		return &PlanLimitError{Reason: PlanLimitActiveTreatment}
 	}
 	return nil
 }

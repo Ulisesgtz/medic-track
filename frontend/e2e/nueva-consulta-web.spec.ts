@@ -25,8 +25,8 @@ const box = async (locator: ReturnType<Page['locator']>) => {
   return { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height) }
 }
 
-async function open(page: Page, width: number) {
-  const { accountId, childId } = await seedChild(page, { withConsultation: false })
+async function open(page: Page, width: number, plan: 'free' | 'paid' = 'paid') {
+  const { accountId, childId } = await seedChild(page, { withConsultation: false, plan })
   await page.setViewportSize({ width, height: 900 })
   await page.goto(`/children/${childId}/consultations/new`)
   await page.evaluate(() => document.fonts.ready)
@@ -205,7 +205,7 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
   })
 
   test('la barra lateral marca al hijo activo y su "+ Agregar hijo" abre el pop-up del plan', async ({ page }) => {
-    await open(page, 1280)
+    await open(page, 1280, 'free') // the plan pop-up belongs to the free plan
     const sidebar = page.getByRole('navigation', { name: 'Tus hijos' })
 
     await expect(sidebar.getByRole('link', { name: /^Mateo/ })).toHaveAttribute('aria-current', 'page')
