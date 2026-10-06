@@ -23,8 +23,9 @@ pantalla de invitación con el logo sobre fondo `ink` y una tarjeta de 480 px.
    después de `?` llega al servidor y a sus registros; lo que va después de `#`, nunca.
 3. **Barra lateral de 280 px**, la de todas las pantallas, no los 348 px del mock; y su enlace «Familia» no lleva el «3 de 4» (pediría
    `GET /family` en cada pantalla). Si quieres los 348 px es un cambio de `AppShell` para toda la app.
-4. **Un Tutor en solo lectura no puede «Quitar» a un Cuidador** (el supuesto C4 del mock dice que sí): el servidor lo baja a «ver y
-   marcar» cuando la dueña deja de pagar y quitar es de quien puede todo. Si se quiere, es una regla nueva del backend.
+4. **Un Tutor en solo lectura no puede «Quitar» a un Cuidador** — **decidido el 2026-10-06**: el mock (supuesto C4) decía que sí; se queda
+   como está en el servidor. Quien administra la familia es la cuenta creadora, la que paga el plan completo; sin plan de pago, un Tutor
+   invitado solo ve y marca (y puede salir).
 5. **La invitación sin cuenta muestra el correo invitado** (de la propia invitación) en «Tu correo», y «Esta invitación es para otro
    correo» muestra el correo de la cuenta con la que entró. Para eso `POST /family/invitations/preview` ahora trae los **nombres de pila
    de los hijos** (`childrenFirstNames`): quien tiene la ficha ve a quién se le pide cuidar, y nada más.
