@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useMatch } from 'react-router-dom'
 import { formatAgeShort } from '../../shared/age'
 import { Logo } from '../../shared/ui/Logo'
 import { useLogout } from '../auth/useLogout'
@@ -25,6 +25,7 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
   const logout = useLogout()
   const query = useCurrentAccount()
   const account = query.data
+  const onFamilyPage = useMatch('/familia') !== null
 
   return (
     <aside className="sticky top-0 flex h-screen w-[280px] shrink-0 flex-col gap-8 overflow-y-auto bg-ink px-6 py-7">
@@ -72,11 +73,15 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
         )}
       </nav>
 
+      {/* Specs/032 («Familia» mock): below the children, active on its own page. */}
       <Link
         to="/familia"
-        className="-my-3 flex min-h-11 items-center rounded-2xl px-4 text-sm font-bold text-bright-soft transition-colors duration-200 hover:bg-ink-soft"
+        aria-current={onFamilyPage ? 'page' : undefined}
+        className={`flex min-h-12 items-center justify-between rounded-2xl px-4 transition-colors duration-200 ${
+          onFamilyPage ? 'bg-action' : 'hover:bg-ink-soft'
+        }`}
       >
-        Familia
+        <span className={`text-base font-extrabold ${onFamilyPage ? 'text-white' : 'text-hint-border'}`}>Familia</span>
       </Link>
 
       {account && (

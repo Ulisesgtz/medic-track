@@ -1,11 +1,15 @@
-import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react'
+import { useEffect, useId, useRef, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
+import { useIsDesktop } from '../../shared/ui/useIsDesktop'
 
 interface ConfirmDialogProps {
   title: string
-  children: ReactNode
+  /** «Dejas de ver / No te llevas / Se conserva»: what happens, in neutral words. */
+  rows: { k: string; v: string }[]
   confirmLabel: string
   busyLabel: string
+  /** `danger` (red, «Quitar a Rosa») or `ink` (leaving: not an error, the system's last-resort button). */
+  tone: 'danger' | 'ink'
   busy: boolean
   /** A sentence when the server refused or the network failed. */
   error: string | null
@@ -16,14 +20,17 @@ interface ConfirmDialogProps {
 }
 
 /**
- * The confirmation of leaving or removing someone from the family (specs/032): neutral words — what happens and what does
- * not, no advice (Principio I). A real dialog like the others: rendered into <body>, Escape and the backdrop cancel (not
- * while it works), focus starts on "Cancelar" (the safe choice) and Tab stays inside.
+ * The confirmation of leaving or removing someone from the family (mock «Familia», D1/D2): neutral words — what stops, what is
+ * not taken, what stays; no advice (Principio I). On the phone a sheet anchored to the bottom with the buttons stacked (the
+ * confirmation above, «Cancelar» below); on the web centered at 560 px with the actions at the right. A real dialog like the
+ * others: rendered into <body>, Escape and the backdrop cancel (not while it works), focus starts on «Cancelar» (the safe
+ * choice) and Tab stays inside.
  */
-export function ConfirmDialog({ title, children, confirmLabel, busyLabel, busy, error, onConfirm, onCancel, opener }: ConfirmDialogProps) {
+export function ConfirmDialog({ title, rows, confirmLabel, busyLabel, tone, busy, error, onConfirm, onCancel, opener }: ConfirmDialogProps) {
   const id = useId()
+  const desktop = useIsDesktop()
+  const dialogRef = useRef<HTMLDivElement>(null)
   const cancelRef = useRef<HTMLButtonElement>(null)
-  const confirmRef = useRef<HTMLButtonElement>(null)
   const busyRef = useRef(busy)
   useEffect(() => {
     busyRef.current = busy
@@ -39,13 +46,17 @@ export function ConfirmDialog({ title, children, confirmLabel, busyLabel, busy, 
         return
       }
       if (event.key !== 'Tab') return
+      const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLButtonElement>('button:not([disabled])') ?? [])
+      if (focusable.length === 0) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
       const active = document.activeElement
-      if (event.shiftKey && active === cancelRef.current) {
+      if (event.shiftKey && active === first) {
         event.preventDefault()
-        confirmRef.current?.focus()
-      } else if (!event.shiftKey && active === confirmRef.current) {
+        last.focus()
+      } else if (!event.shiftKey && active === last) {
         event.preventDefault()
-        cancelRef.current?.focus()
+        first.focus()
       }
     }
     document.addEventListener('keydown', handleKeyDown)
@@ -55,43 +66,63 @@ export function ConfirmDialog({ title, children, confirmLabel, busyLabel, busy, 
     }
   }, [onCancel, opener])
 
+  const confirmClass = tone === 'danger' ? 'bg-red-700 hover:opacity-90' : 'bg-ink hover:opacity-90'
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4" onClick={() => !busy && onCancel()}>
+    <div
+      className={`fixed inset-0 z-50 flex bg-ink/70 ${desktop ? 'items-center justify-center p-6' : 'items-end p-4'}`}
+      onClick={() => !busy && onCancel()}
+    >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${id}-title`}
         aria-describedby={`${id}-body`}
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-surface p-6 shadow-2xl"
+        className={`flex max-h-[90vh] w-full flex-col gap-4 overflow-y-auto rounded-3xl bg-surface shadow-2xl ${desktop ? 'max-w-[560px] p-7' : 'p-6 pb-7'}`}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id={`${id}-title`} className="text-2xl font-black tracking-tight text-ink">
-          {title}
-        </h2>
-        <div id={`${id}-body`} className="mt-3 flex flex-col gap-2 text-base leading-relaxed text-body">
-          {children}
+        <div className="flex items-start justify-between gap-3">
+          <h2 id={`${id}-title`} className="mt-2 text-2xl leading-[1.2] font-black tracking-[-0.02em] text-ink">
+            {title}
+          </h2>
+          <button
+            type="button"
+            aria-label="Cerrar"
+            onClick={onCancel}
+            disabled={busy}
+            className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-xl text-[26px] leading-none font-bold text-ink transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+        <div id={`${id}-body`} className="flex flex-col gap-4">
+          {rows.map((r) => (
+            <div key={r.k} className="flex flex-col gap-0.5">
+              <span className="text-[13px] font-bold text-ink">{r.k}</span>
+              <span className={`leading-normal text-body ${desktop ? 'text-base' : 'text-[15px]'}`}>{r.v}</span>
+            </div>
+          ))}
         </div>
         {error && (
-          <p role="alert" className="mt-3 text-[13px] font-semibold text-red-700">
+          <p role="alert" className="text-[13px] font-semibold text-red-700">
             {error}
           </p>
         )}
-        <div className="mt-6 flex flex-wrap justify-end gap-3">
+        <div className={`mt-1.5 flex gap-3 ${desktop ? 'justify-end' : 'flex-col-reverse gap-2.5'}`}>
           <button
             ref={cancelRef}
             type="button"
             onClick={onCancel}
             disabled={busy}
-            className="min-h-11 cursor-pointer rounded-2xl border-2 border-action px-5 py-3 text-[15px] font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            className={`min-h-12 cursor-pointer rounded-2xl border-2 border-action text-base font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-confirmed focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${desktop ? 'px-6' : ''}`}
           >
             Cancelar
           </button>
           <button
-            ref={confirmRef}
             type="button"
             onClick={onConfirm}
             disabled={busy}
-            className="min-h-11 cursor-pointer rounded-2xl bg-ink px-5 py-3 text-[15px] font-extrabold text-white transition-opacity duration-200 hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            className={`min-h-12 cursor-pointer rounded-2xl text-base font-extrabold text-white transition-opacity duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${confirmClass} ${desktop ? 'px-6' : 'w-full'}`}
           >
             {busy ? busyLabel : confirmLabel}
           </button>

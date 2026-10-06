@@ -71,7 +71,10 @@ type Preview struct {
 	OwnerName      string
 	Role           Role
 	ChildFirstName string
-	Email          string
+	// ChildrenFirstNames are the first names of the children the invitation would give access to, oldest first (for the
+	// Child role, only theirs): the invitation says whom the person is asked to look after.
+	ChildrenFirstNames []string
+	Email              string
 	ExpiresAt      time.Time
 	EmailMatches   bool
 }
@@ -97,4 +100,6 @@ type MemberView struct {
 	Member
 	// CanRemove: the session can remove this person (it can do everything and the person is not a Tutor).
 	CanRemove bool
+	// You: this person is the session's own account.
+	You bool
 }

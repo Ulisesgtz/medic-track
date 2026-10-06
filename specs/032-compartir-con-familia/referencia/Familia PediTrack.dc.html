@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--color-ink:#04252b;--color-ink-soft:#0b3b44;--color-action:#0e7490;--color-bright:#22d3ee;--color-confirmed:#047857;--color-confirmed-soft:#d1fae5;--color-pending:#f59e0b;--color-pending-soft:#fef3c7;--color-canvas:#f8feff;--color-surface:#ffffff;--color-hint:#ecfeff;--color-hint-border:#a5f3fc;
+--color-bright-soft:#67e8f9;--color-hint-edge:#cffafe;--color-ink-muted:#62909d;--color-ink-edge:#0b5763;--color-body:#1f3d44;--color-confirmed-strong:#065f46;--color-emerald-800:#065f46;--color-mint:#a7f3d0;
+--color-slate-100:#f1f5f9;--color-slate-300:#cbd5e1;--color-slate-500:#64748b;--color-slate-600:#475569;--color-red-50:#fef2f2;--color-red-700:#b91c1c;
+--radius-field:14px;--radius-button:16px;--radius-card:22px;--radius-modal:24px;--shadow-card:0 8px 20px rgba(4,37,43,0.07);--color-ink-70:rgba(4,37,43,0.7);}
+*{box-sizing:border-box}
+body{margin:0;background:#dfe8ea;font-family:'Figtree',system-ui,sans-serif;color:#04252b}
+button,input{font-family:inherit}
+a{color:#0e7490;text-decoration:none}
+a:hover{color:#04252b;text-decoration:underline}
+</style>
+</helmet>
+
+<div style="padding:56px;display:flex;flex-direction:column;gap:72px">
+  <div style="max-width:900px;display:flex;flex-direction:column;gap:10px">
+    <p style="margin:0;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-action)">PediTrack · Familia · propuesta 06 oct 2026</p>
+    <h1 style="margin:0;font-size:38px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Pantallas de Familia</h1>
+    <p style="margin:0;font-size:16px;line-height:1.55;color:var(--color-body)">Móvil 390 px y web 1280 px por separado. Tokens de <code>design-tokens.md</code>; los nuevos y las desviaciones están en <code>specs/005-identidad-visual-front-end/familia-decisiones.md</code> para tu aprobación.</p>
+  </div>
+
+  <section data-screen-label="Familia móvil" style="display:flex;flex-direction:column;gap:24px">
+    <h2 style="margin:0;font-size:24px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">/familia · móvil 390 px</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+      <sc-for list="{{ states }}" as="s" hint-placeholder-count="3">
+        <div style="display:flex;flex-direction:column;gap:10px;width:390px">
+          <p style="margin:0;font-size:13px;font-weight:800;color:var(--color-ink)">{{ s.id }}m · {{ s.label }}</p>
+          <div data-screen-label="{{ s.id }} móvil" style="width:390px;min-height:844px;background:var(--color-canvas);box-shadow:0 20px 50px rgba(4,37,43,0.18);overflow:hidden">
+            <header style="background:var(--color-ink);padding:24px 24px 26px">
+              <a href="#" style="font-size:14px;font-weight:700;color:var(--color-bright-soft)">← Tus hijos</a>
+              <h1 style="margin:18px 0 0;font-size:30px;font-weight:900;letter-spacing:-0.03em;color:var(--color-surface)">{{ s.title }}</h1>
+              <p style="margin:4px 0 0;font-size:14px;font-weight:600;color:var(--color-hint-border)">Mateo y Sofía</p>
+              <sc-if value="{{ s.showCounter }}" hint-placeholder-val="{{ true }}">
+                <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px">
+                  <p style="margin:0;display:flex;align-items:baseline;gap:8px;color:var(--color-surface)"><span style="font-size:34px;font-weight:900;letter-spacing:-0.03em">{{ s.countBig }}</span><span style="font-size:18px;font-weight:800">personas</span></p>
+                  <div aria-hidden="true" style="display:flex;gap:6px">
+                    <sc-for list="{{ s.seats }}" as="seat" hint-placeholder-count="4">
+                      <sc-if value="{{ seat.member }}"><span style="width:44px;height:10px;border-radius:999px;background:var(--color-bright)"></span></sc-if>
+                      <sc-if value="{{ seat.pending }}"><span style="width:44px;height:10px;border-radius:999px;border:2px dashed var(--color-bright-soft)"></span></sc-if>
+                      <sc-if value="{{ seat.empty }}"><span style="width:44px;height:10px;border-radius:999px;background:var(--color-ink-edge)"></span></sc-if>
+                    </sc-for>
+                  </div>
+                  <sc-if value="{{ s.hasPending }}"><p style="margin:0;font-size:13px;font-weight:600;color:var(--color-bright-soft)">contando invitaciones pendientes</p></sc-if>
+                </div>
+              </sc-if>
+            </header>
+
+            <sc-if value="{{ s.loading }}">
+              <div aria-busy="true" style="padding:24px;display:flex;flex-direction:column;gap:14px">
+                <p role="status" style="margin:0;font-size:15px;font-weight:600;color:var(--color-slate-600)">Cargando tu familia…</p>
+                <div style="height:116px;border-radius:var(--radius-card);background:var(--color-surface);box-shadow:var(--shadow-card);padding:20px;display:flex;gap:14px"><span style="width:44px;height:44px;border-radius:999px;background:var(--color-slate-100)"></span><span style="flex:1;display:flex;flex-direction:column;gap:10px"><span style="height:14px;width:60%;border-radius:8px;background:var(--color-slate-100)"></span><span style="height:12px;width:40%;border-radius:8px;background:var(--color-slate-100)"></span></span></div>
+                <div style="height:116px;border-radius:var(--radius-card);background:var(--color-surface);box-shadow:var(--shadow-card);padding:20px;display:flex;gap:14px"><span style="width:44px;height:44px;border-radius:999px;background:var(--color-slate-100)"></span><span style="flex:1;display:flex;flex-direction:column;gap:10px"><span style="height:14px;width:50%;border-radius:8px;background:var(--color-slate-100)"></span><span style="height:12px;width:35%;border-radius:8px;background:var(--color-slate-100)"></span></span></div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ s.error }}">
+              <div style="padding:24px">
+                <div style="background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:22px;display:flex;flex-direction:column;gap:12px">
+                  <h2 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">No pudimos cargar tu familia</h2>
+                  <p style="margin:0;font-size:16px;line-height:1.55;color:var(--color-body)">Revisa tu conexión e intenta de nuevo.</p>
+                  <button type="button" style="margin-top:4px;min-height:48px;border:0;border-radius:var(--radius-button);background:var(--color-confirmed);color:var(--color-surface);font-size:16px;font-weight:800;cursor:pointer" style-hover="background:var(--color-emerald-800)">Reintentar</button>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ s.ready }}" hint-placeholder-val="{{ true }}">
+              <div style="padding:24px 24px 40px;display:flex;flex-direction:column;gap:28px">
+                <sc-if value="{{ s.readonly }}">
+                  <div role="status" style="padding:18px;border-radius:var(--radius-card);border:1.5px solid var(--color-hint-border);background:var(--color-hint);display:flex;flex-direction:column;gap:6px">
+                    <p style="margin:0;font-size:16px;font-weight:800;color:var(--color-ink)">La familia está en el plan gratuito</p>
+                    <p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">Sigues viendo todo y puedes marcar tomas. Por ahora no se pueden agregar consultas ni invitar.</p>
+                  </div>
+                </sc-if>
+
+                <div style="display:flex;flex-direction:column;gap:14px">
+                  <h2 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Personas</h2>
+                  <sc-for list="{{ s.people }}" as="p" hint-placeholder-count="2">
+                    <div style="background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:20px;display:flex;flex-direction:column;gap:12px">
+                      <div style="display:flex;gap:14px;align-items:flex-start">
+                        <sc-if value="{{ p.isOwner }}"><span aria-hidden="true" style="flex-shrink:0;width:44px;height:44px;border-radius:999px;background:var(--color-ink);color:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800">{{ p.initial }}</span></sc-if>
+                        <sc-if value="{{ p.notOwner }}"><span aria-hidden="true" style="flex-shrink:0;width:44px;height:44px;border-radius:999px;background:var(--color-action);color:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800">{{ p.initial }}</span></sc-if>
+                        <div style="min-width:0;flex:1;display:flex;flex-direction:column;gap:6px">
+                          <p style="margin:0;font-size:17px;font-weight:800;letter-spacing:-0.01em;color:var(--color-ink);overflow-wrap:anywhere">{{ p.name }}</p>
+                          <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+                            <sc-if value="{{ p.isOwner }}"><span style="padding:4px 10px;border-radius:999px;background:var(--color-ink);font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-surface)">Cuenta de la familia</span></sc-if>
+                            <sc-if value="{{ p.isTutor }}"><span style="padding:4px 10px;border-radius:999px;background:var(--color-action);font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-surface)">Tutor</span></sc-if>
+                            <sc-if value="{{ p.isCuidador }}"><span style="padding:3px 10px;border-radius:999px;border:1.5px solid var(--color-hint-border);background:var(--color-hint);font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-action)">Cuidador</span></sc-if>
+                            <sc-if value="{{ p.since }}"><span style="font-size:13px;font-weight:600;color:var(--color-slate-600)">{{ p.since }}</span></sc-if>
+                          </div>
+                        </div>
+                      </div>
+                      <p style="margin:0;font-size:15px;line-height:1.5;color:var(--color-body)">{{ p.desc }}</p>
+                      <sc-if value="{{ p.canRemove }}"><button type="button" style="align-self:flex-start;min-height:44px;padding:0 20px;border:2px solid var(--color-red-700);border-radius:var(--radius-button);background:transparent;color:var(--color-red-700);font-size:15px;font-weight:800;cursor:pointer" style-hover="background:var(--color-red-50)">Quitar</button></sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <sc-if value="{{ s.hasInvites }}">
+                  <div style="display:flex;flex-direction:column;gap:14px">
+                    <h2 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Invitaciones pendientes</h2>
+                    <sc-for list="{{ s.invites }}" as="i" hint-placeholder-count="1">
+                      <div style="background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:20px;display:flex;flex-direction:column;gap:10px">
+                        <p style="margin:0;font-size:16px;font-weight:800;color:var(--color-ink);overflow-wrap:anywhere">{{ i.email }}</p>
+                        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+                          <sc-if value="{{ i.isTutor }}"><span style="padding:4px 10px;border-radius:999px;background:var(--color-action);font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-surface)">Tutor</span></sc-if>
+                          <sc-if value="{{ i.isCuidador }}"><span style="padding:3px 10px;border-radius:999px;border:1.5px solid var(--color-hint-border);background:var(--color-hint);font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-action)">Cuidador</span></sc-if>
+                          <sc-if value="{{ i.isPending }}"><span style="padding:3px 10px;border-radius:999px;border:1.5px dashed var(--color-action);background:var(--color-hint);font-size:13px;font-weight:800;color:var(--color-action)">Pendiente</span></sc-if>
+                          <sc-if value="{{ i.isExpired }}"><span style="padding:4px 10px;border-radius:999px;background:var(--color-slate-100);font-size:13px;font-weight:800;color:var(--color-slate-600)">Vencida</span></sc-if>
+                          <span style="font-size:13px;font-weight:600;color:var(--color-slate-600)">{{ i.date }}</span>
+                        </div>
+                        <div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:10px">
+                          <button type="button" style="min-height:44px;padding:0 18px;border:2px solid var(--color-action);border-radius:var(--radius-button);background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer" style-hover="background:var(--color-hint)">Enviar de nuevo</button>
+                          <button type="button" style="min-height:44px;padding:0 14px;border:0;border-radius:var(--radius-button);background:transparent;color:var(--color-action);font-size:15px;font-weight:800;text-decoration:underline;cursor:pointer" style-hover="background:var(--color-hint)">Cancelar</button>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ s.formOpen }}">
+                  <form style="background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:22px;display:flex;flex-direction:column;gap:18px">
+                    <h2 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Invitar a alguien</h2>
+                    <p style="margin:-8px 0 0;font-size:15px;line-height:1.55;color:var(--color-body)">Quien invites verá las consultas, los medicamentos y las tomas de Mateo y Sofía. Invita solo a personas que los cuidan.</p>
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                      <label style="font-size:13px;font-weight:700;color:var(--color-ink)">Correo</label>
+                      <input type="email" placeholder="nombre@correo.mx" style="min-height:48px;border:1.5px solid var(--color-slate-300);border-radius:var(--radius-field);padding:0 16px;font-size:16px;font-weight:500;color:var(--color-ink);background:var(--color-surface)">
+                    </div>
+                    <fieldset style="margin:0;padding:0;border:0;display:flex;flex-direction:column;gap:10px">
+                      <legend style="padding:0;margin-bottom:8px;font-size:13px;font-weight:700;color:var(--color-ink)">Rol</legend>
+                      <label style="display:flex;gap:12px;align-items:flex-start;padding:16px;border-radius:var(--radius-field);border:1.5px solid var(--color-slate-300);background:var(--color-surface);cursor:pointer">
+                        <span style="margin-top:2px;flex-shrink:0;width:22px;height:22px;border-radius:999px;border:2px solid var(--color-slate-500)"></span>
+                        <span style="display:flex;flex-direction:column;gap:4px"><span style="font-size:16px;font-weight:800;color:var(--color-ink)">Tutor</span><span style="font-size:14px;line-height:1.5;color:var(--color-body)">Ve todo, agrega consultas, marca tomas e invita. Nadie lo puede quitar; solo él puede salir.</span></span>
+                      </label>
+                      <label style="display:flex;gap:12px;align-items:flex-start;padding:15px;border-radius:var(--radius-field);border:2px solid var(--color-ink);background:var(--color-hint);cursor:pointer">
+                        <span style="margin-top:2px;flex-shrink:0;width:22px;height:22px;border-radius:999px;border:2px solid var(--color-ink);display:flex;align-items:center;justify-content:center"><span style="width:10px;height:10px;border-radius:999px;background:var(--color-ink)"></span></span>
+                        <span style="display:flex;flex-direction:column;gap:4px"><span style="font-size:16px;font-weight:800;color:var(--color-ink)">Cuidador</span><span style="font-size:14px;line-height:1.5;color:var(--color-body)">Ve todo y marca tomas. No agrega consultas ni invita. Tú o un tutor lo pueden quitar.</span></span>
+                      </label>
+                    </fieldset>
+                    <p style="margin:0;font-size:14px;line-height:1.55;color:var(--color-slate-600)">No mandamos correo: copias la liga y la envías tú por mensaje. Sirve una vez, vence en 7 días y solo la acepta quien entre con este correo.</p>
+                    <button type="button" style="min-height:48px;border:0;border-radius:var(--radius-button);background:var(--color-confirmed);color:var(--color-surface);font-size:16px;font-weight:800;cursor:pointer" style-hover="background:var(--color-emerald-800)">Crear liga</button>
+                  </form>
+                </sc-if>
+
+                <sc-if value="{{ s.formFull }}">
+                  <div style="background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:22px;display:flex;flex-direction:column;gap:18px">
+                    <h2 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Invitar a alguien</h2>
+                    <div role="status" style="padding:16px;border-radius:16px;border:1.5px solid var(--color-hint-border);background:var(--color-hint);display:flex;flex-direction:column;gap:4px">
+                      <p style="margin:0;font-size:15px;font-weight:800;color:var(--color-ink)">Tu familia está completa</p>
+                      <p style="margin:0;font-size:14px;line-height:1.55;color:var(--color-body)">Son 4 de 4 personas, contando invitaciones pendientes. Para invitar a alguien más, cancela una invitación o quita a un cuidador.</p>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                      <label style="font-size:13px;font-weight:700;color:var(--color-slate-600)">Correo</label>
+                      <input disabled placeholder="nombre@correo.mx" style="min-height:48px;border:1.5px solid var(--color-slate-300);border-radius:var(--radius-field);padding:0 16px;font-size:16px;color:var(--color-slate-600);background:var(--color-slate-100)">
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:10px">
+                      <div style="padding:14px 16px;border-radius:var(--radius-field);background:var(--color-slate-100);font-size:15px;font-weight:700;color:var(--color-slate-600)">Tutor</div>
+                      <div style="padding:14px 16px;border-radius:var(--radius-field);background:var(--color-slate-100);font-size:15px;font-weight:700;color:var(--color-slate-600)">Cuidador</div>
+                    </div>
+                    <button type="button" disabled style="min-height:48px;border:0;border-radius:var(--radius-button);background:var(--color-slate-100);color:var(--color-slate-600);font-size:16px;font-weight:800;cursor:not-allowed">Crear liga</button>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ s.showLiga }}">
+                  <div style="background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);border:2px solid var(--color-bright);padding:22px;display:flex;flex-direction:column;gap:16px">
+                    <p style="margin:0;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-action)">Liga lista</p>
+                    <h2 style="margin:-8px 0 0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Envíale esta liga por mensaje</h2>
+                    <p style="margin:0;font-size:15px;line-height:1.5;color:var(--color-body);overflow-wrap:anywhere">Para <strong style="color:var(--color-ink)">carmen.rios.hernandez.abuela@correo.com.mx</strong> · Cuidador · vence el 13 oct</p>
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                      <label style="font-size:13px;font-weight:700;color:var(--color-ink)">Liga de invitación</label>
+                      <div aria-readonly="true" style="min-height:48px;padding:13px 16px;border-radius:var(--radius-field);border:1.5px solid var(--color-hint-border);background:var(--color-hint);font-size:15px;font-weight:600;color:var(--color-ink);overflow-wrap:anywhere">https://peditrack.mx/familia/invitacion?t=8Kd2qR7xLm4pZw91</div>
+                    </div>
+                    <p style="margin:0;font-size:14px;line-height:1.55;color:var(--color-slate-600)">Esta liga solo se muestra ahora. Si la pierdes, usa «Enviar de nuevo» para crear otra.</p>
+                    <div style="display:flex;flex-wrap:wrap;gap:10px">
+                      <sc-if value="{{ s.ligaNotCopied }}"><button type="button" style="flex:1 1 150px;min-height:48px;border:0;border-radius:var(--radius-button);background:var(--color-confirmed);color:var(--color-surface);font-size:16px;font-weight:800;cursor:pointer" style-hover="background:var(--color-emerald-800)">Copiar liga</button></sc-if>
+                      <sc-if value="{{ s.ligaCopied }}"><button type="button" style="flex:1 1 150px;min-height:48px;border:0;border-radius:var(--radius-button);background:var(--color-emerald-800);color:var(--color-surface);font-size:16px;font-weight:800;cursor:pointer">Liga copiada ✓</button></sc-if>
+                      <button type="button" style="flex:1 1 110px;min-height:48px;border:2px solid var(--color-action);border-radius:var(--radius-button);background:transparent;color:var(--color-action);font-size:16px;font-weight:800;cursor:pointer" style-hover="background:var(--color-hint)">Listo</button>
+                    </div>
+                    <sc-if value="{{ s.ligaCopied }}"><p role="status" style="margin:-4px 0 0;font-size:14px;font-weight:700;color:var(--color-confirmed)">Liga copiada. Pégala en tu chat.</p></sc-if>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ s.showPlan }}">
+                  <div style="padding:22px;border-radius:var(--radius-card);border:1.5px solid var(--color-hint-border);background:var(--color-hint);display:flex;flex-direction:column;gap:12px">
+                    <p style="margin:0;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-action)">Plan completo</p>
+                    <h2 style="margin:-4px 0 0;font-size:22px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Comparte con tu familia</h2>
+                    <p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">Hasta 3 personas más pueden ver a Mateo y Sofía y marcar tomas: tu pareja, la abuela o quien los cuida.</p>
+                    <button type="button" style="margin-top:4px;min-height:48px;border:0;border-radius:var(--radius-button);background:var(--color-confirmed);color:var(--color-surface);font-size:16px;font-weight:800;cursor:pointer" style-hover="background:var(--color-emerald-800)">Ver el plan completo</button>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ s.showTuLugar }}">
+                  <div style="display:flex;flex-direction:column;gap:12px;padding-top:4px">
+                    <h2 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Tu lugar en esta familia</h2>
+                    <p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">Eres {{ s.viewerRole }} en la familia de Ana. Puedes salir cuando quieras: dejas de ver a Mateo y Sofía al instante y no te llevas copia de nada.</p>
+                    <button type="button" style="align-self:flex-start;min-height:44px;padding:0 20px;border:2px solid var(--color-action);border-radius:var(--radius-button);background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer" style-hover="background:var(--color-hint)">Salir de esta familia</button>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section data-screen-label="Familia web" style="display:flex;flex-direction:column;gap:24px">
+    <h2 style="margin:0;font-size:24px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">/familia · web 1280 px</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:48px;align-items:flex-start">
+      <sc-for list="{{ states }}" as="s" hint-placeholder-count="2">
+        <div style="display:flex;flex-direction:column;gap:10px;width:1280px">
+          <p style="margin:0;font-size:13px;font-weight:800;color:var(--color-ink)">{{ s.id }}w · {{ s.label }}</p>
+          <div data-screen-label="{{ s.id }} web" style="width:1280px;min-height:820px;display:flex;background:var(--color-canvas);box-shadow:0 20px 50px rgba(4,37,43,0.18);overflow:hidden">
+            <aside style="width:348px;flex-shrink:0;background:var(--color-ink);padding:28px 24px;display:flex;flex-direction:column;gap:28px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <svg width="34" height="34" viewBox="0 0 64 64" role="img" aria-label="PediTrack"><defs><clipPath id="lgF"><rect x="21" y="5" width="22" height="54" rx="11"></rect></clipPath></defs><rect width="64" height="64" rx="15" fill="#22d3ee"></rect><g transform="rotate(-45 32 32)" clip-path="url(#lgF)"><rect x="21" y="5" width="22" height="54" fill="#ffffff"></rect><rect x="21" y="32" width="22" height="27" fill="#047857"></rect><rect x="21" y="30.6" width="22" height="2.8" fill="#22d3ee"></rect></g></svg>
+                <span style="font-size:18px;font-weight:900;letter-spacing:-0.02em;color:var(--color-surface)">Pedi<span style="color:var(--color-bright-soft)">Track</span></span>
+              </div>
+              <nav style="display:flex;flex-direction:column;gap:10px">
+                <a href="#" style="display:flex;justify-content:space-between;align-items:center;min-height:48px;padding:0 16px;border-radius:var(--radius-button)"><span style="font-size:16px;font-weight:800;color:var(--color-hint-border)">Mateo</span><span style="font-size:13px;font-weight:600;color:var(--color-ink-muted)">5a 6m</span></a>
+                <a href="#" style="display:flex;justify-content:space-between;align-items:center;min-height:48px;padding:0 16px;border-radius:var(--radius-button)"><span style="font-size:16px;font-weight:800;color:var(--color-hint-border)">Sofía</span><span style="font-size:13px;font-weight:600;color:var(--color-ink-muted)">1a 2m</span></a>
+                <sc-if value="{{ s.isOwner }}"><a href="#" style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:var(--radius-button);border:1.5px dashed var(--color-ink-edge);font-size:14px;font-weight:700;color:var(--color-bright-soft)">+ Agregar hijo</a></sc-if>
+              </nav>
+              <a href="#" aria-current="page" style="display:flex;justify-content:space-between;align-items:center;min-height:48px;padding:0 16px;border-radius:var(--radius-button);background:var(--color-action);border-top:0"><span style="font-size:16px;font-weight:800;color:var(--color-surface)">Familia</span><span style="font-size:13px;font-weight:600;color:var(--color-hint-edge)">{{ s.navSub }}</span></a>
+              <div style="margin-top:auto;display:flex;align-items:center;gap:12px;border-top:1px solid var(--color-ink-soft);padding-top:20px">
+                <span aria-hidden="true" style="width:38px;height:38px;border-radius:999px;background:var(--color-action);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--color-surface)">{{ s.viewer.initials }}</span>
+                <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700;color:var(--color-surface)">{{ s.viewer.name }}</span><span style="font-size:13px;color:var(--color-bright-soft)">{{ s.viewer.plan }}</span></span>
+              </div>
+            </aside>
+
+            <main style="min-width:0;flex:1;padding:44px 48px">
+              <div style="max-width:904px;margin:0 auto;display:flex;flex-direction:column;gap:32px">
+                <div style="display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:24px">
+                  <div>
+                    <p style="margin:0;font-size:14px;font-weight:700;color:var(--color-action)">Mateo y Sofía</p>
+                    <h1 style="margin:4px 0 0;font-size:38px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">{{ s.title }}</h1>
+                  </div>
+                  <sc-if value="{{ s.showCounter }}" hint-placeholder-val="{{ true }}">
+                    <div style="background:var(--color-ink);border-radius:var(--radius-card);padding:18px 22px;display:flex;flex-direction:column;gap:10px;min-width:260px">
+                      <p style="margin:0;display:flex;align-items:baseline;gap:8px;color:var(--color-surface)"><span style="font-size:34px;font-weight:900;letter-spacing:-0.03em">{{ s.countBig }}</span><span style="font-size:18px;font-weight:800">personas</span></p>
+                      <div aria-hidden="true" style="display:flex;gap:6px">
+                        <sc-for list="{{ s.seats }}" as="seat" hint-placeholder-count="4">
+                          <sc-if value="{{ seat.member }}"><span style="flex:1;height:10px;border-radius:999px;background:var(--color-bright)"></span></sc-if>
+                          <sc-if value="{{ seat.pending }}"><span style="flex:1;height:10px;border-radius:999px;border:2px dashed var(--color-bright-soft)"></span></sc-if>
+                          <sc-if value="{{ seat.empty }}"><span style="flex:1;height:10px;border-radius:999px;background:var(--color-ink-edge)"></span></sc-if>
+                        </sc-for>
+                      </div>
+                      <sc-if value="{{ s.hasPending }}"><p style="margin:0;font-size:13px;font-weight:600;color:var(--color-bright-soft)">contando invitaciones pendientes</p></sc-if>
+                    </div>
+                  </sc-if>
+                </div>
+
+                <sc-if value="{{ s.loading }}">
+                  <div aria-busy="true" style="display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:28px">
+                    <div style="display:flex;flex-direction:column;gap:14px">
+                      <p role="status" style="margin:0;font-size:15px;font-weight:600;color:var(--color-slate-600)">Cargando tu familia…</p>
+                      <div style="height:104px;border-radius:var(--radius-card);background:var(--color-surface);box-shadow:var(--shadow-card);padding:22px;display:flex;gap:16px"><span style="width:44px;height:44px;border-radius:999px;background:var(--color-slate-100)"></span><span style="flex:1;display:flex;flex-direction:column;gap:10px"><span style="height:14px;width:45%;border-radius:8px;background:var(--color-slate-100)"></span><span style="height:12px;width:30%;border-radius:8px;background:var(--color-slate-100)"></span></span></div>
+                      <div style="height:104px;border-radius:var(--radius-card);background:var(--color-surface);box-shadow:var(--shadow-card);padding:22px;display:flex;gap:16px"><span style="width:44px;height:44px;border-radius:999px;background:var(--color-slate-100)"></span><span style="flex:1;display:flex;flex-direction:column;gap:10px"><span style="height:14px;width:40%;border-radius:8px;background:var(--color-slate-100)"></span><span style="height:12px;width:28%;border-radius:8px;background:var(--color-slate-100)"></span></span></div>
+                    </div>
+                    <div style="margin-top:36px;height:320px;border-radius:var(--radius-card);background:var(--color-surface);box-shadow:var(--shadow-card)"></div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ s.error }}">
+                  <div style="max-width:520px;background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:26px;display:flex;flex-direction:column;gap:12px">
+                    <h2 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">No pudimos cargar tu familia</h2>
+                    <p style="margin:0;font-size:16px;line-height:1.55;color:var(--color-body)">Revisa tu conexión e intenta de nuevo.</p>
+                    <button type="button" style="align-self:flex-start;margin-top:4px;min-height:48px;padding:0 24px;border:0;border-radius:var(--radius-button);background:var(--color-confirmed);color:var(--color-surface);font-size:16px;font-weight:800;cursor:pointer" style-hover="background:var(--color-emerald-800)">Reintentar</button>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ s.ready }}" hint-placeholder-val="{{ true }}">
+                  <sc-if value="{{ s.readonly }}">
+                    <div role="status" style="padding:18px 22px;border-radius:var(--radius-card);border:1.5px solid var(--color-hint-border);background:var(--color-hint);display:flex;flex-direction:column;gap:4px">
+                      <p style="margin:0;font-size:16px;font-weight:800;color:var(--color-ink)">La familia está en el plan gratuito</p>
+                      <p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">Sigues viendo todo y puedes marcar tomas. Por ahora no se pueden agregar consultas ni invitar.</p>
+                    </div>
+                  </sc-if>
+                  <div style="display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:28px;align-items:start">
+                    <div style="min-width:0;display:flex;flex-direction:column;gap:28px">
+                      <div style="display:flex;flex-direction:column;gap:14px">
+                        <h2 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Personas</h2>
+                        <sc-for list="{{ s.people }}" as="p" hint-placeholder-count="2">
+                          <div style="background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:22px;display:flex;gap:16px;align-items:flex-start">
+                            <sc-if value="{{ p.isOwner }}"><span aria-hidden="true" style="flex-shrink:0;width:44px;height:44px;border-radius:999px;background:var(--color-ink);color:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800">{{ p.initial }}</span></sc-if>
+                            <sc-if value="{{ p.notOwner }}"><span aria-hidden="true" style="flex-shrink:0;width:44px;height:44px;border-radius:999px;background:var(--color-action);color:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800">{{ p.initial }}</span></sc-if>
+                            <div style="min-width:0;flex:1;display:flex;flex-direction:column;gap:6px">
+                              <p style="margin:0;font-size:18px;font-weight:800;letter-spacing:-0.01em;color:var(--color-ink);overflow-wrap:anywhere">{{ p.name }}</p>
+                              <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+                                <sc-if value="{{ p.isOwner }}"><span style="padding:4px 10px;border-radius:999px;background:var(--color-ink);font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-surface)">Cuenta de la familia</span></sc-if>
+                                <sc-if value="{{ p.isTutor }}"><span style="padding:4px 10px;border-radius:999px;background:var(--color-action);font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-surface)">Tutor</span></sc-if>
+                                <sc-if value="{{ p.isCuidador }}"><span style="padding:3px 10px;border-radius:999px;border:1.5px solid var(--color-hint-border);background:var(--color-hint);font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-action)">Cuidador</span></sc-if>
+                                <sc-if value="{{ p.since }}"><span style="font-size:13px;font-weight:600;color:var(--color-slate-600)">{{ p.since }}</span></sc-if>
+                              </div>
+                              <p style="margin:4px 0 0;font-size:15px;line-height:1.5;color:var(--color-body)">{{ p.desc }}</p>
+                            </div>
+                            <sc-if value="{{ p.canRemove }}"><button type="button" style="flex-shrink:0;min-height:44px;padding:0 20px;border:2px solid var(--color-red-700);border-radius:var(--radius-button);background:transparent;color:var(--color-red-700);font-size:15px;font-weight:800;cursor:pointer" style-hover="background:var(--color-red-50)">Quitar</button></sc-if>
+                          </div>
+                        </sc-for>
+                      </div>
+
+                      <sc-if value="{{ s.hasInvites }}">
+                        <div style="display:flex;flex-direction:column;gap:14px">
+                          <h2 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Invitaciones pendientes</h2>
+                          <sc-for list="{{ s.invites }}" as="i" hint-placeholder-count="1">
+                            <div style="background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:22px;display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between">
+                              <div style="min-width:0;flex:1 1 260px;display:flex;flex-direction:column;gap:8px">
+                                <p style="margin:0;font-size:16px;font-weight:800;color:var(--color-ink);overflow-wrap:anywhere">{{ i.email }}</p>
+                                <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+                                  <sc-if value="{{ i.isTutor }}"><span style="padding:4px 10px;border-radius:999px;background:var(--color-action);font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-surface)">Tutor</span></sc-if>
+                                  <sc-if value="{{ i.isCuidador }}"><span style="padding:3px 10px;border-radius:999px;border:1.5px solid var(--color-hint-border);background:var(--color-hint);font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-action)">Cuidador</span></sc-if>
+                                  <sc-if value="{{ i.isPending }}"><span style="padding:3px 10px;border-radius:999px;border:1.5px dashed var(--color-action);background:var(--color-hint);font-size:13px;font-weight:800;color:var(--color-action)">Pendiente</span></sc-if>
+                                  <sc-if value="{{ i.isExpired }}"><span style="padding:4px 10px;border-radius:999px;background:var(--color-slate-100);font-size:13px;font-weight:800;color:var(--color-slate-600)">Vencida</span></sc-if>
+                                  <span style="font-size:13px;font-weight:600;color:var(--color-slate-600)">{{ i.date }}</span>
+                                </div>
+                              </div>
+                              <div style="display:flex;gap:8px;flex-shrink:0">
+                                <button type="button" style="min-height:44px;padding:0 18px;border:2px solid var(--color-action);border-radius:var(--radius-button);background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer" style-hover="background:var(--color-hint)">Enviar de nuevo</button>
+                                <button type="button" style="min-height:44px;padding:0 14px;border:0;border-radius:var(--radius-button);background:transparent;color:var(--color-action);font-size:15px;font-weight:800;text-decoration:underline;cursor:pointer" style-hover="background:var(--color-hint)">Cancelar</button>
+                              </div>
+                            </div>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+                    </div>
+
+                    <div style="min-width:0;display:flex;flex-direction:column;gap:24px;padding-top:34px">
+                      <sc-if value="{{ s.formOpen }}">
+                        <form style="background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:24px;display:flex;flex-direction:column;gap:18px">
+                          <h2 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Invitar a alguien</h2>
+                          <p style="margin:-8px 0 0;font-size:15px;line-height:1.55;color:var(--color-body)">Quien invites verá las consultas, los medicamentos y las tomas de Mateo y Sofía. Invita solo a personas que los cuidan.</p>
+                          <div style="display:flex;flex-direction:column;gap:8px">
+                            <label style="font-size:13px;font-weight:700;color:var(--color-ink)">Correo</label>
+                            <input type="email" placeholder="nombre@correo.mx" style="min-height:48px;border:1.5px solid var(--color-slate-300);border-radius:var(--radius-field);padding:0 16px;font-size:16px;font-weight:500;color:var(--color-ink);background:var(--color-surface)">
+                          </div>
+                          <fieldset style="margin:0;padding:0;border:0;display:flex;flex-direction:column;gap:10px">
+                            <legend style="padding:0;margin-bottom:8px;font-size:13px;font-weight:700;color:var(--color-ink)">Rol</legend>
+                            <label style="display:flex;gap:12px;align-items:flex-start;padding:16px;border-radius:var(--radius-field);border:1.5px solid var(--color-slate-300);background:var(--color-surface);cursor:pointer">
+                              <span style="margin-top:2px;flex-shrink:0;width:22px;height:22px;border-radius:999px;border:2px solid var(--color-slate-500)"></span>
+                              <span style="display:flex;flex-direction:column;gap:4px"><span style="font-size:16px;font-weight:800;color:var(--color-ink)">Tutor</span><span style="font-size:14px;line-height:1.5;color:var(--color-body)">Ve todo, agrega consultas, marca tomas e invita. Nadie lo puede quitar; solo él puede salir.</span></span>
+                            </label>
+                            <label style="display:flex;gap:12px;align-items:flex-start;padding:15px;border-radius:var(--radius-field);border:2px solid var(--color-ink);background:var(--color-hint);cursor:pointer">
+                              <span style="margin-top:2px;flex-shrink:0;width:22px;height:22px;border-radius:999px;border:2px solid var(--color-ink);display:flex;align-items:center;justify-content:center"><span style="width:10px;height:10px;border-radius:999px;background:var(--color-ink)"></span></span>
+                              <span style="display:flex;flex-direction:column;gap:4px"><span style="font-size:16px;font-weight:800;color:var(--color-ink)">Cuidador</span><span style="font-size:14px;line-height:1.5;color:var(--color-body)">Ve todo y marca tomas. No agrega consultas ni invita. Tú o un tutor lo pueden quitar.</span></span>
+                            </label>
+                          </fieldset>
+                          <p style="margin:0;font-size:14px;line-height:1.55;color:var(--color-slate-600)">No mandamos correo: copias la liga y la envías tú por mensaje. Sirve una vez, vence en 7 días y solo la acepta quien entre con este correo.</p>
+                          <button type="button" style="min-height:48px;border:0;border-radius:var(--radius-button);background:var(--color-confirmed);color:var(--color-surface);font-size:16px;font-weight:800;cursor:pointer" style-hover="background:var(--color-emerald-800)">Crear liga</button>
+                        </form>
+                      </sc-if>
+
+                      <sc-if value="{{ s.formFull }}">
+                        <div style="background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:24px;display:flex;flex-direction:column;gap:18px">
+                          <h2 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Invitar a alguien</h2>
+                          <div role="status" style="padding:16px;border-radius:16px;border:1.5px solid var(--color-hint-border);background:var(--color-hint);display:flex;flex-direction:column;gap:4px">
+                            <p style="margin:0;font-size:15px;font-weight:800;color:var(--color-ink)">Tu familia está completa</p>
+                            <p style="margin:0;font-size:14px;line-height:1.55;color:var(--color-body)">Son 4 de 4 personas, contando invitaciones pendientes. Para invitar a alguien más, cancela una invitación o quita a un cuidador.</p>
+                          </div>
+                          <div style="display:flex;flex-direction:column;gap:8px">
+                            <label style="font-size:13px;font-weight:700;color:var(--color-slate-600)">Correo</label>
+                            <input disabled placeholder="nombre@correo.mx" style="min-height:48px;border:1.5px solid var(--color-slate-300);border-radius:var(--radius-field);padding:0 16px;font-size:16px;color:var(--color-slate-600);background:var(--color-slate-100)">
+                          </div>
+                          <div style="display:flex;gap:10px">
+                            <div style="flex:1;padding:14px 16px;border-radius:var(--radius-field);background:var(--color-slate-100);font-size:15px;font-weight:700;color:var(--color-slate-600)">Tutor</div>
+                            <div style="flex:1;padding:14px 16px;border-radius:var(--radius-field);background:var(--color-slate-100);font-size:15px;font-weight:700;color:var(--color-slate-600)">Cuidador</div>
+                          </div>
+                          <button type="button" disabled style="min-height:48px;border:0;border-radius:var(--radius-button);background:var(--color-slate-100);color:var(--color-slate-600);font-size:16px;font-weight:800;cursor:not-allowed">Crear liga</button>
+                        </div>
+                      </sc-if>
+
+                      <sc-if value="{{ s.showLiga }}">
+                        <div style="background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);border:2px solid var(--color-bright);padding:24px;display:flex;flex-direction:column;gap:16px">
+                          <p style="margin:0;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-action)">Liga lista</p>
+                          <h2 style="margin:-8px 0 0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Envíale esta liga por mensaje</h2>
+                          <p style="margin:0;font-size:15px;line-height:1.5;color:var(--color-body);overflow-wrap:anywhere">Para <strong style="color:var(--color-ink)">carmen.rios.hernandez.abuela@correo.com.mx</strong> · Cuidador · vence el 13 oct</p>
+                          <div style="display:flex;flex-direction:column;gap:8px">
+                            <label style="font-size:13px;font-weight:700;color:var(--color-ink)">Liga de invitación</label>
+                            <div aria-readonly="true" style="min-height:48px;padding:13px 16px;border-radius:var(--radius-field);border:1.5px solid var(--color-hint-border);background:var(--color-hint);font-size:15px;font-weight:600;color:var(--color-ink);overflow-wrap:anywhere">https://peditrack.mx/familia/invitacion?t=8Kd2qR7xLm4pZw91</div>
+                          </div>
+                          <p style="margin:0;font-size:14px;line-height:1.55;color:var(--color-slate-600)">Esta liga solo se muestra ahora. Si la pierdes, usa «Enviar de nuevo» para crear otra.</p>
+                          <div style="display:flex;flex-wrap:wrap;gap:10px">
+                            <sc-if value="{{ s.ligaNotCopied }}"><button type="button" style="flex:1 1 150px;min-height:48px;border:0;border-radius:var(--radius-button);background:var(--color-confirmed);color:var(--color-surface);font-size:16px;font-weight:800;cursor:pointer" style-hover="background:var(--color-emerald-800)">Copiar liga</button></sc-if>
+                            <sc-if value="{{ s.ligaCopied }}"><button type="button" style="flex:1 1 150px;min-height:48px;border:0;border-radius:var(--radius-button);background:var(--color-emerald-800);color:var(--color-surface);font-size:16px;font-weight:800;cursor:pointer">Liga copiada ✓</button></sc-if>
+                            <button type="button" style="flex:1 1 110px;min-height:48px;border:2px solid var(--color-action);border-radius:var(--radius-button);background:transparent;color:var(--color-action);font-size:16px;font-weight:800;cursor:pointer" style-hover="background:var(--color-hint)">Listo</button>
+                          </div>
+                          <sc-if value="{{ s.ligaCopied }}"><p role="status" style="margin:-4px 0 0;font-size:14px;font-weight:700;color:var(--color-confirmed)">Liga copiada. Pégala en tu chat.</p></sc-if>
+                        </div>
+                      </sc-if>
+
+                      <sc-if value="{{ s.showPlan }}">
+                        <div style="padding:24px;border-radius:var(--radius-card);border:1.5px solid var(--color-hint-border);background:var(--color-hint);display:flex;flex-direction:column;gap:12px">
+                          <p style="margin:0;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-action)">Plan completo</p>
+                          <h2 style="margin:-4px 0 0;font-size:22px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Comparte con tu familia</h2>
+                          <p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">Hasta 3 personas más pueden ver a Mateo y Sofía y marcar tomas: tu pareja, la abuela o quien los cuida.</p>
+                          <button type="button" style="margin-top:4px;min-height:48px;border:0;border-radius:var(--radius-button);background:var(--color-confirmed);color:var(--color-surface);font-size:16px;font-weight:800;cursor:pointer" style-hover="background:var(--color-emerald-800)">Ver el plan completo</button>
+                        </div>
+                      </sc-if>
+
+                      <sc-if value="{{ s.showTuLugar }}">
+                        <div style="background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:24px;display:flex;flex-direction:column;gap:12px">
+                          <h2 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Tu lugar en esta familia</h2>
+                          <p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">Eres {{ s.viewerRole }} en la familia de Ana. Puedes salir cuando quieras: dejas de ver a Mateo y Sofía al instante y no te llevas copia de nada.</p>
+                          <button type="button" style="align-self:flex-start;min-height:44px;padding:0 20px;border:2px solid var(--color-action);border-radius:var(--radius-button);background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer" style-hover="background:var(--color-hint)">Salir de esta familia</button>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+            </main>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section data-screen-label="Invitación" style="display:flex;flex-direction:column;gap:24px">
+    <h2 style="margin:0;font-size:24px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">/familia/invitacion · móvil 390 px</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+      <sc-for list="{{ invStates }}" as="v" hint-placeholder-count="3">
+        <div style="display:flex;flex-direction:column;gap:10px;width:390px">
+          <p style="margin:0;font-size:13px;font-weight:800;color:var(--color-ink)">{{ v.id }}m · {{ v.label }}</p>
+          <div data-screen-label="{{ v.id }} móvil" style="width:390px;min-height:844px;background:var(--color-ink);padding:40px 20px;display:flex;flex-direction:column;align-items:center;gap:28px;box-shadow:0 20px 50px rgba(4,37,43,0.18)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <svg width="40" height="40" viewBox="0 0 64 64" role="img" aria-label="PediTrack"><defs><clipPath id="lgI"><rect x="21" y="5" width="22" height="54" rx="11"></rect></clipPath></defs><rect width="64" height="64" rx="15" fill="#22d3ee"></rect><g transform="rotate(-45 32 32)" clip-path="url(#lgI)"><rect x="21" y="5" width="22" height="54" fill="#ffffff"></rect><rect x="21" y="32" width="22" height="27" fill="#047857"></rect><rect x="21" y="30.6" width="22" height="2.8" fill="#22d3ee"></rect></g></svg>
+              <span style="font-size:22px;font-weight:900;letter-spacing:-0.02em;color:var(--color-surface)">Pedi<span style="color:var(--color-bright-soft)">Track</span></span>
+            </div>
+            <dc-import name="InvitacionTarjeta" kind="{{ v.kind }}" hint-size="100%,420px"></dc-import>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <h2 style="margin:32px 0 0;font-size:24px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">/familia/invitacion · web 1280 px</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:48px;align-items:flex-start">
+      <sc-for list="{{ invStates }}" as="v" hint-placeholder-count="2">
+        <div style="display:flex;flex-direction:column;gap:10px;width:1280px">
+          <p style="margin:0;font-size:13px;font-weight:800;color:var(--color-ink)">{{ v.id }}w · {{ v.label }}</p>
+          <div data-screen-label="{{ v.id }} web" style="width:1280px;min-height:820px;background:var(--color-ink);padding:64px 48px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px;box-shadow:0 20px 50px rgba(4,37,43,0.18)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <svg width="44" height="44" viewBox="0 0 64 64" role="img" aria-label="PediTrack"><defs><clipPath id="lgW"><rect x="21" y="5" width="22" height="54" rx="11"></rect></clipPath></defs><rect width="64" height="64" rx="15" fill="#22d3ee"></rect><g transform="rotate(-45 32 32)" clip-path="url(#lgW)"><rect x="21" y="5" width="22" height="54" fill="#ffffff"></rect><rect x="21" y="32" width="22" height="27" fill="#047857"></rect><rect x="21" y="30.6" width="22" height="2.8" fill="#22d3ee"></rect></g></svg>
+              <span style="font-size:24px;font-weight:900;letter-spacing:-0.02em;color:var(--color-surface)">Pedi<span style="color:var(--color-bright-soft)">Track</span></span>
+            </div>
+            <dc-import name="InvitacionTarjeta" kind="{{ v.kind }}" hint-size="480px,420px" style="width:480px"></dc-import>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section data-screen-label="Diálogos" style="display:flex;flex-direction:column;gap:24px">
+    <h2 style="margin:0;font-size:24px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Diálogos de confirmación</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+      <sc-for list="{{ dialogs }}" as="d" hint-placeholder-count="2">
+        <div style="display:flex;flex-direction:column;gap:10px;width:390px">
+          <p style="margin:0;font-size:13px;font-weight:800;color:var(--color-ink)">{{ d.id }}m · {{ d.label }}</p>
+          <div data-screen-label="{{ d.id }} móvil" style="position:relative;width:390px;height:844px;background:var(--color-canvas);overflow:hidden;box-shadow:0 20px 50px rgba(4,37,43,0.18)">
+            <div style="height:220px;background:var(--color-ink)"></div>
+            <div style="position:absolute;inset:0;background:var(--color-ink-70);display:flex;align-items:flex-end;padding:16px">
+              <div role="dialog" aria-modal="true" style="width:100%;background:var(--color-surface);border-radius:var(--radius-modal);padding:28px 24px;display:flex;flex-direction:column;gap:16px">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><h2 style="margin:8px 0 0;font-size:24px;line-height:1.2;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">{{ d.title }}</h2><button type="button" aria-label="Cerrar" style="flex-shrink:0;width:44px;height:44px;border:0;border-radius:12px;background:transparent;color:var(--color-ink);font-size:26px;font-weight:700;line-height:1;cursor:pointer" style-hover="background:var(--color-hint)">×</button></div>
+                <sc-for list="{{ d.rows }}" as="r" hint-placeholder-count="3">
+                  <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:700;color:var(--color-ink)">{{ r.k }}</span><span style="font-size:15px;line-height:1.5;color:var(--color-body)">{{ r.v }}</span></div>
+                </sc-for>
+                <div style="margin-top:6px;display:flex;flex-direction:column-reverse;gap:10px">
+                  <button type="button" autofocus style="min-height:48px;border:2px solid var(--color-action);border-radius:var(--radius-button);background:transparent;color:var(--color-action);font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 0 0 2px var(--color-surface),0 0 0 4px var(--color-confirmed)">Cancelar</button>
+                  <sc-if value="{{ d.isRemove }}"><button type="button" style="width:100%;min-height:48px;border:0;border-radius:var(--radius-button);background:var(--color-red-700);color:var(--color-surface);font-size:16px;font-weight:800;cursor:pointer">{{ d.confirm }}</button></sc-if>
+                  <sc-if value="{{ d.isLeave }}"><button type="button" style="width:100%;min-height:48px;border:0;border-radius:var(--radius-button);background:var(--color-ink);color:var(--color-surface);font-size:16px;font-weight:800;cursor:pointer">{{ d.confirm }}</button></sc-if>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+      <sc-for list="{{ dialogs }}" as="d" hint-placeholder-count="2">
+        <div style="display:flex;flex-direction:column;gap:10px;width:1280px">
+          <p style="margin:0;font-size:13px;font-weight:800;color:var(--color-ink)">{{ d.id }}w · {{ d.label }}</p>
+          <div data-screen-label="{{ d.id }} web" style="position:relative;width:1280px;height:820px;display:flex;background:var(--color-canvas);overflow:hidden;box-shadow:0 20px 50px rgba(4,37,43,0.18)">
+            <div style="width:348px;background:var(--color-ink)"></div>
+            <div style="position:absolute;inset:0;background:var(--color-ink-70);display:flex;align-items:center;justify-content:center;padding:24px">
+              <div role="dialog" aria-modal="true" style="width:100%;max-width:560px;background:var(--color-surface);border-radius:var(--radius-modal);padding:28px;display:flex;flex-direction:column;gap:16px;box-shadow:0 24px 60px rgba(0,0,0,0.3)">
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><h2 style="margin:8px 0 0;font-size:24px;line-height:1.2;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">{{ d.title }}</h2><button type="button" aria-label="Cerrar" style="flex-shrink:0;width:44px;height:44px;border:0;border-radius:12px;background:transparent;color:var(--color-ink);font-size:26px;font-weight:700;line-height:1;cursor:pointer" style-hover="background:var(--color-hint)">×</button></div>
+                <sc-for list="{{ d.rows }}" as="r" hint-placeholder-count="3">
+                  <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:700;color:var(--color-ink)">{{ r.k }}</span><span style="font-size:16px;line-height:1.5;color:var(--color-body)">{{ r.v }}</span></div>
+                </sc-for>
+                <div style="margin-top:8px;display:flex;justify-content:flex-end;gap:12px">
+                  <button type="button" autofocus style="min-height:48px;padding:0 24px;border:2px solid var(--color-action);border-radius:var(--radius-button);background:transparent;color:var(--color-action);font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 0 0 2px var(--color-surface),0 0 0 4px var(--color-confirmed)">Cancelar</button>
+                  <sc-if value="{{ d.isRemove }}"><button type="button" style="min-height:48px;padding:0 24px;border:0;border-radius:var(--radius-button);background:var(--color-red-700);color:var(--color-surface);font-size:16px;font-weight:800;cursor:pointer">{{ d.confirm }}</button></sc-if>
+                  <sc-if value="{{ d.isLeave }}"><button type="button" style="min-height:48px;padding:0 24px;border:0;border-radius:var(--radius-button);background:var(--color-ink);color:var(--color-surface);font-size:16px;font-weight:800;cursor:pointer">{{ d.confirm }}</button></sc-if>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+
+  <section data-screen-label="Entradas" style="display:flex;flex-direction:column;gap:24px">
+    <h2 style="margin:0;font-size:24px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Entradas: home</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+      <div style="display:flex;flex-direction:column;gap:10px;width:390px">
+        <p style="margin:0;font-size:13px;font-weight:800;color:var(--color-ink)">E1m · Home con tarjeta Familia</p>
+        <div data-screen-label="E1 móvil" style="width:390px;min-height:844px;background:var(--color-canvas);box-shadow:0 20px 50px rgba(4,37,43,0.18)">
+          <header style="background:var(--color-ink);padding:24px 24px 28px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <svg width="34" height="34" viewBox="0 0 64 64" role="img" aria-label="PediTrack"><defs><clipPath id="lgE"><rect x="21" y="5" width="22" height="54" rx="11"></rect></clipPath></defs><rect width="64" height="64" rx="15" fill="#22d3ee"></rect><g transform="rotate(-45 32 32)" clip-path="url(#lgE)"><rect x="21" y="5" width="22" height="54" fill="#ffffff"></rect><rect x="21" y="32" width="22" height="27" fill="#047857"></rect><rect x="21" y="30.6" width="22" height="2.8" fill="#22d3ee"></rect></g></svg>
+              <span style="font-size:18px;font-weight:900;letter-spacing:-0.02em;color:var(--color-surface)">Pedi<span style="color:var(--color-bright-soft)">Track</span></span>
+            </div>
+            <p style="margin:22px 0 0;font-size:14px;font-weight:700;color:var(--color-bright-soft)">Hola, Ana</p>
+            <h1 style="margin:2px 0 0;font-size:30px;font-weight:900;letter-spacing:-0.03em;color:var(--color-surface)">Tus hijos</h1>
+          </header>
+          <div style="padding:24px;display:flex;flex-direction:column;gap:14px">
+            <a href="#" style="display:flex;align-items:center;gap:16px;padding:20px;border-radius:var(--radius-card);background:var(--color-surface);box-shadow:var(--shadow-card)"><span aria-hidden="true" style="width:56px;height:56px;border-radius:16px;background:var(--color-mint);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:var(--color-ink)">M</span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:19px;font-weight:800;letter-spacing:-0.02em;color:var(--color-ink)">Mateo Morales</span><span style="font-size:14px;font-weight:600;color:var(--color-action)">5 años 6 meses</span></span></a>
+            <a href="#" style="display:flex;align-items:center;gap:16px;padding:20px;border-radius:var(--radius-card);background:var(--color-surface);box-shadow:var(--shadow-card)"><span aria-hidden="true" style="width:56px;height:56px;border-radius:16px;background:var(--color-mint);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:var(--color-ink)">S</span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:19px;font-weight:800;letter-spacing:-0.02em;color:var(--color-ink)">Sofía Morales</span><span style="font-size:14px;font-weight:600;color:var(--color-action)">1 año 2 meses</span></span></a>
+            <a href="#" style="margin-top:10px;display:flex;align-items:center;gap:16px;padding:20px;border-radius:var(--radius-card);background:var(--color-surface);box-shadow:var(--shadow-card)">
+              <span aria-hidden="true" style="display:flex">
+                <span style="width:36px;height:36px;border-radius:999px;background:var(--color-ink);border:2px solid var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--color-surface)">A</span>
+                <span style="margin-left:-8px;width:36px;height:36px;border-radius:999px;background:var(--color-action);border:2px solid var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--color-surface)">R</span>
+                <span style="margin-left:-8px;width:36px;height:36px;border-radius:999px;background:var(--color-hint);border:2px dashed var(--color-action);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--color-action)">C</span>
+              </span>
+              <span style="min-width:0;flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:19px;font-weight:800;letter-spacing:-0.02em;color:var(--color-ink)">Familia</span><span style="font-size:14px;font-weight:600;color:var(--color-action)">3 de 4 personas · 1 pendiente</span></span>
+              <span aria-hidden="true" style="font-size:20px;font-weight:800;color:var(--color-action)">→</span>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;width:1280px">
+        <p style="margin:0;font-size:13px;font-weight:800;color:var(--color-ink)">E1w · Home con enlace Familia en la barra lateral y tarjeta</p>
+        <div data-screen-label="E1 web" style="width:1280px;min-height:820px;display:flex;background:var(--color-canvas);box-shadow:0 20px 50px rgba(4,37,43,0.18)">
+          <aside style="width:348px;flex-shrink:0;background:var(--color-ink);padding:28px 24px;display:flex;flex-direction:column;gap:28px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <svg width="34" height="34" viewBox="0 0 64 64" role="img" aria-label="PediTrack"><defs><clipPath id="lgH"><rect x="21" y="5" width="22" height="54" rx="11"></rect></clipPath></defs><rect width="64" height="64" rx="15" fill="#22d3ee"></rect><g transform="rotate(-45 32 32)" clip-path="url(#lgH)"><rect x="21" y="5" width="22" height="54" fill="#ffffff"></rect><rect x="21" y="32" width="22" height="27" fill="#047857"></rect><rect x="21" y="30.6" width="22" height="2.8" fill="#22d3ee"></rect></g></svg>
+              <span style="font-size:18px;font-weight:900;letter-spacing:-0.02em;color:var(--color-surface)">Pedi<span style="color:var(--color-bright-soft)">Track</span></span>
+            </div>
+            <nav style="display:flex;flex-direction:column;gap:10px">
+              <a href="#" style="display:flex;justify-content:space-between;align-items:center;min-height:48px;padding:0 16px;border-radius:var(--radius-button)"><span style="font-size:16px;font-weight:800;color:var(--color-hint-border)">Mateo</span><span style="font-size:13px;font-weight:600;color:var(--color-ink-muted)">5a 6m</span></a>
+              <a href="#" style="display:flex;justify-content:space-between;align-items:center;min-height:48px;padding:0 16px;border-radius:var(--radius-button)"><span style="font-size:16px;font-weight:800;color:var(--color-hint-border)">Sofía</span><span style="font-size:13px;font-weight:600;color:var(--color-ink-muted)">1a 2m</span></a>
+              <a href="#" style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:var(--radius-button);border:1.5px dashed var(--color-ink-edge);font-size:14px;font-weight:700;color:var(--color-bright-soft)">+ Agregar hijo</a>
+            </nav>
+            <a href="#" style="display:flex;justify-content:space-between;align-items:center;min-height:48px;padding:0 16px;border-radius:var(--radius-button)" style-hover="background:var(--color-ink-soft)"><span style="font-size:16px;font-weight:800;color:var(--color-hint-border)">Familia</span><span style="font-size:13px;font-weight:600;color:var(--color-ink-muted)">3 de 4</span></a>
+            <div style="margin-top:auto;display:flex;align-items:center;gap:12px;border-top:1px solid var(--color-ink-soft);padding-top:20px">
+              <span aria-hidden="true" style="width:38px;height:38px;border-radius:999px;background:var(--color-action);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--color-surface)">AM</span>
+              <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700;color:var(--color-surface)">Ana Morales</span><span style="font-size:13px;color:var(--color-bright-soft)">Plan completo</span></span>
+            </div>
+          </aside>
+          <main style="min-width:0;flex:1;padding:44px 48px">
+            <div style="max-width:904px;margin:0 auto;display:flex;flex-direction:column;gap:28px">
+              <div>
+                <p style="margin:0;font-size:14px;font-weight:700;color:var(--color-action)">Hola, Ana</p>
+                <h1 style="margin:4px 0 0;font-size:38px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Tus hijos</h1>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px">
+                <a href="#" style="display:flex;align-items:center;gap:16px;padding:24px;border-radius:var(--radius-card);background:var(--color-surface);box-shadow:var(--shadow-card)"><span aria-hidden="true" style="width:56px;height:56px;border-radius:16px;background:var(--color-mint);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:var(--color-ink)">M</span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:20px;font-weight:800;letter-spacing:-0.02em;color:var(--color-ink)">Mateo Morales</span><span style="font-size:14px;font-weight:600;color:var(--color-action)">5 años 6 meses</span></span></a>
+                <a href="#" style="display:flex;align-items:center;gap:16px;padding:24px;border-radius:var(--radius-card);background:var(--color-surface);box-shadow:var(--shadow-card)"><span aria-hidden="true" style="width:56px;height:56px;border-radius:16px;background:var(--color-mint);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:var(--color-ink)">S</span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:20px;font-weight:800;letter-spacing:-0.02em;color:var(--color-ink)">Sofía Morales</span><span style="font-size:14px;font-weight:600;color:var(--color-action)">1 año 2 meses</span></span></a>
+              </div>
+              <a href="#" style="display:flex;align-items:center;gap:18px;padding:24px;border-radius:var(--radius-card);background:var(--color-surface);box-shadow:var(--shadow-card)">
+                <span aria-hidden="true" style="display:flex">
+                  <span style="width:40px;height:40px;border-radius:999px;background:var(--color-ink);border:2px solid var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:var(--color-surface)">A</span>
+                  <span style="margin-left:-8px;width:40px;height:40px;border-radius:999px;background:var(--color-action);border:2px solid var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:var(--color-surface)">R</span>
+                  <span style="margin-left:-8px;width:40px;height:40px;border-radius:999px;background:var(--color-hint);border:2px dashed var(--color-action);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:var(--color-action)">C</span>
+                </span>
+                <span style="min-width:0;flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:20px;font-weight:800;letter-spacing:-0.02em;color:var(--color-ink)">Familia</span><span style="font-size:14px;font-weight:600;color:var(--color-action)">3 de 4 personas · 1 invitación pendiente</span></span>
+                <span style="font-size:15px;font-weight:800;color:var(--color-action)">Ver familia →</span>
+              </a>
+            </div>
+          </main>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const per = (o) => ({ isOwner: false, isTutor: false, isCuidador: false, canRemove: false, since: '', ...o, notOwner: !o.isOwner });
+    const ana = (you) => per({ initial: 'A', name: 'Ana Morales' + (you ? ' (tú)' : ''), isOwner: true, desc: 'Paga el plan y decide quién entra.' });
+    const luis = (you) => per({ initial: 'L', name: 'Luis Morales' + (you ? ' (tú)' : ''), isTutor: true, since: 'desde el 14 sep', desc: 'Ve todo, agrega consultas, marca tomas e invita.' });
+    const rosa = (you, rm) => per({ initial: 'R', name: 'Rosa Hernández' + (you ? ' (tú)' : ''), isCuidador: true, since: 'desde el 06 oct', canRemove: rm, desc: 'Ve todo y marca tomas.' });
+    const carmen = { email: 'carmen.rios.hernandez.abuela@correo.com.mx', isCuidador: true, isTutor: false, isPending: true, isExpired: false, date: 'Vence el 13 oct' };
+    const jorge = { email: 'jorge.morales@correo.mx', isTutor: true, isCuidador: false, isPending: false, isExpired: true, date: 'Venció el 02 oct' };
+    const V = {
+      ana: { initials: 'AM', name: 'Ana Morales', plan: 'Plan completo' },
+      anaFree: { initials: 'AM', name: 'Ana Morales', plan: 'Plan gratuito' },
+      luis: { initials: 'LM', name: 'Luis Morales', plan: 'Tutor · familia de Ana' },
+      rosa: { initials: 'RH', name: 'Rosa Hernández', plan: 'Cuidador · familia de Ana' },
+    };
+    const st = (o) => {
+      const m = o.members ?? 0, p = o.pending ?? 0;
+      const seats = [0, 1, 2, 3].map((n) => ({ member: n < m, pending: n >= m && n < m + p, empty: n >= m + p }));
+      const form = o.form ?? 'none';
+      const ready = !o.loading && !o.error;
+      return {
+        title: o.isOwner ? 'Tu familia' : 'Familia de Ana', people: [], invites: [],
+        showCounter: ready && !o.free, countBig: (m + p) + ' de 4', hasPending: p > 0, seats,
+        navSub: o.free ? '' : (m + p) + ' de 4', ready,
+        formOpen: form === 'open', formFull: form === 'full', showLiga: form === 'liga' || form === 'copied',
+        ligaCopied: form === 'copied', ligaNotCopied: form === 'liga', showPlan: form === 'plan',
+        showTuLugar: !!o.viewerRole, readonly: false, loading: false, error: false,
+        ...o, hasInvites: (o.invites ?? []).length > 0,
+      };
+    };
+    const states = [
+      st({ id: 'F1', label: 'Dueña · con invitación pendiente y vencida', isOwner: true, viewer: V.ana, members: 2, pending: 1, people: [ana(true), rosa(false, true)], invites: [carmen, jorge], form: 'open' }),
+      st({ id: 'F2', label: 'Liga lista (tras crear o enviar de nuevo)', isOwner: true, viewer: V.ana, members: 2, pending: 1, people: [ana(true), rosa(false, true)], invites: [carmen, jorge], form: 'liga' }),
+      st({ id: 'F3', label: 'Liga copiada', isOwner: true, viewer: V.ana, members: 2, pending: 1, people: [ana(true), rosa(false, true)], invites: [carmen, jorge], form: 'copied' }),
+      st({ id: 'F4', label: 'Familia llena · formulario deshabilitado', isOwner: true, viewer: V.ana, members: 3, pending: 1, people: [ana(true), luis(false), rosa(false, true)], invites: [carmen, jorge], form: 'full' }),
+      st({ id: 'F5', label: 'Vista de Tutor', viewer: V.luis, viewerRole: 'Tutor', members: 3, pending: 0, people: [ana(false), luis(true), rosa(false, true)], form: 'open' }),
+      st({ id: 'F6', label: 'Vista de Cuidador', viewer: V.rosa, viewerRole: 'Cuidador', members: 3, pending: 0, people: [ana(false), luis(false), rosa(true, false)] }),
+      st({ id: 'F7', label: 'Solo lectura (la cuenta pasó a plan gratuito)', viewer: V.luis, viewerRole: 'Tutor', readonly: true, members: 3, pending: 0, people: [ana(false), luis(true), rosa(false, true)] }),
+      st({ id: 'F8', label: 'Plan gratuito (dueña)', isOwner: true, free: true, viewer: V.anaFree, people: [ana(true)], form: 'plan' }),
+      st({ id: 'F9', label: 'Cargando', isOwner: true, viewer: V.ana, loading: true }),
+      st({ id: 'F10', label: 'Error al cargar', isOwner: true, viewer: V.ana, error: true }),
+    ];
+    const invStates = [
+      { id: 'I1', label: 'Sin sesión', kind: 'nosession' },
+      { id: 'I2', label: 'Sin cuenta de PediTrack', kind: 'noaccount' },
+      { id: 'I3', label: 'La oferta', kind: 'offer' },
+      { id: 'I4', label: 'Correo equivocado', kind: 'wrong' },
+      { id: 'I5', label: 'Liga que ya no sirve', kind: 'dead' },
+      { id: 'I6', label: 'Error de conexión', kind: 'neterror' },
+    ];
+    const dialogs = [
+      { id: 'D1', label: 'Salir de la familia (Tutor o Cuidador)', isLeave: true, isRemove: false, title: '¿Salir de la familia de Ana?', confirm: 'Salir de la familia', rows: [
+        { k: 'Dejas de ver', v: 'Las consultas, los medicamentos y las tomas de Mateo y Sofía, desde este momento.' },
+        { k: 'No te llevas', v: 'Ninguna copia. La información se queda en la familia.' },
+        { k: 'Se conserva', v: 'Lo que agregaste y las tomas que marcaste. Para volver, Ana tendría que invitarte de nuevo.' } ] },
+      { id: 'D2', label: 'Quitar a un Cuidador', isLeave: false, isRemove: true, title: '¿Quitar a Rosa de la familia?', confirm: 'Quitar a Rosa', rows: [
+        { k: 'Deja de ver', v: 'Las consultas, los medicamentos y las tomas de Mateo y Sofía, desde este momento.' },
+        { k: 'No se lleva', v: 'Ninguna copia de la información.' },
+        { k: 'Se conserva', v: 'Las tomas que marcó, con su nombre. Su lugar queda libre.' } ] },
+    ];
+    return { states, invStates, dialogs };
+  }
+}
+</script>
+</body>
+</html>

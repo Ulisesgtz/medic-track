@@ -247,6 +247,7 @@ func TestAccept_TheFullJourneyAndItsRefusals(t *testing.T) {
 	require.Equal(t, http.StatusOK, code)
 	require.Equal(t, true, out["emailMatches"])
 	require.Equal(t, "Ana", out["ownerName"])
+	require.Equal(t, []any{}, out["childrenFirstNames"], "the owner has no children here: an empty list, never null")
 	code, out = e.do(t, noEmail.clerkID, http.MethodPost, "/family/invitations/preview", payload)
 	require.Equal(t, http.StatusOK, code)
 	require.Equal(t, false, out["emailMatches"])
@@ -288,6 +289,10 @@ func TestAccept_TheFullJourneyAndItsRefusals(t *testing.T) {
 	require.Len(t, view["invitations"], 0)
 	require.EqualValues(t, 2, view["capacity"].(map[string]any)["used"])
 	require.Equal(t, false, view["members"].([]any)[0].(map[string]any)["canRemove"], "a Tutor can't be removed")
+	// Each person is told which one is them.
+	require.Equal(t, false, view["members"].([]any)[0].(map[string]any)["you"])
+	_, mine := e.do(t, invited.clerkID, http.MethodGet, "/family", "")
+	require.Equal(t, true, mine["members"].([]any)[0].(map[string]any)["you"])
 
 	// The link is used up: nobody else gets anything from it.
 	code, _ = e.do(t, other.clerkID, http.MethodPost, "/family/invitations/preview", payload)

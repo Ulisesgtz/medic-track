@@ -37,12 +37,12 @@ for (const design of designs) {
       // The owner invites from «Familia» and copies the one-time link.
       await page.goto('/familia')
       const main = page.getByRole('main')
-      await expect(main.getByText('1 de 4 personas')).toBeVisible()
-      await main.getByLabel('Correo de la persona').fill(guest.email)
-      await main.getByRole('button', { name: 'Crear invitación' }).click()
-      const link = await main.getByLabel('Liga de la invitación').inputValue()
+      await expect(main.getByText('1 de 4', { exact: true })).toBeVisible()
+      await main.getByLabel('Correo', { exact: true }).fill(guest.email)
+      await main.getByRole('button', { name: 'Crear liga' }).click()
+      const link = await main.getByLabel('Liga de invitación').inputValue()
       expect(link).toContain('/familia/invitacion#')
-      await expect(main.getByText('2 de 4 personas (contando invitaciones pendientes)')).toBeVisible()
+      await expect(main.getByText('2 de 4', { exact: true })).toBeVisible()
       await expect(main.getByText('Pendiente', { exact: true })).toBeVisible()
       await expectNoHorizontalScroll(page)
 
@@ -52,7 +52,7 @@ for (const design of designs) {
       await guest.page.getByLabel('Apellido').fill('Pérez')
       await guest.page.getByRole('button', { name: 'Continuar' }).click()
       await expect(guest.page.getByRole('heading', { name: 'Ana te invita a su familia' })).toBeVisible()
-      await expect(guest.page.getByText(/datos médicos de los hijos de Ana/)).toBeVisible()
+      await expect(guest.page.getByText(/Vas a ver datos médicos de/)).toBeVisible()
       await expectNoHorizontalScroll(guest.page)
       await guest.page.getByRole('button', { name: 'Aceptar' }).click()
 
@@ -65,7 +65,7 @@ for (const design of designs) {
 
       // The owner's list now has the person and no way to remove a Tutor.
       await page.reload()
-      await expect(page.getByRole('main').getByText('Tutor · desde el')).toBeVisible()
+      await expect(page.getByRole('main').getByText(/desde el/)).toBeVisible()
       await expect(page.getByRole('main').getByRole('button', { name: /Quitar a/ })).toHaveCount(0)
       await guest.context.close()
     })
@@ -77,7 +77,7 @@ for (const design of designs) {
       const stranger = await secondPerson(browser, design)
 
       await stranger.page.goto(invitationUrl(invitation))
-      await expect(stranger.page.getByText(/Entraste con otro correo/)).toBeVisible()
+      await expect(stranger.page.getByText(/Entraste como/)).toBeVisible()
       await expect(stranger.page.getByRole('button', { name: 'Aceptar' })).toHaveCount(0)
       await expectNoHorizontalScroll(stranger.page)
 
@@ -139,8 +139,8 @@ for (const design of designs) {
       const main = guest.page.getByRole('main')
       await expect(main.getByText('Tu lugar en esta familia')).toBeVisible()
       await main.getByRole('button', { name: 'Salir de esta familia' }).click()
-      const dialog = guest.page.getByRole('dialog', { name: '¿Salir de esta familia?' })
-      await expect(dialog).toContainText('No te llevas una copia')
+      const dialog = guest.page.getByRole('dialog', { name: '¿Salir de la familia de Ana?' })
+      await expect(dialog).toContainText('Ninguna copia')
       await dialog.getByRole('button', { name: 'Salir de la familia' }).click()
 
       await expect(guest.page).toHaveURL(/\/home/)
@@ -150,7 +150,7 @@ for (const design of designs) {
 
       // The owner's family has nobody else, and nobody can bring the person back without inviting them again.
       await page.goto('/familia')
-      await expect(page.getByRole('main').getByText('1 de 4 personas')).toBeVisible()
+      await expect(page.getByRole('main').getByText('1 de 4', { exact: true })).toBeVisible()
       await guest.context.close()
     })
 
@@ -161,9 +161,9 @@ for (const design of designs) {
 
       await page.goto('/familia')
       const main = page.getByRole('main')
-      await expect(main.getByText('4 de 4 personas (contando invitaciones pendientes)')).toBeVisible()
-      await expect(main.getByRole('button', { name: 'Crear invitación' })).toBeDisabled()
-      await expect(main.getByText(/máximo de personas/)).toBeVisible()
+      await expect(main.getByText('4 de 4', { exact: true })).toBeVisible()
+      await expect(main.getByRole('button', { name: 'Crear liga' })).toBeDisabled()
+      await expect(main.getByText('Tu familia está completa')).toBeVisible()
       await expectNoHorizontalScroll(page)
     })
 
@@ -174,7 +174,7 @@ for (const design of designs) {
       await page.goto('/familia')
       const main = page.getByRole('main')
       await expect(main.getByRole('heading', { name: 'Comparte con tu familia' })).toBeVisible()
-      await expect(main.getByLabel('Correo de la persona')).toHaveCount(0)
+      await expect(main.getByLabel('Correo', { exact: true })).toHaveCount(0)
       await main.getByRole('button', { name: 'Ver el plan completo' }).click()
       await expect(page.getByRole('dialog', { name: 'Compartir con tu familia' })).toBeVisible()
       await expectNoHorizontalScroll(page)
@@ -195,7 +195,7 @@ for (const design of designs) {
       await expect(guest.page.getByText('Dra. Laura Cázares')).toBeVisible()
       await expect(newConsultation).toHaveCount(0)
       await guest.page.goto('/familia')
-      await expect(guest.page.getByText(/ya no es de pago/)).toBeVisible()
+      await expect(guest.page.getByText('La familia está en el plan gratuito')).toBeVisible()
 
       // Marking is for safety: it keeps working.
       await guest.page.goto(`/consultations/${owner.consultationId}`)

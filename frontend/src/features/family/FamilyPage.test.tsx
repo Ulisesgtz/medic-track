@@ -68,7 +68,7 @@ describe('FamilyPage', () => {
   it('lists the family: the owner first, then each person with their role, and the places used', async () => {
     stubApi(() =>
       family({
-        members: [{ id: 'm1', name: 'Luis', role: 'tutor', childId: null, since: '2026-10-01T10:00:00Z', canRemove: false }],
+        members: [{ id: 'm1', name: 'Luis', role: 'tutor', childId: null, since: '2026-10-01T10:00:00Z', canRemove: false, you: false }],
         capacity: { max: 4, used: 2 },
       }),
     )
@@ -76,9 +76,10 @@ describe('FamilyPage', () => {
 
     const people = within(await screen.findByRole('list', { name: 'Personas de la familia' }))
     expect(people.getAllByRole('listitem')).toHaveLength(2)
-    expect(people.getByText('Ana')).toBeInTheDocument()
-    expect(people.getByText(/Tutor · desde el/)).toBeInTheDocument()
-    expect(screen.getByText('2 de 4 personas')).toBeInTheDocument()
+    expect(people.getByText('Ana (tú)')).toBeInTheDocument()
+    expect(people.getByText('Tutor')).toBeInTheDocument()
+    expect(people.getByText(/desde el/)).toBeInTheDocument()
+    expect(screen.getByText('2 de 4')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: '← Tus hijos' })).toHaveAttribute('href', '/home')
   })
 
@@ -90,7 +91,8 @@ describe('FamilyPage', () => {
       }),
     )
     renderPage()
-    expect(await screen.findByText(/2 de 4 personas \(contando invitaciones pendientes\)/)).toBeInTheDocument()
+    expect(await screen.findByText('2 de 4')).toBeInTheDocument()
+    expect(screen.getByText('contando invitaciones pendientes')).toBeInTheDocument()
   })
 
   it('shows the plan card instead of the invite form on the free plan, and the card opens the plan notice', async () => {
@@ -111,7 +113,7 @@ describe('FamilyPage', () => {
   it('tells an invited person whose family stopped paying why they can only view and mark', async () => {
     stubApi(() => family({ role: 'tutor', plan: 'free', readOnly: true }))
     renderPage()
-    expect(await screen.findByText(/ya no es de pago/)).toBeInTheDocument()
+    expect(await screen.findByText(/La familia está en el plan gratuito/)).toBeInTheDocument()
     expect(screen.queryByRole('form', { name: 'Invitar a alguien' })).not.toBeInTheDocument()
     expect(screen.queryByText('Comparte con tu familia')).not.toBeInTheDocument()
   })
@@ -121,7 +123,7 @@ describe('FamilyPage', () => {
     renderPage()
     await screen.findByRole('list', { name: 'Personas de la familia' })
     expect(screen.queryByRole('form', { name: 'Invitar a alguien' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Invitaciones' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Invitaciones pendientes' })).not.toBeInTheDocument()
   })
 
   it('shows an error with Reintentar when the family cannot be read', async () => {
@@ -151,19 +153,19 @@ describe('FamilyPage', () => {
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
     renderPage()
 
-    await user.type(await screen.findByLabelText('Correo de la persona'), 'papa@example.com')
-    await user.click(screen.getByRole('button', { name: 'Crear invitación' }))
+    await user.type(await screen.findByLabelText('Correo'), 'papa@example.com')
+    await user.click(screen.getByRole('button', { name: 'Crear liga' }))
 
-    const link = (await screen.findByLabelText('Liga de la invitación')) as HTMLInputElement
+    const link = (await screen.findByLabelText('Liga de invitación')) as HTMLInputElement
     expect(link.value).toBe(`${window.location.origin}/familia/invitacion#TOKEN123`)
     expect(calls.find((c) => c.method === 'POST' && c.path === '/family/invitations')?.body).toEqual({ email: 'papa@example.com', role: 'tutor' })
 
     await user.click(screen.getByRole('button', { name: 'Copiar liga' }))
     expect(writeText).toHaveBeenCalledWith(link.value)
-    expect(await screen.findByText('Liga copiada')).toBeInTheDocument()
+    expect(await screen.findByText('Liga copiada. Pégala en tu chat.')).toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Listo' }))
-    expect(screen.queryByLabelText('Liga de la invitación')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Liga de invitación')).not.toBeInTheDocument()
   })
 
   it('says so when the link cannot be copied', async () => {
@@ -174,9 +176,9 @@ describe('FamilyPage', () => {
     Object.defineProperty(navigator, 'clipboard', { value: { writeText: vi.fn().mockRejectedValue(new Error('no')) }, configurable: true })
     renderPage()
 
-    await user.type(await screen.findByLabelText('Correo de la persona'), 'a@b.com')
+    await user.type(await screen.findByLabelText('Correo'), 'a@b.com')
     await user.click(screen.getByLabelText(/Cuidador/))
-    await user.click(screen.getByRole('button', { name: 'Crear invitación' }))
+    await user.click(screen.getByRole('button', { name: 'Crear liga' }))
     await user.click(await screen.findByRole('button', { name: 'Copiar liga' }))
     expect(await screen.findByText(/No pudimos copiarla/)).toBeInTheDocument()
   })
@@ -186,9 +188,9 @@ describe('FamilyPage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: 'Crear invitación' }))
+    await user.click(await screen.findByRole('button', { name: 'Crear liga' }))
     expect(screen.getByText('Escribe el correo de la persona.')).toBeInTheDocument()
-    await user.type(screen.getByLabelText('Correo de la persona'), 'no-es-correo')
+    await user.type(screen.getByLabelText('Correo'), 'no-es-correo')
     expect(screen.getByText(/Escribe un correo válido/)).toBeInTheDocument()
     expect(calls.some((c) => c.method === 'POST')).toBe(false)
   })
@@ -196,15 +198,15 @@ describe('FamilyPage', () => {
   it.each([
     ['already_member', 409, /ya tiene acceso/],
     ['invitation_pending', 409, /invitación pendiente/],
-    ['family_full', 422, /máximo de personas/],
+    ['family_full', 422, /ya está completa/],
     ['validation_error', 400, /no parece válido/],
-    ['internal_error', 500, /No pudimos crear la invitación/],
+    ['internal_error', 500, /No pudimos crear la liga/],
   ])('explains a refusal of %s', async (error, status, text) => {
     stubApi(() => family(), { 'POST /family/invitations': { status, body: { error, message: 'x' } } })
     const user = userEvent.setup()
     renderPage()
-    await user.type(await screen.findByLabelText('Correo de la persona'), 'a@b.com')
-    await user.click(screen.getByRole('button', { name: 'Crear invitación' }))
+    await user.type(await screen.findByLabelText('Correo'), 'a@b.com')
+    await user.click(screen.getByRole('button', { name: 'Crear liga' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(text)
   })
 
@@ -214,16 +216,16 @@ describe('FamilyPage', () => {
     })
     const user = userEvent.setup()
     renderPage()
-    await user.type(await screen.findByLabelText('Correo de la persona'), 'a@b.com')
-    await user.click(screen.getByRole('button', { name: 'Crear invitación' }))
+    await user.type(await screen.findByLabelText('Correo'), 'a@b.com')
+    await user.click(screen.getByRole('button', { name: 'Crear liga' }))
     expect(await screen.findByRole('dialog')).toHaveTextContent('Compartir con tu familia')
   })
 
   it('disables inviting when the family is full', async () => {
     stubApi(() => family({ capacity: { max: 4, used: 4 } }))
     renderPage()
-    expect(await screen.findByRole('button', { name: 'Crear invitación' })).toBeDisabled()
-    expect(screen.getByText(/ya tiene el máximo de personas/)).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Crear liga' })).toBeDisabled()
+    expect(screen.getByText('Tu familia está completa')).toBeInTheDocument()
   })
 
   describe('invitations waiting', () => {
@@ -238,7 +240,7 @@ describe('FamilyPage', () => {
     it('shows each one with its state and expiry', async () => {
       stubApi(() => pending)
       renderPage()
-      const list = within(await screen.findByRole('heading', { name: 'Invitaciones' }).then((h) => h.closest('section')!))
+      const list = within(await screen.findByRole('heading', { name: 'Invitaciones pendientes' }).then((h) => h.closest('section')!))
       expect(list.getByText('p@x.com')).toBeInTheDocument()
       expect(list.getByText('Pendiente')).toBeInTheDocument()
       expect(list.getByText('Vencida')).toBeInTheDocument()
@@ -254,11 +256,11 @@ describe('FamilyPage', () => {
       const user = userEvent.setup()
       renderPage()
       await user.click(await screen.findByRole('button', { name: /Enviar de nuevo a old@x.com/ }))
-      expect(((await screen.findByLabelText('Liga de la invitación')) as HTMLInputElement).value).toMatch(/#NEW$/)
+      expect(((await screen.findByLabelText('Liga de invitación')) as HTMLInputElement).value).toMatch(/#NEW$/)
     })
 
     it.each([
-      [422, { error: 'family_full' }, /máximo de personas/],
+      [422, { error: 'family_full' }, /ya está completa/],
       [500, { error: 'internal_error' }, /No pudimos enviar la invitación de nuevo/],
     ])('explains why it could not be sent again (%i)', async (status, body, text) => {
       stubApi(() => pending, { 'POST /family/invitations/i1/resend': { status, body } })
@@ -306,23 +308,23 @@ describe('FamilyPage', () => {
       const user = userEvent.setup()
       renderPage()
       await user.click(await screen.findByRole('button', { name: /Enviar de nuevo a p@x.com/ }))
-      await screen.findByLabelText('Liga de la invitación')
+      await screen.findByLabelText('Liga de invitación')
       await user.click(screen.getByRole('button', { name: /Cancelar la invitación de p@x.com/ }))
-      await waitFor(() => expect(screen.queryByLabelText('Liga de la invitación')).not.toBeInTheDocument())
+      await waitFor(() => expect(screen.queryByLabelText('Liga de invitación')).not.toBeInTheDocument())
     })
   })
 
   describe('leaving and removing (specs/032)', () => {
     const withCaregiver = () =>
       family({
-        members: [{ id: 'm1', name: 'Rosa', role: 'caregiver', childId: null, since: '2026-10-01T10:00:00Z', canRemove: true }],
+        members: [{ id: 'm1', name: 'Rosa', role: 'caregiver', childId: null, since: '2026-10-01T10:00:00Z', canRemove: true, you: false }],
         capacity: { max: 4, used: 2 },
       })
 
     it('offers «Quitar» only where the server says the person can be removed, and asks first', async () => {
       let removed = false
       const calls = stubApi(
-        () => (removed ? family() : { ...withCaregiver(), members: [...withCaregiver().members, { id: 'm2', name: 'Luis', role: 'tutor', childId: null, since: '2026-10-01T10:00:00Z', canRemove: false }] }),
+        () => (removed ? family() : { ...withCaregiver(), members: [...withCaregiver().members, { id: 'm2', name: 'Luis', role: 'tutor', childId: null, since: '2026-10-01T10:00:00Z', canRemove: false, you: false }] }),
         { 'POST /family/members/m1/remove': { status: 204 } },
       )
       const user = userEvent.setup()
@@ -332,12 +334,12 @@ describe('FamilyPage', () => {
       expect(screen.queryByRole('button', { name: 'Quitar a Luis' })).not.toBeInTheDocument()
       await user.click(screen.getByRole('button', { name: 'Quitar a Rosa' }))
 
-      const dialog = screen.getByRole('dialog', { name: '¿Quitar el acceso de Rosa?' })
-      expect(dialog).toHaveTextContent('Lo que registró se queda en tu cuenta')
+      const dialog = screen.getByRole('dialog', { name: '¿Quitar a Rosa de la familia?' })
+      expect(dialog).toHaveTextContent('Las tomas que marcó')
       expect(calls.some((c) => c.path === '/family/members/m1/remove')).toBe(false)
 
       removed = true
-      await user.click(within(dialog).getByRole('button', { name: 'Quitar acceso' }))
+      await user.click(within(dialog).getByRole('button', { name: 'Quitar a Rosa' }))
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
       expect(calls.some((c) => c.path === '/family/members/m1/remove')).toBe(true)
       await waitFor(() => expect(screen.queryByText('Rosa')).not.toBeInTheDocument())
@@ -358,7 +360,7 @@ describe('FamilyPage', () => {
       const user = userEvent.setup()
       renderPage()
       await user.click(await screen.findByRole('button', { name: 'Quitar a Rosa' }))
-      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Quitar acceso' }))
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Quitar a Rosa' }))
       expect(await screen.findByRole('alert')).toHaveTextContent(/No pudimos quitar el acceso/)
       expect(screen.getByRole('dialog')).toBeInTheDocument()
     })
@@ -368,7 +370,7 @@ describe('FamilyPage', () => {
       const user = userEvent.setup()
       renderPage()
       await user.click(await screen.findByRole('button', { name: 'Quitar a Rosa' }))
-      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Quitar acceso' }))
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Quitar a Rosa' }))
       expect(await screen.findByRole('alert')).toHaveTextContent(/Un Tutor no puede ser quitado/)
     })
 
@@ -377,7 +379,7 @@ describe('FamilyPage', () => {
       const user = userEvent.setup()
       renderPage()
       await user.click(await screen.findByRole('button', { name: 'Quitar a Rosa' }))
-      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Quitar acceso' }))
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Quitar a Rosa' }))
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
     })
 
@@ -387,8 +389,8 @@ describe('FamilyPage', () => {
       renderPage()
 
       await user.click(await screen.findByRole('button', { name: 'Salir de esta familia' }))
-      const dialog = screen.getByRole('dialog', { name: '¿Salir de esta familia?' })
-      expect(dialog).toHaveTextContent('No te llevas una copia')
+      const dialog = screen.getByRole('dialog', { name: '¿Salir de la familia de Ana?' })
+      expect(dialog).toHaveTextContent('Ninguna copia')
       await user.click(within(dialog).getByRole('button', { name: 'Salir de la familia' }))
 
       expect(await screen.findByText('home')).toBeInTheDocument()
@@ -414,7 +416,7 @@ describe('FamilyPage', () => {
     it('offers the read-only person the exit with the neutral notice', async () => {
       stubApi(() => family({ role: 'tutor', plan: 'free', readOnly: true }))
       renderPage()
-      expect(await screen.findByText(/ya no es de pago: puedes ver todo lo registrado y marcar tomas/)).toBeInTheDocument()
+      expect(await screen.findByText(/La familia está en el plan gratuito/)).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Salir de esta familia' })).toBeInTheDocument()
     })
 

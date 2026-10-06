@@ -428,6 +428,10 @@ definitions:
       since:
         example: "2026-10-06T14:00:00Z"
         type: string
+      you:
+        description: 'You: this person is the session''s own account.'
+        example: false
+        type: boolean
     type: object
   FamilyMembershipInfo:
     properties:
@@ -593,6 +597,15 @@ definitions:
     properties:
       childFirstName:
         type: string
+      childrenFirstNames:
+        description: 'ChildrenFirstNames: whom the invitation asks the person to look
+          after (first names only).'
+        example:
+        - Mateo
+        - Sofía
+        items:
+          type: string
+        type: array
       email:
         example: papa@ejemplo.com
         type: string

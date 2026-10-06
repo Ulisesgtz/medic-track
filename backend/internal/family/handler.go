@@ -38,6 +38,8 @@ type memberResponse struct {
 	Since   string  `json:"since" example:"2026-10-06T14:00:00Z"`
 	// CanRemove: the session can remove this person (it can do everything and the person is not a Tutor).
 	CanRemove bool `json:"canRemove" example:"false"`
+	// You: this person is the session's own account.
+	You bool `json:"you" example:"false"`
 } // @name FamilyMemberResponse
 
 type invitationResponse struct {
@@ -96,7 +98,9 @@ type previewResponse struct {
 	OwnerName      string `json:"ownerName" example:"Ana"`
 	Role           string `json:"role" example:"tutor"`
 	ChildFirstName string `json:"childFirstName,omitempty"`
-	Email          string `json:"email" example:"papa@ejemplo.com"`
+	// ChildrenFirstNames: whom the invitation asks the person to look after (first names only).
+	ChildrenFirstNames []string `json:"childrenFirstNames" example:"Mateo,Sofía"`
+	Email              string   `json:"email" example:"papa@ejemplo.com"`
 	ExpiresAt      string `json:"expiresAt" example:"2026-10-13T14:00:00Z"`
 	// EmailMatches: the session's verified e-mail is the invited one (only that account can accept).
 	EmailMatches bool `json:"emailMatches" example:"true"`
@@ -154,7 +158,7 @@ func toCreatedResponse(inv *Invitation) createdInvitationResponse {
 func toFamilyResponse(v *View) familyResponse {
 	members := make([]memberResponse, 0, len(v.Members))
 	for _, m := range v.Members {
-		members = append(members, memberResponse{ID: m.ID.String(), Name: m.Name, Role: string(m.Role), ChildID: idText(m.ChildID), Since: timeText(m.Since), CanRemove: m.CanRemove})
+		members = append(members, memberResponse{ID: m.ID.String(), Name: m.Name, Role: string(m.Role), ChildID: idText(m.ChildID), Since: timeText(m.Since), CanRemove: m.CanRemove, You: m.You})
 	}
 	invitations := make([]invitationResponse, 0, len(v.Invitations))
 	for _, inv := range v.Invitations {
@@ -414,8 +418,12 @@ func (h *Handler) PreviewInvitation(w http.ResponseWriter, r *http.Request) {
 		h.writeError(r.Context(), w, err, "Could not read the invitation")
 		return
 	}
+	names := p.ChildrenFirstNames
+	if names == nil {
+		names = []string{}
+	}
 	h.responder.WriteJSON(r.Context(), w, http.StatusOK, previewResponse{
-		OwnerName: p.OwnerName, Role: string(p.Role), ChildFirstName: p.ChildFirstName, Email: p.Email,
+		OwnerName: p.OwnerName, Role: string(p.Role), ChildFirstName: p.ChildFirstName, ChildrenFirstNames: names, Email: p.Email,
 		ExpiresAt: timeText(p.ExpiresAt), EmailMatches: p.EmailMatches,
 	}, nil)
 }

@@ -129,7 +129,7 @@ func (s *Service) View(ctx context.Context, clerkUserID string) (*View, error) {
 	}
 	view.Used = 1 + len(members) + pending
 	for _, m := range members {
-		view.Members = append(view.Members, MemberView{Member: m, CanRemove: level == access.Full && m.Role != RoleTutor && m.AccountID != actorID})
+		view.Members = append(view.Members, MemberView{Member: m, CanRemove: level == access.Full && m.Role != RoleTutor && m.AccountID != actorID, You: m.AccountID == actorID})
 	}
 	if view.Members == nil {
 		view.Members = []MemberView{}

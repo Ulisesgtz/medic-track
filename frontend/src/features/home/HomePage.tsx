@@ -187,7 +187,7 @@ export function HomePage() {
               </div>
             )}
 
-            {account && <FamilyEntry />}
+            {account && <FamilyEntry variant="desktop" />}
             <RemindersCard account={account} />
           </div>
           {dialogs}
@@ -253,7 +253,7 @@ export function HomePage() {
           )}
           {account && (
             <div className="mt-6">
-              <FamilyEntry />
+              <FamilyEntry variant="phone" />
             </div>
           )}
           <div className="mt-4">

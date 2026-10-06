@@ -14,11 +14,12 @@ type Reply = { status?: number; body?: unknown }
 const preview = {
   ownerName: 'Ana',
   role: 'tutor',
+  childrenFirstNames: ['Mateo', 'Sofía'],
   email: 'papa@example.com',
   expiresAt: '2026-10-13T10:00:00Z',
   emailMatches: true,
 }
-const account = { id: 'a1', firstName: 'Luis', lastName: 'Pérez', plan: 'free', children: [] }
+const account = { id: 'a1', firstName: 'Luis', lastName: 'Pérez', email: 'luis@example.com', plan: 'free', children: [] }
 
 function stubApi(routes: Record<string, Reply>) {
   const calls: { method: string; path: string; url: string; body?: unknown }[] = []
@@ -101,7 +102,7 @@ describe('InvitationPage', () => {
 
     expect(await screen.findByRole('heading', { name: 'Ana te invita a su familia' })).toBeInTheDocument()
     expect(screen.getByText(/Tutor/)).toBeInTheDocument()
-    expect(screen.getByText(/datos médicos de los hijos de Ana/)).toBeInTheDocument()
+    expect(screen.getByText(/datos médicos de dos menores/)).toBeInTheDocument()
     expect(screen.getByText('papa@example.com')).toBeInTheDocument()
     expect(calls.every((c) => !c.url.includes('SECRET'))).toBe(true)
   })
@@ -176,7 +177,7 @@ describe('InvitationPage', () => {
     const user = userEvent.setup()
     renderPage()
 
-    expect(await screen.findByText(/Entraste con otro correo/)).toBeInTheDocument()
+    expect(await screen.findByText(/Entraste como/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Aceptar' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
     expect(signOut).toHaveBeenCalled()
@@ -187,7 +188,7 @@ describe('InvitationPage', () => {
     stubApi({ 'GET /accounts/me': { body: account }, 'POST /family/invitations/preview': { status: 404, body: { error: 'invitation_not_found' } } })
     renderPage()
     expect(await screen.findByRole('heading', { name: 'Esta liga ya no sirve' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Ir a mi home' })).toHaveAttribute('href', '/home')
+    expect(screen.getByRole('link', { name: 'Ir a PediTrack' })).toHaveAttribute('href', '/home')
   })
 
   it('offers to try again when the invitation cannot be read', async () => {
@@ -249,7 +250,7 @@ describe('InvitationPage', () => {
       vi.fn().mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
         const path = new URL(String(input)).pathname
         if (path === '/accounts/me') return { ok: false, status: 404, json: async () => ({}) } as Response
-        if (init?.method === 'POST') return { ok: false, status: 500, json: async () => ({ message: 'boom' }) } as Response
+        if (init?.method === 'POST' && path === '/accounts') return { ok: false, status: 500, json: async () => ({ message: 'boom' }) } as Response
         return { ok: true, status: 200, json: async () => preview } as Response
       }),
     )
@@ -262,7 +263,14 @@ describe('InvitationPage', () => {
   })
 
   it('offers to try again when the account cannot be read', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) } as Response))
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (input: RequestInfo | URL) =>
+        new URL(String(input)).pathname === '/accounts/me'
+          ? ({ ok: false, status: 500, json: async () => ({}) } as Response)
+          : ({ ok: true, status: 200, json: async () => preview } as Response),
+      ),
+    )
     renderPage()
     expect(await screen.findByRole('heading', { name: 'No pudimos cargar tu cuenta' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()

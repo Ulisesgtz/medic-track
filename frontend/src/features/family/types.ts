@@ -14,6 +14,8 @@ export interface FamilyMember {
   since: string
   /** The session can remove this person (it can do everything, and the person is not a Tutor). */
   canRemove: boolean
+  /** This person is the session's own account. */
+  you: boolean
 }
 
 export interface FamilyInvitation {
@@ -51,6 +53,8 @@ export interface InvitationPreview {
   ownerName: string
   role: MemberRole
   childFirstName?: string
+  /** Whom the invitation asks the person to look after (first names only). */
+  childrenFirstNames: string[]
   email: string
   expiresAt: string
   /** The session's verified e-mail is the invited one (only that account can accept). */

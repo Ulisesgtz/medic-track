@@ -2523,6 +2523,11 @@ const docTemplate = `{
                 "since": {
                     "type": "string",
                     "example": "2026-10-06T14:00:00Z"
+                },
+                "you": {
+                    "description": "You: this person is the session's own account.",
+                    "type": "boolean",
+                    "example": false
                 }
             }
         },
@@ -2758,6 +2763,17 @@ const docTemplate = `{
             "properties": {
                 "childFirstName": {
                     "type": "string"
+                },
+                "childrenFirstNames": {
+                    "description": "ChildrenFirstNames: whom the invitation asks the person to look after (first names only).",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "Mateo",
+                        "Sofía"
+                    ]
                 },
                 "email": {
                     "type": "string",

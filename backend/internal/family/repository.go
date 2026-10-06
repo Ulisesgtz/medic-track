@@ -287,12 +287,14 @@ func (r *Repository) PreviewByToken(ctx context.Context, tokenHash []byte) (*Pre
 	var p Preview
 	var role string
 	err := r.pool.QueryRow(ctx, `
-		SELECT o.first_name, i.role, COALESCE(ch.first_name, ''), i.email, i.expires_at
+		SELECT o.first_name, i.role, COALESCE(ch.first_name, ''), i.email, i.expires_at,
+		       COALESCE((SELECT array_agg(c.first_name ORDER BY c.created_at, c.id) FROM children c
+		                 WHERE c.account_id = i.family_account_id AND (i.child_id IS NULL OR c.id = i.child_id)), '{}')
 		FROM family_invitations i
 		JOIN accounts o ON o.id = i.family_account_id
 		LEFT JOIN children ch ON ch.id = i.child_id
 		WHERE i.token_hash = $1 AND i.status = 'pending' AND i.expires_at >= now()
-	`, tokenHash).Scan(&p.OwnerName, &role, &p.ChildFirstName, &p.Email, &p.ExpiresAt)
+	`, tokenHash).Scan(&p.OwnerName, &role, &p.ChildFirstName, &p.Email, &p.ExpiresAt, &p.ChildrenFirstNames)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrInvitationNotFound
 	}
