@@ -111,7 +111,7 @@ describe('FamilyPage', () => {
   it('tells an invited person whose family stopped paying why they can only view and mark', async () => {
     stubApi(() => family({ role: 'tutor', plan: 'free', readOnly: true }))
     renderPage()
-    expect(await screen.findByText(/ya no tiene el plan completo/)).toBeInTheDocument()
+    expect(await screen.findByText(/ya no es de pago/)).toBeInTheDocument()
     expect(screen.queryByRole('form', { name: 'Invitar a alguien' })).not.toBeInTheDocument()
     expect(screen.queryByText('Comparte con tu familia')).not.toBeInTheDocument()
   })
@@ -309,6 +309,122 @@ describe('FamilyPage', () => {
       await screen.findByLabelText('Liga de la invitación')
       await user.click(screen.getByRole('button', { name: /Cancelar la invitación de p@x.com/ }))
       await waitFor(() => expect(screen.queryByLabelText('Liga de la invitación')).not.toBeInTheDocument())
+    })
+  })
+
+  describe('leaving and removing (specs/032)', () => {
+    const withCaregiver = () =>
+      family({
+        members: [{ id: 'm1', name: 'Rosa', role: 'caregiver', childId: null, since: '2026-10-01T10:00:00Z', canRemove: true }],
+        capacity: { max: 4, used: 2 },
+      })
+
+    it('offers «Quitar» only where the server says the person can be removed, and asks first', async () => {
+      let removed = false
+      const calls = stubApi(
+        () => (removed ? family() : { ...withCaregiver(), members: [...withCaregiver().members, { id: 'm2', name: 'Luis', role: 'tutor', childId: null, since: '2026-10-01T10:00:00Z', canRemove: false }] }),
+        { 'POST /family/members/m1/remove': { status: 204 } },
+      )
+      const user = userEvent.setup()
+      renderPage()
+
+      expect(await screen.findByRole('button', { name: 'Quitar a Rosa' })).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Quitar a Luis' })).not.toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'Quitar a Rosa' }))
+
+      const dialog = screen.getByRole('dialog', { name: '¿Quitar el acceso de Rosa?' })
+      expect(dialog).toHaveTextContent('Lo que registró se queda en tu cuenta')
+      expect(calls.some((c) => c.path === '/family/members/m1/remove')).toBe(false)
+
+      removed = true
+      await user.click(within(dialog).getByRole('button', { name: 'Quitar acceso' }))
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+      expect(calls.some((c) => c.path === '/family/members/m1/remove')).toBe(true)
+      await waitFor(() => expect(screen.queryByText('Rosa')).not.toBeInTheDocument())
+    })
+
+    it('cancelling the removal changes nothing', async () => {
+      const calls = stubApi(withCaregiver)
+      const user = userEvent.setup()
+      renderPage()
+      await user.click(await screen.findByRole('button', { name: 'Quitar a Rosa' }))
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancelar' }))
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      expect(calls.some((c) => c.method === 'POST')).toBe(false)
+    })
+
+    it('explains a removal that failed and keeps the dialog open', async () => {
+      stubApi(withCaregiver, { 'POST /family/members/m1/remove': { status: 500, body: { error: 'internal_error' } } })
+      const user = userEvent.setup()
+      renderPage()
+      await user.click(await screen.findByRole('button', { name: 'Quitar a Rosa' }))
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Quitar acceso' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent(/No pudimos quitar el acceso/)
+      expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+
+    it('says so when somebody is a Tutor (they cannot be removed by another person)', async () => {
+      stubApi(withCaregiver, { 'POST /family/members/m1/remove': { status: 403, body: { error: 'cannot_remove_tutor' } } })
+      const user = userEvent.setup()
+      renderPage()
+      await user.click(await screen.findByRole('button', { name: 'Quitar a Rosa' }))
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Quitar acceso' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent(/Un Tutor no puede ser quitado/)
+    })
+
+    it('closes quietly when the person was already gone (another device)', async () => {
+      stubApi(withCaregiver, { 'POST /family/members/m1/remove': { status: 404, body: { error: 'member_not_found' } } })
+      const user = userEvent.setup()
+      renderPage()
+      await user.click(await screen.findByRole('button', { name: 'Quitar a Rosa' }))
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Quitar acceso' }))
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    })
+
+    it('lets an invited person leave: it asks, says what they keep, and takes them to their home', async () => {
+      const calls = stubApi(() => family({ role: 'caregiver' }), { 'POST /family/leave': { status: 204 } })
+      const user = userEvent.setup()
+      renderPage()
+
+      await user.click(await screen.findByRole('button', { name: 'Salir de esta familia' }))
+      const dialog = screen.getByRole('dialog', { name: '¿Salir de esta familia?' })
+      expect(dialog).toHaveTextContent('No te llevas una copia')
+      await user.click(within(dialog).getByRole('button', { name: 'Salir de la familia' }))
+
+      expect(await screen.findByText('home')).toBeInTheDocument()
+      expect(calls.some((c) => c.path === '/family/leave')).toBe(true)
+    })
+
+    it('does not offer the owner to leave their own family', async () => {
+      stubApi(() => family())
+      renderPage()
+      await screen.findByRole('list', { name: 'Personas de la familia' })
+      expect(screen.queryByRole('button', { name: 'Salir de esta familia' })).not.toBeInTheDocument()
+    })
+
+    it('explains a failed exit and stays', async () => {
+      stubApi(() => family({ role: 'tutor' }), { 'POST /family/leave': { status: 500, body: { error: 'internal_error' } } })
+      const user = userEvent.setup()
+      renderPage()
+      await user.click(await screen.findByRole('button', { name: 'Salir de esta familia' }))
+      await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Salir de la familia' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent(/No pudimos completar la salida/)
+    })
+
+    it('offers the read-only person the exit with the neutral notice', async () => {
+      stubApi(() => family({ role: 'tutor', plan: 'free', readOnly: true }))
+      renderPage()
+      expect(await screen.findByText(/ya no es de pago: puedes ver todo lo registrado y marcar tomas/)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Salir de esta familia' })).toBeInTheDocument()
+    })
+
+    it('Escape closes the dialog', async () => {
+      stubApi(withCaregiver)
+      const user = userEvent.setup()
+      renderPage()
+      await user.click(await screen.findByRole('button', { name: 'Quitar a Rosa' }))
+      await user.keyboard('{Escape}')
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
   })
 })

@@ -6,12 +6,13 @@ import { Notice } from '../../shared/ui/Notice'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
 import { AppShell } from '../home/AppShell'
 import { useSidebarSession } from '../home/useSidebarSession'
-import { cancelInvitation, createInvitation, FamilyApiError, resendInvitation } from './api'
+import { cancelInvitation, createInvitation, FamilyApiError, leaveFamily, removeMember, resendInvitation } from './api'
+import { ConfirmDialog } from './ConfirmDialog'
 import { InvitationsList } from './InvitationsList'
 import { InviteForm } from './InviteForm'
 import { InviteLink } from './InviteLink'
 import { MembersList } from './MembersList'
-import type { CreatedInvitation, FamilyInvitation, InviteRole } from './types'
+import type { CreatedInvitation, FamilyInvitation, FamilyMember, InviteRole } from './types'
 import { useFamily } from './useFamily'
 
 /**
@@ -34,6 +35,18 @@ export function FamilyPage() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [planOpen, setPlanOpen] = useState(false)
   const planOpener = useRef<HTMLButtonElement>(null)
+  // Leaving and removing ask first; each dialog gives the focus back to the button that opened it.
+  const [removing, setRemoving] = useState<FamilyMember | null>(null)
+  const [leaving, setLeaving] = useState(false)
+  const [dialogError, setDialogError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const removeOpener = useRef<HTMLElement | null>(null)
+  const leaveOpener = useRef<HTMLButtonElement>(null)
+  const closeDialog = useCallback(() => {
+    setRemoving(null)
+    setLeaving(false)
+    setDialogError(null)
+  }, [])
   const closePlan = useCallback(() => setPlanOpen(false), [])
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['family'] })
@@ -95,6 +108,50 @@ export function FamilyPage() {
     }
   }
 
+  async function confirmRemove() {
+    if (!removing) return
+    setBusy(true)
+    setDialogError(null)
+    try {
+      await removeMember(removing.id, await getToken())
+      await refresh()
+      closeDialog()
+    } catch (e) {
+      // Already gone (another device): the list is the truth, show it and close.
+      if (e instanceof FamilyApiError && e.kind === 'member_not_found') {
+        await refresh()
+        closeDialog()
+      } else if (e instanceof FamilyApiError && e.kind === 'cannot_remove_tutor') {
+        setDialogError('Un Tutor no puede ser quitado por otra persona.')
+      } else {
+        setDialogError('No pudimos quitar el acceso. Revisa tu conexión e inténtalo de nuevo.')
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function confirmLeave() {
+    setBusy(true)
+    setDialogError(null)
+    try {
+      await leaveFamily(await getToken())
+      // The children shared with this person are no longer theirs: everything cached about them goes.
+      await queryClient.invalidateQueries({ queryKey: ['accounts', 'me'] })
+      queryClient.removeQueries({ queryKey: ['family'] })
+      navigate('/home', { replace: true })
+    } catch (e) {
+      if (e instanceof FamilyApiError && (e.kind === 'member_not_found' || e.kind === 'owner_cannot_leave')) {
+        await refresh()
+        closeDialog()
+      } else {
+        setDialogError('No pudimos completar la salida. Revisa tu conexión e inténtalo de nuevo.')
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const body = (() => {
     if (family.isPending) return <p className="text-base font-semibold text-action">Cargando…</p>
     if (family.isError || !family.data) {
@@ -125,12 +182,18 @@ export function FamilyPage() {
 
         {data.readOnly && (
           <Notice tone="info">
-            La cuenta de {data.owner.name} ya no tiene el plan completo. Puedes ver lo registrado y marcar tomas, pero no
-            agregar nada.
+            El plan de la familia de {data.owner.name} ya no es de pago: puedes ver todo lo registrado y marcar tomas, pero no
+            agregar nada. Si prefieres, puedes salir de esta familia.
           </Notice>
         )}
 
-        <MembersList family={data} />
+        <MembersList
+          family={data}
+          onRemove={(member, button) => {
+            removeOpener.current = button
+            setRemoving(member)
+          }}
+        />
 
         {full && !paid && !data.readOnly && (
           <section className="flex flex-col gap-3 rounded-3xl border-2 border-dashed border-hint-border p-6">
@@ -161,12 +224,66 @@ export function FamilyPage() {
             full={data.capacity.used >= data.capacity.max}
           />
         )}
+
+        {data.role !== 'owner' && (
+          <section className="flex flex-col gap-3 rounded-3xl border-2 border-dashed border-hint-border p-6">
+            <h2 className="text-xl font-black tracking-tight text-ink">Tu lugar en esta familia</h2>
+            <p className="text-sm leading-relaxed text-body">
+              Puedes salir cuando quieras, sin pedir permiso. Dejarás de ver los hijos de {data.owner.name} y de recibir sus
+              avisos; no te llevas una copia de lo registrado y lo que tú registraste se queda en su cuenta.
+            </p>
+            <button
+              ref={leaveOpener}
+              type="button"
+              onClick={() => setLeaving(true)}
+              className="min-h-11 cursor-pointer self-start rounded-2xl border-2 border-action px-5 py-2.5 text-[15px] font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+            >
+              Salir de esta familia
+            </button>
+          </section>
+        )}
       </div>
     )
   })()
 
   const planModal = planOpen && (
     <FreemiumLimitModal reason="family" onStayFree={closePlan} onViewPlans={() => navigate('/planes')} opener={planOpener} />
+  )
+
+  const dialogs = (
+    <>
+      {planModal}
+      {removing && (
+        <ConfirmDialog
+          title={`¿Quitar el acceso de ${removing.name}?`}
+          confirmLabel="Quitar acceso"
+          busyLabel="Quitando…"
+          busy={busy}
+          error={dialogError}
+          onConfirm={() => void confirmRemove()}
+          onCancel={closeDialog}
+          opener={removeOpener}
+        >
+          <p>Dejará de ver a tus hijos y de recibir sus avisos, y su acceso termina de inmediato.</p>
+          <p>Lo que registró se queda en tu cuenta. Si más adelante quieres darle acceso otra vez, tendrás que invitarla de nuevo.</p>
+        </ConfirmDialog>
+      )}
+      {leaving && (
+        <ConfirmDialog
+          title="¿Salir de esta familia?"
+          confirmLabel="Salir de la familia"
+          busyLabel="Saliendo…"
+          busy={busy}
+          error={dialogError}
+          onConfirm={() => void confirmLeave()}
+          onCancel={closeDialog}
+          opener={leaveOpener}
+        >
+          <p>Dejarás de ver los hijos de esta familia y de recibir sus avisos, de inmediato.</p>
+          <p>No te llevas una copia de lo registrado y lo que tú registraste se queda en la cuenta de la familia.</p>
+        </ConfirmDialog>
+      )}
+    </>
   )
 
   if (isDesktop) {
@@ -181,7 +298,7 @@ export function FamilyPage() {
             {body}
           </div>
         </main>
-        {planModal}
+        {dialogs}
       </AppShell>
     )
   }
@@ -196,7 +313,7 @@ export function FamilyPage() {
         </header>
         <div className="px-6 pt-6">{body}</div>
       </main>
-      {planModal}
+      {dialogs}
     </AppShell>
   )
 }

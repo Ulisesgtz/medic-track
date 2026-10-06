@@ -223,6 +223,12 @@ func (h *Handler) writeError(ctx context.Context, w http.ResponseWriter, err err
 		h.responder.WriteJSON(ctx, w, http.StatusForbidden, errorBody("email_not_verified", "The session's e-mail is not verified"), nil)
 	case errors.Is(err, ErrInvitationNotFound):
 		h.responder.WriteJSON(ctx, w, http.StatusNotFound, errorBody("invitation_not_found", "Invitation not found"), nil)
+	case errors.Is(err, ErrMemberNotFound):
+		h.responder.WriteJSON(ctx, w, http.StatusNotFound, errorBody("member_not_found", "Member not found"), nil)
+	case errors.Is(err, ErrCannotRemoveTutor):
+		h.responder.WriteJSON(ctx, w, http.StatusForbidden, errorBody("cannot_remove_tutor", "A Tutor can't be removed"), nil)
+	case errors.Is(err, ErrOwnerCannotLeave):
+		h.responder.WriteJSON(ctx, w, http.StatusForbidden, errorBody("owner_cannot_leave", "The owner of the family can't leave it"), nil)
 	default:
 		h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", internalMessage, nil)
 	}
@@ -473,6 +479,61 @@ func (h *Handler) DeclineInvitation(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.service.Decline(r.Context(), clerkID, token); err != nil {
 		h.writeError(r.Context(), w, err, "Could not decline the invitation")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// RemoveMember handles POST /family/members/{memberId}/remove.
+//
+//	@Summary		Remove a Caregiver or a Child-role member
+//	@Description	Only who can do everything in the family (the owner or a Tutor of a paid family). A Tutor can't be removed by
+//	@Description	anybody — not even by the owner —; the only way to cut a Tutor's access is for the owner to stop paying.
+//	@Description	What the person registered stays. Takes effect at once.
+//	@Tags			family
+//	@Param			memberId	path	string	true	"Member UUID (from GET /family)"
+//	@Success		204
+//	@Failure		403	{object}	errorResponseDoc	"The session can't remove, or the member is a Tutor (cannot_remove_tutor)"
+//	@Failure		404	{object}	errorResponseDoc	"Not an active member of this family"
+//	@Security		ClerkSession
+//	@Failure		401	{object}	sessionErrorResponseDoc	"No valid Clerk session"
+//	@Router			/family/members/{memberId}/remove [post]
+func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
+	clerkID, ok := h.clerkUser(w, r)
+	if !ok {
+		return
+	}
+	memberID, err := uuid.Parse(chi.URLParam(r, "memberId"))
+	if err != nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, errorBody("member_not_found", "Member not found"), nil)
+		return
+	}
+	if err := h.service.RemoveMember(r.Context(), clerkID, memberID); err != nil {
+		h.writeError(r.Context(), w, err, "Could not remove the member")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// LeaveFamily handles POST /family/leave.
+//
+//	@Summary		Leave the family
+//	@Description	The invited person leaves their family: immediate, no approval. What they registered stays in the family's
+//	@Description	account. The owner can't leave their own family.
+//	@Tags			family
+//	@Success		204
+//	@Failure		403	{object}	errorResponseDoc	"The owner can't leave (owner_cannot_leave)"
+//	@Failure		404	{object}	errorResponseDoc	"The session belongs to no family as an invited person"
+//	@Security		ClerkSession
+//	@Failure		401	{object}	sessionErrorResponseDoc	"No valid Clerk session"
+//	@Router			/family/leave [post]
+func (h *Handler) LeaveFamily(w http.ResponseWriter, r *http.Request) {
+	clerkID, ok := h.clerkUser(w, r)
+	if !ok {
+		return
+	}
+	if err := h.service.Leave(r.Context(), clerkID); err != nil {
+		h.writeError(r.Context(), w, err, "Could not leave the family")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

@@ -798,6 +798,12 @@ definitions:
       at:
         example: "2026-01-15T14:05:00Z"
         type: string
+      mine:
+        description: |-
+          Mine: the session's own account marked it (it may take its own mark back; anybody else's only a person who can do
+          everything may).
+        example: false
+        type: boolean
       name:
         example: Ana
         type: string
@@ -2244,6 +2250,63 @@ paths:
       security:
       - ClerkSession: []
       summary: What an invitation offers, before accepting it
+      tags:
+      - family
+  /family/leave:
+    post:
+      description: |-
+        The invited person leaves their family: immediate, no approval. What they registered stays in the family's
+        account. The owner can't leave their own family.
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/FamilySessionErrorResponse'
+        "403":
+          description: The owner can't leave (owner_cannot_leave)
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "404":
+          description: The session belongs to no family as an invited person
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Leave the family
+      tags:
+      - family
+  /family/members/{memberId}/remove:
+    post:
+      description: |-
+        Only who can do everything in the family (the owner or a Tutor of a paid family). A Tutor can't be removed by
+        anybody — not even by the owner —; the only way to cut a Tutor's access is for the owner to stop paying.
+        What the person registered stays. Takes effect at once.
+      parameters:
+      - description: Member UUID (from GET /family)
+        in: path
+        name: memberId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/FamilySessionErrorResponse'
+        "403":
+          description: The session can't remove, or the member is a Tutor (cannot_remove_tutor)
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+        "404":
+          description: Not an active member of this family
+          schema:
+            $ref: '#/definitions/FamilyErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Remove a Caregiver or a Child-role member
       tags:
       - family
   /ops/error-logs:

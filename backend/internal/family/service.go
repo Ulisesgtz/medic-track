@@ -240,5 +240,32 @@ func (s *Service) Decline(ctx context.Context, clerkUserID, token string) error 
 	return s.repo.Decline(ctx, HashToken(strings.TrimSpace(token)), email)
 }
 
+// Leave is the invited person leaving their family. The owner is the family's: they can't leave it.
+func (s *Service) Leave(ctx context.Context, clerkUserID string) error {
+	actorID, err := s.repo.AccountIDByClerk(ctx, clerkUserID)
+	if err != nil {
+		return err
+	}
+	if _, role, err := s.repo.FamilyOf(ctx, actorID); err != nil {
+		return err
+	} else if role == "owner" {
+		return ErrOwnerCannotLeave
+	}
+	return s.repo.Leave(ctx, actorID)
+}
+
+// RemoveMember removes a Caregiver or a Child-role member. Only who can do everything in the family asks it, and never for a
+// Tutor.
+func (s *Service) RemoveMember(ctx context.Context, clerkUserID string, memberID uuid.UUID) error {
+	actorID, familyID, level, err := s.actorAndFamily(ctx, clerkUserID)
+	if err != nil {
+		return err
+	}
+	if level != access.Full {
+		return ErrNotAllowed
+	}
+	return s.repo.RemoveMember(ctx, familyID, memberID, actorID)
+}
+
 // IsNotFound reports whether err is ErrInvitationNotFound (a small helper for the handler's tests).
 func IsNotFound(err error) bool { return errors.Is(err, ErrInvitationNotFound) }

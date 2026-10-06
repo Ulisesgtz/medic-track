@@ -22,6 +22,8 @@ func TestRouter_EveryFamilyRouteNeedsASession(t *testing.T) {
 		{http.MethodPost, "/family/invitations/decline"},
 		{http.MethodPost, "/family/invitations/" + w.accountA.String() + "/resend"},
 		{http.MethodPost, "/family/invitations/" + w.accountA.String() + "/cancel"},
+		{http.MethodPost, "/family/members/" + w.accountA.String() + "/remove"},
+		{http.MethodPost, "/family/leave"},
 	} {
 		require.Equal(t, http.StatusUnauthorized, w.do(t, rt.method, rt.path, "", `{}`).Code, rt.path)
 		require.Equal(t, http.StatusUnauthorized, w.do(t, rt.method, rt.path, "not-a-real-jwt", `{}`).Code, rt.path)

@@ -91,7 +91,7 @@ export function MedicationCard({ consultationId, medication, variant, day, today
           </p>
           <div className="mt-2 flex flex-wrap gap-2.5">
             {group.doses.map((dose) => (
-              <DoseChip key={dose.id} consultationId={consultationId} dose={dose} />
+              <DoseChip key={dose.id} consultationId={consultationId} dose={dose} canManage={canManage} />
             ))}
           </div>
         </div>

@@ -191,7 +191,7 @@ export function ChildDetailPage() {
                 </div>
                 {consultationList('desktop')}
               </section>
-              <TodayDosesPanel doses={todayDoses} status={overviewStatus} />
+              <TodayDosesPanel doses={todayDoses} status={overviewStatus} canManage={access.canAdd} />
             </div>
           </div>
         </main>

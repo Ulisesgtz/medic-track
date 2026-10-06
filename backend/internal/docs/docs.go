@@ -1625,6 +1625,89 @@ const docTemplate = `{
                 }
             }
         },
+        "/family/leave": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The invited person leaves their family: immediate, no approval. What they registered stays in the family's\naccount. The owner can't leave their own family.",
+                "tags": [
+                    "family"
+                ],
+                "summary": "Leave the family",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/FamilySessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The owner can't leave (owner_cannot_leave)",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "The session belongs to no family as an invited person",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/family/members/{memberId}/remove": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Only who can do everything in the family (the owner or a Tutor of a paid family). A Tutor can't be removed by\nanybody — not even by the owner —; the only way to cut a Tutor's access is for the owner to stop paying.\nWhat the person registered stays. Takes effect at once.",
+                "tags": [
+                    "family"
+                ],
+                "summary": "Remove a Caregiver or a Child-role member",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Member UUID (from GET /family)",
+                        "name": "memberId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/FamilySessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't remove, or the member is a Tutor (cannot_remove_tutor)",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not an active member of this family",
+                        "schema": {
+                            "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/ops/error-logs": {
             "get": {
                 "security": [
@@ -2942,6 +3025,11 @@ const docTemplate = `{
                 "at": {
                     "type": "string",
                     "example": "2026-01-15T14:05:00Z"
+                },
+                "mine": {
+                    "description": "Mine: the session's own account marked it (it may take its own mark back; anybody else's only a person who can do\neverything may).",
+                    "type": "boolean",
+                    "example": false
                 },
                 "name": {
                     "type": "string",

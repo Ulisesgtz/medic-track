@@ -12,6 +12,9 @@ export type FamilyErrorKind =
   | 'already_member'
   | 'invitation_pending'
   | 'invitation_not_found'
+  | 'member_not_found'
+  | 'cannot_remove_tutor'
+  | 'owner_cannot_leave'
   | 'email_mismatch'
   | 'email_not_verified'
   | 'account_required'
@@ -33,6 +36,9 @@ const KIND_BY_CODE: Record<string, FamilyErrorKind> = {
   already_member: 'already_member',
   invitation_pending: 'invitation_pending',
   invitation_not_found: 'invitation_not_found',
+  member_not_found: 'member_not_found',
+  cannot_remove_tutor: 'cannot_remove_tutor',
+  owner_cannot_leave: 'owner_cannot_leave',
   email_mismatch: 'email_mismatch',
   email_not_verified: 'email_not_verified',
   account_required: 'account_required',
@@ -84,6 +90,13 @@ export const acceptInvitation = (invitationToken: string, token: string | null) 
 
 export const declineInvitation = (invitationToken: string, token: string | null) =>
   request<void>('/family/invitations/decline', 'POST', token, { token: invitationToken })
+
+// POST /family/members/{memberId}/remove — a Caregiver or a Child-role member (never a Tutor), by who can do everything.
+export const removeMember = (memberId: string, token: string | null) =>
+  request<void>(`/family/members/${memberId}/remove`, 'POST', token)
+
+// POST /family/leave — the invited person leaves their family, at once.
+export const leaveFamily = (token: string | null) => request<void>('/family/leave', 'POST', token)
 
 /** The link a person opens to accept: the token is in the fragment, which a browser never sends to a server. */
 export function invitationLink(origin: string, invitationToken: string): string {

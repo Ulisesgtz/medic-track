@@ -8,11 +8,11 @@ import type { Dose, DoseStatus } from './types'
 const at = (h: number) => new Date(2026, 9, 1, h).toISOString()
 const dose = (status: DoseStatus, taken = false): Dose => ({ id: `d-${status}`, scheduledAt: at(8), taken, status })
 
-function renderChip(d: Dose) {
+function renderChip(d: Dose, canManage?: boolean) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
-      <DoseChip consultationId="c1" dose={d} />
+      <DoseChip consultationId="c1" dose={d} canManage={canManage} />
     </QueryClientProvider>,
   )
 }
@@ -81,5 +81,38 @@ describe('DoseChip, who marked it (specs/032)', () => {
     renderChip({ id: 'd-due', scheduledAt: at(8), taken: false, status: 'due', takenBy: { name: 'Ana', at: at(8) } })
 
     expect(screen.getByRole('button')).not.toHaveTextContent('por Ana')
+  })
+})
+
+// specs/032: a mark somebody else made is only taken back by who can do everything; one's own always.
+describe('DoseChip, taking a mark back (specs/032)', () => {
+  const marked = (mine?: boolean): Dose => ({
+    ...dose('taken', true),
+    takenBy: { name: 'Ana', at: at(8), ...(mine === undefined ? {} : { mine }) },
+  })
+
+  it('locks a mark from somebody else for a Caregiver, with the reason', () => {
+    renderChip(marked(false), false)
+    const chip = screen.getByRole('button', { name: 'Toma de 08:00' })
+    expect(chip).toBeDisabled()
+    expect(chip).toHaveAttribute('title', 'Solo quien la marcó o un Tutor puede quitar esta marca')
+  })
+
+  it('locks a mark from before the family could share (no author) for a Caregiver', () => {
+    renderChip(dose('taken', true), false)
+    expect(screen.getByRole('button', { name: 'Toma de 08:00' })).toBeDisabled()
+  })
+
+  it('lets the author take their own mark back', () => {
+    renderChip(marked(true), false)
+    expect(screen.getByRole('button', { name: 'Toma de 08:00' })).toBeEnabled()
+  })
+
+  it('lets who can do everything take any mark back, and everybody mark an unmarked dose', () => {
+    const tutor = renderChip(marked(false), true)
+    expect(screen.getByRole('button', { name: 'Toma de 08:00' })).toBeEnabled()
+    tutor.unmount()
+    renderChip(dose('due'), false)
+    expect(screen.getByRole('button', { name: 'Toma de 08:00' })).toBeEnabled()
   })
 })

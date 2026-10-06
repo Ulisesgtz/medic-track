@@ -216,6 +216,16 @@ func TestHandler_UpdateDose_SaysWhoMarkedAndForbidsUnmarkingSomeoneElses(t *test
 	require.Equal(t, "Ana", takenBy["name"])
 	require.NotEmpty(t, takenBy["at"])
 	require.NotContains(t, marked.Body.String(), "@", "never an e-mail")
+	require.Equal(t, true, takenBy["mine"], "the author is told it is their own mark")
+
+	// Somebody else reading it is told it is not theirs; so is the detail, which is what the screens read.
+	detailPath := "/consultations/" + c.ID.String()
+	seen := doGet(t, asLuis, detailPath)
+	require.Equal(t, http.StatusOK, seen.Code, seen.Body.String())
+	require.Contains(t, seen.Body.String(), `"mine":false`)
+	require.NotContains(t, seen.Body.String(), `"mine":true`)
+	own := doGet(t, asAna, detailPath)
+	require.Contains(t, own.Body.String(), `"mine":true`)
 
 	// Luis (see and mark) can't unmark Ana's; with everything he can.
 	denied := doPatchPath(t, asLuis, path, map[string]any{"taken": false})

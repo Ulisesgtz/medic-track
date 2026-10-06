@@ -110,6 +110,8 @@ func NewRouter(d Deps) *chi.Mux {
 		r.Post("/family/invitations/decline", d.Family.DeclineInvitation)
 		r.Post("/family/invitations/{invitationId}/resend", d.Family.ResendInvitation)
 		r.Post("/family/invitations/{invitationId}/cancel", d.Family.CancelInvitation)
+		r.Post("/family/members/{memberId}/remove", d.Family.RemoveMember)
+		r.Post("/family/leave", d.Family.LeaveFamily)
 
 		r.Get("/reminders/config", d.Reminder.GetConfig)
 

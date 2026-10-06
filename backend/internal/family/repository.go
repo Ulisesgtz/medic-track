@@ -441,3 +441,51 @@ func (r *Repository) Decline(ctx context.Context, tokenHash []byte, verifiedEmai
 	}
 	return tx.Commit(ctx)
 }
+
+// Leave ends the account's active membership by its own decision ("Salir de esta familia"). Immediate, no approval. What the
+// person registered stays in the family's account: nothing is copied or deleted. ErrMemberNotFound if the account belongs to
+// no family as an invited person.
+func (r *Repository) Leave(ctx context.Context, accountID uuid.UUID) error {
+	tag, err := r.pool.Exec(ctx, `
+		UPDATE family_members SET status = 'left', ended_at = now(), ended_by_account_id = $1
+		WHERE account_id = $1 AND status = 'active'
+	`, accountID)
+	if err != nil {
+		return fmt.Errorf("leaving the family: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return ErrMemberNotFound
+	}
+	return nil
+}
+
+// RemoveMember ends the membership of a Caregiver or a Child-role member of the family, decided by `actorAccountID`. A Tutor
+// can't be removed by anybody, not even by the owner or another Tutor (custody: the only way to cut a Tutor is for the owner
+// to stop paying, research R10): ErrCannotRemoveTutor. ErrMemberNotFound if it isn't an active member of that family.
+func (r *Repository) RemoveMember(ctx context.Context, familyID, memberID, actorAccountID uuid.UUID) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("beginning the removal: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var role string
+	err = tx.QueryRow(ctx, `
+		SELECT role FROM family_members WHERE id = $1 AND family_account_id = $2 AND status = 'active' FOR UPDATE
+	`, memberID, familyID).Scan(&role)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrMemberNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("reading the member: %w", err)
+	}
+	if role == string(RoleTutor) {
+		return ErrCannotRemoveTutor
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE family_members SET status = 'removed', ended_at = now(), ended_by_account_id = $2 WHERE id = $1
+	`, memberID, actorAccountID); err != nil {
+		return fmt.Errorf("removing the member: %w", err)
+	}
+	return tx.Commit(ctx)
+}

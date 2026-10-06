@@ -34,6 +34,8 @@ export type DoseStatus = 'pending' | 'due' | 'taken' | 'unregistered' | 'cancele
 export interface TakenBy {
   name: string
   at: string
+  /** The session's own account marked it: it may take its own mark back (anybody else's only who can do everything may). */
+  mine?: boolean
 }
 
 export interface Dose {

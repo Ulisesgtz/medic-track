@@ -91,6 +91,8 @@ func newEnv(t *testing.T) *env {
 	r.Post("/family/invitations/decline", h.DeclineInvitation)
 	r.Post("/family/invitations/{invitationId}/resend", h.ResendInvitation)
 	r.Post("/family/invitations/{invitationId}/cancel", h.CancelInvitation)
+	r.Post("/family/members/{memberId}/remove", h.RemoveMember)
+	r.Post("/family/leave", h.LeaveFamily)
 	e.router = r
 	return e
 }

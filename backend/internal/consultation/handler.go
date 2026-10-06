@@ -47,13 +47,24 @@ type doseResponse struct {
 type takenByResponse struct {
 	Name string `json:"name" example:"Ana"`
 	At   string `json:"at" example:"2026-01-15T14:05:00Z"`
+	// Mine: the session's own account marked it (it may take its own mark back; anybody else's only a person who can do
+	// everything may).
+	Mine bool `json:"mine" example:"false"`
 } // @name TakenByResponse
 
-func toTakenByResponse(t *TakenBy) *takenByResponse {
+// actorOf is the session's own account for the request (what RequireAccess found), uuid.Nil when unknown.
+func actorOf(ctx context.Context) uuid.UUID {
+	if a, ok := access.FromContext(ctx); ok {
+		return a.ActorAccountID
+	}
+	return uuid.Nil
+}
+
+func toTakenByResponse(t *TakenBy, actor uuid.UUID) *takenByResponse {
 	if t == nil {
 		return nil
 	}
-	return &takenByResponse{Name: t.Name, At: t.At.Format(time.RFC3339)}
+	return &takenByResponse{Name: t.Name, At: t.At.Format(time.RFC3339), Mine: actor != uuid.Nil && t.AccountID == actor}
 }
 
 type medicationResponse struct {
@@ -316,7 +327,7 @@ func (h *Handler) GetChildOverview(w http.ResponseWriter, r *http.Request) {
 			ScheduledAt:    d.ScheduledAt.Format(time.RFC3339),
 			Taken:          d.Taken,
 			Status:         string(d.Status),
-			TakenBy:        toTakenByResponse(d.TakenBy),
+			TakenBy:        toTakenByResponse(d.TakenBy, actorOf(r.Context())),
 		})
 	}
 	resp := childOverviewResponse{ChildID: childID.String(), Doses: doses}
@@ -445,7 +456,7 @@ func (h *Handler) CreateConsultation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.responder.WriteJSON(r.Context(), w, http.StatusCreated, toConsultationDetailResponse(c), nil)
+	h.responder.WriteJSON(r.Context(), w, http.StatusCreated, toConsultationDetailResponse(c, actorOf(r.Context())), nil)
 }
 
 // notesOf returns the request's notes, or — from a client older than specs/012 — its "symptoms" text.
@@ -670,7 +681,7 @@ func (h *Handler) GetConsultation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.responder.WriteJSON(r.Context(), w, http.StatusOK, toConsultationDetailResponse(c), nil)
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, toConsultationDetailResponse(c, actorOf(r.Context())), nil)
 }
 
 type updateDoseRequest struct {
@@ -743,7 +754,7 @@ func (h *Handler) UpdateDose(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.responder.WriteJSON(r.Context(), w, http.StatusOK, toDoseResponse(dose), nil)
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, toDoseResponse(dose, actorOf(r.Context())), nil)
 }
 
 func childNotFoundBody() map[string]string {
@@ -814,7 +825,7 @@ func (h *Handler) EndTreatment(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not end the treatment", nil)
 	default:
-		h.responder.WriteJSON(r.Context(), w, http.StatusOK, toMedicationResponse(med), nil)
+		h.responder.WriteJSON(r.Context(), w, http.StatusOK, toMedicationResponse(med, actorOf(r.Context())), nil)
 	}
 }
 
@@ -879,7 +890,7 @@ func (h *Handler) ExtendTreatment(w http.ResponseWriter, r *http.Request) {
 	case err != nil:
 		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not extend the treatment", nil)
 	default:
-		h.responder.WriteJSON(r.Context(), w, http.StatusOK, toMedicationResponse(med), nil)
+		h.responder.WriteJSON(r.Context(), w, http.StatusOK, toMedicationResponse(med, actorOf(r.Context())), nil)
 	}
 }
 
@@ -892,10 +903,10 @@ func medicationNotFoundBody() map[string]any {
 	return map[string]any{"error": "medication_not_found", "message": "Medication not found"}
 }
 
-func toMedicationResponse(m *Medication) medicationResponse {
+func toMedicationResponse(m *Medication, actor uuid.UUID) medicationResponse {
 	doses := make([]doseResponse, 0, len(m.Doses))
 	for _, d := range m.Doses {
-		doses = append(doses, toDoseResponse(&d))
+		doses = append(doses, toDoseResponse(&d, actor))
 	}
 	var endedAt *string
 	if m.EndedAt != nil {
@@ -924,20 +935,20 @@ func toMedicationResponse(m *Medication) medicationResponse {
 	}
 }
 
-func toDoseResponse(d *Dose) doseResponse {
+func toDoseResponse(d *Dose, actor uuid.UUID) doseResponse {
 	return doseResponse{
 		ID:          d.ID.String(),
 		ScheduledAt: d.ScheduledAt.Format(time.RFC3339),
 		Taken:       d.Taken,
 		Status:      string(d.Status),
-		TakenBy:     toTakenByResponse(d.TakenBy),
+		TakenBy:     toTakenByResponse(d.TakenBy, actor),
 	}
 }
 
-func toConsultationDetailResponse(c *Consultation) consultationDetailResponse {
+func toConsultationDetailResponse(c *Consultation, actor uuid.UUID) consultationDetailResponse {
 	medications := make([]medicationResponse, 0, len(c.Medications))
 	for i := range c.Medications {
-		medications = append(medications, toMedicationResponse(&c.Medications[i]))
+		medications = append(medications, toMedicationResponse(&c.Medications[i], actor))
 	}
 	symptoms := make([]catalog.SymptomResponse, 0, len(c.Symptoms))
 	for _, sym := range c.Symptoms {

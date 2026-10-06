@@ -57,6 +57,16 @@ export function unregisteredText(count: number): string {
   return `${count} sin registrar`
 }
 
+/**
+ * Whether the session may take this dose's mark back (specs/032): a person who can do everything may, anybody else only the
+ * mark they made themselves — and a mark from before the family could share (no author) is only taken back by who can do
+ * everything. An unmarked dose is always free to mark. The server enforces it; this only keeps a button that would answer 403
+ * from being offered.
+ */
+export function canUnmarkDose(dose: { taken: boolean; takenBy?: { mine?: boolean } | null }, canManage: boolean): boolean {
+  return !dose.taken || canManage || dose.takenBy?.mine === true
+}
+
 /** "por Ana, 08:05": who marked a dose and at what time (local), or '' if nobody is known (specs/032). It only records. */
 export function takenByText(takenBy: TakenBy | null | undefined): string {
   return takenBy ? `por ${takenBy.name}, ${formatTime(takenBy.at)}` : ''
