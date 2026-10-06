@@ -129,6 +129,9 @@ func (w *world) routes() []struct {
 		{"register reminder device", http.MethodPost, "/accounts/" + w.accountA.String() + "/reminder-devices", `{}`, http.StatusBadRequest},
 		{"remove reminder device", http.MethodPost, "/accounts/" + w.accountA.String() + "/reminder-devices/remove", `{}`, http.StatusBadRequest},
 		{"list consultations", http.MethodGet, "/children/" + w.childA.String() + "/consultations", "", http.StatusOK},
+		// Specs/031: tutor A's account is on the free plan here, so the owner reaches the handler and is told it is the paid plan's.
+		{"search consultations", http.MethodPost, "/children/" + w.childA.String() + "/consultations/search", `{}`, http.StatusUnprocessableEntity},
+		{"history options", http.MethodGet, "/children/" + w.childA.String() + "/history-options", "", http.StatusUnprocessableEntity},
 		{"child overview", http.MethodGet, "/children/" + w.childA.String() + "/overview" + window, "", http.StatusOK},
 		{"create consultation", http.MethodPost, "/children/" + w.childA.String() + "/consultations", `{}`, http.StatusBadRequest},
 		{"get consultation", http.MethodGet, "/consultations/" + w.consultationA.String(), "", http.StatusOK},

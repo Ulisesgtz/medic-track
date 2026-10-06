@@ -132,6 +132,47 @@ type fieldErrorDoc struct {
 	Message string `json:"message" example:"doctor name is required"`
 } // @name ConsultationFieldError
 
+// searchConsultationsRequest is the body of POST /children/{childId}/consultations/search (specs/031). Every field is
+// optional; the ones given must all hold. It is a body, not a query string, so what the parent typed (it can be health
+// information about the child) doesn't travel in the address: the server logs addresses, and so do the hosting providers.
+type searchConsultationsRequest struct {
+	// Q matches the doctor, the notes or the name of any medication, ignoring case and accents, as a part of the text (up to 100 characters).
+	Q string `json:"q" example:"amox"`
+	// From and To bound the consultation date, both ends included ("YYYY-MM-DD"); To must not be before From.
+	From string `json:"from" example:"2026-01-01"`
+	To   string `json:"to" example:"2026-06-30"`
+	// Doctor is a doctor's name exactly as registered (see history-options).
+	Doctor string `json:"doctor" example:"Dra. López"`
+	// Medication is a medication's name exactly as registered (see history-options).
+	Medication string `json:"medication" example:"Amoxicilina 250 mg"`
+	// SymptomCodes are catalog codes; the consultation must have all of them (retired ones included).
+	SymptomCodes []string `json:"symptomCodes" example:"fever,cough"`
+	// Kind narrows to "treatment" (with a schedule) or "record" (saved only as a record); "all" or empty doesn't filter.
+	Kind string `json:"kind" enums:"all,treatment,record" example:"all"`
+} // @name SearchConsultationsRequest
+
+type historyOptionsResponse struct {
+	Doctors     []string `json:"doctors" example:"Dr. Iván Robles,Dra. Laura Cázares"`
+	Medications []string `json:"medications" example:"Amoxicilina 250 mg,Paracetamol"`
+} // @name HistoryOptionsResponse
+
+// toSummaries maps the consultations of a list (or of a search) to their response shape.
+func toSummaries(consultations []Consultation) []consultationSummaryResponse {
+	summaries := make([]consultationSummaryResponse, 0, len(consultations))
+	for _, c := range consultations {
+		summaries = append(summaries, consultationSummaryResponse{
+			ID:              c.ID.String(),
+			DoctorName:      c.DoctorName,
+			ConsultDate:     c.ConsultDate.Format("2006-01-02"),
+			Notes:           c.Notes,
+			SymptomNames:    c.SymptomNames, // [] when none: the query COALESCEs to an empty array,
+			MedicationCount: c.MedicationCount,
+			RecordOnly:      c.RecordOnly,
+		})
+	}
+	return summaries
+}
+
 // ListConsultations handles GET /children/{childId}/consultations
 // (specs/004-detalle-consulta-hijo/contracts/get-consultations.md).
 //
@@ -163,18 +204,7 @@ func (h *Handler) ListConsultations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	summaries := make([]consultationSummaryResponse, 0, len(consultations))
-	for _, c := range consultations {
-		summaries = append(summaries, consultationSummaryResponse{
-			ID:              c.ID.String(),
-			DoctorName:      c.DoctorName,
-			ConsultDate:     c.ConsultDate.Format("2006-01-02"),
-			Notes:           c.Notes,
-			SymptomNames:    c.SymptomNames, // [] when none: the query COALESCEs to an empty array,
-			MedicationCount: c.MedicationCount,
-			RecordOnly:      c.RecordOnly,
-		})
-	}
+	summaries := toSummaries(consultations)
 
 	h.responder.WriteJSON(r.Context(), w, http.StatusOK, consultationListResponse{
 		ChildID:       childID.String(),
@@ -436,7 +466,8 @@ func (h *Handler) writeCreateConsultationError(ctx context.Context, w http.Respo
 type planLimitResponseDoc struct {
 	Error   string `json:"error" example:"freemium_consultation_limit_exceeded"`
 	Message string `json:"message" example:"The free plan includes one active treatment at a time"`
-	// Reason is "active_treatment" (another treatment is still running) or "record_only" (saving only as a record).
+	// Reason is "active_treatment" (another treatment is still running), "record_only" (saving only as a record) or
+	// "history_search" (searching and filtering the history, specs/031).
 	Reason string `json:"reason" example:"active_treatment"`
 } // @name PlanLimitResponse
 
@@ -444,10 +475,148 @@ type planLimitResponseDoc struct {
 // follows the child limit's (`freemium_child_limit_exceeded`); the reason says which rule applied.
 func planLimitBody(reason string) map[string]string {
 	message := "The free plan includes one active treatment at a time"
-	if reason == PlanLimitRecordOnly {
+	switch reason {
+	case PlanLimitRecordOnly:
 		message = "Saving a consultation only as a record is part of the paid plan"
+	case PlanLimitHistorySearch:
+		message = "Searching and filtering the history is part of the paid plan"
 	}
 	return map[string]string{"error": "freemium_consultation_limit_exceeded", "message": message, "reason": reason}
+}
+
+// SearchConsultations handles POST /children/{childId}/consultations/search (specs/031-historial-busqueda-filtros,
+// contracts/history-search.md).
+//
+//	@Summary		Search and filter a child's consultations
+//	@Description	The paid plan's history: lists the child's consultations that meet every criterion given (text, date range,
+//	@Description	doctor, medication, symptoms, kind), most recent first, in the same shape as the plain list. It only finds what
+//	@Description	was registered. It is a POST so the typed text is not part of the address. A free account always gets 422
+//	@Description	"freemium_consultation_limit_exceeded" with reason "history_search" and no consultations.
+//	@Tags			consultations
+//	@Accept			json
+//	@Produce		json
+//	@Param			childId	path		string						true	"Child UUID"
+//	@Param			payload	body		searchConsultationsRequest	true	"Criteria (all optional)"
+//	@Success		200		{object}	consultationListResponse
+//	@Failure		400		{object}	validationErrorResponseDoc	"Malformed body or an invalid criterion"
+//	@Failure		404		{object}	childNotFoundResponseDoc	"No child exists for this id"
+//	@Failure		422		{object}	planLimitResponseDoc		"Free plan: searching the history is part of the paid plan"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	sessionErrorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	sessionErrorResponseDoc	"The session does not own this resource"
+//	@Router			/children/{childId}/consultations/search [post]
+func (h *Handler) SearchConsultations(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+
+	childID, err := uuid.Parse(chi.URLParam(r, "childId"))
+	if err != nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, childNotFoundBody(), nil)
+		return
+	}
+
+	var req searchConsultationsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusBadRequest, "validation_error", "Malformed JSON body", nil)
+		return
+	}
+
+	search := HistorySearch{
+		Q:            req.Q,
+		Doctor:       req.Doctor,
+		Medication:   req.Medication,
+		SymptomCodes: req.SymptomCodes,
+		Kind:         req.Kind,
+	}
+	var dateErrs ValidationErrors
+	if search.From, err = parseSearchDate(req.From); err != nil {
+		dateErrs = append(dateErrs, ValidationError{Field: "from", Message: "must be an ISO-8601 date (YYYY-MM-DD)"})
+	}
+	if search.To, err = parseSearchDate(req.To); err != nil {
+		dateErrs = append(dateErrs, ValidationError{Field: "to", Message: "must be an ISO-8601 date (YYYY-MM-DD)"})
+	}
+	if dateErrs.HasErrors() {
+		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody(dateErrs, "One or more fields are invalid"), nil)
+		return
+	}
+
+	consultations, err := h.service.SearchConsultations(r.Context(), childID, search)
+	if err != nil {
+		h.writeHistoryError(r.Context(), w, err, "Could not search consultations")
+		return
+	}
+
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, consultationListResponse{
+		ChildID:       childID.String(),
+		Consultations: toSummaries(consultations),
+	}, nil)
+}
+
+// HistoryOptions handles GET /children/{childId}/history-options (specs/031, contracts/history-search.md).
+//
+//	@Summary		List the doctors and medications registered for a child
+//	@Description	The distinct doctor and medication names already registered for the child, as written, sorted without telling
+//	@Description	apart case or accents: the choices of the history's filters. A free account gets 422 "history_search".
+//	@Tags			consultations
+//	@Produce		json
+//	@Param			childId	path		string	true	"Child UUID"
+//	@Success		200		{object}	historyOptionsResponse
+//	@Failure		404		{object}	childNotFoundResponseDoc	"No child exists for this id"
+//	@Failure		422		{object}	planLimitResponseDoc		"Free plan: the history is part of the paid plan"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	sessionErrorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	sessionErrorResponseDoc	"The session does not own this resource"
+//	@Router			/children/{childId}/history-options [get]
+func (h *Handler) HistoryOptions(w http.ResponseWriter, r *http.Request) {
+	childID, err := uuid.Parse(chi.URLParam(r, "childId"))
+	if err != nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, childNotFoundBody(), nil)
+		return
+	}
+
+	options, err := h.service.HistoryOptions(r.Context(), childID)
+	if err != nil {
+		h.writeHistoryError(r.Context(), w, err, "Could not list the history options")
+		return
+	}
+
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, historyOptionsResponse{
+		Doctors:     options.Doctors,
+		Medications: options.Medications,
+	}, nil)
+}
+
+// parseSearchDate reads an optional "YYYY-MM-DD" criterion: empty means none.
+func parseSearchDate(value string) (*time.Time, error) {
+	if value == "" {
+		return nil, nil
+	}
+	parsed, err := time.Parse("2006-01-02", value)
+	if err != nil {
+		return nil, err
+	}
+	return &parsed, nil
+}
+
+// writeHistoryError maps the errors of the history's two endpoints. Each case calls the responder from its own line, so
+// error_logs keeps telling them apart (backend/CLAUDE.md).
+func (h *Handler) writeHistoryError(ctx context.Context, w http.ResponseWriter, err error, internalMessage string) {
+	var validationErrs ValidationErrors
+	var planErr *PlanLimitError
+	switch {
+	case errors.As(err, &validationErrs):
+		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationErrorBody(validationErrs, "One or more fields are invalid"), nil)
+	case errors.Is(err, ErrSymptomNotAvailable):
+		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationErrorBody(ValidationErrors{{
+			Field:   "symptomCodes",
+			Message: "symptom_not_available",
+		}}, "One or more fields are invalid"), nil)
+	case errors.As(err, &planErr):
+		h.responder.WriteJSON(ctx, w, http.StatusUnprocessableEntity, planLimitBody(planErr.Reason), nil)
+	case errors.Is(err, ErrChildNotFound):
+		h.responder.WriteJSON(ctx, w, http.StatusNotFound, childNotFoundBody(), nil)
+	default:
+		h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", internalMessage, nil)
+	}
 }
 
 // GetConsultation handles GET /consultations/{consultationId}

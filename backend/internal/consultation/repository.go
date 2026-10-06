@@ -98,6 +98,12 @@ func (r *Repository) GetByChild(ctx context.Context, childID uuid.UUID) ([]Consu
 	}
 	defer rows.Close()
 
+	return scanSummaries(rows)
+}
+
+// scanSummaries reads the rows of the consultations list (the columns GetByChild and Search select, in that order) into
+// summaries; an empty result is an empty slice, never nil.
+func scanSummaries(rows pgx.Rows) ([]Consultation, error) {
 	consultations := make([]Consultation, 0)
 	for rows.Next() {
 		var c Consultation

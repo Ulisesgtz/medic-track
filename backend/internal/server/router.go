@@ -90,6 +90,9 @@ func NewRouter(d Deps) *chi.Mux {
 
 		r.With(ownsChild).Get("/children/{childId}/consultations", d.Consultation.ListConsultations)
 		r.With(ownsChild).Get("/children/{childId}/overview", d.Consultation.GetChildOverview)
+		// Specs/031: the paid plan's history. Search is a POST so the typed text stays out of the address (and the logs).
+		r.With(ownsChild).Post("/children/{childId}/consultations/search", d.Consultation.SearchConsultations)
+		r.With(ownsChild).Get("/children/{childId}/history-options", d.Consultation.HistoryOptions)
 		r.With(ownsChild).Post("/children/{childId}/consultations", d.Consultation.CreateConsultation)
 		r.With(ownsConsultation).Get("/consultations/{consultationId}", d.Consultation.GetConsultation)
 		r.With(ownsConsultation).Patch("/consultations/{consultationId}/doses/{doseId}", d.Consultation.UpdateDose)
