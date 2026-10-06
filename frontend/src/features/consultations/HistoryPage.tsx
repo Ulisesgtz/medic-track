@@ -10,7 +10,7 @@ import { ActiveCriteria } from './ActiveCriteria'
 import { ConsultationApiError } from './api'
 import { ConsultationCard } from './ConsultationCard'
 import { HistoryFilterFields, HistorySearchField } from './HistoryFilters'
-import { filterCount, isEmpty } from './historyCriteria'
+import { filterCount, isEmpty, rangeInverted } from './historyCriteria'
 import { useHistoryCriteria, useHistoryOptions, useHistorySearch } from './useHistory'
 
 const isPlanLimit = (error: unknown) => error instanceof ConsultationApiError && error.kind === 'plan_limit_history_search'
@@ -69,21 +69,32 @@ function HistoryScreen({ childId }: { childId: string }) {
     )
   }
 
-  const consultations = search.data
+  // A range turned around isn't asked of the server, so the previous results (kept while the next ones load) would no
+  // longer answer the criteria on screen: they are not shown until the dates are fixed.
+  const invalidRange = rangeInverted(criteria)
+  const consultations = invalidRange ? undefined : search.data
   const hasCriteria = !isEmpty(criteria)
+  // The server refused a criterion (a stored symptom the catalog doesn't have): asking again would never help.
+  const badCriteria =
+    search.error instanceof ConsultationApiError && (search.error.kind === 'validation_error' || search.error.kind === 'symptom_not_available')
 
   const results = (
     <section aria-label="Resultados" aria-busy={search.isFetching} className="flex min-w-0 flex-col gap-4">
-      {search.isPending && !search.isError && <p className="text-base font-semibold text-action">Cargando…</p>}
-      {search.isError && (
+      {invalidRange && <p className="text-base font-semibold text-slate-600">Corrige las fechas para ver los resultados.</p>}
+      {!invalidRange && search.isPending && !search.isError && <p className="text-base font-semibold text-action">Cargando…</p>}
+      {!invalidRange && search.isError && (
         <div className="flex flex-col items-start gap-3">
-          <Notice tone="error">No pudimos cargar el historial. Revisa tu conexión e inténtalo de nuevo.</Notice>
+          {badCriteria ? (
+            <Notice tone="error">Alguno de los criterios ya no es válido. Quita los filtros e inténtalo de nuevo.</Notice>
+          ) : (
+            <Notice tone="error">No pudimos cargar el historial. Revisa tu conexión e inténtalo de nuevo.</Notice>
+          )}
           <button
             type="button"
-            onClick={() => void search.refetch()}
+            onClick={badCriteria ? clear : () => void search.refetch()}
             className="min-h-11 cursor-pointer rounded-2xl border-2 border-action px-5 py-2.5 text-[15px] font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
           >
-            Reintentar
+            {badCriteria ? 'Limpiar filtros' : 'Reintentar'}
           </button>
         </div>
       )}
@@ -183,7 +194,7 @@ function HistoryScreen({ childId }: { childId: string }) {
           <button
             type="button"
             aria-expanded={filtersOpen}
-            aria-controls="history-filters"
+            aria-controls={filtersOpen ? 'history-filters' : undefined}
             onClick={() => setFiltersOpen((open) => !open)}
             className="inline-flex min-h-11 cursor-pointer items-center justify-between rounded-2xl border-[1.5px] border-slate-300 bg-surface px-4 text-[15px] font-extrabold text-ink transition-colors duration-200 hover:border-action hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
           >

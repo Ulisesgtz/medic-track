@@ -219,22 +219,38 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, c *Consultat
 // reads the column directly, as it does the children's, so it doesn't import account).
 const planPaid = "paid"
 
+// accountPlanOf reads the id and the plan of the account that owns the child — the one place that does (the free plan's
+// consultation rules and the paid plan's history both ask). `lock` takes the account row `FOR UPDATE` so the requests of
+// one account are checked one after the other (inside a transaction). ErrChildNotFound if there is no such child.
+func accountPlanOf(ctx context.Context, q querier, childID uuid.UUID, lock bool) (uuid.UUID, string, error) {
+	query := `
+		SELECT a.id, a.plan::text
+		FROM accounts a JOIN children ch ON ch.account_id = a.id
+		WHERE ch.id = $1`
+	if lock {
+		query += ` FOR UPDATE OF a`
+	}
+	var accountID uuid.UUID
+	var plan string
+	err := q.QueryRow(ctx, query, childID).Scan(&accountID, &plan)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, "", ErrChildNotFound
+	}
+	if err != nil {
+		return uuid.Nil, "", fmt.Errorf("reading the account's plan: %w", err)
+	}
+	return accountID, plan, nil
+}
+
 // checkPlan applies the free plan's rules to a consultation about to be saved (specs/030-reglas-plan-gratis): a free
 // account can't save a consultation only as a record, and can't start another while any of its children still has a
 // treatment running (a medication not ended with a dose still ahead — the same "active" as the child's overview).
 // It locks the account row first, so two requests of the same account are checked one after the other and both can't
 // start a treatment. Paid accounts pass untouched; nothing already saved is ever hidden or changed.
 func checkPlan(ctx context.Context, tx pgx.Tx, childID uuid.UUID, c *Consultation, now time.Time) error {
-	var accountID uuid.UUID
-	var plan string
-	err := tx.QueryRow(ctx, `
-		SELECT a.id, a.plan::text
-		FROM accounts a JOIN children ch ON ch.account_id = a.id
-		WHERE ch.id = $1
-		FOR UPDATE OF a
-	`, childID).Scan(&accountID, &plan)
+	accountID, plan, err := accountPlanOf(ctx, tx, childID, true)
 	if err != nil {
-		return fmt.Errorf("reading the account's plan: %w", err)
+		return err
 	}
 	if plan == planPaid {
 		return nil

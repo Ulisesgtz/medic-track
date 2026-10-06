@@ -2,7 +2,6 @@ package consultation
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -10,7 +9,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 )
 
 // specs/031-historial-busqueda-filtros: the paid plan's "Historial" — search and filters over the consultations a child
@@ -118,17 +116,9 @@ func trimmedCodes(codes []string) []string {
 // requirePaid reads the plan of the account that owns the child and refuses the search unless it is the paid one (research
 // R6). ErrChildNotFound when the child doesn't exist. The server decides, never the client.
 func (r *Repository) requirePaid(ctx context.Context, childID uuid.UUID) error {
-	var plan string
-	err := r.pool.QueryRow(ctx, `
-		SELECT a.plan::text
-		FROM children ch JOIN accounts a ON a.id = ch.account_id
-		WHERE ch.id = $1
-	`, childID).Scan(&plan)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrChildNotFound
-	}
+	_, plan, err := accountPlanOf(ctx, r.pool, childID, false)
 	if err != nil {
-		return fmt.Errorf("reading the account's plan: %w", err)
+		return err
 	}
 	if plan != planPaid {
 		return &PlanLimitError{Reason: PlanLimitHistorySearch}
@@ -209,46 +199,47 @@ func (r *Repository) Search(ctx context.Context, childID uuid.UUID, s HistorySea
 }
 
 // HistoryOptions lists the distinct doctors and medication names registered for the child, as the parent wrote them (they
-// are not unified or corrected), sorted without telling apart case or accents. Paid accounts only, like Search.
+// are not unified or corrected), sorted without telling apart case or accents. Paid accounts only, like Search. One
+// query for both lists; never nil: a child without consultations has empty lists, not null.
 func (r *Repository) HistoryOptions(ctx context.Context, childID uuid.UUID) (*HistoryOptions, error) {
 	if err := r.requirePaid(ctx, childID); err != nil {
 		return nil, err
 	}
-	doctors, err := r.distinctNames(ctx, `
-		SELECT DISTINCT btrim(c.doctor_name) FROM consultations c WHERE c.child_id = $1`, childID)
+	rows, err := r.pool.Query(ctx, `
+		SELECT 'doctor', btrim(c.doctor_name) FROM consultations c WHERE c.child_id = $1
+		UNION
+		SELECT 'medication', btrim(m.name)
+		FROM medications m JOIN consultations c ON c.id = m.consultation_id WHERE c.child_id = $1
+	`, childID)
 	if err != nil {
-		return nil, fmt.Errorf("listing the doctors: %w", err)
-	}
-	medications, err := r.distinctNames(ctx, `
-		SELECT DISTINCT btrim(m.name)
-		FROM medications m JOIN consultations c ON c.id = m.consultation_id WHERE c.child_id = $1`, childID)
-	if err != nil {
-		return nil, fmt.Errorf("listing the medications: %w", err)
-	}
-	return &HistoryOptions{Doctors: doctors, Medications: medications}, nil
-}
-
-// distinctNames runs a one-column query and returns its non-empty values sorted by their folded text, then as written.
-// Never nil: a child without consultations has empty lists, not null.
-func (r *Repository) distinctNames(ctx context.Context, query string, childID uuid.UUID) ([]string, error) {
-	rows, err := r.pool.Query(ctx, query, childID)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("listing the history options: %w", err)
 	}
 	defer rows.Close()
-	names := []string{}
+
+	options := &HistoryOptions{Doctors: []string{}, Medications: []string{}}
 	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			return nil, err
+		var kind, name string
+		if err := rows.Scan(&kind, &name); err != nil {
+			return nil, fmt.Errorf("scanning a history option: %w", err)
 		}
-		if name != "" {
-			names = append(names, name)
+		switch {
+		case name == "":
+		case kind == "doctor":
+			options.Doctors = append(options.Doctors, name)
+		default:
+			options.Medications = append(options.Medications, name)
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("iterating the history options: %w", err)
 	}
+	sortFolded(options.Doctors)
+	sortFolded(options.Medications)
+	return options, nil
+}
+
+// sortFolded orders names by their folded text (no case, no accents), then as written, so the order is stable.
+func sortFolded(names []string) {
 	sort.SliceStable(names, func(i, j int) bool {
 		fi, fj := foldSpanish(names[i]), foldSpanish(names[j])
 		if fi != fj {
@@ -256,5 +247,4 @@ func (r *Repository) distinctNames(ctx context.Context, query string, childID uu
 		}
 		return names[i] < names[j]
 	})
-	return names, nil
 }

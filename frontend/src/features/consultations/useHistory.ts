@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@clerk/react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { fetchHistoryOptions, searchConsultations } from './api'
 import { EMPTY_CRITERIA, rangeInverted, readStored, toRequest, writeStored, type HistoryCriteria } from './historyCriteria'
 
-/** How long the text waits after the last key before the list is asked again. Everything else applies at once. */
+/** How long the criteria wait after the last change before the list is asked again. */
 export const SEARCH_DEBOUNCE_MS = 300
 
 function useDebounced<T>(value: T, ms: number): T {
@@ -18,13 +18,13 @@ function useDebounced<T>(value: T, ms: number): T {
 
 /**
  * The history's criteria (specs/031): what the form shows (`criteria`), what is actually asked of the server (`applied`:
- * the same, with the text delayed so a word isn't searched letter by letter) and how to change them. They start from
+ * the same, a moment after the last change, so a word isn't searched letter by letter and a filter changed while the text
+ * is still pending is never asked together with the old text) and how to change them. They start from
  * what the tab kept for this child and are kept again at every change (FR-012). Remount the screen per child (`key`).
  */
 export function useHistoryCriteria(childId: string) {
   const [criteria, setCriteria] = useState<HistoryCriteria>(() => readStored(childId))
-  const q = useDebounced(criteria.q, SEARCH_DEBOUNCE_MS)
-  const applied = useMemo(() => ({ ...criteria, q }), [criteria, q])
+  const applied = useDebounced(criteria, SEARCH_DEBOUNCE_MS)
 
   useEffect(() => {
     writeStored(childId, criteria)

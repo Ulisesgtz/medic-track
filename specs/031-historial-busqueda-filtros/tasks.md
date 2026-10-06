@@ -65,7 +65,7 @@ backend es la base de las tres; sin migración, sin dependencias nuevas.
 ## Fase 7: Cierre
 
 - [x] T025 [P] Documentación: `CLAUDE.md` (línea de la feature 031), `backend/CLAUDE.md` (los dos endpoints, `foldSpanish`, el motivo `history_search`, que el texto no va en la dirección ni se registra, sin migración), `frontend/CLAUDE.md` (pantalla, `HistoryEntry`, criterio en `sessionStorage`, sin URL) y `BACKLOG.md` (el segundo paso del «Orden sugerido» pasa a hecho; «Historial de todos los hijos» queda como futuro)
-- [ ] T026 Verificación completa: `cd backend && go vet ./... && go test ./... -cover` (>90 %), `cd frontend && npx tsc --noEmit && npx eslint . && npx vitest run --coverage` (>90 %) y `npx playwright test` (con el backend corriendo), sin tocar lo que pasa hoy
+- [x] T026 Verificación completa: `cd backend && go vet ./... && go test ./... -cover` (>90 %), `cd frontend && npx tsc --noEmit && npx eslint . && npx vitest run --coverage` (>90 %) y `npx playwright test` (con el backend corriendo), sin tocar lo que pasa hoy
 - [ ] T027 Abrir el PR a `develop` con el resumen, el aviso de que el texto no viaja en la dirección y el recordatorio de que **no hay mock** (se mostrará al usuario para ajustes), y revisar el CI
 
 ---

@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { errorClass, fieldAuth, fieldCompact, labelClass } from '../../shared/ui/formStyles'
+import { errorClass, fieldAuth, fieldBorder, fieldCompact, labelClass } from '../../shared/ui/formStyles'
 import { SymptomPicker } from './SymptomPicker'
 import { rangeInverted, type HistoryCriteria, type HistoryKind } from './historyCriteria'
 import type { HistoryOptions } from './types'
@@ -37,7 +37,7 @@ export function HistorySearchField({ variant, criteria, onChange }: FieldsProps)
         placeholder="Doctor, medicamento o notas"
         maxLength={100}
         autoComplete="off"
-        className={field(variant)}
+        className={`${field(variant)} ${fieldBorder(false)}`}
       />
     </div>
   )
@@ -54,7 +54,7 @@ export function HistoryFilterFields({ variant, criteria, onChange, options, opti
   const base = useId()
   const inverted = rangeInverted(criteria)
   const desktop = variant === 'desktop'
-  const cls = field(variant)
+  const cls = `${field(variant)} ${fieldBorder(false)}`
 
   return (
     <div className={`flex min-w-0 flex-col ${desktop ? 'gap-5' : 'gap-4'}`}>
@@ -68,7 +68,7 @@ export function HistoryFilterFields({ variant, criteria, onChange, options, opti
             type="date"
             value={criteria.from}
             onChange={(event) => onChange({ from: event.target.value })}
-            className={`${cls} appearance-none`}
+            className={`${field(variant)} ${fieldBorder(false)} appearance-none`}
           />
         </div>
         <div className="flex min-w-0 flex-col gap-2">
@@ -82,7 +82,7 @@ export function HistoryFilterFields({ variant, criteria, onChange, options, opti
             onChange={(event) => onChange({ to: event.target.value })}
             aria-invalid={inverted}
             aria-describedby={inverted ? `${base}-range-error` : undefined}
-            className={`${cls} appearance-none ${inverted ? 'border-red-600' : ''}`}
+            className={`${field(variant)} ${fieldBorder(inverted)} appearance-none`}
           />
         </div>
         {inverted && (

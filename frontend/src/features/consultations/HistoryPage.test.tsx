@@ -363,3 +363,90 @@ describe('HistoryEntry', () => {
     expect(button).toHaveFocus()
   })
 })
+
+// The review of the history (specs/031): what the first version got wrong.
+describe('HistoryPage, after the review', () => {
+  it('draws every field with the form border color, and the red one only for a range turned around', async () => {
+    const user = userEvent.setup()
+    stubApi()
+    renderPage()
+    await screen.findByText('2 consultas')
+    await user.click(screen.getByRole('button', { name: /^Filtros/ }))
+
+    for (const label of ['Buscar', 'Doctor', 'Medicamento']) {
+      expect(screen.getByLabelText(label)).toHaveClass('border-slate-300')
+    }
+    expect(screen.getByLabelText('Hasta')).toHaveClass('border-slate-300')
+    await user.type(screen.getByLabelText('Desde'), '2026-07-01')
+    await user.type(screen.getByLabelText('Hasta'), '2026-06-01')
+    expect(screen.getByLabelText('Hasta')).toHaveClass('border-red-600')
+  })
+
+  it('does not show the previous results while the range is turned around, and brings the list back when it is fixed', async () => {
+    const user = userEvent.setup()
+    stubApi()
+    renderPage()
+    await screen.findByText('2 consultas')
+    await user.click(screen.getByRole('button', { name: /^Filtros/ }))
+
+    await user.type(screen.getByLabelText('Desde'), '2026-07-01')
+    await user.type(screen.getByLabelText('Hasta'), '2026-06-01')
+
+    expect(await screen.findByText('Corrige las fechas para ver los resultados.')).toBeInTheDocument()
+    expect(screen.queryByText('2 consultas')).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Dra. López/ })).not.toBeInTheDocument()
+
+    await user.clear(screen.getByLabelText('Hasta'))
+    await user.type(screen.getByLabelText('Hasta'), '2026-08-01')
+    expect(await screen.findByText('2 consultas', undefined, { timeout: 3000 })).toBeInTheDocument()
+  })
+
+  it('never asks the server for text that was cleared before its pause ended', async () => {
+    const user = userEvent.setup()
+    const { searches } = stubApi()
+    renderPage()
+    await screen.findByText('2 consultas')
+    const asked = searches.length
+
+    await user.type(screen.getByLabelText('Buscar'), 'amox')
+    await user.click(screen.getByRole('button', { name: 'Limpiar todo' }))
+
+    await waitFor(() => expect(screen.getByLabelText('Buscar')).toHaveValue(''))
+    await new Promise((resolve) => setTimeout(resolve, 600)) // longer than the pause
+    expect(searches.slice(asked).some((body) => body.q === 'amox')).toBe(false)
+  })
+
+  it('says a criterion the server refuses is no longer valid, and "Limpiar filtros" (not "Reintentar") clears it', async () => {
+    const user = userEvent.setup()
+    window.sessionStorage.setItem('historial:child-1', JSON.stringify({ symptomCodes: ['nope'] }))
+    const { searches } = stubApi({
+      onSearch: (body) =>
+        body.symptomCodes
+          ? { ok: false, status: 400, json: async () => ({ error: 'validation_error', details: [{ field: 'symptomCodes', message: 'symptom_not_available' }] }) }
+          : { ok: true, json: async () => ({ consultations }) },
+    })
+    renderPage()
+
+    expect(await screen.findByText(/Alguno de los criterios ya no es válido/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Limpiar filtros' }))
+
+    expect(await screen.findByText('2 consultas', undefined, { timeout: 3000 })).toBeInTheDocument()
+    expect(searches.at(-1)).toEqual({})
+  })
+
+  it('only points the phone toggle at the filters while they exist', async () => {
+    const user = userEvent.setup()
+    stubApi()
+    renderPage()
+    await screen.findByText('2 consultas')
+    const toggle = screen.getByRole('button', { name: /^Filtros/ })
+
+    expect(toggle).not.toHaveAttribute('aria-controls')
+    await user.click(toggle)
+
+    expect(toggle).toHaveAttribute('aria-controls', 'history-filters')
+    expect(document.getElementById('history-filters')).not.toBeNull()
+  })
+})
