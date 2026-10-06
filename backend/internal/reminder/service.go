@@ -168,7 +168,8 @@ type push struct {
 	payload []byte
 }
 
-// Tick claims the doses due now and pushes their reminder to each of the account's devices.
+// Tick claims the (dose, person) pairs due now and pushes each person's reminder to each of THEIR devices, with their own
+// choice of detail (specs/032: a dose is reminded to every person with access, once each).
 // It returns how many pushes were delivered. A device whose push service answers 404/410 is
 // turned off; any other failure leaves it on and is not retried (the dose is already claimed:
 // at most one reminder per dose, research.md R5).

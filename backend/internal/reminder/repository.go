@@ -78,43 +78,65 @@ func (r *Repository) DeactivateByID(ctx context.Context, id uuid.UUID) error {
 	return nil
 }
 
-// ClaimDueDoses marks, in one statement, every dose whose reminder is due at `now` as reminded
-// and returns them (research.md R5): not taken, not reminded yet, scheduled in (now-window, now],
-// of an account with an active device activated no later than the dose. Claiming before sending
-// is what makes a dose reminded at most once, even across restarts or two instances; rows locked
-// by another claim are skipped, not waited for.
+// ClaimDueDoses claims, in one statement, every (dose, person) pair whose reminder is due at `now` and returns them
+// (research.md R5, and specs/032-compartir-con-familia for the "per person"). A dose is not taken, scheduled in
+// (now-window, now], not "sin registrar" and not canceled; each person with at least see-and-mark access to its child
+// (the owner account, an active Tutor or Caregiver of its family, the Child-role member of that child) who has an active
+// device activated no later than the dose gets their own pair. The pair is inserted into dose_reminders and only the rows
+// that were really inserted come back: the primary key (dose, person) is what makes one reminder per dose and per person
+// at most, even across restarts or two instances (a concurrent insert of the same pair waits and then does nothing). A
+// dose already taken is never a candidate, so nobody is reminded of a dose another person already marked; and a person who
+// left or was removed (their membership is no longer active) is not a recipient from the next tick on.
+// `doses.reminder_sent_at` is still written, for whoever reads it, but no longer decides anything.
 func (r *Repository) ClaimDueDoses(ctx context.Context, now time.Time, window time.Duration) ([]DueDose, error) {
 	rows, err := r.pool.Query(ctx, `
-		WITH due AS (
-			SELECT d.id
+		WITH cand AS (
+			SELECT d.id, d.scheduled_at, c.id AS consultation_id, m.name, ch.id AS child_id, ch.first_name, ch.account_id AS owner_id
 			FROM doses d
 			JOIN medications m ON m.id = d.medication_id
 			JOIN consultations c ON c.id = m.consultation_id
 			JOIN children ch ON ch.id = c.child_id
-			WHERE d.reminder_sent_at IS NULL
-			  AND d.taken = false
+			WHERE d.taken = false
 			  AND d.scheduled_at <= $1
 			  AND d.scheduled_at > $1 - make_interval(secs => $2)
 			  -- Never a dose already "sin registrar": its medication's next dose came (specs/013).
 			  AND d.scheduled_at + make_interval(hours => m.frequency_hours) > $1
 			  -- Never a dose canceled by ending the treatment early (specs/016).
 			  AND (m.ended_at IS NULL OR d.scheduled_at <= m.ended_at)
-			  AND EXISTS (
+		),
+		pairs AS (
+			SELECT cand.id AS dose_id, a.id AS account_id, cand.scheduled_at
+			FROM cand
+			JOIN accounts a ON a.id = cand.owner_id
+			   OR EXISTS (
+				SELECT 1 FROM family_members fm
+				WHERE fm.account_id = a.id AND fm.family_account_id = cand.owner_id AND fm.status = 'active'
+				  AND (fm.role <> 'child' OR fm.child_id = cand.child_id)
+			   )
+			WHERE EXISTS (
 				SELECT 1 FROM reminder_devices rd
-				WHERE rd.account_id = ch.account_id AND rd.active AND rd.activated_at <= d.scheduled_at
-			  )
-			ORDER BY d.scheduled_at
+				WHERE rd.account_id = a.id AND rd.active AND rd.activated_at <= cand.scheduled_at
+			)
+			  AND NOT EXISTS (SELECT 1 FROM dose_reminders dr WHERE dr.dose_id = cand.id AND dr.account_id = a.id)
+			ORDER BY cand.scheduled_at, a.id
 			LIMIT 500
-			FOR UPDATE OF d SKIP LOCKED
+		),
+		claimed AS (
+			INSERT INTO dose_reminders (dose_id, account_id, sent_at)
+			SELECT dose_id, account_id, $1 FROM pairs
+			ON CONFLICT (dose_id, account_id) DO NOTHING
+			RETURNING dose_id, account_id
+		),
+		stamp AS (
+			UPDATE doses SET reminder_sent_at = $1
+			WHERE id IN (SELECT dose_id FROM claimed) AND reminder_sent_at IS NULL
+			RETURNING id
 		)
-		UPDATE doses SET reminder_sent_at = $1
-		FROM due, medications m, consultations c, children ch, accounts a
-		WHERE doses.id = due.id
-		  AND m.id = doses.medication_id
-		  AND c.id = m.consultation_id
-		  AND ch.id = c.child_id
-		  AND a.id = ch.account_id
-		RETURNING doses.id, doses.scheduled_at, c.id, m.name, ch.first_name, a.id, a.reminder_detail
+		SELECT cand.id, cand.scheduled_at, cand.consultation_id, cand.name, cand.first_name, claimed.account_id, a.reminder_detail
+		FROM claimed
+		JOIN cand ON cand.id = claimed.dose_id
+		JOIN accounts a ON a.id = claimed.account_id
+		ORDER BY cand.scheduled_at, claimed.account_id
 	`, now, window.Seconds())
 	if err != nil {
 		return nil, fmt.Errorf("claiming due doses: %w", err)
