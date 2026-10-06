@@ -28,6 +28,7 @@ import (
 	clerk "github.com/clerk/clerk-sdk-go/v2"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 
+	"github.com/Ulisesgtz/medic-track/backend/internal/access"
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
@@ -114,6 +115,7 @@ func main() {
 		Ops:            opsHandler,
 		OpsKey:         opsKey,
 		Ownership:      ownership.NewRepository(pool),
+		Access:         access.NewRepository(pool),
 		FrontendOrigin: frontendOrigin,
 		RequireSession: authmw.RequireSession(responder),
 	})
