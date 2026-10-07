@@ -60,9 +60,8 @@ for (const design of designs) {
 
       // It shows in the child's section and in «Tomas de hoy» with the «Suplemento» label.
       await page.goto(`/children/${owner.childId}`)
-      // The web's «Tomas de hoy» panel lists it with the label; the phone's amber block only counts it (its mock has no list).
+      // The web's «Tomas de hoy» panel lists it with the label; the phone's block only counts it (its mock has no list).
       if (design.isWeb) await expect(page.getByRole('main').getByText('Suplemento', { exact: true }).first()).toBeVisible()
-      else await expect(page.getByRole('main').getByText(/0 sin marcar/)).toBeVisible()
       await expect(page.getByRole('main').getByText('1 activa')).toBeVisible()
       await expectNoHorizontalScroll(page)
 

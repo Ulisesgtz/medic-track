@@ -62,7 +62,7 @@ base de datos de pruebas y sale de la rama `develop` (la constitución reserva `
 ## Orden de despliegue (importante)
 
 1. **Migraciones primero** — se aplican **a mano** (aún no hay herramienta de migraciones), en orden, y solo las que falten
-   (`backend/migrations/00NN_….sql`; la última a la fecha es la `0018`). **Las `0017` y `0018` son de compartir con la familia (spec 032)**: la `0018` además **rellena** `dose_reminders` con lo que ya se había avisado (`reminder_sent_at`) para que al desplegar no se reenvíe ningún aviso; aplícalas **antes** del backend (el backend nuevo las necesita) y una sola vez.
+   (`backend/migrations/00NN_….sql`; la última a la fecha es la `0019`). **Las `0017` y `0018` son de compartir con la familia (spec 032)**: la `0018` además **rellena** `dose_reminders` con lo que ya se había avisado (`reminder_sent_at`) para que al desplegar no se reenvíe ningún aviso; aplícalas **antes** del backend (el backend nuevo las necesita) y una sola vez. **La `0019` es de las rutinas de suplementos (spec 033)**: crea cuatro tablas nuevas (`supplement_*`), no toca nada existente y también va **antes** del backend; el aviso «Antes de empezar» cambió de versión (`2026-10-07`), así que cada cuenta lo verá una vez más.
 2. **Backend después** (el *healthcheck* es `GET /catalog/countries`, que necesita el catálogo ya cargado).
 3. **Frontend al final.** El backend es compatible hacia atrás con el frontend anterior; al revés no.
 

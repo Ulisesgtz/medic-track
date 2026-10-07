@@ -128,11 +128,13 @@ export interface RoutineAccess {
 
 export function useRoutineAccess(account: Account | undefined, childId: string | undefined, paidPlan: boolean | undefined): RoutineAccess {
   const access = useChildAccess(account, childId)
-  const manager = access.role === 'owner' || access.role === 'tutor'
+  // Until the account is known nothing is offered: a Caregiver must never see a button that would answer 403.
+  const known = account !== undefined
+  const manager = known && (access.role === 'owner' || access.role === 'tutor')
   return {
-    canCreate: access.canAdd && paidPlan === true,
+    canCreate: known && access.canAdd && paidPlan === true,
     showPlan: manager && paidPlan === false,
-    canStop: access.canAdd,
-    isViewer: !manager,
+    canStop: known && access.canAdd,
+    isViewer: known && !manager,
   }
 }

@@ -107,7 +107,7 @@ export function RoutineDetailPage() {
   const dayTitle = `Tomas del ${sd} de ${LONG_MONTHS[sm - 1]}`
   const progress = progressSummary(routine, today)
   const rows = detailRows(routine)
-  const canManage = access.canAdd
+  const canManage = accountQuery.data !== undefined && access.canAdd
   const paused = routine.status === 'paused'
   const ended = routine.status === 'ended'
 
