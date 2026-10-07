@@ -278,3 +278,18 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
 
 - Registro de marca ante el IMPI (clases 9+42) — ver memoria `peditrack-registro-marca-impi.md`.
 - Verificación de exención de COFEPRIS antes de lanzamiento (Principio II de la constitución).
+
+## Spec 033 — recordatorios de suplementos y de próxima cita (pendiente)
+
+La **parte 1** (rutinas de suplementos de los hijos) está en el PR de `feature/033-recordatorios-suplementos-citas`. Quedan, con su
+historia ya escrita en `specs/033-recordatorios-suplementos-citas/spec.md`:
+
+- **Parte 2 — próxima cita** (historias 4 y 5): campo opcional «Próxima cita» al crear una consulta, avisos por omisión un día y dos horas
+  antes (editables), marcar la cita como realizada o cancelada; también se puede agregar o editar después de guardar la consulta.
+  Diseño: el prompt 2 ya se le dio a Claude Design.
+- **Parte 3 — rutinas personales del padre** (historia 6): suplementos para sí mismo, **no compartidos** y que avisan solo a su dueño
+  (`supplement_routines.child_id` ya admite nulo para esto; `access.OnRoutine` hoy responde «ninguno» a una rutina sin hijo).
+  El prompt de diseño 3 está por escribir.
+- **Aprobar las desviaciones del mock de suplementos**: el móvil de «Tomas de hoy» solo cuenta las tomas de suplemento (no las lista), el
+  texto de «Finalizar», fechas con selector nativo y hora local fija por rutina (un viaje obliga a editar la rutina).
+- **E2E de avisos por persona de suplementos** con dos sesiones (`suplementos-recordatorios.spec.ts`, como `familia-recordatorios.spec.ts`).

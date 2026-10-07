@@ -18,6 +18,11 @@ tutor un lugar centralizado para:
   la fecha y cada medicamento como texto editable. El padre siempre revisa y confirma antes de
   guardar; el dato del OCR nunca se guarda "a ciegas".
 - **Marcar cada toma de medicamento** como tomada o no tomada, sin restricción de fecha.
+- **Compartir con la familia** (plan de pago): invitar a otro tutor o a quien cuida; cada toma guarda
+  quién la marcó y cada persona recibe sus propios recordatorios.
+- **Rutinas de suplementos** (plan de pago): lo que el hijo toma de forma regular, con su horario, sus
+  tomas marcables y avisos por persona. La app solo repite lo que el padre escribió; nunca sugiere
+  suplementos, cantidades ni horarios.
 
 ### Principio de diseño: "Registra, nunca interpreta"
 

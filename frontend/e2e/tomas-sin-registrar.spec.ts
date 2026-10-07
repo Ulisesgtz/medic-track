@@ -10,7 +10,7 @@ const LOCAL_HOUR = 12
 const utcHour = new Date().getUTCHours()
 const offsetHours = LOCAL_HOUR - utcHour // always within -11..+12, a real UTC offset
 // IANA "Etc/GMT" zones use the inverted sign: Etc/GMT-5 is UTC+5.
-const timezoneId = offsetHours === 0 ? 'Etc/UTC' : `Etc/GMT${offsetHours > 0 ? '-' : '+'}${Math.abs(offsetHours)}`
+const timezoneId = offsetHours === 0 ? 'UTC' : `Etc/GMT${offsetHours > 0 ? '-' : '+'}${Math.abs(offsetHours)}`
 const localToday = new Date(Date.now() + offsetHours * 3_600_000).toISOString().slice(0, 10)
 
 async function seedNoonConsultation(page: Page) {
