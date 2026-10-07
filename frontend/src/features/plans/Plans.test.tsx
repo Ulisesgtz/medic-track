@@ -121,6 +121,7 @@ describe('PlansPage', () => {
     stub(base)
     renderPlans()
     expect(await screen.findByRole('heading', { name: 'Planes', level: 1 })).toBeInTheDocument()
+    await screen.findByText('Tu plan actual')
     expect(screen.getByText('Un plan gratuito y un plan completo anual. Una suscripción cubre a toda la familia.')).toBeInTheDocument()
     const free = screen.getByRole('article', { name: 'Gratis' })
     const full = screen.getByRole('article', { name: 'Plan completo' })
@@ -164,7 +165,8 @@ describe('PlansPage', () => {
   it('a guest whose family stopped paying is back on Gratis', async () => {
     stub(guestOf('free'))
     renderPlans()
-    expect(within(await screen.findByRole('article', { name: 'Gratis' })).getByText('Tu plan actual')).toBeInTheDocument()
+    const free = await screen.findByRole('article', { name: 'Gratis' })
+    await waitFor(() => expect(within(free).getByText('Tu plan actual')).toBeInTheDocument())
   })
 
   it('phone: the full plan comes first; web: Gratis first, inside the sidebar', async () => {
@@ -180,6 +182,17 @@ describe('PlansPage', () => {
     await screen.findByRole('article', { name: 'Plan completo' })
     expect(screen.getAllByRole('article').map((a) => a.getAttribute('aria-labelledby'))).toEqual(['plan-free', 'plan-full'])
     expect(await screen.findByRole('navigation', { name: 'Personal' })).toBeInTheDocument()
+  })
+})
+
+describe('PlansPage while the account loads', () => {
+  it('marks no plan as the current one and offers no button until it is known', async () => {
+    vi.stubGlobal('matchMedia', vi.fn().mockImplementation(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })))
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
+    renderPlans()
+    const full = await screen.findByRole('article', { name: 'Plan completo' })
+    expect(screen.queryByText('Tu plan actual')).not.toBeInTheDocument()
+    expect(within(full).queryByRole('button')).not.toBeInTheDocument()
   })
 })
 

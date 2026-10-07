@@ -58,8 +58,10 @@ export function PlansPage() {
   const account = useCurrentAccount().data
   const standing = planStanding(account)
   const onFull = standing.plan === 'full'
+  // Until the account is known nothing says which plan is theirs, so a paid account never sees Gratis marked (nor the «Pronto» button) for a moment.
+  const known = account !== undefined
 
-  const free = <PlanTarjeta id="plan-free" name="Gratis" price="MX$0" period="siempre" items={FREE_ITEMS} current={!onFull} />
+  const free = <PlanTarjeta id="plan-free" name="Gratis" price="MX$0" period="siempre" items={FREE_ITEMS} current={known && !onFull} />
   const full = (
     <PlanTarjeta
       id="plan-full"
@@ -68,9 +70,9 @@ export function PlansPage() {
       period={PLAN_PERIOD}
       lead="Todo lo de Gratis, más:"
       items={FULL_ITEMS}
-      current={onFull}
+      current={known && onFull}
       sub={standing.includedBy ? `Incluido por la familia de ${standing.includedBy}. No pagas nada: lo cubre su suscripción.` : undefined}
-      pronto={!onFull && !PAYMENT_AVAILABLE}
+      pronto={known && !onFull && !PAYMENT_AVAILABLE}
     />
   )
   const intro = 'Un plan gratuito y un plan completo anual. Una suscripción cubre a toda la familia.'
