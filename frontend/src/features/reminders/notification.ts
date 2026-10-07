@@ -45,12 +45,7 @@ export function parsePayload(read: () => unknown): ReminderPayload | null {
   return p as ReminderPayload
 }
 
-/**
- * The notification shown for a reminder. It only repeats the schedule the tutor registered —
- * never an indication (Principio I). The time is in the device's own zone; `tag` makes a repeated
- * push replace the first one instead of stacking.
- */
-/** «hoy», «mañana» or «el viernes 9 oct»: the day of an appointment as the device sees it. */
+/** «hoy»,«mañana» or «el viernes 9 oct»: the day of an appointment as the device sees it. */
 function dayWord(start: Date, now: Date): string {
   const days = Math.round((Date.UTC(start.getFullYear(), start.getMonth(), start.getDate()) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / 86_400_000)
   if (days === 0) return 'hoy'
@@ -93,6 +88,11 @@ function buildAppointmentNotification(p: ReminderPayload, now: Date): ReminderNo
   }
 }
 
+/**
+ * The notification shown for a reminder. It only repeats the schedule the tutor registered —
+ * never an indication (Principio I). The time is in the device's own zone; `tag` makes a repeated
+ * push replace the first one instead of stacking.
+ */
 export function buildNotification(p: ReminderPayload, now: Date = new Date()): ReminderNotification {
   if (p.source === 'appointment') return buildAppointmentNotification(p, now)
   const time = formatTime(p.scheduledAt)

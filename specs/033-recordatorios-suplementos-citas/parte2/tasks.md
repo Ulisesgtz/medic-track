@@ -19,12 +19,12 @@ description: "Lista de tareas de la spec 033, parte 2: próxima cita (historias 
 
 ## Fase 2: Frontend (US4 y US5)
 
-- [ ] T111 [P] `frontend/src/features/appointments/{types,api,hooks,appointmentText}` (+ pruebas): API sin datos del padre en direcciones; cuenta regresiva y fechas en español
-- [ ] T112 `AppointmentFields.tsx` (CitaCampos): fecha, hora, nota, chips de aviso editables, «+ Agregar aviso» con ejemplos, máximo de 5, aviso que ya pasó, cuenta gratuita deshabilitada con enlace al plan; usado por «Nueva consulta», editar y agregar
-- [ ] T113 `AppointmentCard.tsx` (CitaTarjeta) en el detalle del hijo y de la consulta (móvil y web), «Tus avisos de esta cita», Editar / Marcar realizada / Cancelar cita, nota para el Cuidador, aviso `role=status` tras marcar
-- [ ] T114 Páginas `/citas/:id/editar`, `/consultations/:id/cita/nueva`, `/children/:id/citas` (historial), diálogo «Cancelar cita» (ConfirmDialog en `ink`); campo en `ConsultationForm` y guardado en dos llamadas
-- [ ] T115 Texto del aviso en `reminders/notification.ts` (con detalle y genérico, sin imperativos) y destino al abrir; `FreemiumLimitModal` motivo `appointments`
-- [ ] T116 Verificar: `npx tsc -p tsconfig.app.json --noEmit && npx eslint . && npx vitest run --coverage` (>90 %), commit de la fase
+- [x] T111 [P] `frontend/src/features/appointments/{types,api,hooks,appointmentText}` (+ pruebas): API sin datos del padre en direcciones; cuenta regresiva y fechas en español
+- [x] T112 `AppointmentFields.tsx` (CitaCampos): fecha, hora, nota, chips de aviso editables, «+ Agregar aviso» con ejemplos, máximo de 5, aviso que ya pasó, cuenta gratuita deshabilitada con enlace al plan; usado por «Nueva consulta», editar y agregar
+- [x] T113 `AppointmentCard.tsx` (CitaTarjeta) en el detalle del hijo y de la consulta (móvil y web), «Tus avisos de esta cita», Editar / Marcar realizada / Cancelar cita, nota para el Cuidador, aviso `role=status` tras marcar
+- [x] T114 Páginas `/citas/:id/editar`, `/consultations/:id/cita/nueva`, `/children/:id/citas` (historial), diálogo «Cancelar cita» (ConfirmDialog en `ink`); campo en `ConsultationForm` y guardado en dos llamadas
+- [x] T115 Texto del aviso en `reminders/notification.ts` (con detalle y genérico, sin imperativos) y destino al abrir; `FreemiumLimitModal` motivo `appointments`
+- [x] T116 Verificar: `npx tsc -p tsconfig.app.json --noEmit && npx eslint . && npx vitest run --coverage` (>90 %), commit de la fase
 
 ## Fase 3: E2E y cierre
 
