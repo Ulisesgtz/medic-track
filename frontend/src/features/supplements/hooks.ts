@@ -32,14 +32,15 @@ export function useRoutines(childId: string | undefined, day: { from: Date; to: 
 }
 
 /** The person's OWN routines (specs/033, part 3) with the doses of their local day; same refresh as a child's. */
-export function usePersonalRoutines(accountId: string | undefined, day: { from: Date; to: Date }) {
+export function usePersonalRoutines(accountId: string | undefined, day: { from: Date; to: Date }, { poll = true }: { poll?: boolean } = {}) {
   const { getToken } = useAuth()
   return useQuery({
     queryKey: ['routines', 'personal', accountId, day.from.toISOString()],
     queryFn: async () => fetchPersonalRoutines(accountId!, day.from, day.to, await getToken()),
     enabled: !!accountId,
     retry: false,
-    refetchInterval: DOSE_REFETCH_MS,
+    // The sidebar only wants the count: it doesn't ask again every minute on every screen (the screens that show doses do).
+    refetchInterval: poll ? DOSE_REFETCH_MS : false,
   })
 }
 

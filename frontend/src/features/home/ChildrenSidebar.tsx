@@ -30,7 +30,7 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
   const onFamilyPage = useMatch('/familia') !== null
   // Specs/033, part 3: the person's own section, apart from the children; its count comes from the same query the home uses.
   const onPersonalPage = useMatch('/mis-suplementos/*') !== null
-  const personalCount = usePersonalRoutines(account?.id, useLocalDay()).data?.activeCount ?? 0
+  const personalCount = usePersonalRoutines(account?.id, useLocalDay(), { poll: false }).data?.activeCount ?? 0
 
   return (
     <aside className="sticky top-0 flex h-screen w-[280px] shrink-0 flex-col gap-8 overflow-y-auto bg-ink px-6 py-7">
