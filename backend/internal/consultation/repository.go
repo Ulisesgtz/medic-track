@@ -705,12 +705,18 @@ func (r *Repository) GetOverview(ctx context.Context, childID uuid.UUID, from, t
 		if err := doseRows.Scan(&d.ID, &d.ConsultationID, &d.MedicationName, &d.ScheduledAt, &d.Taken, &frequencyHours, &by.accountID, &by.name, &by.at); err != nil {
 			return nil, fmt.Errorf("scanning dose: %w", err)
 		}
+		d.Kind = DoseKindMedication
 		d.TakenBy = by.takenBy()
 		d.Status = StatusAt(d.ScheduledAt, d.Taken, frequencyHours, nil, now) // canceled ones are filtered out above
 		overview.Doses = append(overview.Doses, d)
 	}
 	if err := doseRows.Err(); err != nil {
 		return nil, fmt.Errorf("iterating doses: %w", err)
+	}
+
+	// The doses of the child's active supplement routines count in "Tomas de hoy" too (specs/033), not as a treatment.
+	if err := r.addSupplementDoses(ctx, overview, childID, from, to, now); err != nil {
+		return nil, err
 	}
 
 	treatmentRows, err := r.pool.Query(ctx, `

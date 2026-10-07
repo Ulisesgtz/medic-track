@@ -185,7 +185,17 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 		}
 		return 0, err
 	}
-	s.recovered(failureTick)
+	// The routines' doses (specs/033) are claimed the same way. If reading them fails, the medications' ones — already
+	// claimed — are still sent, and the failure is reported like a tick's.
+	supplements, claimErr := s.repo.ClaimDueSupplementDoses(ctx, now, remindWindow)
+	if claimErr != nil {
+		if s.shouldReport(ctx) {
+			s.reporter.Report(failureTick, "reminder tick failed: could not read the due doses", nil)
+		}
+	} else {
+		due = append(due, supplements...)
+		s.recovered(failureTick)
+	}
 
 	// The doses are already claimed: from here on a failure must only cost its own dose, never the
 	// rest of the batch. Devices are read once per account (activated as late as now) and each dose
@@ -271,18 +281,24 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 	} else if len(pushes) > 0 {
 		s.recovered(failureDeliver)
 	}
-	return delivered, nil
+	return delivered, claimErr
 }
 
 // buildPayload is what the service worker receives. Generic mode (also while the tutor hasn't
 // chosen) carries no medication and no child at all (SC-005).
 func buildPayload(dose DueDose, actionToken string) Payload {
 	p := Payload{
-		Kind:           DetailGeneric,
-		DoseID:         dose.DoseID.String(),
-		ConsultationID: dose.ConsultationID.String(),
-		ScheduledAt:    dose.ScheduledAt.UTC().Format(time.RFC3339),
-		ActionToken:    actionToken,
+		Kind:        DetailGeneric,
+		DoseID:      dose.DoseID.String(),
+		ScheduledAt: dose.ScheduledAt.UTC().Format(time.RFC3339),
+		ActionToken: actionToken,
+	}
+	if dose.Source == SourceSupplement {
+		// A supplement's reminder points at its routine; the name is in the payload only in detailed mode, like a medication's.
+		p.RoutineID = dose.RoutineID.String()
+		p.Source = string(SourceSupplement)
+	} else {
+		p.ConsultationID = dose.ConsultationID.String()
 	}
 	if dose.Detail != nil && *dose.Detail == DetailDetailed {
 		p.Kind = DetailDetailed

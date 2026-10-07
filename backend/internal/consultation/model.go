@@ -115,7 +115,11 @@ type Dose struct {
 // DoseOverview is one dose of any of a child's consultations, joined with its
 // medication's name — what the child's "tomas de hoy" list shows.
 type DoseOverview struct {
-	ID             uuid.UUID
+	ID uuid.UUID
+	// Kind is "medication" (a consultation's dose) or "supplement" (a routine's, specs/033); a supplement's has RoutineID
+	// and no ConsultationID, and its routine's name is in MedicationName.
+	Kind           string
+	RoutineID      uuid.UUID
 	ConsultationID uuid.UUID
 	MedicationName string
 	ScheduledAt    time.Time

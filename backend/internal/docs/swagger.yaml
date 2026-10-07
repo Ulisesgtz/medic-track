@@ -712,8 +712,20 @@ definitions:
       id:
         example: a1b2c3d4-0000-0000-0000-000000000000
         type: string
+      kind:
+        description: |-
+          Kind is "medication" or "supplement" (specs/033). A supplement dose has routineId and an empty consultationId, its
+          routine's name is in medicationName, and it is marked with PATCH /routines/{routineId}/doses/{doseId}.
+        enum:
+        - medication
+        - supplement
+        example: medication
+        type: string
       medicationName:
         example: Amoxicilina
+        type: string
+      routineId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
         type: string
       scheduledAt:
         example: "2026-01-15T14:00:00Z"

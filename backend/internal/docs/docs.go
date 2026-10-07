@@ -3205,9 +3205,22 @@ const docTemplate = `{
                     "type": "string",
                     "example": "a1b2c3d4-0000-0000-0000-000000000000"
                 },
+                "kind": {
+                    "description": "Kind is \"medication\" or \"supplement\" (specs/033). A supplement dose has routineId and an empty consultationId, its\nroutine's name is in medicationName, and it is marked with PATCH /routines/{routineId}/doses/{doseId}.",
+                    "type": "string",
+                    "enum": [
+                        "medication",
+                        "supplement"
+                    ],
+                    "example": "medication"
+                },
                 "medicationName": {
                     "type": "string",
                     "example": "Amoxicilina"
+                },
+                "routineId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
                 },
                 "scheduledAt": {
                     "type": "string",

@@ -21,6 +21,14 @@ const (
 	DetailGeneric  DetailMode = "generic"
 )
 
+// Source tells which kind of dose a reminder is for.
+type Source string
+
+const (
+	SourceMedication Source = "medication"
+	SourceSupplement Source = "supplement"
+)
+
 // Device is a browser or installed PWA on which a tutor turned reminders on.
 type Device struct {
 	ID          uuid.UUID
@@ -35,8 +43,12 @@ type Device struct {
 // DueDose is a dose claimed for the reminder of ONE person (specs/032: a dose is reminded to each person with access and
 // an active device, once each), with what that reminder needs to say.
 type DueDose struct {
-	DoseID         uuid.UUID
+	DoseID uuid.UUID
+	// Source is where the dose comes from: SourceMedication (a consultation's) or SourceSupplement (a routine's, specs/033).
+	Source Source
+	// ConsultationID is set for a medication's dose, RoutineID for a supplement's.
 	ConsultationID uuid.UUID
+	RoutineID      uuid.UUID
 	// AccountID is the person this reminder is for (the account whose devices receive it), not the child's owner.
 	AccountID      uuid.UUID
 	ScheduledAt    time.Time
@@ -50,13 +62,16 @@ type DueDose struct {
 // Payload is the JSON encrypted and pushed to a device; the service worker turns it into the
 // notification. In generic mode Medication and Child are not sent at all, not even encrypted.
 type Payload struct {
-	Kind           DetailMode `json:"kind"`
-	DoseID         string     `json:"doseId"`
-	ConsultationID string     `json:"consultationId"`
-	ScheduledAt    string     `json:"scheduledAt"`
-	Medication     string     `json:"medication,omitempty"`
-	Child          string     `json:"child,omitempty"`
-	ActionToken    string     `json:"actionToken,omitempty"`
+	Kind   DetailMode `json:"kind"`
+	DoseID string     `json:"doseId"`
+	// ConsultationID is only for a medication's dose; RoutineID and Source "supplement" only for a supplement's (specs/033).
+	ConsultationID string `json:"consultationId,omitempty"`
+	RoutineID      string `json:"routineId,omitempty"`
+	Source         string `json:"source,omitempty"`
+	ScheduledAt    string `json:"scheduledAt"`
+	Medication     string `json:"medication,omitempty"`
+	Child          string `json:"child,omitempty"`
+	ActionToken    string `json:"actionToken,omitempty"`
 }
 
 var (
