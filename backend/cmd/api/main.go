@@ -30,6 +30,7 @@ import (
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/access"
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
+	"github.com/Ulisesgtz/medic-track/backend/internal/appointment"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
@@ -84,6 +85,9 @@ func main() {
 	// The planner keeps every active routine's doses generated ahead (it only adds; what fails goes to error_logs as job:supplements).
 	go supplement.RunPlanner(ctx, supplementRepo, jobreport.New(errorLogRepo, "supplements"), supplement.PlannerInterval)
 
+	// The next appointment of a consultation (specs/033, part 2): plan and one-scheduled-per-consultation under the owner's lock.
+	appointmentHandler := appointment.NewHandler(appointment.NewService(appointment.NewRepository(pool)), responder)
+
 	// Sharing with the family (specs/032): who can accept an invitation is decided by the session's verified e-mail.
 	familyService := family.NewService(family.NewRepository(pool), access.NewRepository(pool), family.EmailFunc(func(ctx context.Context, clerkUserID string) (string, error) {
 		email, err := account.VerifiedEmail(ctx, clerkUserID)
@@ -132,6 +136,7 @@ func main() {
 		Reminder:       reminderHandler,
 		Family:         familyHandler,
 		Supplement:     supplementHandler,
+		Appointment:    appointmentHandler,
 		Ops:            opsHandler,
 		OpsKey:         opsKey,
 		Ownership:      ownership.NewRepository(pool),

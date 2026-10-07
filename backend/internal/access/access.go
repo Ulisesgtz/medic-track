@@ -184,3 +184,24 @@ func (r *Repository) OnRoutine(ctx context.Context, clerkUserID string, routineI
 	}
 	return r.run(ctx, onRoutineQuery(byClerkUser), clerkUserID, routineID)
 }
+
+// onAppointmentQuery: access over a consultation's appointment (specs/033, part 2), resolved through its child.
+func onAppointmentQuery(actorWhere string) string {
+	return `
+		SELECT a.id, ` + levelCase("m.child_id = ch.id") + `
+		FROM accounts a
+		JOIN consultation_appointments ap ON ap.id = $2
+		JOIN children ch ON ch.id = ap.child_id
+		JOIN accounts owner ON owner.id = ch.account_id
+		LEFT JOIN family_members m
+		       ON m.account_id = a.id AND m.family_account_id = owner.id AND m.status = 'active'
+		WHERE ` + actorWhere
+}
+
+// OnAppointment is what the Clerk session can do with the appointment (resolved through its child).
+func (r *Repository) OnAppointment(ctx context.Context, clerkUserID string, appointmentID uuid.UUID) (Access, error) {
+	if clerkUserID == "" {
+		return Access{Level: None}, nil
+	}
+	return r.run(ctx, onAppointmentQuery(byClerkUser), clerkUserID, appointmentID)
+}

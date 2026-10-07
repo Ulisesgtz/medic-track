@@ -16,6 +16,7 @@ import (
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/access"
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
+	"github.com/Ulisesgtz/medic-track/backend/internal/appointment"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw/authmwtest"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
@@ -51,6 +52,8 @@ type world struct {
 	// Specs/033: a supplement routine of child A (inserted directly: A is on the free plan here) and one of its doses.
 	routineA     uuid.UUID
 	routineDoseA uuid.UUID
+	// Specs/033, part 2: the next appointment of consultation A (inserted directly: A is on the free plan here).
+	appointmentA uuid.UUID
 }
 
 func newWorld(t *testing.T) *world {
@@ -120,6 +123,9 @@ func newWorld(t *testing.T) *world {
 		INSERT INTO supplement_routines (account_id, child_id, name, period, times, first_date, utc_offset_minutes, generated_until, created_by_account_id)
 		VALUES ($1, $2, 'Vitamina D', 'daily', ARRAY['08:00']::time[], current_date, 0, now() + interval '14 days', $1) RETURNING id`, w.accountA, w.childA).Scan(&w.routineA))
 	require.NoError(t, pool.QueryRow(context.Background(), `
+		INSERT INTO consultation_appointments (consultation_id, child_id, account_id, starts_at, utc_offset_minutes, created_by_account_id)
+		VALUES ($1, $2, $3, now() + interval '3 days', 0, $3) RETURNING id`, w.consultationA, w.childA, w.accountA).Scan(&w.appointmentA))
+	require.NoError(t, pool.QueryRow(context.Background(), `
 		INSERT INTO supplement_doses (routine_id, scheduled_at) VALUES ($1, now() + interval '1 hour') RETURNING id`, w.routineA).Scan(&w.routineDoseA))
 
 	w.router = server.NewRouter(server.Deps{
@@ -138,6 +144,7 @@ func newWorld(t *testing.T) *world {
 				return "", family.ErrEmailNotVerified
 			})), responder),
 		Supplement:     supplement.NewHandler(supplement.NewService(supplement.NewRepository(pool)), responder),
+		Appointment:    appointment.NewHandler(appointment.NewService(appointment.NewRepository(pool)), responder),
 		Ownership:      ownership.NewRepository(pool),
 		Access:         access.NewRepository(pool),
 		FrontendOrigin: "http://localhost:5173",
@@ -195,6 +202,14 @@ func (w *world) routes() []struct {
 		{"pause routine", http.MethodPost, "/routines/" + w.routineA.String() + "/pause", "", http.StatusOK},
 		{"resume routine", http.MethodPost, "/routines/" + w.routineA.String() + "/resume", `{"utcOffsetMinutes":0}`, http.StatusUnprocessableEntity},
 		{"finish routine", http.MethodPost, "/routines/" + w.routineA.String() + "/finish", "", http.StatusOK},
+		// Specs/033, part 2: the next appointment. Reading, one's own reminders and marking never need the plan; creating and editing do (an empty form is a 400 first).
+		{"child appointments", http.MethodGet, "/children/" + w.childA.String() + "/appointments", "", http.StatusOK},
+		{"consultation appointment", http.MethodGet, "/consultations/" + w.consultationA.String() + "/appointment", "", http.StatusOK},
+		{"create appointment", http.MethodPost, "/consultations/" + w.consultationA.String() + "/appointments", `{}`, http.StatusBadRequest},
+		{"get appointment", http.MethodGet, "/appointments/" + w.appointmentA.String(), "", http.StatusOK},
+		{"my appointment reminders", http.MethodPut, "/appointments/" + w.appointmentA.String() + "/my-reminders", `{"enabled":false}`, http.StatusOK},
+		{"edit appointment", http.MethodPatch, "/appointments/" + w.appointmentA.String(), `{}`, http.StatusBadRequest},
+		{"mark appointment", http.MethodPost, "/appointments/" + w.appointmentA.String() + "/status", `{"status":"done"}`, http.StatusOK},
 	}
 }
 
@@ -242,6 +257,7 @@ func TestRouter_NonexistentResourcesAreForbiddenNotNotFound(t *testing.T) {
 		"/children/" + uuid.NewString() + "/consultations",
 		"/consultations/" + uuid.NewString(),
 		"/routines/" + uuid.NewString() + "?from=2026-01-15T00:00:00Z&to=2026-01-16T00:00:00Z",
+		"/appointments/" + uuid.NewString(),
 	} {
 		require.Equal(t, http.StatusForbidden, w.do(t, http.MethodGet, path, tokenA, "").Code, path)
 	}
@@ -261,7 +277,7 @@ func TestRouter_TheOwnerReachesTheHandler(t *testing.T) {
 func TestRouter_MalformedIDsFallThroughToTheHandlersOwn404(t *testing.T) {
 	w := newWorld(t)
 	tokenA := w.verifier.Token(t, w.clerkA)
-	for _, path := range []string{"/accounts/not-a-uuid", "/children/not-a-uuid/consultations", "/consultations/not-a-uuid", "/routines/not-a-uuid", "/children/not-a-uuid/routines"} {
+	for _, path := range []string{"/accounts/not-a-uuid", "/children/not-a-uuid/consultations", "/consultations/not-a-uuid", "/routines/not-a-uuid", "/children/not-a-uuid/routines", "/appointments/not-a-uuid", "/children/not-a-uuid/appointments"} {
 		require.Equal(t, http.StatusNotFound, w.do(t, http.MethodGet, path, tokenA, "").Code, path)
 	}
 }
@@ -287,7 +303,7 @@ func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 // fullRoutes need the full level (the owner or a Tutor); every other protected route needs only Mark (see and mark).
 var (
 	ownRoutes  = map[string]bool{"get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true}
-	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true}
+	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "edit appointment": true, "mark appointment": true}
 )
 
 func (w *world) setOwnerPlan(t *testing.T, plan string) {

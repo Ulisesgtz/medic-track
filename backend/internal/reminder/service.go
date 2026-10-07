@@ -197,6 +197,19 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 		s.recovered(failureTick)
 	}
 
+	// The notices of a consultation's next appointment (specs/033, part 2), claimed the same way.
+	appointments, appointmentErr := s.repo.ClaimDueAppointmentNotices(ctx, now, remindWindow)
+	if appointmentErr != nil {
+		if s.shouldReport(ctx) {
+			s.reporter.Report(failureTick, "reminder tick failed: could not read the due doses", nil)
+		}
+		if claimErr == nil {
+			claimErr = appointmentErr
+		}
+	} else {
+		due = append(due, appointments...)
+	}
+
 	// The doses are already claimed: from here on a failure must only cost its own dose, never the
 	// rest of the batch. Devices are read once per account (activated as late as now) and each dose
 	// keeps those activated no later than itself.
@@ -221,7 +234,11 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 			if device.ActivatedAt.After(dose.ScheduledAt) {
 				continue
 			}
-			token := SignActionToken(s.config.ActionSecret, dose.DoseID, device.ID, now.Add(actionTokenLifetime))
+			// An appointment's reminder has no "Tomada" action, so no token (specs/033, part 2).
+			token := ""
+			if dose.Source != SourceAppointment {
+				token = SignActionToken(s.config.ActionSecret, dose.DoseID, device.ID, now.Add(actionTokenLifetime))
+			}
 			body, err := json.Marshal(buildPayload(dose, token))
 			if err != nil {
 				skipped++
@@ -292,6 +309,23 @@ func buildPayload(dose DueDose, actionToken string) Payload {
 		DoseID:      dose.DoseID.String(),
 		ScheduledAt: dose.ScheduledAt.UTC().Format(time.RFC3339),
 		ActionToken: actionToken,
+	}
+	if dose.Source == SourceAppointment {
+		// The reminder of a next appointment: it carries when the appointment starts and how long before it goes off; the
+		// device words it. Generic carries no child, doctor or note at all.
+		lead := dose.LeadMinutes
+		p.DoseID = ""
+		p.ScheduledAt = dose.StartsAt.UTC().Format(time.RFC3339)
+		p.Source = string(SourceAppointment)
+		p.AppointmentID = dose.AppointmentID.String()
+		p.LeadMinutes = &lead
+		if dose.Detail != nil && *dose.Detail == DetailDetailed {
+			p.Kind = DetailDetailed
+			p.Child = dose.ChildFirstName
+			p.Doctor = dose.DoctorName
+			p.Note = dose.Note
+		}
+		return p
 	}
 	if dose.Source == SourceSupplement {
 		// A supplement's reminder points at its routine; the name is in the payload only in detailed mode, like a medication's.

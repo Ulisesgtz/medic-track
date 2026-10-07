@@ -541,6 +541,283 @@ const docTemplate = `{
                 }
             }
         },
+        "/appointments/{appointmentId}": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "appointments"
+                ],
+                "summary": "One appointment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Appointment UUID",
+                        "name": "appointmentId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session has no access to this appointment",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such appointment",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The whole appointment is sent. Notices that stay the same keep their already-sent reminders; moving the date makes\nthem all again. Only a scheduled one can be edited (409). Paid plan only (422 reason \"appointments\").",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "appointments"
+                ],
+                "summary": "Edit an appointment's date, note and notices",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Appointment UUID",
+                        "name": "appointmentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The appointment",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "An invalid field",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't edit this appointment",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such appointment",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "The appointment is closed",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Free plan",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentPlanLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/appointments/{appointmentId}/my-reminders": {
+            "put": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Only for the person who asks, never for the rest of the family; a Caregiver can too. Only a scheduled appointment has reminders (409).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "appointments"
+                ],
+                "summary": "Turn the session's own reminders of an appointment on or off",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Appointment UUID",
+                        "name": "appointmentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "enabled",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentMyRemindersRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentMyRemindersResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "No access to this appointment",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such appointment",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "The appointment is not scheduled",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/appointments/{appointmentId}/status": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "` + "`" + `done` + "`" + ` and ` + "`" + `canceled` + "`" + ` stop its reminders for everybody and keep it in the history with who and when; ` + "`" + `scheduled` + "`" + `\ntakes a ` + "`" + `done` + "`" + ` back. A canceled one is final. It never needs the paid plan.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "appointments"
+                ],
+                "summary": "Mark an appointment done or canceled",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Appointment UUID",
+                        "name": "appointmentId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The new status",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "An unknown status",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't change this appointment",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such appointment",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "The change is not possible from its status",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/catalog/countries": {
             "get": {
                 "description": "Read-only catalog used to populate the país selector (contracts/get-catalog.md).",
@@ -639,6 +916,58 @@ const docTemplate = `{
                         "description": "Unexpected server error",
                         "schema": {
                             "$ref": "#/definitions/NotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/children/{childId}/appointments": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "` + "`" + `next` + "`" + ` is the nearest scheduled appointment that has not passed, across the child's consultations; ` + "`" + `history` + "`" + `\nhas the done, canceled and «Pasó sin marcar» ones, most recent first. Reading never depends on the plan.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "appointments"
+                ],
+                "summary": "A child's next appointment and the history of the rest",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentsOfChildResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session has no access to this child",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
                         }
                     }
                 }
@@ -1171,6 +1500,140 @@ const docTemplate = `{
                         "description": "No consultation exists for this id",
                         "schema": {
                             "$ref": "#/definitions/ConsultationNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/consultations/{consultationId}/appointment": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The appointment that is still scheduled (it may read «unmarked» once its day ended), or null.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "appointments"
+                ],
+                "summary": "A consultation's scheduled appointment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Consultation UUID",
+                        "name": "consultationId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentOfConsultationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session has no access to this consultation",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No consultation exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/consultations/{consultationId}/appointments": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Saves the appointment exactly as written; nothing else of the consultation changes. Paid plan only (422 reason\n\"appointments\"). Without ` + "`" + `notices` + "`" + ` it gets one day before and two hours before; a notice already past is saved\nbut never fires. A consultation has at most one scheduled appointment (409).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "appointments"
+                ],
+                "summary": "Add a next appointment to a consultation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Consultation UUID",
+                        "name": "consultationId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The appointment",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "An invalid field",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't add appointments here",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No consultation exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Already has a scheduled appointment",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Free plan",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentPlanLimitResponse"
                         }
                     }
                 }
@@ -2602,6 +3065,267 @@ const docTemplate = `{
                 "otherCount": {
                     "type": "integer",
                     "example": 0
+                }
+            }
+        },
+        "AppointmentErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "forbidden"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "AppointmentMyRemindersRequest": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "AppointmentMyRemindersResponse": {
+            "type": "object",
+            "properties": {
+                "myReminders": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "AppointmentNoticeResponse": {
+            "type": "object",
+            "properties": {
+                "atTime": {
+                    "type": "string",
+                    "example": "20:00"
+                },
+                "daysBefore": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "fireAt": {
+                    "type": "string",
+                    "example": "2026-10-09T14:30:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "kind": {
+                    "type": "string",
+                    "enum": [
+                        "before",
+                        "at_time"
+                    ],
+                    "example": "before"
+                },
+                "label": {
+                    "type": "string",
+                    "example": "2 horas antes"
+                },
+                "leadMinutes": {
+                    "type": "integer",
+                    "example": 120
+                },
+                "past": {
+                    "description": "Past: it was due before the appointment was saved or has already gone off; it never fires.",
+                    "type": "boolean",
+                    "example": false
+                }
+            }
+        },
+        "AppointmentOfConsultationResponse": {
+            "type": "object",
+            "properties": {
+                "appointment": {
+                    "$ref": "#/definitions/AppointmentResponse"
+                },
+                "paidPlan": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "AppointmentPlanLimitResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "freemium_consultation_limit_exceeded"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "reason": {
+                    "description": "Reason is \"appointments\" (creating and editing appointments are the paid plan's).",
+                    "type": "string",
+                    "example": "appointments"
+                }
+            }
+        },
+        "AppointmentRequest": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "type": "string",
+                    "example": ""
+                },
+                "notices": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_appointment.NoticeInput"
+                    }
+                },
+                "startsAt": {
+                    "type": "string",
+                    "example": "2026-10-09T10:30:00-06:00"
+                },
+                "utcOffsetMinutes": {
+                    "type": "integer",
+                    "example": -360
+                }
+            }
+        },
+        "AppointmentResponse": {
+            "type": "object",
+            "properties": {
+                "canEdit": {
+                    "description": "CanEdit: the session can do everything AND the owner's plan is paid.",
+                    "type": "boolean",
+                    "example": true
+                },
+                "canMark": {
+                    "description": "CanMark: the session can do everything (marking a state never needs the plan).",
+                    "type": "boolean",
+                    "example": true
+                },
+                "childId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "consultDate": {
+                    "type": "string",
+                    "example": "2026-09-28"
+                },
+                "consultationId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "createdBy": {
+                    "type": "string",
+                    "example": "Ana"
+                },
+                "doctorName": {
+                    "type": "string",
+                    "example": "Dra. Laura López"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "myReminders": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "note": {
+                    "type": "string",
+                    "example": ""
+                },
+                "notices": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/AppointmentNoticeResponse"
+                    }
+                },
+                "startsAt": {
+                    "type": "string",
+                    "example": "2026-10-09T16:30:00Z"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "scheduled",
+                        "done",
+                        "canceled",
+                        "unmarked"
+                    ],
+                    "example": "scheduled"
+                },
+                "statusAt": {
+                    "type": "string"
+                },
+                "statusBy": {
+                    "type": "string",
+                    "example": "Ana"
+                },
+                "utcOffsetMinutes": {
+                    "type": "integer",
+                    "example": -360
+                }
+            }
+        },
+        "AppointmentStatusRequest": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "done",
+                        "canceled",
+                        "scheduled"
+                    ],
+                    "example": "done"
+                }
+            }
+        },
+        "AppointmentValidationResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "field": {
+                                "type": "string",
+                                "example": "startsAt"
+                            },
+                            "message": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "error": {
+                    "type": "string",
+                    "example": "validation_error"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "AppointmentsOfChildResponse": {
+            "type": "object",
+            "properties": {
+                "history": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/AppointmentResponse"
+                    }
+                },
+                "next": {
+                    "$ref": "#/definitions/AppointmentResponse"
+                },
+                "paidPlan": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
@@ -4275,6 +4999,34 @@ const docTemplate = `{
                     "example": "generic"
                 }
             }
+        },
+        "internal_appointment.NoticeInput": {
+            "type": "object",
+            "properties": {
+                "atTime": {
+                    "type": "string"
+                },
+                "daysBefore": {
+                    "type": "integer"
+                },
+                "kind": {
+                    "$ref": "#/definitions/internal_appointment.NoticeKind"
+                },
+                "leadMinutes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_appointment.NoticeKind": {
+            "type": "string",
+            "enum": [
+                "before",
+                "at_time"
+            ],
+            "x-enum-varnames": [
+                "KindBefore",
+                "KindAtTime"
+            ]
         },
         "internal_catalog.countryResponse": {
             "type": "object",
