@@ -1,4 +1,5 @@
 import { formatTime } from '../../shared/date'
+import { longDayText } from '../appointments/appointmentText'
 
 /**
  * What the backend pushes for a dose reminder (specs/011-recordatorios-push,
@@ -10,7 +11,12 @@ export interface ReminderPayload {
   /** A medication's dose has a consultation; a supplement routine's (specs/033, `source: "supplement"`) has a routine instead. */
   consultationId?: string
   routineId?: string
-  source?: 'supplement'
+  source?: 'supplement' | 'appointment'
+  /** An appointment's reminder (specs/033, part 2): when it starts is `scheduledAt`; this is how long before it this one goes off. */
+  appointmentId?: string
+  leadMinutes?: number
+  doctor?: string
+  note?: string
   scheduledAt: string
   medication?: string
   child?: string
@@ -35,7 +41,7 @@ export function parsePayload(read: () => unknown): ReminderPayload | null {
   }
   if (!data || typeof data !== 'object') return null
   const p = data as Partial<ReminderPayload>
-  if ((p.kind !== 'detailed' && p.kind !== 'generic') || !p.doseId || (!p.consultationId && !p.routineId) || !p.scheduledAt) return null
+  if ((p.kind !== 'detailed' && p.kind !== 'generic') || (!p.doseId && !p.appointmentId) || (!p.consultationId && !p.routineId && !p.appointmentId) || !p.scheduledAt) return null
   return p as ReminderPayload
 }
 
@@ -44,7 +50,51 @@ export function parsePayload(read: () => unknown): ReminderPayload | null {
  * never an indication (Principio I). The time is in the device's own zone; `tag` makes a repeated
  * push replace the first one instead of stacking.
  */
-export function buildNotification(p: ReminderPayload): ReminderNotification {
+/** «hoy», «mañana» or «el viernes 9 oct»: the day of an appointment as the device sees it. */
+function dayWord(start: Date, now: Date): string {
+  const days = Math.round((Date.UTC(start.getFullYear(), start.getMonth(), start.getDate()) - Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())) / 86_400_000)
+  if (days === 0) return 'hoy'
+  if (days === 1) return 'mañana'
+  return `el ${longDayText(start)}`
+}
+
+/** «2 horas», «30 minutos», «1 día»: how long before the appointment a notice goes off. */
+function leadText(minutes: number): string {
+  const unit = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
+  if (minutes % 1440 === 0) return unit(minutes / 1440, 'día', 'días')
+  if (minutes % 60 === 0) return unit(minutes / 60, 'hora', 'horas')
+  return unit(minutes, 'minuto', 'minutos')
+}
+
+/**
+ * The reminder of a next appointment (specs/033, part 2, mock section C): neutral, never an imperative («No olvides», «Lleva…»).
+ * Generic: only that there is one and when — no child, doctor, exact time or note. With detail: the child, the doctor, the hour
+ * and the note. «hoy, en 2 horas» when the same day, the day when it is further away.
+ */
+function buildAppointmentNotification(p: ReminderPayload, now: Date): ReminderNotification {
+  const start = new Date(p.scheduledAt)
+  const day = dayWord(start, now)
+  const sameDay = day === 'hoy'
+  const lead = p.leadMinutes ?? 0
+  const when = sameDay && lead > 0 ? `hoy, en ${leadText(lead)}` : day
+  const tag = `appointment-${p.appointmentId}-${p.leadMinutes ?? 0}`
+  const data = p
+  if (p.kind === 'detailed' && p.child) {
+    const who = p.doctor ? `Con ${p.doctor}, ` : ''
+    const note = p.note ? ` Nota: ${p.note}` : ''
+    return {
+      title: `Cita de ${p.child}: ${day} a las ${formatTime(p.scheduledAt)}`,
+      options: { body: `${who}${sameDay && lead > 0 ? `en ${leadText(lead)}` : day}.${note}`, tag, icon: '/icon-192.png', badge: '/icon-192.png', data },
+    }
+  }
+  return {
+    title: 'Recordatorio de cita',
+    options: { body: `Hay una cita registrada para ${when}.`, tag, icon: '/icon-192.png', badge: '/icon-192.png', data },
+  }
+}
+
+export function buildNotification(p: ReminderPayload, now: Date = new Date()): ReminderNotification {
+  if (p.source === 'appointment') return buildAppointmentNotification(p, now)
   const time = formatTime(p.scheduledAt)
   const body =
     p.kind === 'detailed' && p.medication
@@ -65,7 +115,7 @@ export function buildNotification(p: ReminderPayload): ReminderNotification {
 
 /** Where tapping a reminder goes: the consultation of that dose. */
 export function targetUrl(p: ReminderPayload): string {
-  return p.routineId ? `/suplementos/${p.routineId}` : `/consultations/${p.consultationId}`
+  return p.routineId ? `/suplementos/${p.routineId}` : `/consultations/${p.consultationId}` // an appointment's carries its consultation
 }
 
 interface WindowClientLike {

@@ -51,15 +51,18 @@ export function NewConsultationPage() {
           onDirtyChange={handleDirtyChange}
           // specs/030: only the free plan lacks it; until the account loads the server decides.
           recordOnlyAvailable={!access.isFree}
-          onSuccess={(consultationId) => {
+          // specs/033, part 2: the next appointment is the paid plan's too.
+          appointmentAvailable={!access.isFree}
+          onSuccess={(consultationId, appointmentFailed) => {
             dirtyRef.current = false
             queryClient.invalidateQueries({ queryKey: ['consultations', childId] })
             queryClient.invalidateQueries({ queryKey: ['overview'] })
+            queryClient.invalidateQueries({ queryKey: ['appointments'] })
             // The paid plan's history (specs/031) and its doctor/medication lists.
             queryClient.invalidateQueries({ queryKey: ['history', childId] })
             queryClient.invalidateQueries({ queryKey: ['history-options', childId] })
             // replace: "back" from the saved consultation lands on the child, not on an already-sent form.
-            navigate(`/consultations/${consultationId}`, { replace: true })
+            navigate(`/consultations/${consultationId}`, { replace: true, state: appointmentFailed ? { appointmentFailed: true } : undefined })
           }}
         />
       </main>

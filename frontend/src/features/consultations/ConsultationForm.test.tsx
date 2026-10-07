@@ -158,7 +158,8 @@ describe('ConsultationForm', () => {
       const user = userEvent.setup()
       vi.stubGlobal('fetch', vi.fn())
       renderForm(variant)
-      expect(screen.queryByText(/opcional/i)).not.toBeInTheDocument()
+      // The «Primera toma» row carries no "(opcional)" (the appointment's own fields are optional and say so).
+      expect(screen.getByText('Primera toma').parentElement).not.toHaveTextContent(/opcional/i)
 
       await user.type(screen.getByLabelText('Doctor'), 'Dra. López')
       await user.type(screen.getByLabelText('Fecha'), '2026-01-15')
@@ -204,7 +205,7 @@ describe('ConsultationForm', () => {
       await fillValid(user)
       await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
 
-      await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('consultation-1'))
+      await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('consultation-1', false))
       const [, init] = vi.mocked(fetch).mock.calls[0]
       const body = JSON.parse(init!.body as string)
       expect(body.medications).toEqual([
@@ -682,7 +683,7 @@ describe('ConsultationForm', () => {
       await user.type(screen.getByLabelText('Notas previas a la consulta'), 'Comió mariscos')
       await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
 
-      await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('consultation-1'))
+      await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('consultation-1', false))
       const body = postBody(fetchMock)
       expect(body.symptomCodes).toEqual(['cough', 'fever'])
       expect(body.notes).toBe('Comió mariscos')
@@ -808,7 +809,7 @@ describe('ConsultationForm, record only (specs/024)', () => {
     await user.click(checkbox())
     await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
 
-    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('consultation-1'))
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('consultation-1', false))
     const body = JSON.parse(String(fetchMock.mock.calls[0][1].body))
     expect(body.recordOnly).toBe(true)
     expect(body.medications).toEqual([{ name: 'Amoxicilina 250 mg', frequencyHours: 8, durationDays: 7, startTime: null }])

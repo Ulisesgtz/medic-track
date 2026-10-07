@@ -7,6 +7,8 @@ interface ConfirmDialogProps {
   /** «Dejas de ver / No te llevas / Se conserva»: what happens, in neutral words. */
   rows: { k: string; v: string }[]
   confirmLabel: string
+  /** The safe button's words (it keeps the first focus); «Cancelar» unless the confirmation itself says that word (specs/033: «Cancelar cita» → «Volver»). */
+  cancelLabel?: string
   busyLabel: string
   /** `danger` (red, «Quitar a Rosa») or `ink` (leaving: not an error, the system's last-resort button). */
   tone: 'danger' | 'ink'
@@ -26,7 +28,7 @@ interface ConfirmDialogProps {
  * others: rendered into <body>, Escape and the backdrop cancel (not while it works), focus starts on «Cancelar» (the safe
  * choice) and Tab stays inside.
  */
-export function ConfirmDialog({ title, rows, confirmLabel, busyLabel, tone, busy, error, onConfirm, onCancel, opener }: ConfirmDialogProps) {
+export function ConfirmDialog({ title, rows, confirmLabel, cancelLabel = 'Cancelar', busyLabel, tone, busy, error, onConfirm, onCancel, opener }: ConfirmDialogProps) {
   const id = useId()
   const desktop = useIsDesktop()
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -116,7 +118,7 @@ export function ConfirmDialog({ title, rows, confirmLabel, busyLabel, tone, busy
             disabled={busy}
             className={`min-h-12 cursor-pointer rounded-2xl border-2 border-action text-base font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-confirmed focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${desktop ? 'px-6' : ''}`}
           >
-            Cancelar
+            {cancelLabel}
           </button>
           <button
             type="button"

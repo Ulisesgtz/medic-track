@@ -196,7 +196,7 @@ describe('NewConsultationPage, "solo registro" and the plan (specs/030)', () => 
     renderPage()
 
     await waitFor(() => expect(checkbox()).toBeDisabled())
-    expect(screen.getByText(/Disponible en el plan completo/)).toBeInTheDocument()
+    expect(screen.getAllByText(/Disponible en el plan completo/).length).toBeGreaterThan(0)
   })
 
   it('is available for a paid account', async () => {

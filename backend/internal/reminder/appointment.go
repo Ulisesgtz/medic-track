@@ -19,7 +19,7 @@ import (
 func (r *Repository) ClaimDueAppointmentNotices(ctx context.Context, now time.Time, window time.Duration) ([]DueDose, error) {
 	rows, err := r.pool.Query(ctx, `
 		WITH cand AS (
-			SELECT n.id AS notice_id, n.fire_at, ap.id AS appointment_id, ap.starts_at, co.doctor_name, ap.note,
+			SELECT n.id AS notice_id, n.fire_at, ap.id AS appointment_id, ap.consultation_id, ap.starts_at, co.doctor_name, ap.note,
 			       ch.id AS child_id, ch.first_name, ch.account_id AS owner_id
 			FROM appointment_notices n
 			JOIN consultation_appointments ap ON ap.id = n.appointment_id AND ap.status = 'scheduled'
@@ -54,7 +54,7 @@ func (r *Repository) ClaimDueAppointmentNotices(ctx context.Context, now time.Ti
 			ON CONFLICT (notice_id, account_id) DO NOTHING
 			RETURNING notice_id, account_id
 		)
-		SELECT cand.notice_id, cand.fire_at, cand.appointment_id, cand.starts_at,
+		SELECT cand.notice_id, cand.fire_at, cand.appointment_id, cand.consultation_id, cand.starts_at,
 		       (EXTRACT(EPOCH FROM (cand.starts_at - cand.fire_at)) / 60)::int, cand.doctor_name, cand.note, cand.first_name,
 		       claimed.account_id, a.reminder_detail
 		FROM claimed
@@ -71,7 +71,7 @@ func (r *Repository) ClaimDueAppointmentNotices(ctx context.Context, now time.Ti
 	for rows.Next() {
 		d := DueDose{Source: SourceAppointment}
 		var detail *string
-		if err := rows.Scan(&d.DoseID, &d.ScheduledAt, &d.AppointmentID, &d.StartsAt, &d.LeadMinutes, &d.DoctorName, &d.Note, &d.ChildFirstName, &d.AccountID, &detail); err != nil {
+		if err := rows.Scan(&d.DoseID, &d.ScheduledAt, &d.AppointmentID, &d.ConsultationID, &d.StartsAt, &d.LeadMinutes, &d.DoctorName, &d.Note, &d.ChildFirstName, &d.AccountID, &detail); err != nil {
 			return nil, fmt.Errorf("scanning due appointment notice: %w", err)
 		}
 		if detail != nil {

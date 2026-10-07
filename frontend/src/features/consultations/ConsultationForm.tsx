@@ -9,6 +9,15 @@ import { SYMPTOMS_QUERY_KEY } from '../../shared/catalog/useCatalog'
 import { MedicationFieldset } from './MedicationFieldset'
 import { parsePositiveInt } from './parsePositiveInt'
 import { useOcrSuggestion } from './useOcrSuggestion'
+import { AppointmentFields } from '../appointments/AppointmentFields'
+import { createAppointment } from '../appointments/api'
+import {
+  emptyAppointmentValues,
+  hasAppointment,
+  toAppointmentInput,
+  validateAppointment,
+  type AppointmentErrors,
+} from '../appointments/appointmentValues'
 import { createConsultation, ConsultationApiError, type CreateConsultationPayload } from './api'
 import { missingFieldsText } from './missingFields'
 import { SymptomPicker } from './SymptomPicker'
@@ -160,13 +169,16 @@ interface ConsultationFormProps {
   childLabel?: string
   /** Where "← Cancelar" goes (the child's detail). */
   cancelTo: string
-  onSuccess: (consultationId: string) => void
+  /** `appointmentFailed`: the consultation was saved but its next appointment was not (specs/033, part 2). */
+  onSuccess: (consultationId: string, appointmentFailed?: boolean) => void
   /** Called when "← Cancelar" is followed: return false to stay (e.g. the parent refused to discard). */
   confirmLeave?: () => boolean
   /** Tells the parent whether the form holds anything the user would lose. */
   onDirtyChange?: (dirty: boolean) => void
   /** False on the free plan (specs/030): "guardar solo como registro" is shown but can't be marked. Default: true. */
   recordOnlyAvailable?: boolean
+  /** False on the free plan (specs/033, part 2): the «Próxima cita» fields are shown disabled with a link to the plan. Default: true. */
+  appointmentAvailable?: boolean
 }
 
 const MEDICATION_STAGGER_MS = 180
@@ -199,6 +211,7 @@ export function ConsultationForm({
   confirmLeave,
   onDirtyChange,
   recordOnlyAvailable = true,
+  appointmentAvailable = true,
 }: ConsultationFormProps) {
   const navigate = useNavigate()
   // The free plan's pop-up (specs/030) when the server refuses to save: the form and what was typed stay as they are.
@@ -231,10 +244,14 @@ export function ConsultationForm({
     },
   })
   const { fields, append, remove } = useFieldArray({ control, name: 'medications' })
+  // The optional «Próxima cita» (specs/033, part 2): its own state, saved right after the consultation.
+  const [appt, setAppt] = useState(emptyAppointmentValues)
+  const [apptErrors, setApptErrors] = useState<AppointmentErrors>({})
+  const apptTouched = hasAppointment(appt) || appt.note !== '' || JSON.stringify(appt.notices) !== JSON.stringify(emptyAppointmentValues().notices)
   const recordOnly = useWatch({ control, name: 'recordOnly' })
 
   // A typed field or a chosen photo (which OCR may have autofilled from) is worth a confirmation.
-  const dirty = isDirty || photoFile !== null
+  const dirty = isDirty || photoFile !== null || apptTouched
   useEffect(() => {
     onDirtyChange?.(dirty)
   }, [dirty, onDirtyChange])
@@ -261,9 +278,19 @@ export function ConsultationForm({
         // Start times are read in the parent's own time zone (their offset on the consult date).
         utcOffsetMinutes: -new Date(`${values.consultDate}T00:00:00`).getTimezoneOffset(),
       }
-      return createConsultation(childId, payload, await getToken())
+      const consultation = await createConsultation(childId, payload, await getToken())
+      // The appointment is its own call: if it fails the consultation stays saved and the parent is told to add it from there.
+      let appointmentFailed = false
+      if (appointmentAvailable && hasAppointment(appt)) {
+        try {
+          await createAppointment(consultation.id, toAppointmentInput(appt), await getToken())
+        } catch {
+          appointmentFailed = true
+        }
+      }
+      return { consultation, appointmentFailed }
     },
-    onSuccess: (consultation) => onSuccess(consultation.id),
+    onSuccess: ({ consultation, appointmentFailed }) => onSuccess(consultation.id, appointmentFailed),
     onError: async (error) => {
       if (error instanceof ConsultationApiError && error.kind === 'plan_limit_active_treatment') setPlanLimit('active_treatment')
       if (error instanceof ConsultationApiError && error.kind === 'plan_limit_record_only') setPlanLimit('record_only')
@@ -370,10 +397,13 @@ export function ConsultationForm({
 
   const onSubmit = handleSubmit(
     (values) => {
+      const apptFound = appointmentAvailable && hasAppointment(appt) ? validateAppointment(appt, values.consultDate) : {}
+      setApptErrors(apptFound)
       if (!photoFile) {
         setPhotoMissing(true)
         return
       }
+      if (Object.keys(apptFound).length > 0) return
       mutation.mutate({ values, photo: photoFile })
     },
     () => setPhotoMissing(!photoFile),
@@ -613,6 +643,19 @@ export function ConsultationForm({
     </div>
   )
 
+  const appointmentSection = (
+    <div className={`flex min-w-0 flex-col rounded-3xl border-[1.5px] border-slate-200 bg-surface ${desktop ? 'p-6' : 'p-5'}`}>
+      <AppointmentFields
+        value={appt}
+        onChange={setAppt}
+        errors={apptErrors}
+        optional
+        help="Si el pediatra dio fecha, se anota aquí. Si no, la consulta se guarda sin ella."
+        disabled={!appointmentAvailable}
+      />
+    </div>
+  )
+
   const addButton = (
     <button
       type="button"
@@ -671,10 +714,9 @@ export function ConsultationForm({
           {recordOnlyField}
           {symptomsSection}
           {medications}
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            {addButton}
-            {saveButton}
-          </div>
+          <div className="flex flex-wrap items-center gap-4">{addButton}</div>
+          {appointmentSection}
+          <div className="flex flex-wrap items-center justify-end gap-4">{saveButton}</div>
           {status}
         </form>
       </div>
@@ -698,6 +740,7 @@ export function ConsultationForm({
         {symptomsSection}
         {medications}
         {addButton}
+        {appointmentSection}
         {saveButton}
         {status}
       </form>

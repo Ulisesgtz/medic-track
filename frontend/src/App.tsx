@@ -6,6 +6,8 @@ import { HomePage } from './features/home/HomePage'
 import { ChildDetailPage } from './features/consultations/ChildDetailPage'
 import { ConsultationDetailPage } from './features/consultations/ConsultationDetailPage'
 import { HistoryPage } from './features/consultations/HistoryPage'
+import { AppointmentFormPage } from './features/appointments/AppointmentFormPage'
+import { AppointmentHistoryPage } from './features/appointments/AppointmentHistoryPage'
 import { RoutineDetailPage } from './features/supplements/RoutineDetailPage'
 import { RoutineFormPage } from './features/supplements/RoutineFormPage'
 import { FamilyPage } from './features/family/FamilyPage'
@@ -104,6 +106,30 @@ function App() {
             element={
               <RequireSession>
                 <RoutineFormPage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/citas/:appointmentId/editar"
+            element={
+              <RequireSession>
+                <AppointmentFormPage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/consultations/:consultationId/cita/nueva"
+            element={
+              <RequireSession>
+                <AppointmentFormPage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/children/:childId/citas"
+            element={
+              <RequireSession>
+                <AppointmentHistoryPage />
               </RequireSession>
             }
           />

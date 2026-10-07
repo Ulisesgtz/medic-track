@@ -205,7 +205,7 @@ func TestService_Tick_AppointmentRemindersPerPersonWithTheirOwnDetail(t *testing
 	require.Equal(t, "Nota privada", detailed["note"])
 	require.NotContains(t, detailed, "doseId")
 	require.NotContains(t, detailed, "actionToken", "an appointment has no «Tomada»")
-	require.NotContains(t, detailed, "consultationId")
+	require.NotEmpty(t, detailed["consultationId"], "tapping it opens the consultation that has the appointment")
 
 	generic := decode(t, sender.sentTo(caregiverDevice.ID)[0].payload)
 	require.Equal(t, "generic", generic["kind"])
