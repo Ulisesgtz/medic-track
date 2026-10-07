@@ -339,3 +339,31 @@ export async function appointmentViaApi(
     ...overrides,
   })
 }
+
+// ---- specs/033-recordatorios-suplementos-citas, parte 3: the person's own routines.
+
+/**
+ * Creates a routine for the person themselves (no child) through the API as the account whose token this is (their own plan, or
+ * the paid family's they belong to, must be paid). By default a daily 08:00 routine that started today.
+ */
+export async function personalRoutineViaApi(
+  request: APIRequestContext,
+  token: string,
+  accountId: string,
+  overrides: Record<string, unknown> = {},
+): Promise<{ id: string; name: string; doses: { id: string; scheduledAt: string; taken: boolean }[] }> {
+  const { day, offset } = localToday()
+  return apiPost(request, token, `/accounts/${accountId}/routines`, {
+    name: 'Omega 3',
+    note: '',
+    period: 'daily',
+    times: ['08:00'],
+    weekdays: [],
+    intervalHours: null,
+    firstDate: day,
+    firstTime: null,
+    endDate: null,
+    utcOffsetMinutes: offset,
+    ...overrides,
+  })
+}

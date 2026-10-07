@@ -21,5 +21,5 @@ Formato `[ID] Descripción`. Un solo PR; un commit por fase.
 
 ## Fase 3: E2E y cierre
 
-- [ ] T221 `frontend/e2e/suplementos-personales.spec.ts` (390 y 1280 px; dueña, su pareja no la ve ni la alcanza por la API, plan gratuito, invitada)
-- [ ] T222 Documentación (`CLAUDE.md` ×3, `DEPLOY.md` con la `0021`, `README.md`, `BACKLOG.md`), Swagger, desviaciones, code review, PR a `develop`
+- [x] T221 `frontend/e2e/suplementos-personales.spec.ts` (390 y 1280 px; dueña, su pareja no la ve ni la alcanza por la API, plan gratuito, invitada)
+- [x] T222 Documentación (`CLAUDE.md` ×3, `DEPLOY.md` con la `0021`, `README.md`, `BACKLOG.md`), Swagger, desviaciones, code review, PR a `develop`

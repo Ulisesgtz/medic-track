@@ -26,6 +26,8 @@ tutor un lugar centralizado para:
 - **Próxima cita** (plan de pago): al registrar una consulta, o después, se anota cuándo es la siguiente cita con avisos
   (por omisión un día y dos horas antes, editables); cada persona de la familia recibe los suyos y se puede marcar
   como realizada o cancelada. Nunca se borra: queda en el historial.
+- **Mis suplementos** (plan de pago): rutinas de suplemento de la propia persona, con sus tomas marcables y sus avisos. Solo ella las
+  ve y solo a ella le llegan los avisos; nadie de su familia las alcanza.
 
 ### Principio de diseño: "Registra, nunca interpreta"
 
