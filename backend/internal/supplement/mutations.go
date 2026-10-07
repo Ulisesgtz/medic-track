@@ -107,6 +107,8 @@ func (r *Repository) Resume(ctx context.Context, routineID uuid.UUID, utcOffsetM
 		if err := checkActiveCap(ctx, tx, *s.view.ChildID); err != nil {
 			return err
 		}
+	} else if err := checkPersonalCap(ctx, tx, s.view.AccountID); err != nil {
+		return err
 	}
 	now := r.now()
 	horizon := now.AddDate(0, 0, HorizonDays)

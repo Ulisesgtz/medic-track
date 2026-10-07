@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { DOSE_CHIP_STYLE, canUnmarkDose, DOSE_REFETCH_MS, UNREGISTERED_LABEL, isUnmarked, isUnregistered, statusOf, takenByText, unregisteredText } from './doseStatus'
+import { DOSE_CHIP_STYLE, canUnmarkDose, DOSE_REFETCH_MS, ownTakenText, UNREGISTERED_LABEL, isUnmarked, isUnregistered, statusOf, takenByText, unregisteredText } from './doseStatus'
 
 const at = { taken: false, scheduledAt: '2026-01-15T08:00:00Z' }
 
@@ -57,5 +57,14 @@ describe('takenByText (specs/032)', () => {
   it('is empty when nobody is known', () => {
     expect(takenByText(null)).toBe('')
     expect(takenByText(undefined)).toBe('')
+  })
+})
+
+// specs/033, part 3: a dose of the person's own routine can only have been marked by them.
+describe('ownTakenText', () => {
+  it('says only when, never who', () => {
+    expect(ownTakenText({ name: 'Ana', at: new Date(2026, 9, 1, 7, 20).toISOString() })).toBe('a las 07:20')
+    expect(ownTakenText(null)).toBe('')
+    expect(ownTakenText(undefined)).toBe('')
   })
 })

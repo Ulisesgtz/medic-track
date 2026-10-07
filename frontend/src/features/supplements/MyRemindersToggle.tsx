@@ -6,7 +6,7 @@ import { useMyReminders } from './hooks'
  * Only an active routine has reminders, so the card isn't drawn for a paused or finished one. A switch with a fixed name;
  * the state is only `aria-checked`.
  */
-export function MyRemindersToggle({ routineId, enabled }: { routineId: string; enabled: boolean }) {
+export function MyRemindersToggle({ routineId, enabled, personal = false }: { routineId: string; enabled: boolean; personal?: boolean }) {
   const mutation = useMyReminders(routineId)
   const [failed, setFailed] = useState(false)
 
@@ -14,14 +14,14 @@ export function MyRemindersToggle({ routineId, enabled }: { routineId: string; e
     <div className="flex flex-col gap-2.5 rounded-[22px] bg-surface px-[22px] py-5 shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-col gap-0.5">
-          <h3 className="text-[17px] font-black tracking-[-0.01em] text-ink">Tus avisos</h3>
+          <h3 className="text-[17px] font-black tracking-[-0.01em] text-ink">{personal ? 'Avisos' : 'Tus avisos'}</h3>
           <p className="text-sm leading-normal text-body">A la hora de cada toma, en este dispositivo.</p>
         </div>
         <button
           type="button"
           role="switch"
           aria-checked={enabled}
-          aria-label="Avisos de esta rutina para ti"
+          aria-label={personal ? 'Avisos de esta rutina' : 'Avisos de esta rutina para ti'}
           disabled={mutation.isPending}
           onClick={() => {
             setFailed(false)
@@ -35,7 +35,7 @@ export function MyRemindersToggle({ routineId, enabled }: { routineId: string; e
         </button>
       </div>
       <p className="text-[13px] leading-normal text-slate-600">
-        Cada persona de la familia elige los suyos. Activarlos aquí no los activa para nadie más.
+        {personal ? 'Se activan en cada dispositivo por separado.' : 'Cada persona de la familia elige los suyos. Activarlos aquí no los activa para nadie más.'}
       </p>
       {failed && (
         <p role="alert" className="text-[13px] font-semibold text-red-700">

@@ -7,7 +7,7 @@ import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { useChildAccess } from '../family/useChildAccess'
 import { AppShell } from '../home/AppShell'
 import { useSidebarSession } from '../home/useSidebarSession'
-import { useCreateRoutine, useRoutine, useUpdateRoutine } from './hooks'
+import { useCreatePersonalRoutine, useCreateRoutine, useRoutine, useUpdateRoutine } from './hooks'
 import { RoutineForm } from './RoutineForm'
 import type { RoutineInput } from './types'
 
@@ -68,7 +68,7 @@ export function RoutinePageFrame({
  * changes with the periodicity). Leaving with something typed asks first. If the server answers that the plan isn't paid,
  * the plan notice opens and what was typed stays.
  */
-export function RoutineFormPage() {
+export function RoutineFormPage({ personal: creatingPersonal = false }: { personal?: boolean } = {}) {
   const params = useParams<{ childId: string; routineId: string }>()
   const routineId = params.routineId
   const navigate = useNavigate()
@@ -79,10 +79,13 @@ export function RoutineFormPage() {
   const routineQuery = useRoutine(routineId, day)
   const routine = routineQuery.data
   const childId = params.childId ?? routine?.childId ?? undefined
+  // A person's own routine (specs/033, part 3): the new-routine route of the section, or an existing routine with no child.
+  const personal = creatingPersonal || (routine !== undefined && routine.childId === null)
   const child = accountQuery.data?.children.find((c) => c.id === childId)
   const access = useChildAccess(accountQuery.data, childId)
 
   const createMutation = useCreateRoutine(childId ?? '')
+  const createPersonalMutation = useCreatePersonalRoutine(accountQuery.data?.id ?? '')
   const updateMutation = useUpdateRoutine(routineId ?? '')
 
   const dirtyRef = useRef(false)
@@ -96,13 +99,13 @@ export function RoutineFormPage() {
   const closePlan = useCallback(() => setPlanOpen(false), [])
 
   const editing = routineId !== undefined
-  const backTo = editing ? `/suplementos/${routineId}` : `/children/${childId}`
-  const childName = child?.firstName ?? 'Volver'
-  const eyebrow = child ? `Suplemento · ${child.firstName} ${child.lastName}` : 'Suplemento'
+  const backTo = editing ? `/suplementos/${routineId}` : personal ? '/mis-suplementos' : `/children/${childId}`
+  const childName = personal ? 'Mis suplementos' : (child?.firstName ?? 'Volver')
+  const eyebrow = personal ? 'Mis suplementos' : child ? `Suplemento · ${child.firstName} ${child.lastName}` : 'Suplemento'
   const frame = (content: ReactNode) => (
     <RoutinePageFrame
       isDesktop={isDesktop}
-      childId={childId}
+      childId={personal ? undefined : childId}
       backLabel={editing && routine ? `← ${routine.name}` : `← ${childName}`}
       backTo={backTo}
       eyebrow={eyebrow}
@@ -119,7 +122,7 @@ export function RoutineFormPage() {
 
   if (editing && routineQuery.isPending) return frame(<p className="text-base font-semibold text-action">Cargando…</p>)
   if (editing && (routineQuery.isError || !routine)) return frame(message('No se encontró esta rutina.'))
-  if (accountQuery.data && !access.canAdd) return frame(message('Solo un Tutor puede crear o editar rutinas.'))
+  if (!personal && accountQuery.data && !access.canAdd) return frame(message('Solo un Tutor puede crear o editar rutinas.'))
   if (routine && routine.status === 'ended') {
     return frame(message('Esta rutina ya terminó y no se puede editar. Para volver a registrarla, crea una rutina nueva.'))
   }
@@ -130,7 +133,11 @@ export function RoutineFormPage() {
   }
 
   async function save(input: RoutineInput) {
-    const saved = editing ? await updateMutation.mutateAsync(input) : await createMutation.mutateAsync(input)
+    const saved = editing
+      ? await updateMutation.mutateAsync(input)
+      : personal
+        ? await createPersonalMutation.mutateAsync(input)
+        : await createMutation.mutateAsync(input)
     dirtyRef.current = false
     // replace: "back" from the routine lands on the child, not on an already-sent form.
     navigate(`/suplementos/${saved.id}`, { replace: true })
@@ -147,6 +154,7 @@ export function RoutineFormPage() {
           onCancel={leave}
           onPlanRequired={() => setPlanOpen(true)}
           onDirtyChange={handleDirty}
+          personal={personal}
         />,
       )}
       {planOpen && <FreemiumLimitModal reason="supplements" onStayFree={closePlan} onViewPlans={() => navigate('/planes')} />}

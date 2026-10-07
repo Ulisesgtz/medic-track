@@ -16,6 +16,8 @@ interface RoutineFormProps {
   onPlanRequired: () => void
   /** Whether anything was typed that leaving would lose. */
   onDirtyChange?: (dirty: boolean) => void
+  /** A routine of the person's own (specs/033, part 3): says nobody else sees it. */
+  personal?: boolean
 }
 
 /**
@@ -23,7 +25,7 @@ interface RoutineFormProps {
  * It records what the parent writes exactly: no example in the fields, no check of the name, the amount or the time
  * (Principio I) — it says so in the fixed sentence under the form. Errors go under their field.
  */
-export function RoutineForm({ routine, onSubmit, onCancel, onPlanRequired, onDirtyChange }: RoutineFormProps) {
+export function RoutineForm({ routine, onSubmit, onCancel, onPlanRequired, onDirtyChange, personal = false }: RoutineFormProps) {
   const editing = routine !== undefined
   const initial = useMemo(() => (routine ? valuesOf(routine) : newRoutineValues()), [routine])
   const [values, setValues] = useState<FormValues>(initial)
@@ -85,9 +87,11 @@ export function RoutineForm({ routine, onSubmit, onCancel, onPlanRequired, onDir
       onSubmit={handleSubmit}
       className="flex flex-col gap-[22px] rounded-[22px] bg-surface px-[18px] py-5 shadow-[0_8px_20px_rgba(4,37,43,0.07)]"
     >
-      {editing && (
+      {(editing || personal) && (
         <p role="note" className="rounded-[14px] border-[1.5px] border-hint-border bg-hint px-4 py-3.5 text-sm leading-normal text-body">
-          Los cambios cuentan desde la siguiente toma. Las tomas ya marcadas no cambian.
+          {personal && 'Es una rutina personal: solo tú la ves y solo a ti te llegan sus avisos.'}
+          {personal && editing && ' '}
+          {editing && 'Los cambios cuentan desde la siguiente toma. Las tomas ya marcadas no cambian.'}
         </p>
       )}
 
@@ -315,7 +319,7 @@ export function RoutineForm({ routine, onSubmit, onCancel, onPlanRequired, onDir
           placeholder="Lo que quieras recordar al darla"
           className={`${fieldRoutineMultiline} resize-y border-slate-300`}
         />
-        <span className="text-[13px] font-medium text-slate-600">La ve toda la familia.</span>
+        <span className="text-[13px] font-medium text-slate-600">{personal ? 'Solo la ves tú.' : 'La ve toda la familia.'}</span>
       </div>
 
       <p className="text-sm leading-relaxed text-slate-600">

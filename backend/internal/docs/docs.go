@@ -541,6 +541,189 @@ const docTemplate = `{
                 }
             }
         },
+        "/accounts/{accountId}/routines": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Lists the routines the person made for themselves — active first, then paused and ended — each with only the\ndoses of [from, to) (their local day, at most 48 hours), its progress and its next dose. Nobody else in the\nfamily sees them. Reading never depends on the plan.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "supplements"
+                ],
+                "summary": "The person's own supplement routines",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Window start, RFC 3339",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Window end (exclusive), RFC 3339",
+                        "name": "to",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementPersonalListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or invalid window",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The account is not the session's own",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Saves the routine the person wrote, exactly as written, and generates its first doses. It is the person's own:\nnobody else in the family sees it or is reminded of it. Part of the paid plan (their own, or the one of a paid\nfamily they belong to; the server decides): otherwise 422 \"freemium_consultation_limit_exceeded\" with reason\n\"supplements\"; with 10 active personal routines, 422 \"routine_limit_exceeded\".",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "supplements"
+                ],
+                "summary": "Create a supplement routine for the person themselves",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The routine",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/SupplementRoutineRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementRoutineResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "An invalid field",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The account is not the session's own",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "No paid plan, or the person has the maximum of active routines (routineLimitDoc)",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementPlanLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}/routines/notice-seen": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Records, for the account (every device), that the person read it. Idempotent.",
+                "tags": [
+                    "supplements"
+                ],
+                "summary": "«Entendido» on the first-time notice of the personal section",
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The account is not the session's own",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/appointments/{appointmentId}": {
             "get": {
                 "security": [
@@ -4444,6 +4627,35 @@ const docTemplate = `{
                 "myReminders": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "SupplementPersonalListResponse": {
+            "type": "object",
+            "properties": {
+                "activeCount": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "noticeSeen": {
+                    "description": "NoticeSeen: the person already pressed «Entendido» on the section's first-time notice (on any device).",
+                    "type": "boolean",
+                    "example": false
+                },
+                "paidPlan": {
+                    "description": "PaidPlan: their own plan is paid or they belong to a family whose owner's is (the server decides).",
+                    "type": "boolean",
+                    "example": true
+                },
+                "routines": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/SupplementRoutineResponse"
+                    }
                 }
             }
         },

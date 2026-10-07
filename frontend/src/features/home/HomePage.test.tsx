@@ -23,6 +23,9 @@ function renderHome() {
   return { ...utils, queryClientClearSpy: spy }
 }
 
+/** The person's own supplement routines (specs/033, part 3): none, the notice already seen. */
+const PERSONAL_NONE = { routines: [], activeCount: 0, limit: 10, paidPlan: true, noticeSeen: true }
+
 /** Every request gets an answer shaped like the real API: the account, a child's consultations, or its overview. */
 function stubApi(account: unknown, { consultations = [], doses = [] }: { consultations?: unknown[]; doses?: unknown[] } = {}) {
   vi.stubGlobal(
@@ -33,7 +36,9 @@ function stubApi(account: unknown, { consultations = [], doses = [] }: { consult
         ? { childId: 'child-1', doses, activeTreatment: null }
         : url.includes('/consultations')
           ? { consultations }
-          : account
+          : url.includes('/routines')
+            ? PERSONAL_NONE
+            : account
       return { ok: true, json: async () => body } as Response
     }),
   )
@@ -286,7 +291,7 @@ describe('HomePage', () => {
         vi.fn().mockImplementation(async (input: RequestInfo | URL) =>
           String(input).includes('/children/')
             ? ({ ok: false, status: 500, json: async () => ({ error: 'x', message: 'boom' }) } as Response)
-            : ({ ok: true, json: async () => account } as Response),
+            : ({ ok: true, json: async () => (String(input).includes('/routines') ? PERSONAL_NONE : account) } as Response),
         ),
       )
       renderHome()
@@ -353,7 +358,7 @@ describe('HomePage', () => {
           removeEventListener: vi.fn(),
         })),
       )
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => account([kid('k1', 'Luis')]) }))
+      stubApi(account([kid('k1', 'Luis')]))
       renderDesktopHome()
 
       await screen.findByText('Hola, Ana')
@@ -362,7 +367,7 @@ describe('HomePage', () => {
     })
 
     it('shows "Hola, Ana / Tus hijos", the solid "Agregar hijo" button, the cards and the plan tile (mock 15)', async () => {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => account([kid('k1', 'Luis')]) }))
+      stubApi(account([kid('k1', 'Luis')]))
       renderDesktopHome()
 
       expect(await screen.findByText('Hola, Ana')).toBeInTheDocument()
@@ -375,7 +380,7 @@ describe('HomePage', () => {
 
     it('signs out and clears the query cache when "Cerrar sesión" is clicked in the main content (desktop)', async () => {
       const user = userEvent.setup()
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => account([kid('k1', 'Luis')]) }))
+      stubApi(account([kid('k1', 'Luis')]))
       const { queryClientClearSpy } = renderDesktopHome()
 
       await screen.findByText('Hola, Ana')
@@ -388,7 +393,7 @@ describe('HomePage', () => {
 
     it('opens the plan-limit pop-up from the button, naming the child', async () => {
       const user = userEvent.setup()
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => account([kid('k1', 'Luis')]) }))
+      stubApi(account([kid('k1', 'Luis')]))
       renderDesktopHome()
 
       await user.click(await screen.findByRole('button', { name: 'Agregar hijo' }))
@@ -397,7 +402,7 @@ describe('HomePage', () => {
     })
 
     it('shows the empty state (with the sidebar) when there are no children yet', async () => {
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => account([]) }))
+      stubApi(account([]))
       renderDesktopHome()
 
       expect(await screen.findByText('Todavía no tienes hijos dados de alta')).toBeInTheDocument()

@@ -281,17 +281,19 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
 
 ## Spec 033 — recordatorios de suplementos y de próxima cita (pendiente)
 
-La **parte 1** (rutinas de suplementos de los hijos) ya está en `develop`; la **parte 2** (próxima cita) está en el PR de
-`feature/033b-proxima-cita`. Queda, con su historia ya escrita en `specs/033-recordatorios-suplementos-citas/spec.md`:
+Las **partes 1** (rutinas de suplementos de los hijos) y **2** (próxima cita) ya están en `develop`; la **parte 3** (rutinas personales)
+está en el PR de `feature/033c-rutinas-personales`. Queda por decidir y probar:
 
-- **Parte 3 — rutinas personales del padre** (historia 6): suplementos para sí mismo, **no compartidos** y que avisan solo a su dueño
-  (`supplement_routines.child_id` ya admite nulo para esto; `access.OnRoutine` hoy responde «ninguno» a una rutina sin hijo).
-  El prompt de diseño 3 está por escribir.
 - **Aprobar las desviaciones del mock de suplementos**: el móvil de «Tomas de hoy» solo cuenta las tomas de suplemento (no las lista), el
   texto de «Finalizar», fechas con selector nativo y hora local fija por rutina (un viaje obliga a editar la rutina).
 - **Aprobar las desviaciones del mock de próxima cita** (`specs/033-recordatorios-suplementos-citas/parte2/plan.md`): las etiquetas del campo son
   «Fecha de la cita» y «Hora de la cita» (el mock dice «Fecha» y «Hora»: chocaban con la fecha de la consulta), la pantalla de ajustes N3 del
   mock no se construyó (la elección de detalle o texto genérico ya está en la tarjeta de recordatorios del inicio), fecha y hora con selector
   nativo, y la cita se guarda en una segunda llamada después de la consulta (si falla, la consulta queda y se avisa).
+- **Aprobar las desviaciones del mock de rutinas personales** (`specs/033-recordatorios-suplementos-citas/referencia/rutinas-personales-decisiones.md`):
+  **no se renombró el inicio a «Inicio»** ni se agregó «Inicio»/«Hijos» a la barra lateral web ni el panel «Tomas de hoy · Mateo» que el mock dibuja como
+  contexto (B2: cambia la navegación existente; el enlace de regreso sigue siendo «← Tus hijos»), el chip sin autor «a las HH:MM», el estado vacío con
+  botón sólido, y las decisiones D1–D8 del diseño resueltas como se anotan ahí (plan caducado: las rutinas siguen generando tomas y avisos y solo se
+  puede finalizar; aviso de primera vez por cuenta; tope de 10 propio de la persona).
 - **E2E de avisos por persona de la próxima cita** con dos sesiones (como `familia-recordatorios.spec.ts`; el reclamo está cubierto por pruebas del backend).
 - **E2E de avisos por persona de suplementos** con dos sesiones (`suplementos-recordatorios.spec.ts`, como `familia-recordatorios.spec.ts`).

@@ -17,13 +17,17 @@ import (
 // The owner's plan is deliberately not asked: a routine created while the plan was paid keeps reminding if it lapses
 // (FR-020, Principio IV) — only creating, editing and resuming need the plan. A taken dose is never a candidate, so nobody
 // is reminded of what another person already marked.
+//
+// A routine without a child is a person's own (specs/033, part 3): only its owner account is a recipient — nobody in the family
+// is — and the reminder carries no child name.
 func (r *Repository) ClaimDueSupplementDoses(ctx context.Context, now time.Time, window time.Duration) ([]DueDose, error) {
 	rows, err := r.pool.Query(ctx, `
 		WITH cand AS (
-			SELECT d.id, d.scheduled_at, d.routine_id, sr.name, ch.id AS child_id, ch.first_name, ch.account_id AS owner_id
+			SELECT d.id, d.scheduled_at, d.routine_id, sr.name, ch.id AS child_id, COALESCE(ch.first_name, '') AS first_name,
+			       COALESCE(ch.account_id, sr.account_id) AS owner_id
 			FROM supplement_doses d
 			JOIN supplement_routines sr ON sr.id = d.routine_id AND sr.status = 'active'
-			JOIN children ch ON ch.id = sr.child_id
+			LEFT JOIN children ch ON ch.id = sr.child_id
 			WHERE d.taken = false
 			  AND d.scheduled_at <= $1
 			  AND d.scheduled_at > $1 - make_interval(secs => $2)
@@ -37,11 +41,11 @@ func (r *Repository) ClaimDueSupplementDoses(ctx context.Context, now time.Time,
 			SELECT cand.id AS dose_id, a.id AS account_id, cand.scheduled_at
 			FROM cand
 			JOIN accounts a ON a.id = cand.owner_id
-			   OR EXISTS (
+			   OR (cand.child_id IS NOT NULL AND EXISTS (
 				SELECT 1 FROM family_members fm
 				WHERE fm.account_id = a.id AND fm.family_account_id = cand.owner_id AND fm.status = 'active'
 				  AND (fm.role <> 'child' OR fm.child_id = cand.child_id)
-			   )
+			   ))
 			WHERE EXISTS (
 				SELECT 1 FROM reminder_devices rd
 				WHERE rd.account_id = a.id AND rd.active AND rd.activated_at <= cand.scheduled_at

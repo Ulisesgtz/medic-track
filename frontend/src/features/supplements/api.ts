@@ -1,6 +1,6 @@
 import { ApiError, type ValidationErrorDetail } from '../../shared/apiError'
 import { withAuthHeader } from '../../shared/auth/withAuthHeader'
-import type { RoutineDose, Routine, RoutineInput, RoutineList } from './types'
+import type { PersonalRoutineList, RoutineDose, Routine, RoutineInput, RoutineList } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 
@@ -9,6 +9,7 @@ export type { ValidationErrorDetail }
 /** Discriminated error thrown by this feature's api functions. */
 export class SupplementApiError extends ApiError<
   | 'child_not_found'
+  | 'account_not_found'
   | 'routine_not_found'
   | 'dose_not_found'
   | 'forbidden'
@@ -39,6 +40,7 @@ function errorFor(status: number, body: ErrorBody, fallback: string): Supplement
   if (status === 404) {
     if (body.error === 'dose_not_found') return new SupplementApiError('dose_not_found', message)
     if (body.error === 'child_not_found') return new SupplementApiError('child_not_found', message)
+    if (body.error === 'account_not_found') return new SupplementApiError('account_not_found', message)
     return new SupplementApiError('routine_not_found', message)
   }
   if (status === 400 && body.error === 'validation_error') return new SupplementApiError('validation_error', message, body.details)
@@ -65,9 +67,10 @@ async function call<T>(method: string, path: string, token: string | null, body?
     headers: { ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...withAuthHeader(token) },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   })
-  const json = await res.json()
+  // 204: nothing to read (the personal notice's «Entendido»).
+  const json = res.status === 204 ? undefined : await res.json()
   if (res.ok) return json as T
-  throw errorFor(res.status, json, fallback)
+  throw errorFor(res.status, json ?? {}, fallback)
 }
 
 const windowQuery = (from: Date, to: Date) => new URLSearchParams({ from: from.toISOString(), to: to.toISOString() }).toString()
@@ -110,4 +113,19 @@ export function setMyReminders(routineId: string, enabled: boolean, token: strin
 /** PATCH /routines/{id}/doses/{doseId}: mark or unmark a dose (the first mark wins; it never depends on the plan). */
 export function updateRoutineDose(routineId: string, doseId: string, taken: boolean, token: string | null): Promise<RoutineDose> {
   return call('PATCH', `/routines/${routineId}/doses/${doseId}`, token, { taken }, 'Unexpected error updating the dose')
+}
+
+/** GET /accounts/{id}/routines: the person's OWN routines (no child) with only the doses of [from, to) (the local day). */
+export function fetchPersonalRoutines(accountId: string, from: Date, to: Date, token: string | null): Promise<PersonalRoutineList> {
+  return call('GET', `/accounts/${accountId}/routines?${windowQuery(from, to)}`, token, undefined, 'Unexpected error fetching the routines')
+}
+
+/** POST /accounts/{id}/routines: a routine for the person themselves; nobody else in the family sees it. */
+export function createPersonalRoutine(accountId: string, input: RoutineInput, token: string | null): Promise<Routine> {
+  return call('POST', `/accounts/${accountId}/routines`, token, input, 'Unexpected error creating the routine')
+}
+
+/** POST /accounts/{id}/routines/notice-seen: «Entendido» on the first-time notice (kept for the account, every device). */
+export function acknowledgePersonalNotice(accountId: string, token: string | null): Promise<void> {
+  return call('POST', `/accounts/${accountId}/routines/notice-seen`, token, undefined, 'Unexpected error saving the notice')
 }

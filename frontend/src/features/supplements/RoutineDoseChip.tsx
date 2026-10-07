@@ -7,7 +7,18 @@ import type { RoutineDose } from './types'
  * "por Ana, 08:05", amber while it is "por marcar", grey before its time, dashed "sin registrar". It marks through the
  * routine's own endpoint, which never depends on the plan.
  */
-export function RoutineDoseChip({ routineId, dose, canManage = true }: { routineId: string; dose: RoutineDose; canManage?: boolean }) {
+export function RoutineDoseChip({
+  routineId,
+  dose,
+  canManage = true,
+  own = false,
+}: {
+  routineId: string
+  dose: RoutineDose
+  canManage?: boolean
+  /** The person's own routine: «a las 07:20», no name. */
+  own?: boolean
+}) {
   const mutation = useRoutineDoseToggle(routineId, dose.id)
-  return <DoseChipView dose={dose} canManage={canManage} pending={mutation.isPending} onToggle={() => mutation.mutate(!dose.taken)} />
+  return <DoseChipView dose={dose} canManage={canManage} pending={mutation.isPending} onToggle={() => mutation.mutate(!dose.taken)} own={own} />
 }

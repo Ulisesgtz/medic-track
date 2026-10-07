@@ -74,3 +74,8 @@ export interface RoutineInput {
   endDate: string | null
   utcOffsetMinutes: number
 }
+
+/** The person's own routines (specs/033, part 3): the same list plus whether they pressed «Entendido» on the section's first-time notice. */
+export interface PersonalRoutineList extends RoutineList {
+  noticeSeen: boolean
+}

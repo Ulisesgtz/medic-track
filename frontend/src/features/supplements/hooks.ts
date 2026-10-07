@@ -4,7 +4,10 @@ import { DOSE_REFETCH_MS } from '../consultations/doseStatus'
 import type { Account } from '../home/types'
 import { useChildAccess } from '../family/useChildAccess'
 import {
+  acknowledgePersonalNotice,
+  createPersonalRoutine,
   createRoutine,
+  fetchPersonalRoutines,
   fetchRoutine,
   fetchRoutines,
   finishRoutine,
@@ -25,6 +28,19 @@ export function useRoutines(childId: string | undefined, day: { from: Date; to: 
     enabled: !!childId,
     retry: false,
     refetchInterval: DOSE_REFETCH_MS,
+  })
+}
+
+/** The person's OWN routines (specs/033, part 3) with the doses of their local day; same refresh as a child's. */
+export function usePersonalRoutines(accountId: string | undefined, day: { from: Date; to: Date }, { poll = true }: { poll?: boolean } = {}) {
+  const { getToken } = useAuth()
+  return useQuery({
+    queryKey: ['routines', 'personal', accountId, day.from.toISOString()],
+    queryFn: async () => fetchPersonalRoutines(accountId!, day.from, day.to, await getToken()),
+    enabled: !!accountId,
+    retry: false,
+    // The sidebar only wants the count: it doesn't ask again every minute on every screen (the screens that show doses do).
+    refetchInterval: poll ? DOSE_REFETCH_MS : false,
   })
 }
 
@@ -57,6 +73,22 @@ export function useCreateRoutine(childId: string) {
     mutationFn: async (input: RoutineInput) => createRoutine(childId, input, await getToken()),
     onSuccess: refresh,
   })
+}
+
+export function useCreatePersonalRoutine(accountId: string) {
+  const { getToken } = useAuth()
+  const refresh = useRefreshAfterChange()
+  return useMutation({
+    mutationFn: async (input: RoutineInput) => createPersonalRoutine(accountId, input, await getToken()),
+    onSuccess: refresh,
+  })
+}
+
+/** «Entendido» on the personal section's first-time notice. */
+export function useAcknowledgePersonalNotice(accountId: string) {
+  const { getToken } = useAuth()
+  const refresh = useRefreshAfterChange()
+  return useMutation({ mutationFn: async () => acknowledgePersonalNotice(accountId, await getToken()), onSuccess: refresh })
 }
 
 export function useUpdateRoutine(routineId: string) {

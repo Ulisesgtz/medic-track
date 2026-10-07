@@ -32,6 +32,7 @@ interface RoutineCardProps {
  * progress, today's doses as chips (or when the next one is) and the link to its detail. Long names wrap (`overflow-wrap`).
  */
 export function RoutineCard({ routine, today, canManage }: RoutineCardProps) {
+  const own = routine.childId === null
   const path = `/suplementos/${routine.id}`
   const progress = cardProgress(routine, today)
   const showToday = routine.status === 'active' && routine.doses.length > 0
@@ -67,7 +68,7 @@ export function RoutineCard({ routine, today, canManage }: RoutineCardProps) {
           <p className="text-xs font-extrabold tracking-[0.1em] text-action uppercase">Hoy</p>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-2">
             {routine.doses.map((dose) => (
-              <RoutineDoseChip key={dose.id} routineId={routine.id} dose={dose} canManage={canManage} />
+              <RoutineDoseChip key={dose.id} routineId={routine.id} dose={dose} canManage={canManage} own={own} />
             ))}
           </div>
         </div>

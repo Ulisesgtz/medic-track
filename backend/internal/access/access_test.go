@@ -407,9 +407,19 @@ func TestRoles_OnASupplementRoutine(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, access.None, got.Level)
 
-	// A routine with no child (a parent's own, part 3) is not reachable through a child: None for everyone, even its account.
+	// A routine with no child (a parent's own, part 3) is Full for its own account and None for everybody else, even an active Tutor
+	// of the family and whatever the owner's plan is: nobody sees what is personal.
+	setPlan(t, pool, owner, "paid")
 	personal := routineOf(t, pool, owner, nil)
 	got, err = repo.OnRoutine(ctx, owner.clerkID, personal)
+	require.NoError(t, err)
+	require.Equal(t, access.Full, got.Level)
+	require.Equal(t, owner.accountID, got.ActorAccountID)
+	got, err = repo.OnRoutine(ctx, caregiver.clerkID, personal)
+	require.NoError(t, err)
+	require.Equal(t, access.None, got.Level)
+	other, _ := newAccount(t, pool, account.PlanPaid, 0)
+	got, err = repo.OnRoutine(ctx, other.clerkID, personal)
 	require.NoError(t, err)
 	require.Equal(t, access.None, got.Level)
 }

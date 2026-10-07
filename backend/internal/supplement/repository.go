@@ -37,7 +37,10 @@ type querier interface {
 const routineSelect = `
 	SELECT r.id, r.account_id, r.child_id, r.name, r.note, r.period, r.times::text[], r.weekdays, r.interval_hours,
 	       r.first_date::text, r.first_time::text, r.end_date::text, r.utc_offset_minutes, r.status,
-	       r.paused_at, r.ended_at, r.generated_until, r.created_at, c.first_name, owner.plan::text
+	       r.paused_at, r.ended_at, r.generated_until, r.created_at, c.first_name,
+	       CASE WHEN r.child_id IS NULL AND (owner.plan = 'paid' OR EXISTS (
+		       SELECT 1 FROM family_members fm JOIN accounts fo ON fo.id = fm.family_account_id
+		       WHERE fm.account_id = owner.id AND fm.status = 'active' AND fo.plan = 'paid')) THEN 'paid' ELSE owner.plan::text END
 	FROM supplement_routines r
 	JOIN accounts c ON c.id = r.created_by_account_id
 	JOIN accounts owner ON owner.id = r.account_id`
@@ -115,10 +118,23 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, in Routine, 
 		return uuid.Nil, err
 	}
 
+	id, err := r.insertRoutine(ctx, tx, accountID, &childID, in, createdBy)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return uuid.Nil, fmt.Errorf("committing routine: %w", err)
+	}
+	return id, nil
+}
+
+// insertRoutine writes the routine and its first doses (from its first day up to HorizonDays ahead, research R2) inside the caller's
+// transaction. `childID` is nil for a person's own routine (part 3).
+func (r *Repository) insertRoutine(ctx context.Context, tx pgx.Tx, accountID uuid.UUID, childID *uuid.UUID, in Routine, createdBy uuid.UUID) (uuid.UUID, error) {
 	now := r.now()
 	horizon := now.AddDate(0, 0, HorizonDays)
 	var id uuid.UUID
-	err = tx.QueryRow(ctx, `
+	err := tx.QueryRow(ctx, `
 		INSERT INTO supplement_routines
 			(account_id, child_id, name, note, period, times, weekdays, interval_hours, first_date, first_time, end_date,
 			 utc_offset_minutes, generated_until, created_by_account_id)
@@ -134,9 +150,6 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, in Routine, 
 	in.ID = id
 	if err := insertDoses(ctx, tx, id, Generate(in, time.Time{}, horizon)); err != nil {
 		return uuid.Nil, err
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return uuid.Nil, fmt.Errorf("committing routine: %w", err)
 	}
 	return id, nil
 }
@@ -206,7 +219,13 @@ func (r *Repository) ListByChild(ctx context.Context, childID uuid.UUID, from, t
 		return nil, fmt.Errorf("reading the account's plan: %w", err)
 	}
 
-	rows, err := r.pool.Query(ctx, routineSelect+` WHERE r.child_id = $1 ORDER BY r.created_at, r.id`, childID)
+	return r.listWhere(ctx, plan == planPaid, `r.child_id = $1`, childID, from, to)
+}
+
+// listWhere reads the routines that match `where` (one positional argument) with the doses of [from, to), their progress and the
+// numbers the section needs; `paid` is the plan the list reports.
+func (r *Repository) listWhere(ctx context.Context, paid bool, where string, arg uuid.UUID, from, to time.Time) (*RoutineList, error) {
+	rows, err := r.pool.Query(ctx, routineSelect+` WHERE `+where+` ORDER BY r.created_at, r.id`, arg)
 	if err != nil {
 		return nil, fmt.Errorf("listing routines: %w", err)
 	}
@@ -223,7 +242,7 @@ func (r *Repository) ListByChild(ctx context.Context, childID uuid.UUID, from, t
 		return nil, fmt.Errorf("listing routines: %w", err)
 	}
 
-	list := &RoutineList{PaidPlan: plan == planPaid, Routines: []RoutineView{}}
+	list := &RoutineList{PaidPlan: paid, Routines: []RoutineView{}}
 	if err := r.fill(ctx, items, from, to); err != nil {
 		return nil, err
 	}
