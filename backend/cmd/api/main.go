@@ -44,6 +44,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/reminder"
 	"github.com/Ulisesgtz/medic-track/backend/internal/retention"
 	"github.com/Ulisesgtz/medic-track/backend/internal/server"
+	"github.com/Ulisesgtz/medic-track/backend/internal/supplement"
 )
 
 func main() {
@@ -76,6 +77,9 @@ func main() {
 	consultationRepo := consultation.NewRepository(pool)
 	consultationService := consultation.NewService(consultationRepo)
 	consultationHandler := consultation.NewHandler(consultationService, responder)
+
+	// Supplement routines (specs/033): the plan and the cap of active routines are decided by the repository, under a lock.
+	supplementHandler := supplement.NewHandler(supplement.NewService(supplement.NewRepository(pool)), responder)
 
 	// Sharing with the family (specs/032): who can accept an invitation is decided by the session's verified e-mail.
 	familyService := family.NewService(family.NewRepository(pool), access.NewRepository(pool), family.EmailFunc(func(ctx context.Context, clerkUserID string) (string, error) {
@@ -124,6 +128,7 @@ func main() {
 		Consultation:   consultationHandler,
 		Reminder:       reminderHandler,
 		Family:         familyHandler,
+		Supplement:     supplementHandler,
 		Ops:            opsHandler,
 		OpsKey:         opsKey,
 		Ownership:      ownership.NewRepository(pool),

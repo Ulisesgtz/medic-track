@@ -3,7 +3,11 @@
 // unlike consultations — it can be edited, paused and finished.
 package supplement
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 // Period is how a routine repeats.
 type Period string
@@ -50,9 +54,9 @@ const (
 
 // Routine is the schedule part of a routine plus its identity. Times and dates are local to UtcOffsetMinutes (research R3).
 type Routine struct {
-	ID               string
-	AccountID        string
-	ChildID          *string
+	ID               uuid.UUID
+	AccountID        uuid.UUID
+	ChildID          *uuid.UUID
 	Name             string
 	Note             string
 	Period           Period
@@ -68,8 +72,8 @@ type Routine struct {
 
 // Dose is one scheduled intake of a routine.
 type Dose struct {
-	ID          string
-	RoutineID   string
+	ID          uuid.UUID
+	RoutineID   uuid.UUID
 	ScheduledAt time.Time
 	Taken       bool
 	Status      DoseStatus
@@ -78,7 +82,43 @@ type Dose struct {
 
 // TakenBy says who marked a dose.
 type TakenBy struct {
-	Name string
-	At   time.Time
-	Mine bool
+	AccountID uuid.UUID
+	Name      string
+	At        time.Time
+}
+
+// Actor is who changes a dose mark: the session's own account and whether it can do everything (the owner or a Tutor)
+// or only see and mark.
+type Actor struct {
+	AccountID uuid.UUID
+	Full      bool
+}
+
+// Progress counts a routine's doses: marked, already come (elapsed) and, when it has an end, all up to it.
+type Progress struct {
+	Taken   int
+	Elapsed int
+	Total   int
+}
+
+// RoutineView is a routine as it is read: with who created it, its progress and the doses of the asked window.
+type RoutineView struct {
+	Routine
+	CreatedBy string
+	CreatedAt time.Time
+	PausedAt  *time.Time
+	EndedAt   *time.Time
+	Progress  Progress
+	Doses     []Dose
+	// NextDose is the next dose ahead of the window, only for an active routine with no dose in it ("hoy no le toca").
+	NextDose *Dose
+	// PaidPlan is the owner account's plan: whether creating, editing and resuming are open (the plan is the server's).
+	PaidPlan bool
+}
+
+// RoutineList is a child's routines with the numbers the section needs.
+type RoutineList struct {
+	Routines    []RoutineView
+	ActiveCount int
+	PaidPlan    bool
 }

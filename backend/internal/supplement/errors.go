@@ -53,3 +53,6 @@ func (v ValidationErrors) Error() string {
 
 // HasErrors reports whether there is any.
 func (v ValidationErrors) HasErrors() bool { return len(v) > 0 }
+
+// ErrChildNotFound: no such child.
+var ErrChildNotFound = errors.New("child not found")

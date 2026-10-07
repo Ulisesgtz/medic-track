@@ -343,3 +343,73 @@ func TestSchema_RefusesWhatTheRulesAssume(t *testing.T) {
 	_, err := pool.Exec(ctx, `UPDATE family_members SET ended_at = now() WHERE account_id = $1 AND status = 'active'`, person1.accountID)
 	require.Error(t, err, "an active membership has no end date")
 }
+
+// routineOf inserts a supplement routine of the child (the access check only needs the row, not its doses).
+func routineOf(t *testing.T, pool *pgxpool.Pool, owner person, childID *uuid.UUID) uuid.UUID {
+	t.Helper()
+	var id uuid.UUID
+	require.NoError(t, pool.QueryRow(context.Background(), `
+		INSERT INTO supplement_routines (account_id, child_id, name, period, times, first_date, utc_offset_minutes, generated_until, created_by_account_id)
+		VALUES ($1, $2, 'Vitamina D', 'daily', ARRAY['08:00']::time[], current_date, 0, now(), $1) RETURNING id`, owner.accountID, childID).Scan(&id))
+	return id
+}
+
+// Specs/033: a routine is reached through its child, with the same levels.
+func TestRoles_OnASupplementRoutine(t *testing.T) {
+	pool := testPool(t)
+	repo := access.NewRepository(pool)
+	ctx := context.Background()
+	owner, acc := newAccount(t, pool, account.PlanPaid, 2)
+	childA, childB := acc.Children[0].ID, acc.Children[1].ID
+	routineA, routineB := routineOf(t, pool, owner, &childA), routineOf(t, pool, owner, &childB)
+
+	tutor, _ := newAccount(t, pool, account.PlanFree, 0)
+	tutorMembership := join(t, pool, owner, tutor, "tutor", nil)
+	caregiver, _ := newAccount(t, pool, account.PlanFree, 0)
+	join(t, pool, owner, caregiver, "caregiver", nil)
+	kid, _ := newAccount(t, pool, account.PlanFree, 0)
+	join(t, pool, owner, kid, "child", &childA)
+	stranger, _ := newAccount(t, pool, account.PlanPaid, 1)
+
+	cases := []struct {
+		name    string
+		who     person
+		routine uuid.UUID
+		want    access.Level
+	}{
+		{"the owner", owner, routineA, access.Full},
+		{"a tutor of a paid family", tutor, routineB, access.Full},
+		{"a caregiver sees and marks", caregiver, routineA, access.Mark},
+		{"a child-role member, the routine of their own child", kid, routineA, access.Mark},
+		{"a child-role member never sees a sibling's routine", kid, routineB, access.None},
+		{"a stranger", stranger, routineA, access.None},
+		{"a session without a clerk id", person{}, routineA, access.None},
+		{"a routine that does not exist", owner, uuid.New(), access.None},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := repo.OnRoutine(ctx, tc.who.clerkID, tc.routine)
+			require.NoError(t, err)
+			require.Equal(t, tc.want, got.Level)
+			if tc.want != access.None {
+				require.Equal(t, tc.who.accountID, got.ActorAccountID)
+			}
+		})
+	}
+
+	// The owner's plan caps an invited Tutor at Mark, and someone who left has nothing.
+	setPlan(t, pool, owner, "free")
+	got, err := repo.OnRoutine(ctx, tutor.clerkID, routineA)
+	require.NoError(t, err)
+	require.Equal(t, access.Mark, got.Level)
+	end(t, pool, tutorMembership, "left")
+	got, err = repo.OnRoutine(ctx, tutor.clerkID, routineA)
+	require.NoError(t, err)
+	require.Equal(t, access.None, got.Level)
+
+	// A routine with no child (a parent's own, part 3) is not reachable through a child: None for everyone, even its account.
+	personal := routineOf(t, pool, owner, nil)
+	got, err = repo.OnRoutine(ctx, owner.clerkID, personal)
+	require.NoError(t, err)
+	require.Equal(t, access.None, got.Level)
+}

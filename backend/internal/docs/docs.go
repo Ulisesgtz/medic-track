@@ -978,6 +978,152 @@ const docTemplate = `{
                 }
             }
         },
+        "/children/{childId}/routines": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Lists the child's routines — active first, then paused and ended — each with only the doses of [from, to)\n(the parent's local day, at most 48 hours), its progress and, for an active routine with nothing in the\nwindow, its next dose. Reading never depends on the plan.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "supplements"
+                ],
+                "summary": "A child's supplement routines",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Window start, RFC 3339",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Window end (exclusive), RFC 3339",
+                        "name": "to",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementRoutineListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or invalid window",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session has no access to this child",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Saves the routine the parent wrote, exactly as written, and generates its first doses. Part of the paid\nplan (the server decides): a free account gets 422 \"freemium_consultation_limit_exceeded\" with reason\n\"supplements\"; a child with 10 active routines gets 422 \"routine_limit_exceeded\".",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "supplements"
+                ],
+                "summary": "Create a supplement routine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The routine",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/SupplementRoutineRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementRoutineResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "An invalid field",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't create routines for this child",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Free plan, or the child has the maximum of active routines (routineLimitDoc)",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementPlanLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/consultations/{consultationId}": {
             "get": {
                 "security": [
@@ -1924,6 +2070,149 @@ const docTemplate = `{
                         "description": "No valid Clerk session",
                         "schema": {
                             "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    }
+                }
+            }
+        },
+        "/routines/{routineId}": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The routine with the doses of [from, to) (one calendar month, at most 62 days) and its progress.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "supplements"
+                ],
+                "summary": "A supplement routine with its doses",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Routine UUID",
+                        "name": "routineId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Window start, RFC 3339",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Window end (exclusive), RFC 3339",
+                        "name": "to",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementRoutineResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or invalid window",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session has no access to this routine",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No routine exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/routines/{routineId}/doses/{doseId}": {
+            "patch": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Marking: the first mark wins and records who marked it and when. Unmarking: only who marked it, or someone\nwho can do everything. It never depends on the plan.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "supplements"
+                ],
+                "summary": "Mark or unmark a routine's dose",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Routine UUID",
+                        "name": "routineId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Dose UUID",
+                        "name": "doseId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New taken status",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/SupplementUpdateDoseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementDoseResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "No access to the routine, or the mark is someone else's",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such dose in this routine",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
                         }
                     }
                 }
@@ -3015,6 +3304,334 @@ const docTemplate = `{
                 "to": {
                     "type": "string",
                     "example": "2026-06-30"
+                }
+            }
+        },
+        "SupplementDoseResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "scheduledAt": {
+                    "type": "string",
+                    "example": "2026-10-05T14:00:00Z"
+                },
+                "status": {
+                    "description": "Status is derived by the server with its own clock: pending, due, taken or unregistered (\"sin registrar\").",
+                    "type": "string",
+                    "enum": [
+                        "pending",
+                        "due",
+                        "taken",
+                        "unregistered"
+                    ],
+                    "example": "due"
+                },
+                "taken": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "takenBy": {
+                    "$ref": "#/definitions/SupplementTakenByResponse"
+                }
+            }
+        },
+        "SupplementErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "forbidden"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "SupplementPlanLimitResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "freemium_consultation_limit_exceeded"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "reason": {
+                    "description": "Reason is \"supplements\" (creating, editing and resuming routines are the paid plan's).",
+                    "type": "string",
+                    "example": "supplements"
+                }
+            }
+        },
+        "SupplementProgressResponse": {
+            "type": "object",
+            "properties": {
+                "elapsed": {
+                    "type": "integer",
+                    "example": 13
+                },
+                "taken": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 14
+                }
+            }
+        },
+        "SupplementRoutineListResponse": {
+            "type": "object",
+            "properties": {
+                "activeCount": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "paidPlan": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "routines": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/SupplementRoutineResponse"
+                    }
+                }
+            }
+        },
+        "SupplementRoutineRequest": {
+            "type": "object",
+            "properties": {
+                "endDate": {
+                    "type": "string",
+                    "example": "2026-10-20"
+                },
+                "firstDate": {
+                    "type": "string",
+                    "example": "2026-10-05"
+                },
+                "firstTime": {
+                    "type": "string",
+                    "example": "06:00"
+                },
+                "intervalHours": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Vitamina D"
+                },
+                "note": {
+                    "type": "string",
+                    "example": ""
+                },
+                "period": {
+                    "type": "string",
+                    "enum": [
+                        "daily",
+                        "weekdays",
+                        "interval"
+                    ],
+                    "example": "daily"
+                },
+                "times": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "08:00"
+                    ]
+                },
+                "utcOffsetMinutes": {
+                    "type": "integer",
+                    "example": -360
+                },
+                "weekdays": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    },
+                    "example": [
+                        0,
+                        2,
+                        4
+                    ]
+                }
+            }
+        },
+        "SupplementRoutineResponse": {
+            "type": "object",
+            "properties": {
+                "canEdit": {
+                    "description": "CanEdit: the session can do everything AND the owner's plan is paid (so the app doesn't offer a button that would answer 422/403).",
+                    "type": "boolean",
+                    "example": true
+                },
+                "childId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "createdAt": {
+                    "type": "string",
+                    "example": "2026-10-01T14:00:00Z"
+                },
+                "createdBy": {
+                    "description": "CreatedBy is the first name of who created it (never an e-mail).",
+                    "type": "string",
+                    "example": "Ana"
+                },
+                "doses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/SupplementDoseResponse"
+                    }
+                },
+                "endDate": {
+                    "type": "string",
+                    "example": "2026-10-20"
+                },
+                "endedAt": {
+                    "type": "string"
+                },
+                "firstDate": {
+                    "type": "string",
+                    "example": "2026-10-01"
+                },
+                "firstTime": {
+                    "type": "string",
+                    "example": "06:00"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "intervalHours": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Vitamina D"
+                },
+                "nextDose": {
+                    "description": "NextDose: the next dose ahead of the window, only for an active routine with no dose in it.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/SupplementDoseResponse"
+                        }
+                    ]
+                },
+                "note": {
+                    "type": "string",
+                    "example": ""
+                },
+                "pausedAt": {
+                    "type": "string"
+                },
+                "period": {
+                    "type": "string",
+                    "enum": [
+                        "daily",
+                        "weekdays",
+                        "interval"
+                    ],
+                    "example": "daily"
+                },
+                "progress": {
+                    "$ref": "#/definitions/SupplementProgressResponse"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "paused",
+                        "ended"
+                    ],
+                    "example": "active"
+                },
+                "times": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "08:00"
+                    ]
+                },
+                "weekdays": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    },
+                    "example": [
+                        0,
+                        2,
+                        4
+                    ]
+                }
+            }
+        },
+        "SupplementTakenByResponse": {
+            "type": "object",
+            "properties": {
+                "at": {
+                    "type": "string",
+                    "example": "2026-10-05T14:05:00Z"
+                },
+                "mine": {
+                    "description": "Mine: the session's own account marked it.",
+                    "type": "boolean",
+                    "example": false
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Ana"
+                }
+            }
+        },
+        "SupplementUpdateDoseRequest": {
+            "type": "object",
+            "properties": {
+                "taken": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "SupplementValidationResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "field": {
+                                "type": "string",
+                                "example": "times"
+                            },
+                            "message": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "error": {
+                    "type": "string",
+                    "example": "validation_error"
+                },
+                "message": {
+                    "type": "string"
                 }
             }
         },
