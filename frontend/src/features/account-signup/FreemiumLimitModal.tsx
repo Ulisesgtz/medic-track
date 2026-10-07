@@ -6,7 +6,7 @@ import { useIsDesktop } from '../../shared/ui/useIsDesktop'
  * What the free plan stopped (specs/030 adds the last two): a second child, a second consultation while one treatment is
  * still active, a consultation saved only as a record, or (specs/031) searching and filtering the history, or (specs/032) sharing with the family.
  */
-export type PlanLimitReason = 'children' | 'active_treatment' | 'record_only' | 'history_search' | 'family'
+export type PlanLimitReason = 'children' | 'active_treatment' | 'record_only' | 'history_search' | 'family' | 'supplements'
 
 // The words are neutral: they say what the plan includes, never what to do about the child's health (Principio I), and
 // always that what was already saved stays.
@@ -26,6 +26,10 @@ const COPY: Record<Exclude<PlanLimitReason, 'children'>, { title: string; body: 
   family: {
     title: 'Compartir con tu familia',
     body: 'Compartir con tu pareja o con quien cuida es parte del plan completo. Todo lo que ya registraste se mantiene.',
+  },
+  supplements: {
+    title: 'Suplementos con recordatorio',
+    body: 'Crear rutinas de suplementos es parte del plan completo. Todo lo que ya registraste se mantiene y sigue avisando.',
   },
 }
 

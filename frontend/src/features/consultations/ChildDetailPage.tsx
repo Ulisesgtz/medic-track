@@ -15,6 +15,7 @@ import { NewConsultationEntry } from './NewConsultationEntry'
 import { SummaryCard } from './SummaryCard'
 import { TodayDosesBlock } from './TodayDosesBlock'
 import { TodayDosesPanel } from './TodayDosesPanel'
+import { SupplementsSection } from '../supplements/SupplementsSection'
 import { DOSE_REFETCH_MS, isUnmarked, isUnregistered, unregisteredText } from './doseStatus'
 
 /**
@@ -178,19 +179,22 @@ export function ChildDetailPage() {
             </div>
 
             <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-start gap-[22px]">
-              <section className="flex min-w-0 flex-col gap-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-xl font-black tracking-[-0.02em] text-ink">Consultas</h2>
-                  <HistoryEntry
-                    to={historyPath}
-                    free={historyIsFree}
-                    className="inline-flex min-h-11 cursor-pointer items-center rounded-2xl border-2 border-action px-4 text-[14px] font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
-                  >
-                    Buscar en el historial
-                  </HistoryEntry>
-                </div>
-                {consultationList('desktop')}
-              </section>
+              <div className="flex min-w-0 flex-col gap-[30px]">
+                {childId && <SupplementsSection childId={childId} childName={child?.firstName ?? 'tu hijo'} />}
+                <section className="flex min-w-0 flex-col gap-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-xl font-black tracking-[-0.02em] text-ink">Consultas</h2>
+                    <HistoryEntry
+                      to={historyPath}
+                      free={historyIsFree}
+                      className="inline-flex min-h-11 cursor-pointer items-center rounded-2xl border-2 border-action px-4 text-[14px] font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+                    >
+                      Buscar en el historial
+                    </HistoryEntry>
+                  </div>
+                  {consultationList('desktop')}
+                </section>
+              </div>
               <TodayDosesPanel doses={todayDoses} status={overviewStatus} canManage={access.canAdd} />
             </div>
           </div>
@@ -233,6 +237,12 @@ export function ChildDetailPage() {
         </header>
 
         <TodayDosesBlock doses={todayDoses} status={overviewStatus} />
+
+        {childId && (
+          <div className="px-6 pt-7">
+            <SupplementsSection childId={childId} childName={child?.firstName ?? 'tu hijo'} />
+          </div>
+        )}
 
         <section className="px-6 pt-7">
           <div className="flex items-baseline justify-between">

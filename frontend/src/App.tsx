@@ -6,6 +6,8 @@ import { HomePage } from './features/home/HomePage'
 import { ChildDetailPage } from './features/consultations/ChildDetailPage'
 import { ConsultationDetailPage } from './features/consultations/ConsultationDetailPage'
 import { HistoryPage } from './features/consultations/HistoryPage'
+import { RoutineDetailPage } from './features/supplements/RoutineDetailPage'
+import { RoutineFormPage } from './features/supplements/RoutineFormPage'
 import { FamilyPage } from './features/family/FamilyPage'
 import { InvitationPage } from './features/family/InvitationPage'
 import { NewConsultationPage } from './features/consultations/NewConsultationPage'
@@ -78,6 +80,30 @@ function App() {
             element={
               <RequireSession>
                 <ConsultationDetailPage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/children/:childId/suplementos/nueva"
+            element={
+              <RequireSession>
+                <RoutineFormPage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/suplementos/:routineId"
+            element={
+              <RequireSession>
+                <RoutineDetailPage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/suplementos/:routineId/editar"
+            element={
+              <RequireSession>
+                <RoutineFormPage />
               </RequireSession>
             }
           />

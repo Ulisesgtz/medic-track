@@ -90,6 +90,11 @@ export interface ConsultationDetail {
 // Mirrors specs/006-resumen-detalle-hijo/contracts/get-overview.md.
 export interface OverviewDose {
   id: string
+  /** "medication" (a consultation's dose) or "supplement" (a routine's, specs/033). Absent from a backend that predates it: a medication. */
+  kind?: 'medication' | 'supplement'
+  /** Only for a supplement dose: the routine it belongs to (its name is in `medicationName`). */
+  routineId?: string
+  /** Empty for a supplement dose. */
   consultationId: string
   medicationName: string
   scheduledAt: string

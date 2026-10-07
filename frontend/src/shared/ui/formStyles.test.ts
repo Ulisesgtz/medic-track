@@ -8,6 +8,8 @@ import {
   fieldModal,
   fieldMultiline,
   fieldProposed,
+  fieldRoutine,
+  fieldRoutineMultiline,
   labelClass,
 } from './formStyles'
 
@@ -52,8 +54,17 @@ describe('formStyles', () => {
     )
   })
 
+  it('fieldRoutine and fieldRoutineMultiline: the supplement routine form (14 px radius)', () => {
+    expect(classes(fieldRoutine)).toEqual(
+      classes('min-h-12 w-full min-w-0 border-[1.5px] rounded-[14px] bg-surface px-4 text-base font-medium text-ink placeholder:text-slate-500 focus:border-2 focus:border-ink focus:outline-none'),
+    )
+    expect(classes(fieldRoutineMultiline)).toEqual(
+      classes('w-full min-w-0 border-[1.5px] rounded-[14px] bg-surface px-4 py-3 text-base leading-normal font-medium text-ink placeholder:text-slate-500 focus:border-2 focus:border-ink focus:outline-none'),
+    )
+  })
+
   it('no preset lets a placeholder fall below slate-500 (4.5:1; slate-400 is ~2.6:1)', () => {
-    for (const preset of [fieldAuth, fieldCompact, fieldModal, fieldMedication, fieldMultiline]) {
+    for (const preset of [fieldAuth, fieldCompact, fieldModal, fieldMedication, fieldMultiline, fieldRoutine, fieldRoutineMultiline]) {
       expect(preset).toContain('placeholder:text-slate-500')
       expect(preset).not.toContain('slate-400')
     }

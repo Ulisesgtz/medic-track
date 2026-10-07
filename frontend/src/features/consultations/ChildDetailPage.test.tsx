@@ -43,6 +43,7 @@ const dose = (
 })
 
 const emptyOverview = { childId: 'child-1', doses: [], activeTreatment: null }
+const emptyRoutines = { routines: [], activeCount: 0, limit: 10, paidPlan: true }
 
 /** Routes every fetch of the page by URL. */
 function stubApi({
@@ -54,6 +55,7 @@ function stubApi({
   const fetchMock = vi.fn().mockImplementation(async (input: string, init?: RequestInit) => {
     const url = String(input)
     if (init?.method === 'PATCH') return { ok: true, json: async () => ({ id: 'd', scheduledAt: '', taken: true, status: 'taken' }) }
+    if (url.includes('/routines')) return { ok: true, json: async () => emptyRoutines }
     if (url.includes('/overview')) return { ok: overviewOk, status: overviewOk ? 200 : 500, json: async () => overview }
     if (url.includes('/accounts/')) return { ok: true, json: async () => account }
     if (listStatus !== 200) return { ok: false, status: listStatus, json: async () => ({ message: 'nope' }) }
