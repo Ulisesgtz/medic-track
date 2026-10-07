@@ -23,6 +23,9 @@ tutor un lugar centralizado para:
 - **Rutinas de suplementos** (plan de pago): lo que el hijo toma de forma regular, con su horario, sus
   tomas marcables y avisos por persona. La app solo repite lo que el padre escribió; nunca sugiere
   suplementos, cantidades ni horarios.
+- **Próxima cita** (plan de pago): al registrar una consulta, o después, se anota cuándo es la siguiente cita con avisos
+  (por omisión un día y dos horas antes, editables); cada persona de la familia recibe los suyos y se puede marcar
+  como realizada o cancelada. Nunca se borra: queda en el historial.
 
 ### Principio de diseño: "Registra, nunca interpreta"
 
