@@ -114,6 +114,8 @@ type RoutineView struct {
 	NextDose *Dose
 	// PaidPlan is the owner account's plan: whether creating, editing and resuming are open (the plan is the server's).
 	PaidPlan bool
+	// MyReminders: the session has not turned this routine's reminders off («Tus avisos»); filled by the service.
+	MyReminders bool
 }
 
 // RoutineList is a child's routines with the numbers the section needs.

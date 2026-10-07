@@ -68,6 +68,8 @@ type routineResponse struct {
 	// CreatedBy is the first name of who created it (never an e-mail).
 	CreatedBy string `json:"createdBy" example:"Ana"`
 	CreatedAt string `json:"createdAt" example:"2026-10-01T14:00:00Z"`
+	// MyReminders: the session has not turned this routine's reminders off («Tus avisos»); each person decides for themselves.
+	MyReminders bool `json:"myReminders" example:"true"`
 	// CanEdit: the session can do everything AND the owner's plan is paid (so the app doesn't offer a button that would answer 422/403).
 	CanEdit  bool             `json:"canEdit" example:"true"`
 	Progress progressResponse `json:"progress"`
@@ -165,7 +167,7 @@ func toRoutineResponse(v RoutineView, level access.Level, actor uuid.UUID) routi
 		ID: v.ID.String(), Name: v.Name, Note: v.Note, Period: string(v.Period), Times: v.Times, Weekdays: v.Weekdays,
 		FirstDate: v.FirstDate, FirstTime: optString(v.FirstTime), EndDate: optString(v.EndDate), Status: string(v.Status),
 		PausedAt: optTime(v.PausedAt), EndedAt: optTime(v.EndedAt), CreatedBy: v.CreatedBy, CreatedAt: formatTime(v.CreatedAt),
-		CanEdit:  level == access.Full && v.PaidPlan,
+		CanEdit: level == access.Full && v.PaidPlan, MyReminders: v.MyReminders,
 		Progress: progressResponse{Taken: v.Progress.Taken, Elapsed: v.Progress.Elapsed, Total: v.Progress.Total},
 		Doses:    make([]doseResponse, 0, len(v.Doses)),
 	}
@@ -276,7 +278,7 @@ func (h *Handler) ListRoutines(w http.ResponseWriter, r *http.Request) {
 		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationBody(errs), nil)
 		return
 	}
-	list, err := h.service.List(ctx, childID, from, to)
+	list, err := h.service.List(ctx, childID, from, to, actorOf(ctx))
 	if err != nil {
 		var verrs ValidationErrors
 		switch {
@@ -391,7 +393,7 @@ func (h *Handler) GetRoutine(w http.ResponseWriter, r *http.Request) {
 		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationBody(errs), nil)
 		return
 	}
-	view, err := h.service.Get(ctx, routineID, from, to)
+	view, err := h.service.Get(ctx, routineID, from, to, actorOf(ctx))
 	if err != nil {
 		var verrs ValidationErrors
 		switch {

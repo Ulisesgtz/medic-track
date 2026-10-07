@@ -75,3 +75,12 @@ func countDoses(t *testing.T, pool *pgxpool.Pool, routineID uuid.UUID) int {
 	require.NoError(t, pool.QueryRow(context.Background(), `SELECT count(*) FROM supplement_doses WHERE routine_id = $1`, routineID).Scan(&n))
 	return n
 }
+
+// closedSupplementPool is a pool that was closed, to see how an unavailable database is answered.
+func closedSupplementPool(t *testing.T, _ *pgxpool.Pool) *pgxpool.Pool {
+	t.Helper()
+	pool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	require.NoError(t, err)
+	pool.Close()
+	return pool
+}

@@ -26,6 +26,16 @@ type Input struct {
 // as sorted "HH:MM", weekdays sorted, and only the fields of its period (the others are dropped). `now` is the
 // server's clock: the first day can't be before yesterday in the routine's own zone.
 func ValidateInput(in Input, now time.Time) (Routine, ValidationErrors) {
+	return validateInput(in, now, true)
+}
+
+// ValidateEdit is ValidateInput for a routine being edited: the same rules except that its first day may be long past
+// (the routine already started; the form sends it back unchanged).
+func ValidateEdit(in Input, now time.Time) (Routine, ValidationErrors) {
+	return validateInput(in, now, false)
+}
+
+func validateInput(in Input, now time.Time, checkFirstDate bool) (Routine, ValidationErrors) {
 	var errs ValidationErrors
 	add := func(field, msg string) { errs = append(errs, ValidationError{Field: field, Message: msg}) }
 
@@ -73,7 +83,7 @@ func ValidateInput(in Input, now time.Time) (Routine, ValidationErrors) {
 	default:
 		local := now.In(loc)
 		yesterday := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, -1)
-		if first.Before(yesterday) {
+		if checkFirstDate && first.Before(yesterday) {
 			add("firstDate", "can't be before yesterday")
 		}
 		r.FirstDate = in.FirstDate

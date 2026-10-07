@@ -79,7 +79,10 @@ func main() {
 	consultationHandler := consultation.NewHandler(consultationService, responder)
 
 	// Supplement routines (specs/033): the plan and the cap of active routines are decided by the repository, under a lock.
-	supplementHandler := supplement.NewHandler(supplement.NewService(supplement.NewRepository(pool)), responder)
+	supplementRepo := supplement.NewRepository(pool)
+	supplementHandler := supplement.NewHandler(supplement.NewService(supplementRepo), responder)
+	// The planner keeps every active routine's doses generated ahead (it only adds; what fails goes to error_logs as job:supplements).
+	go supplement.RunPlanner(ctx, supplementRepo, jobreport.New(errorLogRepo, "supplements"), supplement.PlannerInterval)
 
 	// Sharing with the family (specs/032): who can accept an invitation is decided by the session's verified e-mail.
 	familyService := family.NewService(family.NewRepository(pool), access.NewRepository(pool), family.EmailFunc(func(ctx context.Context, clerkUserID string) (string, error) {

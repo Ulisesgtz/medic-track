@@ -2137,6 +2137,86 @@
                         }
                     }
                 }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Replaces the routine's form (name, note and schedule). It counts from the next dose: future unmarked doses\nare dropped and regenerated; past and marked doses never change. Paid plan only (422 reason \"supplements\");\nan ended routine cannot be edited (409 routine_ended).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "supplements"
+                ],
+                "summary": "Edit a supplement routine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Routine UUID",
+                        "name": "routineId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The whole routine",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/SupplementRoutineRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementRoutineResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "An invalid field",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't edit this routine",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such routine",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "The routine has ended",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Free plan",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementPlanLimitResponse"
+                        }
+                    }
+                }
             }
         },
         "/routines/{routineId}/doses/{doseId}": {
@@ -2205,6 +2285,268 @@
                         "description": "No such dose in this routine",
                         "schema": {
                             "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/routines/{routineId}/finish": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Ends it for good: no more doses or reminders; future unmarked doses disappear, the history stays. It never\nneeds the paid plan. Idempotent.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "supplements"
+                ],
+                "summary": "Finish a supplement routine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Routine UUID",
+                        "name": "routineId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementRoutineResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't finish this routine",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such routine",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/routines/{routineId}/my-reminders": {
+            "put": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "«Tus avisos»: only for the person who asks, never for the rest of the family. Idempotent; a Caregiver can too.\nOnly an active routine has reminders (409 routine_not_active).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "supplements"
+                ],
+                "summary": "Turn the session's own reminders of a routine on or off",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Routine UUID",
+                        "name": "routineId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "enabled",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/SupplementMyRemindersRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementMyRemindersResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "No access to this routine",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such routine",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "The routine is not active",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/routines/{routineId}/pause": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "No more doses or reminders from now on; future unmarked doses disappear, past and marked ones stay. It\nnever needs the paid plan.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "supplements"
+                ],
+                "summary": "Pause a supplement routine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Routine UUID",
+                        "name": "routineId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementRoutineResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't pause this routine",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such routine",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "The routine is not active",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/routines/{routineId}/resume": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Active again from now, without the doses of the time it was paused. Paid plan only (422 reason\n\"supplements\") and it counts toward the 10 active routines (422 routine_limit_exceeded).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "supplements"
+                ],
+                "summary": "Resume a paused supplement routine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Routine UUID",
+                        "name": "routineId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The device's UTC offset",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/SupplementResumeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementRoutineResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "An invalid offset",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't resume this routine",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such routine",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "The routine ended or is already active",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Free plan, or the cap of active routines (routineLimitDoc)",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementPlanLimitResponse"
                         }
                     }
                 }
@@ -3355,6 +3697,24 @@
                 }
             }
         },
+        "SupplementMyRemindersRequest": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "SupplementMyRemindersResponse": {
+            "type": "object",
+            "properties": {
+                "myReminders": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "SupplementPlanLimitResponse": {
             "type": "object",
             "properties": {
@@ -3386,6 +3746,15 @@
                 "total": {
                     "type": "integer",
                     "example": 14
+                }
+            }
+        },
+        "SupplementResumeRequest": {
+            "type": "object",
+            "properties": {
+                "utcOffsetMinutes": {
+                    "type": "integer",
+                    "example": -360
                 }
             }
         },
@@ -3523,6 +3892,11 @@
                 "intervalHours": {
                     "type": "integer",
                     "example": 8
+                },
+                "myReminders": {
+                    "description": "MyReminders: the session has not turned this routine's reminders off («Tus avisos»); each person decides for themselves.",
+                    "type": "boolean",
+                    "example": true
                 },
                 "name": {
                     "type": "string",

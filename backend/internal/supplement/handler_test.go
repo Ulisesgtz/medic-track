@@ -87,10 +87,16 @@ func newEnv(t *testing.T, plan account.Plan) *env {
 	seesChild := authmw.RequireAccess(responder, "childId", access.Mark, acc.OnChild)
 	fullChild := authmw.RequireAccess(responder, "childId", access.Full, acc.OnChild)
 	seesRoutine := authmw.RequireAccess(responder, "routineId", access.Mark, acc.OnRoutine)
+	fullRoutine := authmw.RequireAccess(responder, "routineId", access.Full, acc.OnRoutine)
 	r.With(seesChild).Get("/children/{childId}/routines", h.ListRoutines)
 	r.With(fullChild).Post("/children/{childId}/routines", h.CreateRoutine)
 	r.With(seesRoutine).Get("/routines/{routineId}", h.GetRoutine)
 	r.With(seesRoutine).Patch("/routines/{routineId}/doses/{doseId}", h.UpdateDose)
+	r.With(seesRoutine).Put("/routines/{routineId}/my-reminders", h.SetMyReminders)
+	r.With(fullRoutine).Patch("/routines/{routineId}", h.UpdateRoutine)
+	r.With(fullRoutine).Post("/routines/{routineId}/pause", h.PauseRoutine)
+	r.With(fullRoutine).Post("/routines/{routineId}/resume", h.ResumeRoutine)
+	r.With(fullRoutine).Post("/routines/{routineId}/finish", h.FinishRoutine)
 	e.router = r
 	return e
 }

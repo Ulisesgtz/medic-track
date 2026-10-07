@@ -58,7 +58,7 @@ func NewRouter(d Deps) *chi.Mux {
 	r.Use(middleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{d.FrontendOrigin},
-		AllowedMethods:   []string{"GET", "POST", "PATCH", "OPTIONS"},
+		AllowedMethods:   []string{"GET", "POST", "PATCH", "PUT", "OPTIONS"},
 		AllowedHeaders:   []string{"Content-Type", "Authorization"},
 		AllowCredentials: false,
 		MaxAge:           300,
@@ -91,6 +91,7 @@ func NewRouter(d Deps) *chi.Mux {
 	fullConsultation := authmw.RequireAccess(d.Responder, "consultationId", access.Full, d.Access.OnConsultation)
 	// A supplement routine is reached through its child (specs/033): Mark = see and mark its doses, Full = create, edit, pause, finish.
 	seesRoutine := authmw.RequireAccess(d.Responder, "routineId", access.Mark, d.Access.OnRoutine)
+	fullRoutine := authmw.RequireAccess(d.Responder, "routineId", access.Full, d.Access.OnRoutine)
 	// Adding a child to a family (its owner account): the owner or one of its Tutors.
 	fullAccount := authmw.RequireAccess(d.Responder, "accountId", access.Full, d.Access.OnAccount)
 
@@ -136,6 +137,11 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(fullChild).Post("/children/{childId}/routines", d.Supplement.CreateRoutine)
 		r.With(seesRoutine).Get("/routines/{routineId}", d.Supplement.GetRoutine)
 		r.With(seesRoutine).Patch("/routines/{routineId}/doses/{doseId}", d.Supplement.UpdateDose)
+		r.With(seesRoutine).Put("/routines/{routineId}/my-reminders", d.Supplement.SetMyReminders)
+		r.With(fullRoutine).Patch("/routines/{routineId}", d.Supplement.UpdateRoutine)
+		r.With(fullRoutine).Post("/routines/{routineId}/pause", d.Supplement.PauseRoutine)
+		r.With(fullRoutine).Post("/routines/{routineId}/resume", d.Supplement.ResumeRoutine)
+		r.With(fullRoutine).Post("/routines/{routineId}/finish", d.Supplement.FinishRoutine)
 	})
 
 	return r

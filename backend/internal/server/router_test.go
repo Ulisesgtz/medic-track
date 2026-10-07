@@ -189,6 +189,12 @@ func (w *world) routes() []struct {
 		{"create routine", http.MethodPost, "/children/" + w.childA.String() + "/routines", `{}`, http.StatusBadRequest},
 		{"get routine", http.MethodGet, "/routines/" + w.routineA.String() + window, "", http.StatusOK},
 		{"mark routine dose", http.MethodPatch, "/routines/" + w.routineA.String() + "/doses/" + w.routineDoseA.String(), `{"taken":true}`, http.StatusOK},
+		{"my routine reminders", http.MethodPut, "/routines/" + w.routineA.String() + "/my-reminders", `{"enabled":false}`, http.StatusOK},
+		// In this order: the owner is on the free plan, so editing and resuming are the plan's and pausing and finishing never are.
+		{"edit routine", http.MethodPatch, "/routines/" + w.routineA.String(), `{}`, http.StatusBadRequest},
+		{"pause routine", http.MethodPost, "/routines/" + w.routineA.String() + "/pause", "", http.StatusOK},
+		{"resume routine", http.MethodPost, "/routines/" + w.routineA.String() + "/resume", `{"utcOffsetMinutes":0}`, http.StatusUnprocessableEntity},
+		{"finish routine", http.MethodPost, "/routines/" + w.routineA.String() + "/finish", "", http.StatusOK},
 	}
 }
 
@@ -281,7 +287,7 @@ func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 // fullRoutes need the full level (the owner or a Tutor); every other protected route needs only Mark (see and mark).
 var (
 	ownRoutes  = map[string]bool{"get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true}
-	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "end treatment": true, "extend treatment": true, "create routine": true}
+	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true}
 )
 
 func (w *world) setOwnerPlan(t *testing.T, plan string) {
