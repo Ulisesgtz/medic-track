@@ -194,7 +194,6 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 		}
 	} else {
 		due = append(due, supplements...)
-		s.recovered(failureTick)
 	}
 
 	// The notices of a consultation's next appointment (specs/033, part 2), claimed the same way.
@@ -208,6 +207,11 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 		}
 	} else {
 		due = append(due, appointments...)
+	}
+	// Only when every kind of claim ran clean does the next failure get written at once (otherwise one kind failing every tick would
+	// be un-grouped by another kind's success and fill error_logs).
+	if claimErr == nil {
+		s.recovered(failureTick)
 	}
 
 	// The doses are already claimed: from here on a failure must only cost its own dose, never the

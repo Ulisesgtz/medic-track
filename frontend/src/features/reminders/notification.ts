@@ -58,6 +58,8 @@ function leadText(minutes: number): string {
   const unit = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
   if (minutes % 1440 === 0) return unit(minutes / 1440, 'día', 'días')
   if (minutes % 60 === 0) return unit(minutes / 60, 'hora', 'horas')
+  // A fixed-hour notice of the same day can be any number of minutes before: «3 h 10 min», not «190 minutos».
+  if (minutes > 60) return `${Math.floor(minutes / 60)} h ${minutes % 60} min`
   return unit(minutes, 'minuto', 'minutos')
 }
 

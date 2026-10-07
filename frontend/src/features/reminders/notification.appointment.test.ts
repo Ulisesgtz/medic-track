@@ -59,6 +59,7 @@ describe('an appointment reminder', () => {
     expect(body(60)).toBe('Hay una cita registrada para hoy, en 1 hora.')
     expect(body(45)).toBe('Hay una cita registrada para hoy, en 45 minutos.')
     expect(body(1)).toBe('Hay una cita registrada para hoy, en 1 minuto.')
+    expect(body(190)).toBe('Hay una cita registrada para hoy, en 3 h 10 min.')
     expect(body(2880)).toBe('Hay una cita registrada para hoy, en 2 días.')
     expect(body(1440)).toBe('Hay una cita registrada para hoy, en 1 día.')
   })
