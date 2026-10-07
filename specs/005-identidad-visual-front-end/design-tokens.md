@@ -78,7 +78,7 @@ Mínimo absoluto de texto: 13 px. Los números de resumen (edad, conteos) van en
 - **Tarjeta de consulta**: la misma, con barra de acento izquierda de 5 px — `--color-bright` para la más reciente, `#cffafe` para las anteriores.
 - **Campo de formulario**: radio 14 px, borde 1.5 px `#cbd5e1`; enfocado o con valor confirmado, borde 2 px `--color-ink`; sugerido por OCR, borde 2 px `--color-bright`.
 - **Chip de toma**: radio 12 px, alto mínimo 44 px. Tomada: `--color-confirmed` + blanco. Pendiente: `--color-pending-soft` + borde ámbar. Futura: `#f1f5f9` + `#475569` (con `#64748b` el contraste es 4.34:1 y no llega a 4.5:1).
-- **Modal**: radio 24 px, padding 28 px, encabezado con título 24 px/900 y botón de cierre (X) con área táctil de 44 px, acciones alineadas a la derecha (contorno + sólido). El de límite freemium lleva franja superior ámbar con overline "Plan gratuito".
+- **Modal**: radio 24 px, padding 28 px, encabezado con título 24 px/900 y botón de cierre (X) con área táctil de 44 px, acciones alineadas a la derecha (contorno + sólido). El de límite del plan (spec 034) lleva franja superior `ink` con el overline «Plan completo» en `bright` y el título en blanco (el ámbar significa «por marcar» en las tomas, no una alerta del plan); su sólido es `confirmed` y el foco inicial va en «Ahora no».
 - **Vacío / agregar**: contorno punteado 2 px `#67e8f9`, radio 22 px, texto 15 px/800 en `--color-action`.
 
 ## Detalle del hijo (mock de escritorio)

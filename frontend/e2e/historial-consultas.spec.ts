@@ -173,15 +173,15 @@ for (const design of designs) {
       await expect(entry.getByText('Plan completo')).toBeVisible()
       await entry.click()
 
-      const dialog = page.getByRole('dialog', { name: 'Historial con búsqueda y filtros' })
+      const dialog = page.getByRole('dialog', { name: 'Búsqueda en el historial' })
       await expect(dialog).toBeVisible()
-      await expect(dialog.getByText(/es parte del plan completo/)).toBeVisible()
+      await expect(dialog.getByText(/la búsqueda y los filtros son del plan completo/)).toBeVisible()
       await expect(page).toHaveURL(new RegExp(`/children/${childId}$`))
-      await dialog.getByRole('button', { name: 'Entendido' }).click()
+      await dialog.getByRole('button', { name: 'Ahora no' }).click()
       await expect(dialog).toBeHidden()
 
       await entry.click()
-      await page.getByRole('dialog').getByRole('button', { name: 'Ver planes' }).click()
+      await page.getByRole('dialog').getByRole('link', { name: 'Ver el plan completo' }).click()
       await expect(page).toHaveURL(/\/planes$/)
     })
 
@@ -189,11 +189,11 @@ for (const design of designs) {
       const { childId } = await seedHistory(page, 'free')
       await page.goto(`/children/${childId}/historial`)
 
-      const dialog = page.getByRole('dialog', { name: 'Historial con búsqueda y filtros' })
+      const dialog = page.getByRole('dialog', { name: 'Búsqueda en el historial' })
       await expect(dialog).toBeVisible()
       await expect(page.getByLabel('Buscar')).toHaveCount(0)
 
-      await dialog.getByRole('button', { name: 'Entendido' }).click()
+      await dialog.getByRole('button', { name: 'Ahora no' }).click()
       await expect(page).toHaveURL(new RegExp(`/children/${childId}$`))
       await expect(page.getByRole('link', { name: /Dra. López/ })).toBeVisible()
     })

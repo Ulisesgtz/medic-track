@@ -21,13 +21,13 @@ async function open(page: Page, width: number) {
 
 const pageButton = (page: Page) => page.getByRole('main').getByRole('button', { name: 'Agregar hijo' })
 const sidebarButton = (page: Page) => page.getByRole('navigation', { name: 'Tus hijos' }).getByRole('button', { name: '+ Agregar hijo' })
-const dialog = (page: Page) => page.getByRole('dialog', { name: 'Llegaste a un hijo registrado' })
+const dialog = (page: Page) => page.getByRole('dialog', { name: 'Tu plan incluye un hijo' })
 
 test.describe('Home web y pop-up del plan gratuito (mock 15)', () => {
   for (const { width, titleX, buttonX, tileX, tileW, dialogX } of [
-    { width: 1440, titleX: 412, buttonX: 1173, tileX: 870, tileW: 438, dialogX: 432 },
-    { width: 1280, titleX: 332, buttonX: 1093, tileX: 790, tileW: 438, dialogX: 352 },
-    { width: 1024, titleX: 328, buttonX: 841, tileX: 662, tileW: 314, dialogX: 224 },
+    { width: 1440, titleX: 412, buttonX: 1173, tileX: 870, tileW: 438, dialogX: 430 },
+    { width: 1280, titleX: 332, buttonX: 1093, tileX: 790, tileW: 438, dialogX: 350 },
+    { width: 1024, titleX: 328, buttonX: 841, tileX: 662, tileW: 314, dialogX: 222 },
   ]) {
     test(`a ${width} px: home, tarjeta, recuadro del plan y pop-up en la posición del mock`, async ({ page, browserName }) => {
       await open(page, width)
@@ -46,8 +46,7 @@ test.describe('Home web y pop-up del plan gratuito (mock 15)', () => {
 
       await pageButton(page).click()
       const dlg = await box(dialog(page))
-      expect(dlg).toMatchObject({ x: dialogX, w: 576 })
-      if (browserName === 'chromium') expect(dlg.h).toBe(337)
+      expect(dlg).toMatchObject({ x: dialogX, w: 580 })
       // Centered in the window.
       expect(Math.abs(dlg.y + dlg.h / 2 - 450)).toBeLessThan(2)
     })
@@ -85,34 +84,33 @@ test.describe('Home web y pop-up del plan gratuito (mock 15)', () => {
     await expect(page).toHaveURL(/\/children\/[^/]+$/)
   })
 
-  test('el pop-up dice el mensaje del mock y nombra al hijo (en móvil no)', async ({ page }) => {
+  test('el pop-up dice la comparación, el precio y las dos salidas, con la franja ink', async ({ page }) => {
     await open(page, 1280)
 
     await pageButton(page).click()
 
-    await expect(dialog(page).getByText('Plan gratuito', { exact: true })).toBeVisible()
-    await expect(dialog(page).getByRole('heading', { name: 'Llegaste a un hijo registrado' })).toHaveCSS('font-size', '30px')
-    await expect(dialog(page)).toContainText(
-      'Para dar de alta a otro hijo necesitas ampliar tu plan. Tus datos actuales se mantienen intactos y Mateo sigue disponible sin cambios.',
-    )
-    await expect(dialog(page).getByRole('button', { name: 'Entendido' })).toBeVisible()
-    await expect(dialog(page).getByRole('button', { name: 'Ver planes' })).toBeVisible()
-    await expect(dialog(page).locator('div').first()).toHaveCSS('background-color', 'rgb(245, 158, 11)')
+    await expect(dialog(page).getByText('Plan completo', { exact: true })).toBeVisible()
+    await expect(dialog(page).getByRole('heading', { name: 'Tu plan incluye un hijo' })).toHaveCSS('font-size', '24px')
+    await expect(dialog(page)).toContainText('Intentaste agregar a otro hijo. El plan gratuito incluye uno.')
+    await expect(dialog(page).getByRole('table', { name: 'Comparación de planes' }).getByRole('row').nth(1)).toContainText('Hasta 10')
+    await expect(dialog(page)).toContainText('MX$499')
+    await expect(dialog(page).getByRole('button', { name: 'Ahora no' })).toBeVisible()
+    await expect(dialog(page).getByRole('link', { name: 'Ver el plan completo' })).toBeVisible()
+    await expect(dialog(page).locator('div').first()).toHaveCSS('background-color', 'rgb(4, 37, 43)')
   })
 
-  test('el foco empieza en "Ver planes" y Tab no sale del pop-up', async ({ page }) => {
+  test('el foco empieza en «Ahora no» y Tab no sale del pop-up', async ({ page }) => {
     await open(page, 1280)
     await pageButton(page).click()
-    const stay = dialog(page).getByRole('button', { name: 'Entendido' })
-    const plans = dialog(page).getByRole('button', { name: 'Ver planes' })
-    await expect(plans).toBeFocused()
+    const close = dialog(page).getByRole('button', { name: 'Cerrar' })
+    const stay = dialog(page).getByRole('button', { name: 'Ahora no' })
+    const plans = dialog(page).getByRole('link', { name: 'Ver el plan completo' })
+    await expect(stay).toBeFocused()
 
     await page.keyboard.press('Tab')
-    await expect(stay).toBeFocused()
-    await page.keyboard.press('Tab')
     await expect(plans).toBeFocused()
-    await page.keyboard.press('Shift+Tab')
-    await expect(stay).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(close).toBeFocused()
     await page.keyboard.press('Shift+Tab')
     await expect(plans).toBeFocused()
   })
@@ -121,11 +119,11 @@ test.describe('Home web y pop-up del plan gratuito (mock 15)', () => {
     ['el botón "Agregar hijo" de la página', pageButton],
     ['el "+ Agregar hijo" de la barra lateral', sidebarButton],
   ] as const) {
-    test(`abierto con ${name}: Entendido, Escape y un clic en el fondo lo cierran y el foco vuelve a ese botón`, async ({ page }) => {
+    test(`abierto con ${name}: «Ahora no», Escape y un clic en el fondo lo cierran y el foco vuelve a ese botón`, async ({ page }) => {
       await open(page, 1280)
 
       await opener(page).click()
-      await dialog(page).getByRole('button', { name: 'Entendido' }).click()
+      await dialog(page).getByRole('button', { name: 'Ahora no' }).click()
       await expect(dialog(page)).toBeHidden()
       await expect(opener(page)).toBeFocused()
 
@@ -135,7 +133,7 @@ test.describe('Home web y pop-up del plan gratuito (mock 15)', () => {
       await expect(opener(page)).toBeFocused()
 
       await opener(page).click()
-      await dialog(page).getByText('Plan gratuito', { exact: true }).click()
+      await dialog(page).getByRole('heading', { name: 'Tu plan incluye un hijo' }).click()
       await expect(dialog(page)).toBeVisible() // a click inside does not close it
       await page.mouse.click(4, 4)
       await expect(dialog(page)).toBeHidden()
@@ -143,11 +141,11 @@ test.describe('Home web y pop-up del plan gratuito (mock 15)', () => {
     })
   }
 
-  test('"Ver planes" abre la pantalla de planes', async ({ page }) => {
+  test('«Ver el plan completo» abre la pantalla de planes', async ({ page }) => {
     await open(page, 1280)
     await sidebarButton(page).click()
 
-    await dialog(page).getByRole('button', { name: 'Ver planes' }).click()
+    await dialog(page).getByRole('link', { name: 'Ver el plan completo' }).click()
 
     await expect(page).toHaveURL(/\/planes$/)
   })

@@ -28,6 +28,8 @@ tutor un lugar centralizado para:
   como realizada o cancelada. Nunca se borra: queda en el historial.
 - **Mis suplementos** (plan de pago): rutinas de suplemento de la propia persona, con sus tomas marcables y sus avisos. Solo ella las
   ve y solo a ella le llegan los avisos; nadie de su familia las alcanza.
+- **Planes**: un plan gratuito y un plan completo (MX$499 al año, una suscripción para toda la familia), con una pantalla que compara los dos y
+  un aviso que dice qué incluye el plan completo cuando algo lo requiere. Lo ya registrado nunca se oculta. El cobro con tarjeta todavía no está disponible.
 
 ### Principio de diseño: "Registra, nunca interpreta"
 

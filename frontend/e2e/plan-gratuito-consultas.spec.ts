@@ -29,16 +29,16 @@ for (const design of designs) {
 
       await main(page).getByRole('button', { name: entryName }).click()
 
-      const dialog = page.getByRole('dialog', { name: 'Ya tienes un tratamiento activo' })
+      const dialog = page.getByRole('dialog', { name: 'Ya hay un tratamiento activo' })
       await expect(dialog).toBeVisible()
-      await expect(dialog.getByText('Plan gratuito', { exact: true })).toBeVisible()
-      await expect(dialog.getByText(/un tratamiento activo a la vez/)).toBeVisible()
-      await expect(dialog.getByText(/Todo lo que ya registraste se mantiene y lo sigues viendo/)).toBeVisible()
+      await expect(dialog.getByText('Plan completo', { exact: true })).toBeVisible()
+      await expect(dialog.getByText(/al terminar o finalizar el actual registras el siguiente/)).toBeVisible()
+      await expect(dialog.getByText('Lo que ya registraste se queda igual con cualquier plan.')).toBeVisible()
       await expect(page).toHaveURL(new RegExp(`/children/${childId}$`))
       // The consultation already registered stays in the list.
       await expect(main(page).getByText('Dra. Laura Cázares')).toBeVisible()
 
-      await dialog.getByRole('button', { name: 'Entendido' }).click()
+      await dialog.getByRole('button', { name: 'Ahora no' }).click()
       await expect(dialog).toBeHidden()
 
       // Ending the treatment (spec 016) frees the next consultation: the entry is a link to the form again.
@@ -53,7 +53,7 @@ for (const design of designs) {
       await page.goto(`/children/${childId}`)
       await main(page).getByRole('button', { name: entryName }).click()
 
-      await page.getByRole('dialog', { name: 'Ya tienes un tratamiento activo' }).getByRole('button', { name: 'Ver planes' }).click()
+      await page.getByRole('dialog', { name: 'Ya hay un tratamiento activo' }).getByRole('link', { name: 'Ver el plan completo' }).click()
 
       await expect(page).toHaveURL(/\/planes$/)
     })
@@ -105,9 +105,9 @@ for (const design of designs) {
 
       await page.getByRole('button', { name: 'Guardar consulta' }).click()
 
-      const dialog = page.getByRole('dialog', { name: 'Ya tienes un tratamiento activo' })
+      const dialog = page.getByRole('dialog', { name: 'Ya hay un tratamiento activo' })
       await expect(dialog).toBeVisible()
-      await dialog.getByRole('button', { name: 'Entendido' }).click()
+      await dialog.getByRole('button', { name: 'Ahora no' }).click()
       await expect(dialog).toBeHidden()
       await expect(page).toHaveURL(/\/consultations\/new$/)
       await expect(page.getByLabel('Doctor')).toHaveValue('Dra. Segunda')

@@ -211,6 +211,6 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     await expect(sidebar.getByRole('link', { name: /^Mateo/ })).toHaveAttribute('aria-current', 'page')
     await sidebar.getByRole('button', { name: '+ Agregar hijo' }).click()
 
-    await expect(page.getByRole('dialog', { name: 'Llegaste a un hijo registrado' })).toBeVisible()
+    await expect(page.getByRole('dialog', { name: 'Tu plan incluye un hijo' })).toBeVisible()
   })
 })

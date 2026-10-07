@@ -139,9 +139,7 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
   004 exige al menos un medicamento (FR-015) y la foto de la receta (FR-004), así que hoy ese estado no se
   alcanza. Si el producto decide permitir consultas sin receta (control de peso, revisión), hay que relajar esas
   dos reglas en el backend y en el formulario.
-- **Pantalla de planes de pago** — hoy `/planes` muestra un aviso "Estamos preparando los planes" (`MessagePage`) para que "Ver planes" no caiga en una pantalla en blanco. El modal de límite freemium (franja ámbar) es el punto de entrada
-  visual ya establecido; la pantalla de planes debe continuarlo. Ver `specs/005-identidad-visual-front-end/spec.md`,
-  "Adiciones Futuras Previstas".
+- **Pantalla de planes de pago** — **hecha en `specs/034-planes-y-modales/`** (`/planes` con Gratis y Plan completo, MX$499 al año, botón en estado «Pronto»; el modal de límite con comparación; aviso compacto en Suplementos, Mis suplementos y Familia). **Queda con el cobro**: el botón «Contratar plan completo» activo, el plan **vencido** (P4: aviso «Tu plan completo terminó el…» y «Renovar»), «Vigente hasta el…» y las pantallas de estado del pago (E1 «Pago en proceso», E2 «Plan activo», E3 «No se pudo cobrar»), todo ya diseñado en `specs/034-planes-y-modales/referencia/planes-decisiones.md` y que necesita la suscripción en el backend; y el aviso compacto del **Historial** (A2).
 - **Qué incluye el plan de pago (premium)** — **decidido el 2026-10-05** con el dueño del producto; **falta construirlo**, en el
   orden de «Orden sugerido» al final. Hoy `paid` solo sube el tope de hijos de 1 a 10 (spec 029) y se da a mano con SQL; no
   hay cobro. Lo único abierto es la pregunta legal y lo de Clerk (abajo).

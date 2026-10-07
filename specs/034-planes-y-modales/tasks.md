@@ -16,5 +16,5 @@
 
 ## Fase 3: E2E y cierre
 
-- [ ] T321 E2E `planes.spec.ts` (390 y 1280 px: cuenta gratuita, de pago, invitada; los siete motivos que ya tienen camino) y actualizar las E2E del modal existente
-- [ ] T322 Documentación (`CLAUDE.md` ×2, `design-tokens.md`, `BACKLOG.md`, `README.md`), code review, PR a `develop`
+- [x] T321 E2E `planes.spec.ts` (390 y 1280 px: cuenta gratuita, de pago, invitada; los siete motivos que ya tienen camino) y actualizar las E2E del modal existente
+- [x] T322 Documentación (`CLAUDE.md` ×2, `design-tokens.md`, `BACKLOG.md`, `README.md`), code review, PR a `develop`
