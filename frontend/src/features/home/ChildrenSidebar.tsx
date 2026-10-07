@@ -6,6 +6,8 @@ import { useLogout } from '../auth/useLogout'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { AddChildDialogs } from './AddChildDialogs'
 import { addChildTarget } from './plan'
+import { usePersonalRoutines } from '../supplements/hooks'
+import { useLocalDay } from '../../shared/useLocalDay'
 
 interface ChildrenSidebarProps {
   /** The child whose screen is open, highlighted in the list. */
@@ -26,6 +28,9 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
   const query = useCurrentAccount()
   const account = query.data
   const onFamilyPage = useMatch('/familia') !== null
+  // Specs/033, part 3: the person's own section, apart from the children; its count comes from the same query the home uses.
+  const onPersonalPage = useMatch('/mis-suplementos/*') !== null
+  const personalCount = usePersonalRoutines(account?.id, useLocalDay()).data?.activeCount ?? 0
 
   return (
     <aside className="sticky top-0 flex h-screen w-[280px] shrink-0 flex-col gap-8 overflow-y-auto bg-ink px-6 py-7">
@@ -83,6 +88,26 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
       >
         <span className={`text-base font-extrabold ${onFamilyPage ? 'text-white' : 'text-hint-border'}`}>Familia</span>
       </Link>
+
+      {account && (
+        <nav aria-label="Personal" className="flex flex-col gap-2.5 border-t border-ink-edge pt-5">
+          <p className="px-4 text-xs font-extrabold tracking-[0.1em] text-ink-muted uppercase">Personal</p>
+          <Link
+            to="/mis-suplementos"
+            aria-current={onPersonalPage ? 'page' : undefined}
+            className={`flex min-h-12 items-center justify-between gap-3 rounded-2xl px-4 transition-colors duration-200 ${
+              onPersonalPage ? 'bg-action' : 'hover:bg-ink-soft'
+            }`}
+          >
+            <span className={`text-base font-extrabold ${onPersonalPage ? 'text-white' : 'text-hint-border'}`}>Mis suplementos</span>
+            {personalCount > 0 && (
+              <span className={`shrink-0 text-[13px] font-semibold ${onPersonalPage ? 'text-hint-edge' : 'text-ink-muted'}`}>
+                {personalCount} {personalCount === 1 ? 'activa' : 'activas'}
+              </span>
+            )}
+          </Link>
+        </nav>
+      )}
 
       {account && (
         <div className="mt-auto flex flex-col gap-3 border-t border-ink-soft pt-5">

@@ -8,6 +8,7 @@ import { ConsultationDetailPage } from './features/consultations/ConsultationDet
 import { HistoryPage } from './features/consultations/HistoryPage'
 import { AppointmentFormPage } from './features/appointments/AppointmentFormPage'
 import { AppointmentHistoryPage } from './features/appointments/AppointmentHistoryPage'
+import { PersonalRoutinesPage } from './features/supplements/PersonalRoutinesPage'
 import { RoutineDetailPage } from './features/supplements/RoutineDetailPage'
 import { RoutineFormPage } from './features/supplements/RoutineFormPage'
 import { FamilyPage } from './features/family/FamilyPage'
@@ -90,6 +91,22 @@ function App() {
             element={
               <RequireSession>
                 <RoutineFormPage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/mis-suplementos"
+            element={
+              <RequireSession>
+                <PersonalRoutinesPage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/mis-suplementos/nueva"
+            element={
+              <RequireSession>
+                <RoutineFormPage personal />
               </RequireSession>
             }
           />

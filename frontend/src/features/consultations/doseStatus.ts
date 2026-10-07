@@ -67,6 +67,11 @@ export function canUnmarkDose(dose: { taken: boolean; takenBy?: { mine?: boolean
   return !dose.taken || canManage || dose.takenBy?.mine === true
 }
 
+/** "a las 07:20": when a dose of a person's OWN routine was marked — it can only be theirs, so no name (specs/033, part 3). */
+export function ownTakenText(takenBy: TakenBy | null | undefined): string {
+  return takenBy ? `a las ${formatTime(takenBy.at)}` : ''
+}
+
 /** "por Ana, 08:05": who marked a dose and at what time (local), or '' if nobody is known (specs/032). It only records. */
 export function takenByText(takenBy: TakenBy | null | undefined): string {
   return takenBy ? `por ${takenBy.name}, ${formatTime(takenBy.at)}` : ''

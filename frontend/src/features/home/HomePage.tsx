@@ -14,6 +14,7 @@ import { WelcomeDisclaimer } from './WelcomeDisclaimer'
 import { RemindersCard } from '../reminders/RemindersCard'
 import { readPendingInvitation } from '../family/pendingInvitation'
 import { FamilyEntry } from '../family/FamilyEntry'
+import { PersonalHomeBlock } from '../supplements/PersonalHomeBlock'
 
 /**
  * The parent's home page: lists their children (FR-001), or an invitation to
@@ -188,6 +189,7 @@ export function HomePage() {
             )}
 
             {account && <FamilyEntry variant="desktop" />}
+            <PersonalHomeBlock account={account} variant="desktop" />
             <RemindersCard account={account} />
           </div>
           {dialogs}
@@ -256,6 +258,7 @@ export function HomePage() {
               <FamilyEntry variant="phone" />
             </div>
           )}
+          <PersonalHomeBlock account={account} variant="phone" />
           <div className="mt-4">
             <RemindersCard account={account} />
           </div>

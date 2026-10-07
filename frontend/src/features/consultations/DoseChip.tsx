@@ -1,6 +1,6 @@
 import { useId } from 'react'
 import { formatTime } from '../../shared/date'
-import { CANCELED_LABEL, DOSE_CHIP_STYLE, UNREGISTERED_LABEL, canUnmarkDose, statusOf, takenByText } from './doseStatus'
+import { CANCELED_LABEL, DOSE_CHIP_STYLE, UNREGISTERED_LABEL, canUnmarkDose, ownTakenText, statusOf, takenByText } from './doseStatus'
 import type { Dose } from './types'
 import { useDoseToggle } from './useDoseToggle'
 
@@ -20,10 +20,12 @@ interface DoseChipViewProps {
   canManage: boolean
   pending: boolean
   onToggle: () => void
+  /** A dose of the person's own routine: «a las 07:20» instead of «por Ana, 07:20» (specs/033, part 3). */
+  own?: boolean
 }
 
 /** The chip itself, for any dose: a medication's (`DoseChip`) or a supplement routine's (specs/033, `RoutineDoseChip`). */
-export function DoseChipView({ dose, canManage, pending, onToggle }: DoseChipViewProps) {
+export function DoseChipView({ dose, canManage, pending, onToggle, own = false }: DoseChipViewProps) {
   const time = formatTime(dose.scheduledAt)
   const status = statusOf(dose)
   const unregistered = status === 'unregistered'
@@ -32,7 +34,7 @@ export function DoseChipView({ dose, canManage, pending, onToggle }: DoseChipVie
   // Specs/032: a mark somebody else made is only taken back by who can do everything.
   const locked = !canUnmarkDose(dose, canManage)
   // Who marked it (specs/032): a line under the time, and its sentence as part of the accessible description.
-  const author = dose.taken ? takenByText(dose.takenBy) : ''
+  const author = dose.taken ? (own ? ownTakenText(dose.takenBy) : takenByText(dose.takenBy)) : ''
   const described = unregistered || canceled || author !== ''
 
   return (

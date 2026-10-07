@@ -70,14 +70,16 @@ export function RoutineDetailPage() {
   const child = accountQuery.data?.children.find((c) => c.id === childId)
   const access = useChildAccess(accountQuery.data, childId)
 
-  const backTo = childId ? `/children/${childId}` : '/home'
+  // A person's own routine (specs/033, part 3) has no child: it belongs to the section «Mis suplementos» and only they reach it.
+  const personal = routine !== undefined && routine.childId === null
+  const backTo = personal ? '/mis-suplementos' : childId ? `/children/${childId}` : '/home'
   const frameFor = (title: string, content: ReactNode) => (
     <RoutinePageFrame
       isDesktop={isDesktop}
       childId={childId}
-      backLabel={child ? `← ${child.firstName}` : '← Tus hijos'}
+      backLabel={personal ? '← Mis suplementos' : child ? `← ${child.firstName}` : '← Tus hijos'}
       backTo={backTo}
-      eyebrow={child ? `Suplemento · ${child.firstName} ${child.lastName}` : 'Suplemento'}
+      eyebrow={personal ? 'Mis suplementos' : child ? `Suplemento · ${child.firstName} ${child.lastName}` : 'Suplemento'}
       title={title}
     >
       {content}
@@ -107,7 +109,9 @@ export function RoutineDetailPage() {
   const dayTitle = `Tomas del ${sd} de ${LONG_MONTHS[sm - 1]}`
   const progress = progressSummary(routine, today)
   const rows = detailRows(routine)
-  const canManage = accountQuery.data !== undefined && access.canAdd
+  // Their own routine: they are its owner (Full) once the account is known; with the plan not paid only «Finalizar» is left (mock G3).
+  const canManage = accountQuery.data !== undefined && (personal || access.canAdd)
+  const planLapsed = personal && !routine.canEdit
   const paused = routine.status === 'paused'
   const ended = routine.status === 'ended'
 
@@ -120,7 +124,9 @@ export function RoutineDetailPage() {
 
   const failure = (error: unknown): string => {
     if (error instanceof SupplementApiError && error.kind === 'routine_limit') {
-      return 'Este hijo ya tiene el máximo de rutinas activas. Pausa o finaliza una para poder reanudar esta.'
+      return personal
+        ? 'Ya tienes el máximo de rutinas activas. Pausa o finaliza una para poder reanudar esta.'
+        : 'Este hijo ya tiene el máximo de rutinas activas. Pausa o finaliza una para poder reanudar esta.'
     }
     return 'No se pudo completar. Inténtalo de nuevo.'
   }
@@ -168,9 +174,14 @@ export function RoutineDetailPage() {
           </div>
         ))}
       </dl>
+      {planLapsed && !ended && (
+        <p role="status" className="rounded-[14px] border-[1.5px] border-hint-border bg-hint px-4 py-3.5 text-[15px] leading-normal text-body">
+          Con el plan gratuito puedes ver y marcar las tomas. Para editar, pausar o reanudar se necesita el plan completo.
+        </p>
+      )}
       {!ended && canManage && (
         <div className="flex flex-wrap gap-2.5 pt-1">
-          {paused ? (
+          {planLapsed ? null : paused ? (
             <button
               type="button"
               disabled={resume.isPending}
@@ -199,7 +210,7 @@ export function RoutineDetailPage() {
           </button>
         </div>
       )}
-      {!ended && !canManage && <p className="text-sm leading-normal text-slate-600">Un Tutor puede pausar, editar o finalizar esta rutina.</p>}
+      {!ended && !canManage && !personal && <p className="text-sm leading-normal text-slate-600">Un Tutor puede pausar, editar o finalizar esta rutina.</p>}
       {actionError && (
         <p role="alert" className="text-[13px] font-semibold text-red-700">
           {actionError}
@@ -211,7 +222,7 @@ export function RoutineDetailPage() {
   const left = (
     <div className="flex min-w-0 flex-col gap-5">
       {dataCard}
-      {routine.status === 'active' && <MyRemindersToggle routineId={routine.id} enabled={routine.myReminders} />}
+      {routine.status === 'active' && <MyRemindersToggle routineId={routine.id} enabled={routine.myReminders} personal={personal} />}
     </div>
   )
 
@@ -244,7 +255,7 @@ export function RoutineDetailPage() {
           {selectedDoses.length > 0 ? (
             <div className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-2">
               {selectedDoses.map((dose) => (
-                <RoutineDoseChip key={dose.id} routineId={routine.id} dose={dose} canManage={canManage} />
+                <RoutineDoseChip key={dose.id} routineId={routine.id} dose={dose} canManage={canManage} own={personal} />
               ))}
             </div>
           ) : (
@@ -280,6 +291,7 @@ export function RoutineDetailPage() {
           onConfirm={doFinish}
           onCancel={() => setFinishOpen(false)}
           opener={finishButtonRef}
+          personal={personal}
         />
       )}
       {planOpen && <FreemiumLimitModal reason="supplements" onStayFree={() => setPlanOpen(false)} onViewPlans={() => navigate('/planes')} />}

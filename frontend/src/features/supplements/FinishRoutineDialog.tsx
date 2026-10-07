@@ -10,6 +10,8 @@ interface FinishRoutineDialogProps {
   onConfirm: () => void
   onCancel: () => void
   opener: RefObject<HTMLElement | null>
+  /** The person's own routine: no family to mention. */
+  personal?: boolean
 }
 
 /**
@@ -18,14 +20,16 @@ interface FinishRoutineDialogProps {
  * or edited; the parent creates a new one. Text in the first row follows the real rule: only doses that haven't come yet
  * disappear; today's that already came and weren't marked stay as «sin registrar».
  */
-export function FinishRoutineDialog({ name, taken, busy, error, onConfirm, onCancel, opener }: FinishRoutineDialogProps) {
+export function FinishRoutineDialog({ name, taken, busy, error, onConfirm, onCancel, opener, personal = false }: FinishRoutineDialogProps) {
   return (
     <ConfirmDialog
       title={`¿Finalizar ${name}?`}
       rows={[
         {
           k: 'Deja de pasar',
-          v: 'Desde ahora no se crean más tomas ni avisos para nadie de la familia. Las de hoy que aún no llegan dejan de aparecer.',
+          v: personal
+            ? 'Desde ahora no se crean más tomas ni avisos. Las de hoy que aún no llegan dejan de aparecer.'
+            : 'Desde ahora no se crean más tomas ni avisos para nadie de la familia. Las de hoy que aún no llegan dejan de aparecer.',
         },
         {
           k: 'Se conserva',

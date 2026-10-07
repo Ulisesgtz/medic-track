@@ -14,10 +14,10 @@ Formato `[ID] Descripción`. Un solo PR; un commit por fase.
 
 ## Fase 2: Frontend
 
-- [ ] T211 API y hooks personales (`features/supplements/`), `MisSuplementosSeccion`, aviso de primera vez, vacío / plan / tope / plan caducado / invitada
-- [ ] T212 Páginas `/mis-suplementos`, `/mis-suplementos/nueva`; formulario, detalle y edición en modo personal; «Tus avisos» y finalizar
-- [ ] T213 Inicio: bloque «Personal · Mis suplementos» con «Tus tomas de hoy» (ambos diseños); barra lateral web («Inicio», «Hijos», «Personal»); «← Inicio» en móvil; `TomaChip` sin autor
-- [ ] T214 Pruebas unitarias (>90 %), tsc y eslint
+- [x] T211 API y hooks personales (`features/supplements/`), `MisSuplementosSeccion`, aviso de primera vez, vacío / plan / tope / plan caducado / invitada
+- [x] T212 Páginas `/mis-suplementos`, `/mis-suplementos/nueva`; formulario, detalle y edición en modo personal; «Tus avisos» y finalizar
+- [x] T213 Inicio: bloque «Personal · Mis suplementos» con «Tus tomas de hoy» (ambos diseños); barra lateral web («Inicio», «Hijos», «Personal»); «← Inicio» en móvil; `TomaChip` sin autor
+- [x] T214 Pruebas unitarias (>90 %), tsc y eslint
 
 ## Fase 3: E2E y cierre
 
