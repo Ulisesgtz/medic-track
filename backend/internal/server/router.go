@@ -14,6 +14,7 @@ import (
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/access"
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
+	"github.com/Ulisesgtz/medic-track/backend/internal/appointment"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
@@ -35,6 +36,8 @@ type Deps struct {
 	Family       *family.Handler
 	// Supplement: the parents' supplement routines (specs/033).
 	Supplement *supplement.Handler
+	// Appointment: the next appointment of a consultation (specs/033, part 2).
+	Appointment *appointment.Handler
 	// Ops and OpsKey: the read-only queries over error_logs for the team that runs the service (specs/021). Without
 	// both the routes are not registered at all: there is no open door by default.
 	Ops    *ops.Handler
@@ -92,6 +95,9 @@ func NewRouter(d Deps) *chi.Mux {
 	// A supplement routine is reached through its child (specs/033): Mark = see and mark its doses, Full = create, edit, pause, finish.
 	seesRoutine := authmw.RequireAccess(d.Responder, "routineId", access.Mark, d.Access.OnRoutine)
 	fullRoutine := authmw.RequireAccess(d.Responder, "routineId", access.Full, d.Access.OnRoutine)
+	// A consultation's appointment is reached through its child (specs/033, part 2): Mark = see it and choose one's own reminders, Full = create, edit, mark.
+	seesAppointment := authmw.RequireAccess(d.Responder, "appointmentId", access.Mark, d.Access.OnAppointment)
+	fullAppointment := authmw.RequireAccess(d.Responder, "appointmentId", access.Full, d.Access.OnAppointment)
 	// Adding a child to a family (its owner account): the owner or one of its Tutors.
 	fullAccount := authmw.RequireAccess(d.Responder, "accountId", access.Full, d.Access.OnAccount)
 
@@ -142,6 +148,15 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(fullRoutine).Post("/routines/{routineId}/pause", d.Supplement.PauseRoutine)
 		r.With(fullRoutine).Post("/routines/{routineId}/resume", d.Supplement.ResumeRoutine)
 		r.With(fullRoutine).Post("/routines/{routineId}/finish", d.Supplement.FinishRoutine)
+
+		// Next appointment (specs/033, part 2).
+		r.With(seesChild).Get("/children/{childId}/appointments", d.Appointment.ForChild)
+		r.With(seesConsultation).Get("/consultations/{consultationId}/appointment", d.Appointment.ForConsultation)
+		r.With(fullConsultation).Post("/consultations/{consultationId}/appointments", d.Appointment.Create)
+		r.With(seesAppointment).Get("/appointments/{appointmentId}", d.Appointment.Get)
+		r.With(fullAppointment).Patch("/appointments/{appointmentId}", d.Appointment.Update)
+		r.With(fullAppointment).Post("/appointments/{appointmentId}/status", d.Appointment.SetStatus)
+		r.With(seesAppointment).Put("/appointments/{appointmentId}/my-reminders", d.Appointment.SetMyReminders)
 	})
 
 	return r

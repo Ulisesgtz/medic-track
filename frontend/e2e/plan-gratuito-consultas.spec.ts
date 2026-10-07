@@ -66,7 +66,7 @@ for (const design of designs) {
       const recordOnly = page.getByRole('checkbox', { name: 'Consulta anterior: guardar solo como registro' })
       await expect(recordOnly).toBeDisabled()
       await expect(recordOnly).not.toBeChecked()
-      await expect(page.getByText(/Disponible en el plan completo/)).toBeVisible()
+      await expect(page.getByText(/Disponible en el plan completo. Con el plan gratuito/)).toBeVisible()
 
       await page.getByLabel('Doctor').fill('Dra. Actual')
       await page.getByLabel('Fecha', { exact: true }).fill(localDate(new Date()))

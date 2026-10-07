@@ -29,6 +29,195 @@ definitions:
         example: 0
         type: integer
     type: object
+  AppointmentErrorResponse:
+    properties:
+      error:
+        example: forbidden
+        type: string
+      message:
+        type: string
+    type: object
+  AppointmentMyRemindersRequest:
+    properties:
+      enabled:
+        example: true
+        type: boolean
+    type: object
+  AppointmentMyRemindersResponse:
+    properties:
+      myReminders:
+        example: true
+        type: boolean
+    type: object
+  AppointmentNoticeResponse:
+    properties:
+      atTime:
+        example: "20:00"
+        type: string
+      daysBefore:
+        example: 1
+        type: integer
+      fireAt:
+        example: "2026-10-09T14:30:00Z"
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      kind:
+        enum:
+        - before
+        - at_time
+        example: before
+        type: string
+      label:
+        example: 2 horas antes
+        type: string
+      leadMinutes:
+        example: 120
+        type: integer
+      past:
+        description: 'Past: it was due before the appointment was saved or has already
+          gone off; it never fires.'
+        example: false
+        type: boolean
+    type: object
+  AppointmentOfConsultationResponse:
+    properties:
+      appointment:
+        $ref: '#/definitions/AppointmentResponse'
+      paidPlan:
+        example: true
+        type: boolean
+    type: object
+  AppointmentPlanLimitResponse:
+    properties:
+      error:
+        example: freemium_consultation_limit_exceeded
+        type: string
+      message:
+        type: string
+      reason:
+        description: Reason is "appointments" (creating and editing appointments are
+          the paid plan's).
+        example: appointments
+        type: string
+    type: object
+  AppointmentRequest:
+    properties:
+      note:
+        example: ""
+        type: string
+      notices:
+        items:
+          $ref: '#/definitions/internal_appointment.NoticeInput'
+        type: array
+      startsAt:
+        example: "2026-10-09T10:30:00-06:00"
+        type: string
+      utcOffsetMinutes:
+        example: -360
+        type: integer
+    type: object
+  AppointmentResponse:
+    properties:
+      canEdit:
+        description: 'CanEdit: the session can do everything AND the owner''s plan
+          is paid.'
+        example: true
+        type: boolean
+      canMark:
+        description: 'CanMark: the session can do everything (marking a state never
+          needs the plan).'
+        example: true
+        type: boolean
+      childId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      consultDate:
+        example: "2026-09-28"
+        type: string
+      consultationId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      createdBy:
+        example: Ana
+        type: string
+      doctorName:
+        example: Dra. Laura López
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      myReminders:
+        example: true
+        type: boolean
+      note:
+        example: ""
+        type: string
+      notices:
+        items:
+          $ref: '#/definitions/AppointmentNoticeResponse'
+        type: array
+      startsAt:
+        example: "2026-10-09T16:30:00Z"
+        type: string
+      status:
+        enum:
+        - scheduled
+        - done
+        - canceled
+        - unmarked
+        example: scheduled
+        type: string
+      statusAt:
+        type: string
+      statusBy:
+        example: Ana
+        type: string
+      utcOffsetMinutes:
+        example: -360
+        type: integer
+    type: object
+  AppointmentStatusRequest:
+    properties:
+      status:
+        enum:
+        - done
+        - canceled
+        - scheduled
+        example: done
+        type: string
+    type: object
+  AppointmentValidationResponse:
+    properties:
+      details:
+        items:
+          properties:
+            field:
+              example: startsAt
+              type: string
+            message:
+              type: string
+          type: object
+        type: array
+      error:
+        example: validation_error
+        type: string
+      message:
+        type: string
+    type: object
+  AppointmentsOfChildResponse:
+    properties:
+      history:
+        items:
+          $ref: '#/definitions/AppointmentResponse'
+        type: array
+      next:
+        $ref: '#/definitions/AppointmentResponse'
+      paidPlan:
+        example: true
+        type: boolean
+    type: object
   ChildNotFoundResponse:
     properties:
       error:
@@ -1258,6 +1447,25 @@ definitions:
         example: generic
         type: string
     type: object
+  internal_appointment.NoticeInput:
+    properties:
+      atTime:
+        type: string
+      daysBefore:
+        type: integer
+      kind:
+        $ref: '#/definitions/internal_appointment.NoticeKind'
+      leadMinutes:
+        type: integer
+    type: object
+  internal_appointment.NoticeKind:
+    enum:
+    - before
+    - at_time
+    type: string
+    x-enum-varnames:
+    - KindBefore
+    - KindAtTime
   internal_catalog.countryResponse:
     properties:
       code:
@@ -1792,6 +2000,189 @@ paths:
       summary: Get the authenticated tutor's own account
       tags:
       - accounts
+  /appointments/{appointmentId}:
+    get:
+      parameters:
+      - description: Appointment UUID
+        in: path
+        name: appointmentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/AppointmentResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "403":
+          description: The session has no access to this appointment
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "404":
+          description: No such appointment
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: One appointment
+      tags:
+      - appointments
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        The whole appointment is sent. Notices that stay the same keep their already-sent reminders; moving the date makes
+        them all again. Only a scheduled one can be edited (409). Paid plan only (422 reason "appointments").
+      parameters:
+      - description: Appointment UUID
+        in: path
+        name: appointmentId
+        required: true
+        type: string
+      - description: The appointment
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/AppointmentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/AppointmentResponse'
+        "400":
+          description: An invalid field
+          schema:
+            $ref: '#/definitions/AppointmentValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "403":
+          description: The session can't edit this appointment
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "404":
+          description: No such appointment
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "409":
+          description: The appointment is closed
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "422":
+          description: Free plan
+          schema:
+            $ref: '#/definitions/AppointmentPlanLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: Edit an appointment's date, note and notices
+      tags:
+      - appointments
+  /appointments/{appointmentId}/my-reminders:
+    put:
+      consumes:
+      - application/json
+      description: Only for the person who asks, never for the rest of the family;
+        a Caregiver can too. Only a scheduled appointment has reminders (409).
+      parameters:
+      - description: Appointment UUID
+        in: path
+        name: appointmentId
+        required: true
+        type: string
+      - description: enabled
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/AppointmentMyRemindersRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/AppointmentMyRemindersResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "403":
+          description: No access to this appointment
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "404":
+          description: No such appointment
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "409":
+          description: The appointment is not scheduled
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Turn the session's own reminders of an appointment on or off
+      tags:
+      - appointments
+  /appointments/{appointmentId}/status:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        `done` and `canceled` stop its reminders for everybody and keep it in the history with who and when; `scheduled`
+        takes a `done` back. A canceled one is final. It never needs the paid plan.
+      parameters:
+      - description: Appointment UUID
+        in: path
+        name: appointmentId
+        required: true
+        type: string
+      - description: The new status
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/AppointmentStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/AppointmentResponse'
+        "400":
+          description: An unknown status
+          schema:
+            $ref: '#/definitions/AppointmentValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "403":
+          description: The session can't change this appointment
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "404":
+          description: No such appointment
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "409":
+          description: The change is not possible from its status
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Mark an appointment done or canceled
+      tags:
+      - appointments
   /catalog/countries:
     get:
       description: Read-only catalog used to populate the país selector (contracts/get-catalog.md).
@@ -1864,6 +2255,41 @@ paths:
       summary: List the symptoms a parent can mark
       tags:
       - catalog
+  /children/{childId}/appointments:
+    get:
+      description: |-
+        `next` is the nearest scheduled appointment that has not passed, across the child's consultations; `history`
+        has the done, canceled and «Pasó sin marcar» ones, most recent first. Reading never depends on the plan.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/AppointmentsOfChildResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "403":
+          description: The session has no access to this child
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: A child's next appointment and the history of the rest
+      tags:
+      - appointments
   /children/{childId}/consultations:
     get:
       description: Lists a child's medical consultations (date, doctor, notes, marked
@@ -2235,6 +2661,96 @@ paths:
       summary: Get a consultation's full detail
       tags:
       - consultations
+  /consultations/{consultationId}/appointment:
+    get:
+      description: The appointment that is still scheduled (it may read «unmarked»
+        once its day ended), or null.
+      parameters:
+      - description: Consultation UUID
+        in: path
+        name: consultationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/AppointmentOfConsultationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "403":
+          description: The session has no access to this consultation
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "404":
+          description: No consultation exists for this id
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: A consultation's scheduled appointment
+      tags:
+      - appointments
+  /consultations/{consultationId}/appointments:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Saves the appointment exactly as written; nothing else of the consultation changes. Paid plan only (422 reason
+        "appointments"). Without `notices` it gets one day before and two hours before; a notice already past is saved
+        but never fires. A consultation has at most one scheduled appointment (409).
+      parameters:
+      - description: Consultation UUID
+        in: path
+        name: consultationId
+        required: true
+        type: string
+      - description: The appointment
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/AppointmentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/AppointmentResponse'
+        "400":
+          description: An invalid field
+          schema:
+            $ref: '#/definitions/AppointmentValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "403":
+          description: The session can't add appointments here
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "404":
+          description: No consultation exists for this id
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "409":
+          description: Already has a scheduled appointment
+          schema:
+            $ref: '#/definitions/AppointmentErrorResponse'
+        "422":
+          description: Free plan
+          schema:
+            $ref: '#/definitions/AppointmentPlanLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: Add a next appointment to a consultation
+      tags:
+      - appointments
   /consultations/{consultationId}/doses/{doseId}:
     patch:
       consumes:

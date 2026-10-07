@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '@clerk/react'
-import { useParams, Link } from 'react-router-dom'
+import { useLocation, useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { formatDateLong, formatDayMonth } from '../../shared/date'
 import { useLocalDay } from '../../shared/useLocalDay'
@@ -12,6 +12,8 @@ import { NewConsultationEntry } from './NewConsultationEntry'
 import { fetchChildOverview, fetchConsultationDetail, ConsultationApiError } from './api'
 import { sniffImageMimeType } from './imageMime'
 import { MedicationCard } from './MedicationCard'
+import { Notice } from '../../shared/ui/Notice'
+import { ConsultationAppointmentSection } from '../appointments/AppointmentSections'
 import { PhotoViewer } from './PhotoViewer'
 import { SymptomChips } from './SymptomChips'
 import { CalendarLegendCard } from './CalendarLegendCard'
@@ -30,6 +32,8 @@ const overline = 'text-xs font-extrabold uppercase tracking-[0.1em] text-ink-sof
  * "Nueva consulta", medications, symptoms and notes on the left, the photo and the active treatment on the right.
  */
 export function ConsultationDetailPage() {
+  // specs/033, part 2: «Nueva consulta» saved the consultation but not its next appointment.
+  const appointmentFailed = (useLocation().state as { appointmentFailed?: boolean } | null)?.appointmentFailed === true
   const { consultationId } = useParams<{ consultationId: string }>()
   const [viewerOpen, setViewerOpen] = useState(false)
   // specs/023: the day the parent tapped in the calendar, with the consultation it was tapped in (this component is reused
@@ -186,6 +190,9 @@ export function ConsultationDetailPage() {
               )}
             </div>
 
+            {appointmentFailed && (
+              <Notice tone="info">La consulta se guardó, pero no se pudo guardar la próxima cita. Agrégala desde aquí.</Notice>
+            )}
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
               <div className="flex min-w-0 flex-col gap-4">
                 {calendar('desktop')}
@@ -212,6 +219,7 @@ export function ConsultationDetailPage() {
               </div>
 
               <aside className="flex min-w-0 flex-col gap-4">
+                <ConsultationAppointmentSection consultationId={consultation.id} childId={consultation.childId} />
                 <div className="min-w-0 rounded-3xl bg-surface p-6 shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
                   <h2 className={overline}>Foto de la receta</h2>
                   {photoImage('mt-4 h-[200px] w-full rounded-2xl')}
@@ -275,6 +283,16 @@ export function ConsultationDetailPage() {
             </div>
           </div>
         </section>
+
+        {appointmentFailed && (
+          <div className="px-6 pt-6">
+            <Notice tone="info">La consulta se guardó, pero no se pudo guardar la próxima cita. Agrégala desde aquí.</Notice>
+          </div>
+        )}
+
+        <div className="px-6 pt-7">
+          <ConsultationAppointmentSection consultationId={consultation.id} childId={consultation.childId} />
+        </div>
 
         {hasSymptoms && (
           <section className="px-6 pt-7">

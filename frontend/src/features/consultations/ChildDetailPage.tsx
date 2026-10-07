@@ -15,6 +15,7 @@ import { NewConsultationEntry } from './NewConsultationEntry'
 import { SummaryCard } from './SummaryCard'
 import { TodayDosesBlock } from './TodayDosesBlock'
 import { TodayDosesPanel } from './TodayDosesPanel'
+import { ChildAppointmentSection } from '../appointments/AppointmentSections'
 import { SupplementsSection } from '../supplements/SupplementsSection'
 import { DOSE_REFETCH_MS, isUnmarked, isUnregistered, unregisteredText } from './doseStatus'
 
@@ -180,6 +181,7 @@ export function ChildDetailPage() {
 
             <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-start gap-[22px]">
               <div className="flex min-w-0 flex-col gap-[30px]">
+                {childId && <ChildAppointmentSection childId={childId} historyPath={`/children/${childId}/citas`} />}
                 {childId && <SupplementsSection childId={childId} childName={child?.firstName ?? 'tu hijo'} />}
                 <section className="flex min-w-0 flex-col gap-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -237,6 +239,12 @@ export function ChildDetailPage() {
         </header>
 
         <TodayDosesBlock doses={todayDoses} status={overviewStatus} />
+
+        {childId && (
+          <div className="px-6 pt-7">
+            <ChildAppointmentSection childId={childId} historyPath={`/children/${childId}/citas`} />
+          </div>
+        )}
 
         {childId && (
           <div className="px-6 pt-7">

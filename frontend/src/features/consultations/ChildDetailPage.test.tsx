@@ -56,6 +56,7 @@ function stubApi({
     const url = String(input)
     if (init?.method === 'PATCH') return { ok: true, json: async () => ({ id: 'd', scheduledAt: '', taken: true, status: 'taken' }) }
     if (url.includes('/routines')) return { ok: true, json: async () => emptyRoutines }
+    if (url.includes('/appointments')) return { ok: true, json: async () => ({ next: null, history: [], paidPlan: true }) }
     if (url.includes('/overview')) return { ok: overviewOk, status: overviewOk ? 200 : 500, json: async () => overview }
     if (url.includes('/accounts/')) return { ok: true, json: async () => account }
     if (listStatus !== 200) return { ok: false, status: listStatus, json: async () => ({ message: 'nope' }) }
@@ -128,6 +129,7 @@ describe('ChildDetailPage', () => {
         'fetch',
         vi.fn().mockImplementation(async (input: string) => {
           const url = String(input)
+          if (url.includes('/appointments')) return { ok: true, json: async () => ({ next: null, history: [], paidPlan: true }) }
           if (url.includes('/overview')) return { ok: true, json: async () => emptyOverview }
           if (url.includes('/accounts/')) return { ok: false, status: 404, json: async () => ({ message: 'no account' }) }
           return { ok: true, json: async () => ({ childId: 'child-1', consultations }) }

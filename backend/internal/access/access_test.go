@@ -413,3 +413,60 @@ func TestRoles_OnASupplementRoutine(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, access.None, got.Level)
 }
+
+// Specs/033, part 2: an appointment is reached through its child, with the same levels.
+func TestRoles_OnAnAppointment(t *testing.T) {
+	pool := testPool(t)
+	repo := access.NewRepository(pool)
+	ctx := context.Background()
+	owner, acc := newAccount(t, pool, account.PlanPaid, 2)
+	childA, childB := acc.Children[0].ID, acc.Children[1].ID
+	appt := func(child uuid.UUID) uuid.UUID {
+		consultation := consultationOf(t, pool, child)
+		var id uuid.UUID
+		require.NoError(t, pool.QueryRow(ctx, `
+			INSERT INTO consultation_appointments (consultation_id, child_id, account_id, starts_at, utc_offset_minutes, created_by_account_id)
+			VALUES ($1, $2, $3, now() + interval '2 days', 0, $3) RETURNING id`, consultation, child, owner.accountID).Scan(&id))
+		return id
+	}
+	apptA, apptB := appt(childA), appt(childB)
+
+	tutor, _ := newAccount(t, pool, account.PlanFree, 0)
+	tutorMembership := join(t, pool, owner, tutor, "tutor", nil)
+	caregiver, _ := newAccount(t, pool, account.PlanFree, 0)
+	join(t, pool, owner, caregiver, "caregiver", nil)
+	kid, _ := newAccount(t, pool, account.PlanFree, 0)
+	join(t, pool, owner, kid, "child", &childA)
+	stranger, _ := newAccount(t, pool, account.PlanPaid, 1)
+
+	cases := []struct {
+		name string
+		who  person
+		id   uuid.UUID
+		want access.Level
+	}{
+		{"the owner", owner, apptA, access.Full},
+		{"a tutor of a paid family", tutor, apptB, access.Full},
+		{"a caregiver sees", caregiver, apptA, access.Mark},
+		{"a child-role member, their own child's", kid, apptA, access.Mark},
+		{"a child-role member never sees a sibling's", kid, apptB, access.None},
+		{"a stranger", stranger, apptA, access.None},
+		{"no clerk id", person{}, apptA, access.None},
+		{"does not exist", owner, uuid.New(), access.None},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := repo.OnAppointment(ctx, tc.who.clerkID, tc.id)
+			require.NoError(t, err)
+			require.Equal(t, tc.want, got.Level)
+		})
+	}
+	setPlan(t, pool, owner, "free")
+	got, err := repo.OnAppointment(ctx, tutor.clerkID, apptA)
+	require.NoError(t, err)
+	require.Equal(t, access.Mark, got.Level, "a lapsed plan caps an invited Tutor")
+	end(t, pool, tutorMembership, "left")
+	got, err = repo.OnAppointment(ctx, tutor.clerkID, apptA)
+	require.NoError(t, err)
+	require.Equal(t, access.None, got.Level)
+}

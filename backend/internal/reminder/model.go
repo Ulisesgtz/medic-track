@@ -25,8 +25,9 @@ const (
 type Source string
 
 const (
-	SourceMedication Source = "medication"
-	SourceSupplement Source = "supplement"
+	SourceMedication  Source = "medication"
+	SourceSupplement  Source = "supplement"
+	SourceAppointment Source = "appointment"
 )
 
 // Device is a browser or installed PWA on which a tutor turned reminders on.
@@ -49,6 +50,13 @@ type DueDose struct {
 	// ConsultationID is set for a medication's dose, RoutineID for a supplement's.
 	ConsultationID uuid.UUID
 	RoutineID      uuid.UUID
+	// For an appointment's notice (specs/033, part 2): the appointment, when it starts, how long before it this notice goes off,
+	// its doctor and its note (the last two only reach a "detailed" reminder). `ScheduledAt` is then the instant the notice fires.
+	AppointmentID uuid.UUID
+	StartsAt      time.Time
+	LeadMinutes   int
+	DoctorName    string
+	Note          string
 	// AccountID is the person this reminder is for (the account whose devices receive it), not the child's owner.
 	AccountID      uuid.UUID
 	ScheduledAt    time.Time
@@ -63,7 +71,7 @@ type DueDose struct {
 // notification. In generic mode Medication and Child are not sent at all, not even encrypted.
 type Payload struct {
 	Kind   DetailMode `json:"kind"`
-	DoseID string     `json:"doseId"`
+	DoseID string     `json:"doseId,omitempty"`
 	// ConsultationID is only for a medication's dose; RoutineID and Source "supplement" only for a supplement's (specs/033).
 	ConsultationID string `json:"consultationId,omitempty"`
 	RoutineID      string `json:"routineId,omitempty"`
@@ -72,6 +80,11 @@ type Payload struct {
 	Medication     string `json:"medication,omitempty"`
 	Child          string `json:"child,omitempty"`
 	ActionToken    string `json:"actionToken,omitempty"`
+	// An appointment's reminder (specs/033, part 2): `scheduledAt` is when the appointment starts and `leadMinutes` how long before it this goes off.
+	AppointmentID string `json:"appointmentId,omitempty"`
+	LeadMinutes   *int   `json:"leadMinutes,omitempty"`
+	Doctor        string `json:"doctor,omitempty"`
+	Note          string `json:"note,omitempty"`
 }
 
 var (

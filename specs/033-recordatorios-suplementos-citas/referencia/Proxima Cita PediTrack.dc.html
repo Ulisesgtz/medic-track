@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--color-ink:#04252b;--color-ink-soft:#0b3b44;--color-action:#0e7490;--color-bright:#22d3ee;--color-confirmed:#047857;--color-canvas:#f8feff;--color-surface:#ffffff;--color-hint:#ecfeff;--color-hint-border:#a5f3fc;--color-hint-edge:#cffafe;--color-bright-soft:#67e8f9;--color-body:#1f3d44;--color-ink-muted:#62909d;--color-ink-edge:#0b5763;--color-med-1:#0e7490;--color-emerald-800:#065f46;--color-slate-300:#cbd5e1;--color-slate-500:#64748b;--color-slate-600:#475569;--radius-field:14px;--radius-button:16px;--radius-card:22px;--radius-modal:24px;--shadow-card:0 8px 20px rgba(4,37,43,0.07);--color-ink-70:rgba(4,37,43,0.7)}
+*{box-sizing:border-box}
+body{margin:0;background:#dfe8ea;font-family:'Figtree',system-ui,sans-serif;color:#04252b}
+button,input,textarea,select{font-family:inherit}
+a{color:#0e7490;text-decoration:none}
+a:hover{color:#04252b;text-decoration:underline}
+</style>
+</helmet>
+
+<div style="padding:56px;display:flex;flex-direction:column;gap:80px">
+  <div style="max-width:900px;display:flex;flex-direction:column;gap:10px">
+    <p style="margin:0;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-action)">PediTrack · Próxima cita · propuesta 06 oct 2026</p>
+    <h1 style="margin:0;font-size:38px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Pantallas de Próxima cita</h1>
+    <p style="margin:0;font-size:16px;line-height:1.55;color:var(--color-body)">Cada pantalla en móvil 390 px y en web 1280 px, en filas separadas. Hoy es martes 6 oct, 15:10; la cita de ejemplo es el viernes 9 oct a las 10:30. Decisiones y desviaciones en <code>specs/005-identidad-visual-front-end/proxima-cita-decisiones.md</code>.</p>
+  </div>
+
+  <sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+    <section data-screen-label="{{ g.title }}" style="display:flex;flex-direction:column;gap:20px">
+      <div style="display:flex;flex-direction:column;gap:6px;max-width:900px">
+        <h2 style="margin:0;font-size:30px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">{{ g.title }}</h2>
+        <p style="margin:0;font-size:16px;line-height:1.55;color:var(--color-body)">{{ g.desc }}</p>
+      </div>
+
+      <h3 style="margin:8px 0 0;font-size:16px;font-weight:800;color:var(--color-action)">Móvil · 390 px</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start">
+        <sc-for list="{{ g.states }}" as="s" hint-placeholder-count="3">
+          <div id="{{ s.mid }}" style="display:flex;flex-direction:column;gap:10px;width:390px">
+            <p style="margin:0;display:flex;gap:8px;align-items:center;font-size:13px;font-weight:800;color:var(--color-ink)"><span style="padding:3px 9px;border-radius:999px;background:var(--color-ink);color:var(--color-bright)">{{ s.mid }}</span>{{ s.label }}</p>
+            <div data-screen-label="{{ s.mid }}" style="position:relative;width:390px;min-height:844px;max-height:{{ s.maxHm }};background:var(--color-canvas);box-shadow:0 20px 50px rgba(4,37,43,0.18);overflow:hidden">
+              <sc-if value="{{ s.lock }}">
+                <div style="min-height:844px;background:var(--color-ink);padding:56px 16px 40px;display:flex;flex-direction:column;gap:18px">
+                  <div style="text-align:center;display:flex;flex-direction:column;gap:2px;padding-bottom:12px"><span style="font-size:13px;font-weight:700;color:var(--color-bright-soft)">Pantalla bloqueada · ejemplo</span><span style="font-size:20px;font-weight:800;color:var(--color-surface)">{{ s.lockTitle }}</span></div>
+                  <sc-for list="{{ s.notifs }}" as="n" hint-placeholder-count="3">
+                    <div style="display:flex;flex-direction:column;gap:8px"><span style="padding-left:6px;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-bright-soft)">{{ n.caption }}</span><dc-import name="AvisoNotificacion" n="{{ n }}" hint-size="100%,120px"></dc-import></div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ s.childHeader }}" hint-placeholder-val="{{ true }}">
+                <header style="background:var(--color-ink);padding:20px 24px 26px">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <svg width="34" height="34" viewBox="0 0 64 64" role="img" aria-label="PediTrack"><defs><clipPath id="lgCm"><rect x="21" y="5" width="22" height="54" rx="11"></rect></clipPath></defs><rect width="64" height="64" rx="15" fill="#22d3ee"></rect><g transform="rotate(-45 32 32)" clip-path="url(#lgCm)"><rect x="21" y="5" width="22" height="54" fill="#ffffff"></rect><rect x="21" y="32" width="22" height="27" fill="#047857"></rect><rect x="21" y="30.6" width="22" height="2.8" fill="#22d3ee"></rect></g></svg>
+                      <span style="font-size:18px;font-weight:900;letter-spacing:-0.02em;color:var(--color-surface)">Pedi<span style="color:var(--color-bright-soft)">Track</span></span>
+                    </div>
+                    <sc-if value="{{ s.canConsult }}"><button type="button" style="width:151px;height:48px;border:0;border-radius:var(--radius-button);background:var(--color-confirmed);font-size:15px;font-weight:800;color:var(--color-surface);cursor:pointer" style-hover="background:var(--color-emerald-800)">Nueva consulta</button></sc-if>
+                  </div>
+                  <a href="#" style="margin-top:16px;min-height:44px;display:inline-flex;align-items:center;font-size:14px;font-weight:700;color:var(--color-bright-soft)">← Tus hijos</a>
+                  <p style="margin:2px 0 0;font-size:14px;font-weight:600;color:var(--color-hint-border)">Mateo Morales · 12 mar 2021</p>
+                  <h1 style="margin:2px 0 0;font-size:30px;font-weight:900;letter-spacing:-0.03em;color:var(--color-surface)">5 años 6 meses</h1>
+                </header>
+              </sc-if>
+              <sc-if value="{{ s.subHeader }}">
+                <header style="background:var(--color-ink);padding:16px 24px 26px">
+                  <a href="#" style="min-height:44px;display:inline-flex;align-items:center;font-size:14px;font-weight:700;color:var(--color-bright-soft)">{{ s.back }}</a>
+                  <p style="margin:6px 0 0;font-size:14px;font-weight:600;color:var(--color-hint-border)">{{ s.eyebrow }}</p>
+                  <h1 style="margin:4px 0 0;font-size:30px;line-height:1.15;font-weight:900;letter-spacing:-0.03em;color:var(--color-surface);overflow-wrap:anywhere">{{ s.title }}</h1>
+                </header>
+              </sc-if>
+              <sc-if value="{{ s.hasBody }}" hint-placeholder-val="{{ true }}">
+              <div style="padding:24px 20px 40px;display:flex;flex-direction:column;gap:22px">
+                <sc-if value="{{ s.banner }}"><div role="status" style="padding:14px 16px;border-radius:16px;border:1.5px solid var(--color-hint-border);background:var(--color-hint);display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 12px"><span style="font-size:15px;line-height:1.45;font-weight:700;color:var(--color-ink)">{{ s.banner }}</span><button type="button" style="min-height:44px;padding:0 12px;border:0;border-radius:12px;background:transparent;font-size:15px;font-weight:800;color:var(--color-action);text-decoration:underline;cursor:pointer" style-hover="background:var(--color-surface)">Deshacer</button></div></sc-if>
+                <sc-if value="{{ s.isConsult }}">
+                  <div style="background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:22px;display:flex;flex-direction:column;gap:12px">
+                    <p style="margin:0;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-action)">Consulta</p>
+                    <sc-for list="{{ s.consult }}" as="r" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:700;color:var(--color-ink)">{{ r.k }}</span><span style="font-size:15px;line-height:1.5;color:var(--color-body)">{{ r.v }}</span></div></sc-for>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ s.cita }}" hint-placeholder-val="{{ true }}"><dc-import name="CitaTarjeta" c="{{ s.cita }}" hint-size="100%,560px"></dc-import></sc-if>
+                <sc-if value="{{ s.noCita }}"><div style="border:2px dashed var(--color-hint-border);border-radius:var(--radius-card);padding:22px;display:flex;flex-direction:column;gap:8px;align-items:flex-start"><p style="margin:0;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-action)">Próxima cita</p><p style="margin:0;font-size:18px;font-weight:900;color:var(--color-ink)">Sin próxima cita</p><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">{{ s.noCitaText }}</p><sc-if value="{{ s.noCitaAdd }}"><button type="button" style="margin-top:4px;min-height:48px;padding:0 20px;border:2px solid var(--color-action);border-radius:var(--radius-button);background:transparent;font-size:16px;font-weight:800;color:var(--color-action);cursor:pointer" style-hover="background:var(--color-hint)">Agregar próxima cita</button></sc-if><sc-if value="{{ s.noCitaHist }}"><a href="#" style="min-height:44px;display:inline-flex;align-items:center;font-size:15px;font-weight:800;color:var(--color-action)">Historial de citas →</a></sc-if></div></sc-if>
+                <sc-if value="{{ s.consultas }}"><div style="display:flex;flex-direction:column;gap:12px"><h2 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Consultas</h2><a href="#" style="display:flex;flex-direction:column;gap:3px;padding:18px 20px;border-radius:var(--radius-card);border-left:5px solid var(--color-bright);background:var(--color-surface);box-shadow:var(--shadow-card);text-decoration:none"><span style="font-size:17px;font-weight:800;color:var(--color-ink)">28 sep 2026</span><span style="font-size:15px;color:var(--color-body)">Dra. Laura López · Dolor de oído</span><span style="font-size:13px;font-weight:600;color:var(--color-slate-600)">{{ s.consultaMeta }}</span></a></div></sc-if>
+                <sc-if value="{{ s.isForm }}">
+                  <form novalidate="" style="background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:20px 18px;display:flex;flex-direction:column;gap:20px">
+                    <sc-if value="{{ s.consultFields }}">
+                      <div style="display:flex;flex-direction:column"><label style="margin-bottom:6px;font-size:13px;font-weight:700;color:var(--color-ink)">Fecha de la consulta</label><input type="text" value="6 oct 2026" onChange="{{ noop }}" style="min-height:48px;width:100%;border:1.5px solid var(--color-slate-300);border-radius:var(--radius-field);padding:0 16px;font-size:16px;font-weight:500;color:var(--color-ink)"></div>
+                      <div style="display:flex;flex-direction:column"><label style="margin-bottom:6px;font-size:13px;font-weight:700;color:var(--color-ink)">Doctor</label><input type="text" value="Dra. Laura López" onChange="{{ noop }}" style="min-height:48px;width:100%;border:1.5px solid var(--color-slate-300);border-radius:var(--radius-field);padding:0 16px;font-size:16px;font-weight:500;color:var(--color-ink)"></div>
+                      <p style="margin:0;padding:12px 14px;border:1.5px dashed var(--color-slate-300);border-radius:14px;font-size:13px;font-weight:600;color:var(--color-slate-600)">Mock: aquí siguen síntomas, receta y medicamentos, sin cambios.</p>
+                    </sc-if>
+                    <sc-if value="{{ s.readonlyNote }}"><p role="note" style="margin:0;padding:14px 16px;border-radius:var(--radius-field);border:1.5px solid var(--color-hint-border);background:var(--color-hint);font-size:14px;line-height:1.5;color:var(--color-body)">{{ s.readonlyNote }}</p></sc-if>
+                    <div style="height:1px;background:var(--color-hint-edge)"></div>
+                    <dc-import name="CitaCampos" c="{{ s.campos }}" hint-size="100%,520px"></dc-import>
+                    <div style="display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;padding-top:4px">
+                      <button type="button" style="flex:1 1 120px;min-height:48px;padding:0 20px;border:2px solid var(--color-action);border-radius:var(--radius-button);background:transparent;font-size:16px;font-weight:800;color:var(--color-action);cursor:pointer" style-hover="background:var(--color-hint)">Cancelar</button>
+                      <button type="submit" style="flex:2 1 180px;min-height:48px;padding:0 28px;border:0;border-radius:var(--radius-button);background:var(--color-confirmed);font-size:16px;font-weight:800;color:var(--color-surface);cursor:pointer" style-hover="background:var(--color-emerald-800)">{{ s.submit }}</button>
+                    </div>
+                  </form>
+                </sc-if>
+                <sc-if value="{{ s.isHist }}"><dc-import name="CitasHistorial" h="{{ s.hist }}" hint-size="100%,520px"></dc-import></sc-if>
+                <sc-if value="{{ s.isSettings }}">
+                  <div style="background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:22px 18px;display:flex;flex-direction:column;gap:16px">
+                    <h2 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Texto de tus avisos</h2>
+                    <p style="margin:-6px 0 0;font-size:15px;line-height:1.55;color:var(--color-body)">Aplica a tus avisos de citas, tomas y suplementos en este dispositivo. Se lee aunque el teléfono esté bloqueado.</p>
+                    <sc-for list="{{ s.modes }}" as="m" hint-placeholder-count="2">
+                      <sc-if value="{{ m.on }}"><label style="display:flex;flex-direction:column;gap:12px;padding:15px;border-radius:var(--radius-field);border:2px solid var(--color-ink);background:var(--color-hint);cursor:pointer"><span style="display:flex;gap:12px;align-items:flex-start"><span style="margin-top:1px;flex-shrink:0;width:22px;height:22px;border-radius:999px;border:2px solid var(--color-ink);display:flex;align-items:center;justify-content:center"><span style="width:10px;height:10px;border-radius:999px;background:var(--color-ink)"></span></span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:800;color:var(--color-ink)">{{ m.label }}</span><span style="font-size:14px;line-height:1.45;color:var(--color-body)">{{ m.desc }}</span></span></span><dc-import name="AvisoNotificacion" n="{{ m.preview }}" hint-size="100%,110px"></dc-import></label></sc-if>
+                      <sc-if value="{{ m.off }}"><label style="display:flex;flex-direction:column;gap:12px;padding:16px;border-radius:var(--radius-field);border:1.5px solid var(--color-slate-300);background:var(--color-surface);cursor:pointer"><span style="display:flex;gap:12px;align-items:flex-start"><span style="margin-top:1px;flex-shrink:0;width:22px;height:22px;border-radius:999px;border:2px solid var(--color-slate-500)"></span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:800;color:var(--color-ink)">{{ m.label }}</span><span style="font-size:14px;line-height:1.45;color:var(--color-body)">{{ m.desc }}</span></span></span><dc-import name="AvisoNotificacion" n="{{ m.preview }}" hint-size="100%,110px"></dc-import></label></sc-if>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+              </sc-if>
+              <sc-if value="{{ s.dialog }}">
+                <div style="position:absolute;inset:0;background:var(--color-ink-70);display:flex;align-items:flex-end;padding:16px">
+                  <div role="dialog" aria-modal="true" style="width:100%;background:var(--color-surface);border-radius:var(--radius-modal);padding:28px 24px;display:flex;flex-direction:column;gap:16px">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><h2 style="margin:8px 0 0;font-size:24px;line-height:1.2;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">{{ s.dlg.title }}</h2><button type="button" aria-label="Cerrar" style="flex-shrink:0;width:44px;height:44px;border:0;border-radius:12px;background:transparent;color:var(--color-ink);font-size:26px;font-weight:700;line-height:1;cursor:pointer" style-hover="background:var(--color-hint)">×</button></div>
+                    <sc-for list="{{ s.dlg.rows }}" as="r" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:700;color:var(--color-ink)">{{ r.k }}</span><span style="font-size:15px;line-height:1.5;color:var(--color-body)">{{ r.v }}</span></div></sc-for>
+                    <div style="margin-top:6px;display:flex;flex-direction:column-reverse;gap:10px">
+                      <button type="button" autofocus style="min-height:48px;border:2px solid var(--color-action);border-radius:var(--radius-button);background:transparent;color:var(--color-action);font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 0 0 2px var(--color-surface),0 0 0 4px var(--color-confirmed)">Volver</button>
+                      <button type="button" style="min-height:48px;border:0;border-radius:var(--radius-button);background:var(--color-ink);color:var(--color-surface);font-size:16px;font-weight:800;cursor:pointer">Cancelar cita</button>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+
+      <h3 style="margin:24px 0 0;font-size:16px;font-weight:800;color:var(--color-action)">Web · 1280 px</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:48px;align-items:flex-start">
+        <sc-for list="{{ g.states }}" as="s" hint-placeholder-count="1">
+          <div id="{{ s.wid }}" style="display:flex;flex-direction:column;gap:10px;width:1280px">
+            <p style="margin:0;display:flex;gap:8px;align-items:center;font-size:13px;font-weight:800;color:var(--color-ink)"><span style="padding:3px 9px;border-radius:999px;background:var(--color-ink);color:var(--color-bright)">{{ s.wid }}</span>{{ s.label }}</p>
+            <div data-screen-label="{{ s.wid }}" style="position:relative;width:1280px;min-height:820px;max-height:{{ s.maxHw }};display:flex;background:var(--color-canvas);box-shadow:0 20px 50px rgba(4,37,43,0.18);overflow:hidden">
+              <aside style="width:348px;flex-shrink:0;background:var(--color-ink);padding:28px 24px;display:flex;flex-direction:column;gap:28px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <svg width="34" height="34" viewBox="0 0 64 64" role="img" aria-label="PediTrack"><defs><clipPath id="lgCw"><rect x="21" y="5" width="22" height="54" rx="11"></rect></clipPath></defs><rect width="64" height="64" rx="15" fill="#22d3ee"></rect><g transform="rotate(-45 32 32)" clip-path="url(#lgCw)"><rect x="21" y="5" width="22" height="54" fill="#ffffff"></rect><rect x="21" y="32" width="22" height="27" fill="#047857"></rect><rect x="21" y="30.6" width="22" height="2.8" fill="#22d3ee"></rect></g></svg>
+                  <span style="font-size:18px;font-weight:900;letter-spacing:-0.02em;color:var(--color-surface)">Pedi<span style="color:var(--color-bright-soft)">Track</span></span>
+                </div>
+                <nav style="display:flex;flex-direction:column;gap:10px">
+                  <a href="#" aria-current="page" style="display:flex;justify-content:space-between;align-items:center;min-height:48px;padding:0 16px;border-radius:var(--radius-button);background:var(--color-action)"><span style="font-size:16px;font-weight:800;color:var(--color-surface)">Mateo</span><span style="font-size:13px;font-weight:600;color:var(--color-hint-edge)">5a 6m</span></a>
+                  <a href="#" style="display:flex;justify-content:space-between;align-items:center;min-height:48px;padding:0 16px;border-radius:var(--radius-button)" style-hover="background:var(--color-ink-soft)"><span style="font-size:16px;font-weight:800;color:var(--color-hint-border)">Sofía</span><span style="font-size:13px;font-weight:600;color:var(--color-ink-muted)">1a 2m</span></a>
+                  <sc-if value="{{ s.isOwner }}" hint-placeholder-val="{{ true }}"><a href="#" style="display:flex;align-items:center;justify-content:center;min-height:48px;border-radius:var(--radius-button);border:1.5px dashed var(--color-ink-edge);font-size:14px;font-weight:700;color:var(--color-bright-soft)">+ Agregar hijo</a></sc-if>
+                </nav>
+                <a href="#" style="display:flex;justify-content:space-between;align-items:center;min-height:48px;padding:0 16px;border-radius:var(--radius-button)" style-hover="background:var(--color-ink-soft)"><span style="font-size:16px;font-weight:800;color:var(--color-hint-border)">Familia</span><span style="font-size:13px;font-weight:600;color:var(--color-ink-muted)">{{ s.famSub }}</span></a>
+                <div style="margin-top:auto;display:flex;align-items:center;gap:12px;border-top:1px solid var(--color-ink-soft);padding-top:20px">
+                  <span aria-hidden="true" style="width:38px;height:38px;border-radius:999px;background:var(--color-action);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--color-surface)">{{ s.viewer.initials }}</span>
+                  <span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700;color:var(--color-surface)">{{ s.viewer.name }}</span><span style="font-size:13px;color:var(--color-bright-soft)">{{ s.viewer.plan }}</span></span>
+                </div>
+              </aside>
+              <main style="min-width:0;flex:1;padding:40px 48px 56px">
+                <div style="max-width:904px;margin:0 auto;display:flex;flex-direction:column;gap:28px">
+                  <sc-if value="{{ s.childHeaderW }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:24px">
+                      <div style="min-width:0"><p style="margin:0;font-size:14px;font-weight:700;color:var(--color-action)">Mateo Morales · 12 mar 2021</p><h1 style="margin:4px 0 0;font-size:38px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">5 años 6 meses</h1></div>
+                      <sc-if value="{{ s.canConsult }}"><button type="button" style="flex-shrink:0;width:151px;height:48px;border:0;border-radius:var(--radius-button);background:var(--color-confirmed);font-size:15px;font-weight:800;color:var(--color-surface);cursor:pointer" style-hover="background:var(--color-emerald-800)">Nueva consulta</button></sc-if>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ s.subHeader }}">
+                    <div style="display:flex;flex-direction:column">
+                      <a href="#" style="align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;font-size:14px;font-weight:700;color:var(--color-action)">{{ s.back }}</a>
+                      <p style="margin:0;font-size:14px;font-weight:700;color:var(--color-action)">{{ s.eyebrow }}</p>
+                      <h1 style="margin:4px 0 0;font-size:38px;line-height:1.1;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink);overflow-wrap:anywhere">{{ s.title }}</h1>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ s.banner }}"><div role="status" style="max-width:620px;padding:14px 18px;border-radius:16px;border:1.5px solid var(--color-hint-border);background:var(--color-hint);display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="font-size:15px;font-weight:700;color:var(--color-ink)">{{ s.banner }}</span><button type="button" style="min-height:44px;padding:0 12px;border:0;border-radius:12px;background:transparent;font-size:15px;font-weight:800;color:var(--color-action);text-decoration:underline;cursor:pointer" style-hover="background:var(--color-surface)">Deshacer</button></div></sc-if>
+
+                  <sc-if value="{{ s.isChildW }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:28px;align-items:start">
+                      <div style="min-width:0;display:flex;flex-direction:column;gap:24px">
+                        <sc-if value="{{ s.cita }}" hint-placeholder-val="{{ true }}"><dc-import name="CitaTarjeta" c="{{ s.cita }}" hint-size="100%,520px"></dc-import></sc-if>
+                        <sc-if value="{{ s.noCita }}"><div style="border:2px dashed var(--color-hint-border);border-radius:var(--radius-card);padding:24px;display:flex;flex-direction:column;gap:8px;align-items:flex-start"><p style="margin:0;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-action)">Próxima cita</p><p style="margin:0;font-size:18px;font-weight:900;color:var(--color-ink)">Sin próxima cita</p><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">{{ s.noCitaText }}</p><sc-if value="{{ s.noCitaHist }}"><a href="#" style="min-height:44px;display:inline-flex;align-items:center;font-size:15px;font-weight:800;color:var(--color-action)">Historial de citas →</a></sc-if></div></sc-if>
+                        <div style="display:flex;flex-direction:column;gap:12px"><h2 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Consultas</h2><a href="#" style="display:flex;flex-direction:column;gap:3px;padding:20px 22px;border-radius:var(--radius-card);border-left:5px solid var(--color-bright);background:var(--color-surface);box-shadow:var(--shadow-card);text-decoration:none"><span style="font-size:18px;font-weight:800;color:var(--color-ink)">28 sep 2026</span><span style="font-size:15px;color:var(--color-body)">Dra. Laura López · Dolor de oído</span><span style="font-size:13px;font-weight:600;color:var(--color-slate-600)">{{ s.consultaMeta }}</span></a></div>
+                      </div>
+                      <div style="padding-top:0"><dc-import name="TomasHoyPanel" doses="{{ s.today }}" hint-size="100%,300px"></dc-import></div>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ s.isConsult }}">
+                    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start">
+                      <div style="background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:24px;display:flex;flex-direction:column;gap:14px">
+                        <p style="margin:0;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-action)">Consulta</p>
+                        <sc-for list="{{ s.consult }}" as="r" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:700;color:var(--color-ink)">{{ r.k }}</span><span style="font-size:16px;line-height:1.5;color:var(--color-body)">{{ r.v }}</span></div></sc-for>
+                      </div>
+                      <sc-if value="{{ s.cita }}"><dc-import name="CitaTarjeta" c="{{ s.cita }}" hint-size="100%,520px"></dc-import></sc-if>
+                      <sc-if value="{{ s.noCita }}"><div style="border:2px dashed var(--color-hint-border);border-radius:var(--radius-card);padding:24px;display:flex;flex-direction:column;gap:8px;align-items:flex-start"><p style="margin:0;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-action)">Próxima cita</p><p style="margin:0;font-size:18px;font-weight:900;color:var(--color-ink)">Sin próxima cita</p><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">{{ s.noCitaText }}</p><sc-if value="{{ s.noCitaAdd }}"><button type="button" style="margin-top:4px;min-height:48px;padding:0 20px;border:2px solid var(--color-action);border-radius:var(--radius-button);background:transparent;font-size:16px;font-weight:800;color:var(--color-action);cursor:pointer" style-hover="background:var(--color-hint)">Agregar próxima cita</button></sc-if></div></sc-if>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ s.isForm }}">
+                    <form novalidate="" style="max-width:640px;background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:28px;display:flex;flex-direction:column;gap:20px">
+                      <sc-if value="{{ s.consultFields }}">
+                        <div style="display:flex;gap:16px"><div style="flex:1;display:flex;flex-direction:column"><label style="margin-bottom:6px;font-size:13px;font-weight:700;color:var(--color-ink)">Fecha de la consulta</label><input type="text" value="6 oct 2026" onChange="{{ noop }}" style="min-height:48px;width:100%;border:1.5px solid var(--color-slate-300);border-radius:var(--radius-field);padding:0 16px;font-size:16px;font-weight:500;color:var(--color-ink)"></div><div style="flex:1;display:flex;flex-direction:column"><label style="margin-bottom:6px;font-size:13px;font-weight:700;color:var(--color-ink)">Doctor</label><input type="text" value="Dra. Laura López" onChange="{{ noop }}" style="min-height:48px;width:100%;border:1.5px solid var(--color-slate-300);border-radius:var(--radius-field);padding:0 16px;font-size:16px;font-weight:500;color:var(--color-ink)"></div></div>
+                        <p style="margin:0;padding:12px 14px;border:1.5px dashed var(--color-slate-300);border-radius:14px;font-size:13px;font-weight:600;color:var(--color-slate-600)">Mock: aquí siguen síntomas, receta y medicamentos, sin cambios.</p>
+                      </sc-if>
+                      <sc-if value="{{ s.readonlyNote }}"><p role="note" style="margin:0;padding:14px 16px;border-radius:var(--radius-field);border:1.5px solid var(--color-hint-border);background:var(--color-hint);font-size:14px;line-height:1.5;color:var(--color-body)">{{ s.readonlyNote }}</p></sc-if>
+                      <div style="height:1px;background:var(--color-hint-edge)"></div>
+                      <dc-import name="CitaCampos" c="{{ s.campos }}" hint-size="100%,520px"></dc-import>
+                      <div style="display:flex;justify-content:flex-end;gap:12px;padding-top:4px">
+                        <button type="button" style="min-height:48px;padding:0 24px;border:2px solid var(--color-action);border-radius:var(--radius-button);background:transparent;font-size:16px;font-weight:800;color:var(--color-action);cursor:pointer" style-hover="background:var(--color-hint)">Cancelar</button>
+                        <button type="submit" style="min-height:48px;padding:0 32px;border:0;border-radius:var(--radius-button);background:var(--color-confirmed);font-size:16px;font-weight:800;color:var(--color-surface);cursor:pointer" style-hover="background:var(--color-emerald-800)">{{ s.submit }}</button>
+                      </div>
+                    </form>
+                  </sc-if>
+                  <sc-if value="{{ s.isHist }}"><div style="max-width:720px;display:flex;flex-direction:column;gap:24px"><sc-if value="{{ s.histCita }}"><dc-import name="CitaTarjeta" c="{{ s.histCita }}" hint-size="100%,480px"></dc-import></sc-if><dc-import name="CitasHistorial" h="{{ s.hist }}" hint-size="100%,480px"></dc-import></div></sc-if>
+                  <sc-if value="{{ s.isSettings }}">
+                    <div style="max-width:640px;background:var(--color-surface);border-radius:var(--radius-card);box-shadow:var(--shadow-card);padding:28px;display:flex;flex-direction:column;gap:16px">
+                      <h2 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Texto de tus avisos</h2>
+                      <p style="margin:-6px 0 0;font-size:15px;line-height:1.55;color:var(--color-body)">Aplica a tus avisos de citas, tomas y suplementos en este dispositivo. Se lee aunque la pantalla esté bloqueada.</p>
+                      <sc-for list="{{ s.modes }}" as="m" hint-placeholder-count="2">
+                        <sc-if value="{{ m.on }}"><label style="display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:center;padding:15px;border-radius:var(--radius-field);border:2px solid var(--color-ink);background:var(--color-hint);cursor:pointer"><span style="display:flex;gap:12px;align-items:flex-start"><span style="margin-top:1px;flex-shrink:0;width:22px;height:22px;border-radius:999px;border:2px solid var(--color-ink);display:flex;align-items:center;justify-content:center"><span style="width:10px;height:10px;border-radius:999px;background:var(--color-ink)"></span></span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:800;color:var(--color-ink)">{{ m.label }}</span><span style="font-size:14px;line-height:1.45;color:var(--color-body)">{{ m.desc }}</span></span></span><dc-import name="AvisoNotificacion" n="{{ m.preview }}" hint-size="100%,110px"></dc-import></label></sc-if>
+                        <sc-if value="{{ m.off }}"><label style="display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:center;padding:16px;border-radius:var(--radius-field);border:1.5px solid var(--color-slate-300);background:var(--color-surface);cursor:pointer"><span style="display:flex;gap:12px;align-items:flex-start"><span style="margin-top:1px;flex-shrink:0;width:22px;height:22px;border-radius:999px;border:2px solid var(--color-slate-500)"></span><span style="display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:800;color:var(--color-ink)">{{ m.label }}</span><span style="font-size:14px;line-height:1.45;color:var(--color-body)">{{ m.desc }}</span></span></span><dc-import name="AvisoNotificacion" n="{{ m.preview }}" hint-size="100%,110px"></dc-import></label></sc-if>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+                </div>
+              </main>
+              <sc-if value="{{ s.lock }}">
+                <div style="position:absolute;top:24px;right:24px;width:380px;display:flex;flex-direction:column;gap:14px">
+                  <sc-for list="{{ s.notifs }}" as="n" hint-placeholder-count="3">
+                    <div style="display:flex;flex-direction:column;gap:6px"><span style="padding-left:6px;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-action)">{{ n.caption }}</span><dc-import name="AvisoNotificacion" n="{{ n }}" hint-size="100%,120px"></dc-import></div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ s.dialog }}">
+                <div style="position:absolute;inset:0;background:var(--color-ink-70);display:flex;align-items:center;justify-content:center;padding:24px">
+                  <div role="dialog" aria-modal="true" style="width:100%;max-width:560px;background:var(--color-surface);border-radius:var(--radius-modal);padding:28px;display:flex;flex-direction:column;gap:16px;box-shadow:0 24px 60px rgba(0,0,0,0.3)">
+                    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px"><h2 style="margin:8px 0 0;font-size:24px;line-height:1.2;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">{{ s.dlg.title }}</h2><button type="button" aria-label="Cerrar" style="flex-shrink:0;width:44px;height:44px;border:0;border-radius:12px;background:transparent;color:var(--color-ink);font-size:26px;font-weight:700;line-height:1;cursor:pointer" style-hover="background:var(--color-hint)">×</button></div>
+                    <sc-for list="{{ s.dlg.rows }}" as="r" hint-placeholder-count="3"><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:700;color:var(--color-ink)">{{ r.k }}</span><span style="font-size:16px;line-height:1.5;color:var(--color-body)">{{ r.v }}</span></div></sc-for>
+                    <div style="margin-top:8px;display:flex;justify-content:flex-end;gap:12px">
+                      <button type="button" autofocus style="min-height:48px;padding:0 24px;border:2px solid var(--color-action);border-radius:var(--radius-button);background:transparent;color:var(--color-action);font-size:16px;font-weight:800;cursor:pointer;box-shadow:0 0 0 2px var(--color-surface),0 0 0 4px var(--color-confirmed)">Volver</button>
+                      <button type="button" style="min-height:48px;padding:0 24px;border:0;border-radius:var(--radius-button);background:var(--color-ink);color:var(--color-surface);font-size:16px;font-weight:800;cursor:pointer">Cancelar cita</button>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const V = {
+      ana: { initials: 'AM', name: 'Ana Morales', plan: 'Plan completo' },
+      anaFree: { initials: 'AM', name: 'Ana Morales', plan: 'Plan gratuito' },
+      rosa: { initials: 'RH', name: 'Rosa Hernández', plan: 'Cuidador · familia de Ana' },
+    };
+    const avDef = [{ label: '1 día antes', when: 'jue 8 oct, 10:30' }, { label: '2 horas antes', when: 'vie 9 oct, 08:30' }];
+    const cita = (o) => ({ countdown: 'en 3 días', dateBig: 'Vie 9 oct', time: '10:30', doctor: 'Dra. Laura López', fromConsulta: 'De la consulta del 28 sep →', showConsultaLink: true, note: 'Revisión de oído; pidió la cartilla de vacunas.', avisos: avDef, canEdit: true, cuidadorNote: false, showHistLink: true, ...o });
+    const done = (by, at) => ({ state: 'done', by, at });
+    const today = [
+      { time: '08:00', name: 'Amoxicilina', med: true, meta: 'Consulta del 28 sep', chip: done('Ana', '08:02') },
+      { time: '08:00', name: 'Vitamina D', supp: true, chip: done('Ana', '08:05') },
+      { time: '16:00', name: 'Amoxicilina', med: true, meta: 'Consulta del 28 sep', chip: { state: 'future' } },
+    ];
+    const consult = [
+      { k: 'Doctor', v: 'Dra. Laura López' },
+      { k: 'Síntomas', v: 'Dolor de oído derecho desde hace dos días, sin fiebre.' },
+      { k: 'Medicamentos', v: 'Amoxicilina · cada 8 horas por 10 días' },
+    ];
+    const consultOld = [
+      { k: 'Doctor', v: 'Dr. Jorge Ramírez' },
+      { k: 'Síntomas', v: 'Tos seca por las noches.' },
+      { k: 'Medicamentos', v: 'Ninguno' },
+    ];
+    const base = { lock: false, childHeader: false, childHeaderW: false, subHeader: false, hasBody: true, isChildW: false, isConsult: false, isForm: false, isHist: false, isSettings: false, dialog: false, banner: '', cita: null, noCita: false, consultas: false, consultaMeta: '1 medicamento · próxima cita vie 9 oct', maxHm: 'none', maxHw: 'none', canConsult: true, isOwner: true, viewer: V.ana, famSub: '3 de 4', today };
+    const mk = (o) => ({ ...base, ...o, mid: o.id + 'm', wid: o.id + 'w' });
+    const child = (o) => mk({ childHeader: true, childHeaderW: true, isChildW: true, consultas: true, cita: cita(), ...o });
+
+    const campos = (o) => {
+      const av = (o.avisos || avDef).map((a) => ({ ...a, ok: !a.past, past: !!a.past }));
+      return { optional: false, help: '', enabled: !o.disabled, disabled: !!o.disabled, date: '', time: '', note: '', dateOk: !o.dateErr, canAdd: av.length < 5 && !o.adding, maxReached: av.length >= 5, adding: false, pastNote: '', ...o, avisos: av };
+    };
+    const helpNew = 'Si el pediatra dio fecha, se anota aquí. Si no, la consulta se guarda sin ella.';
+    const newConsult = (o, c) => mk({ subHeader: true, back: '← Mateo', eyebrow: 'Mateo Morales', title: 'Nueva consulta', isForm: true, consultFields: true, submit: 'Guardar consulta', ...o, campos: campos({ optional: true, help: helpNew, ...c }) });
+    const C = [
+      newConsult({ id: 'C1', label: 'Sin cita anotada · avisos por omisión visibles' }, { avisos: [{ label: '1 día antes' }, { label: '2 horas antes' }] }),
+      newConsult({ id: 'C2', label: 'Con fecha y hora' }, { date: '9 oct 2026', time: '10:30', note: 'Revisión de oído; pidió la cartilla de vacunas.' }),
+      newConsult({ id: 'C3', label: 'Error · fecha anterior a la consulta' }, { date: '28 sep 2026', time: '10:30', dateErr: 'La próxima cita va después de la consulta (6 oct 2026).', avisos: [{ label: '1 día antes' }, { label: '2 horas antes' }] }),
+      newConsult({ id: 'C4', label: 'Cuenta gratuita · campo deshabilitado', viewer: V.anaFree, famSub: '' }, { disabled: true }),
+    ];
+
+    const P = [
+      child({ id: 'P1', label: 'Detalle del hijo · Tutor' }),
+      mk({ id: 'P2', label: 'Detalle de la consulta · Tutor', subHeader: true, back: '← Mateo', eyebrow: 'Consulta · Mateo Morales', title: '28 sep 2026', isConsult: true, consult, cita: cita({ showConsultaLink: false }) }),
+      child({ id: 'P3', label: 'Detalle del hijo · Cuidador (solo ver)', canConsult: false, isOwner: false, viewer: V.rosa, cita: cita({ canEdit: false, cuidadorNote: true }) }),
+      child({ id: 'P4', label: 'Detalle del hijo · sin próxima cita (vacío)', cita: null, noCita: true, noCitaHist: true, consultaMeta: '1 medicamento', noCitaText: 'Las citas se anotan al registrar una consulta o desde el detalle de una consulta ya guardada.' }),
+      child({ id: 'P5', label: 'Después de «Marcar realizada»', cita: null, noCita: true, noCitaHist: true, consultaMeta: '1 medicamento', banner: 'La cita del vie 9 oct quedó como realizada.', noCitaText: 'Las citas se anotan al registrar una consulta o desde el detalle de una consulta ya guardada.' }),
+    ];
+
+    const edit = (o, c) => mk({ subHeader: true, back: '← Mateo', eyebrow: 'Próxima cita · Mateo Morales', title: 'Editar cita', isForm: true, submit: 'Guardar cambios', readonlyNote: 'Los cambios los ve toda la familia y los avisos se vuelven a programar.', ...o, campos: campos({ date: '9 oct 2026', time: '10:30', note: 'Revisión de oído; pidió la cartilla de vacunas.', ...c }) });
+    const E = [
+      edit({ id: 'E1', label: 'Editar · con los dos avisos por omisión' }, {}),
+      edit({ id: 'E2', label: 'Agregar un aviso · con ejemplos' }, { adding: true }),
+      edit({ id: 'E3', label: 'Máximo de 5 avisos' }, { avisos: [{ label: '2 días antes', when: 'mié 7 oct, 10:30' }, { label: '1 día antes', when: 'jue 8 oct, 10:30' }, { label: 'El mismo día a las 07:00', when: 'vie 9 oct, 07:00' }, { label: '3 horas antes', when: 'vie 9 oct, 07:30' }, { label: '2 horas antes', when: 'vie 9 oct, 08:30' }] }),
+      edit({ id: 'E4', label: 'Un aviso ya pasó (cita movida a mañana)' }, { date: '7 oct 2026', avisos: [{ label: '1 día antes', when: 'era hoy, 10:30', past: true }, { label: '2 horas antes', when: 'mié 7 oct, 08:30' }], pastNote: 'El aviso de «1 día antes» habría llegado hoy a las 10:30, que ya pasó, así que no se enviará. Los demás siguen igual.' }),
+    ];
+
+    const A = [
+      mk({ id: 'A1', label: 'Consulta guardada sin próxima cita', subHeader: true, back: '← Mateo', eyebrow: 'Consulta · Mateo Morales', title: '14 ago 2026', isConsult: true, consult: consultOld, noCita: true, noCitaAdd: true, noCitaText: 'Si el pediatra dio una fecha para volver, se puede anotar sin cambiar nada más de la consulta.' }),
+      mk({ id: 'A2', label: 'Agregar próxima cita a esa consulta', subHeader: true, back: '← Consulta del 14 ago', eyebrow: 'Consulta del 14 ago 2026 · Mateo Morales', title: 'Agregar próxima cita', isForm: true, submit: 'Guardar cita', readonlyNote: 'Consulta del 14 ago 2026 con Dr. Jorge Ramírez. Solo se agrega la cita; lo demás de la consulta no cambia.', campos: campos({ date: '20 ago 2026', time: '09:30', avisos: [{ label: '1 día antes', when: 'mié 19 ago, 09:30' }, { label: '2 horas antes', when: 'jue 20 ago, 07:30' }] }) }),
+    ];
+
+    const items = (canMark) => [
+      { date: 'mar 15 sep 2026 · 17:00', doctor: 'Dra. Laura López', meta: 'De la consulta del 1 sep · marcada por Ana', isDone: true },
+      { date: 'jue 20 ago 2026 · 09:30', doctor: 'Dr. Jorge Ramírez', meta: 'De la consulta del 14 ago · nadie la marcó', isUnmarked: true, canMark },
+      { date: 'lun 3 ago 2026 · 12:00', doctor: 'Dr. Jorge Ramírez', meta: 'De la consulta del 20 jul · cancelada el 1 ago por Luis', isCancel: true },
+      { date: 'vie 10 jul 2026 · 16:30', doctor: 'Dra. Laura López Hernández de la Garza', meta: 'De la consulta del 26 jun · marcada por Rosa', isDone: true },
+    ];
+    const hist = (o, h) => mk({ subHeader: true, back: '← Mateo', eyebrow: 'Mateo Morales', title: 'Historial de citas', isHist: true, ...o, hist: { isEmpty: false, ...h, hasItems: (h.items || []).length > 0 } });
+    const H = [
+      hist({ id: 'H1', label: 'Historial · Tutor', cita: cita({ showHistLink: false }), histCita: cita({ showHistLink: false }) }, { items: items(true) }),
+      hist({ id: 'H2', label: 'Historial vacío' }, { isEmpty: true, items: [] }),
+      hist({ id: 'H3', label: 'Historial · Cuidador (solo ver)', isOwner: false, canConsult: false, viewer: V.rosa, cita: cita({ showHistLink: false, canEdit: false, cuidadorNote: true }), histCita: cita({ showHistLink: false, canEdit: false, cuidadorNote: true }) }, { items: items(false) }),
+    ];
+
+    const X = [
+      child({ id: 'X1', label: 'Diálogo «Cancelar cita»', dialog: true, maxHm: '844px', maxHw: '820px', dlg: { title: '¿Cancelar la cita del vie 9 oct?', rows: [
+        { k: 'Deja de pasar', v: 'Los avisos de esta cita ya no llegan a nadie de la familia.' },
+        { k: 'Se conserva', v: 'La cita queda en el historial como «Cancelada», con la fecha y quién la canceló.' },
+        { k: 'Después', v: 'Para otra fecha se puede anotar una cita nueva desde la consulta.' } ] } }),
+    ];
+
+    const detail = [
+      { caption: '1 día antes · jue 8 oct, 10:30', time: 'ahora', title: 'Cita de Mateo: mañana a las 10:30', body: 'Con Dra. Laura López, el viernes 9 oct. Nota: revisión de oído; pidió la cartilla de vacunas.' },
+      { caption: '2 horas antes · vie 9 oct, 08:30', time: 'ahora', title: 'Cita de Mateo: hoy a las 10:30', body: 'Con Dra. Laura López, en 2 horas.' },
+      { caption: 'Personalizado · el mismo día, 3 horas antes', time: 'ahora', title: 'Cita de Mateo: hoy a las 10:30', body: 'Con Dra. Laura López, en 3 horas.' },
+    ];
+    const generic = [
+      { caption: '1 día antes · jue 8 oct, 10:30', time: 'ahora', title: 'Recordatorio de cita', body: 'Hay una cita registrada para mañana.' },
+      { caption: '2 horas antes · vie 9 oct, 08:30', time: 'ahora', title: 'Recordatorio de cita', body: 'Hay una cita registrada para hoy, en 2 horas.' },
+      { caption: 'Personalizado · el mismo día, 3 horas antes', time: 'ahora', title: 'Recordatorio de cita', body: 'Hay una cita registrada para hoy, en 3 horas.' },
+    ];
+    const notif = (o) => child({ lock: true, hasBody: false, childHeader: false, ...o });
+    const N = [
+      notif({ id: 'N1', label: 'Aviso con detalle', lockTitle: 'Con detalle', notifs: detail }),
+      notif({ id: 'N2', label: 'Aviso genérico (por omisión)', lockTitle: 'Genérico', notifs: generic }),
+      mk({ id: 'N3', label: 'Ajustes · elegir cómo se ve el texto', subHeader: true, back: '← Ajustes', eyebrow: 'Ajustes · Ana Morales', title: 'Avisos', isSettings: true, modes: [
+        { label: 'Genérico', desc: 'Dice que hay una cita y cuándo. Sin nombre, doctor ni nota.', on: true, off: false, preview: generic[0] },
+        { label: 'Con detalle', desc: 'Incluye el nombre de tu hijo, el doctor, la hora y la nota.', on: false, off: true, preview: detail[0] } ] }),
+    ];
+    N.forEach((s) => { if (s.lock) { s.maxHm = '844px'; } });
+
+    const groups = [
+      { title: '1 · Campo «Próxima cita» en «Nueva consulta»', desc: 'Al final del formulario de consulta, después de medicamentos. Los dos avisos por omisión se ven desde el principio como chips editables. «Guardar consulta» es el único sólido.', states: C },
+      { title: '2 · Tarjeta «Próxima cita»', desc: 'En el detalle del hijo se muestra la más cercana; en el de la consulta, la suya. Fecha y hora grandes, cuenta regresiva neutral, avisos programados y acciones con contorno.', states: P },
+      { title: '3 · Editar cita y sus avisos', desc: 'Hasta 5 avisos. Los ejemplos solo llenan el campo; no se agregan solos. Un aviso que ya pasó se muestra punteado y con una nota, sin color de alerta.', states: E },
+      { title: '4 · Agregar cita a una consulta ya guardada', desc: 'Desde el detalle de la consulta. La pantalla solo tiene los campos de la cita; la consulta se muestra como referencia y no se edita.', states: A },
+      { title: '5 · Historial de citas', desc: 'Realizadas, canceladas y pasadas sin marcar, con chips neutros: cian, gris y punteado. Sin rojo ni ámbar.', states: H },
+      { title: '6 · Cancelar cita', desc: 'Confirmación neutral con qué deja de pasar y qué se conserva. «Volver» tiene el foco inicial.', states: X },
+      { title: '7 · Texto del aviso', desc: 'Dos versiones, sin imperativos. En web, el aviso del navegador aparece sobre la app. Cada persona elige la suya en Ajustes; por omisión, genérico.', states: N },
+    ];
+    return { groups, noop: () => {} };
+  }
+}
+</script>
+</body>
+</html>

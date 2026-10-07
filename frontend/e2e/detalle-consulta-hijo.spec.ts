@@ -119,7 +119,9 @@ for (const design of designs) {
       await signUp(page)
       await page.getByRole('main').getByText('Luis Gómez').click()
       await page.getByRole('link', { name: design.isWeb ? 'Nueva consulta' : '+ Nueva' }).click()
-      await expect(page.getByText(/opcional/i)).toHaveCount(0)
+      const primeraToma = page.locator('label', { hasText: 'Primera toma' })
+      await expect(primeraToma).toBeVisible()
+      await expect(primeraToma).not.toContainText(/opcional/i)
 
       await page.getByLabel('Doctor').fill('Dra. López')
       await page.getByLabel('Fecha', { exact: true }).fill('2026-01-15')
