@@ -25,6 +25,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
 	"github.com/Ulisesgtz/medic-track/backend/internal/reminder"
 	"github.com/Ulisesgtz/medic-track/backend/internal/server"
+	"github.com/Ulisesgtz/medic-track/backend/internal/supplement"
 )
 
 type noopRecorder struct{}
@@ -47,6 +48,9 @@ type world struct {
 	childA         uuid.UUID
 	consultationA  uuid.UUID
 	doseA          uuid.UUID
+	// Specs/033: a supplement routine of child A (inserted directly: A is on the free plan here) and one of its doses.
+	routineA     uuid.UUID
+	routineDoseA uuid.UUID
 }
 
 func newWorld(t *testing.T) *world {
@@ -112,6 +116,11 @@ func newWorld(t *testing.T) *world {
 	require.NoError(t, err)
 	w.consultationA = c.ID
 	w.doseA = c.Medications[0].Doses[0].ID
+	require.NoError(t, pool.QueryRow(context.Background(), `
+		INSERT INTO supplement_routines (account_id, child_id, name, period, times, first_date, utc_offset_minutes, generated_until, created_by_account_id)
+		VALUES ($1, $2, 'Vitamina D', 'daily', ARRAY['08:00']::time[], current_date, 0, now() + interval '14 days', $1) RETURNING id`, w.accountA, w.childA).Scan(&w.routineA))
+	require.NoError(t, pool.QueryRow(context.Background(), `
+		INSERT INTO supplement_doses (routine_id, scheduled_at) VALUES ($1, now() + interval '1 hour') RETURNING id`, w.routineA).Scan(&w.routineDoseA))
 
 	w.router = server.NewRouter(server.Deps{
 		Responder:    responder,
@@ -128,6 +137,7 @@ func newWorld(t *testing.T) *world {
 				}
 				return "", family.ErrEmailNotVerified
 			})), responder),
+		Supplement:     supplement.NewHandler(supplement.NewService(supplement.NewRepository(pool)), responder),
 		Ownership:      ownership.NewRepository(pool),
 		Access:         access.NewRepository(pool),
 		FrontendOrigin: "http://localhost:5173",
@@ -174,6 +184,17 @@ func (w *world) routes() []struct {
 		// The owner reaches the handler, which knows no such medication (a real one would be ended for good).
 		{"end treatment", http.MethodPost, "/consultations/" + w.consultationA.String() + "/medications/" + uuid.NewString() + "/end", "", http.StatusNotFound},
 		{"extend treatment", http.MethodPost, "/consultations/" + w.consultationA.String() + "/medications/" + uuid.NewString() + "/extend", `{"doses":2}`, http.StatusNotFound},
+		// Specs/033: the owner reaches the handler (an empty form is a 400; the free plan is only asked once the form is valid).
+		{"list routines", http.MethodGet, "/children/" + w.childA.String() + "/routines" + window, "", http.StatusOK},
+		{"create routine", http.MethodPost, "/children/" + w.childA.String() + "/routines", `{}`, http.StatusBadRequest},
+		{"get routine", http.MethodGet, "/routines/" + w.routineA.String() + window, "", http.StatusOK},
+		{"mark routine dose", http.MethodPatch, "/routines/" + w.routineA.String() + "/doses/" + w.routineDoseA.String(), `{"taken":true}`, http.StatusOK},
+		{"my routine reminders", http.MethodPut, "/routines/" + w.routineA.String() + "/my-reminders", `{"enabled":false}`, http.StatusOK},
+		// In this order: the owner is on the free plan, so editing and resuming are the plan's and pausing and finishing never are.
+		{"edit routine", http.MethodPatch, "/routines/" + w.routineA.String(), `{}`, http.StatusBadRequest},
+		{"pause routine", http.MethodPost, "/routines/" + w.routineA.String() + "/pause", "", http.StatusOK},
+		{"resume routine", http.MethodPost, "/routines/" + w.routineA.String() + "/resume", `{"utcOffsetMinutes":0}`, http.StatusUnprocessableEntity},
+		{"finish routine", http.MethodPost, "/routines/" + w.routineA.String() + "/finish", "", http.StatusOK},
 	}
 }
 
@@ -220,6 +241,7 @@ func TestRouter_NonexistentResourcesAreForbiddenNotNotFound(t *testing.T) {
 		"/accounts/" + uuid.NewString(),
 		"/children/" + uuid.NewString() + "/consultations",
 		"/consultations/" + uuid.NewString(),
+		"/routines/" + uuid.NewString() + "?from=2026-01-15T00:00:00Z&to=2026-01-16T00:00:00Z",
 	} {
 		require.Equal(t, http.StatusForbidden, w.do(t, http.MethodGet, path, tokenA, "").Code, path)
 	}
@@ -239,7 +261,7 @@ func TestRouter_TheOwnerReachesTheHandler(t *testing.T) {
 func TestRouter_MalformedIDsFallThroughToTheHandlersOwn404(t *testing.T) {
 	w := newWorld(t)
 	tokenA := w.verifier.Token(t, w.clerkA)
-	for _, path := range []string{"/accounts/not-a-uuid", "/children/not-a-uuid/consultations", "/consultations/not-a-uuid"} {
+	for _, path := range []string{"/accounts/not-a-uuid", "/children/not-a-uuid/consultations", "/consultations/not-a-uuid", "/routines/not-a-uuid", "/children/not-a-uuid/routines"} {
 		require.Equal(t, http.StatusNotFound, w.do(t, http.MethodGet, path, tokenA, "").Code, path)
 	}
 }
@@ -265,7 +287,7 @@ func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 // fullRoutes need the full level (the owner or a Tutor); every other protected route needs only Mark (see and mark).
 var (
 	ownRoutes  = map[string]bool{"get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true}
-	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "end treatment": true, "extend treatment": true}
+	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true}
 )
 
 func (w *world) setOwnerPlan(t *testing.T, plan string) {

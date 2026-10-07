@@ -240,7 +240,11 @@ func (h *Handler) ListConsultations(w http.ResponseWriter, r *http.Request) {
 }
 
 type overviewDoseResponse struct {
-	ID             string `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	ID string `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	// Kind is "medication" or "supplement" (specs/033). A supplement dose has routineId and an empty consultationId, its
+	// routine's name is in medicationName, and it is marked with PATCH /routines/{routineId}/doses/{doseId}.
+	Kind           string `json:"kind" enums:"medication,supplement" example:"medication"`
+	RoutineID      string `json:"routineId,omitempty" example:"a1b2c3d4-0000-0000-0000-000000000000"`
 	ConsultationID string `json:"consultationId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
 	MedicationName string `json:"medicationName" example:"Amoxicilina"`
 	ScheduledAt    string `json:"scheduledAt" example:"2026-01-15T14:00:00Z"`
@@ -320,15 +324,21 @@ func (h *Handler) GetChildOverview(w http.ResponseWriter, r *http.Request) {
 
 	doses := make([]overviewDoseResponse, 0, len(overview.Doses))
 	for _, d := range overview.Doses {
-		doses = append(doses, overviewDoseResponse{
+		resp := overviewDoseResponse{
 			ID:             d.ID.String(),
+			Kind:           d.Kind,
 			ConsultationID: d.ConsultationID.String(),
 			MedicationName: d.MedicationName,
 			ScheduledAt:    d.ScheduledAt.Format(time.RFC3339),
 			Taken:          d.Taken,
 			Status:         string(d.Status),
 			TakenBy:        toTakenByResponse(d.TakenBy, actorOf(r.Context())),
-		})
+		}
+		if d.Kind == DoseKindSupplement {
+			resp.ConsultationID = ""
+			resp.RoutineID = d.RoutineID.String()
+		}
+		doses = append(doses, resp)
 	}
 	resp := childOverviewResponse{ChildID: childID.String(), Doses: doses}
 	if t := overview.ActiveTreatment; t != nil {

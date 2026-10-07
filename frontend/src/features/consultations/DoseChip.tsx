@@ -12,6 +12,18 @@ import { useDoseToggle } from './useDoseToggle'
  */
 export function DoseChip({ consultationId, dose, canManage = true }: { consultationId: string; dose: Dose; canManage?: boolean }) {
   const mutation = useDoseToggle(consultationId, dose.id)
+  return <DoseChipView dose={dose} canManage={canManage} pending={mutation.isPending} onToggle={() => mutation.mutate(!dose.taken)} />
+}
+
+interface DoseChipViewProps {
+  dose: Pick<Dose, 'id' | 'scheduledAt' | 'taken' | 'status' | 'takenBy'>
+  canManage: boolean
+  pending: boolean
+  onToggle: () => void
+}
+
+/** The chip itself, for any dose: a medication's (`DoseChip`) or a supplement routine's (specs/033, `RoutineDoseChip`). */
+export function DoseChipView({ dose, canManage, pending, onToggle }: DoseChipViewProps) {
   const time = formatTime(dose.scheduledAt)
   const status = statusOf(dose)
   const unregistered = status === 'unregistered'
@@ -29,9 +41,9 @@ export function DoseChip({ consultationId, dose, canManage = true }: { consultat
       aria-pressed={dose.taken}
       aria-label={`Toma de ${time}`}
       aria-describedby={described ? stateId : undefined}
-      disabled={mutation.isPending || canceled || locked}
+      disabled={pending || canceled || locked}
       title={locked ? 'Solo quien la marcó o un Tutor puede quitar esta marca' : undefined}
-      onClick={() => mutation.mutate(!dose.taken)}
+      onClick={onToggle}
       className={`flex min-h-11 min-w-[76px] max-w-40 flex-1 cursor-pointer flex-col items-center justify-center rounded-xl text-sm font-extrabold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
         described ? 'py-1.5 leading-tight' : 'py-3'
       } ${canceled || locked ? 'disabled:opacity-100' : ''} ${DOSE_CHIP_STYLE[status]}`}

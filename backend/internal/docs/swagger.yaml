@@ -712,8 +712,20 @@ definitions:
       id:
         example: a1b2c3d4-0000-0000-0000-000000000000
         type: string
+      kind:
+        description: |-
+          Kind is "medication" or "supplement" (specs/033). A supplement dose has routineId and an empty consultationId, its
+          routine's name is in medicationName, and it is marked with PATCH /routines/{routineId}/doses/{doseId}.
+        enum:
+        - medication
+        - supplement
+        example: medication
+        type: string
       medicationName:
         example: Amoxicilina
+        type: string
+      routineId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
         type: string
       scheduledAt:
         example: "2026-01-15T14:00:00Z"
@@ -792,6 +804,266 @@ definitions:
         type: array
       to:
         example: "2026-06-30"
+        type: string
+    type: object
+  SupplementDoseResponse:
+    properties:
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      scheduledAt:
+        example: "2026-10-05T14:00:00Z"
+        type: string
+      status:
+        description: 'Status is derived by the server with its own clock: pending,
+          due, taken or unregistered ("sin registrar").'
+        enum:
+        - pending
+        - due
+        - taken
+        - unregistered
+        example: due
+        type: string
+      taken:
+        example: false
+        type: boolean
+      takenBy:
+        $ref: '#/definitions/SupplementTakenByResponse'
+    type: object
+  SupplementErrorResponse:
+    properties:
+      error:
+        example: forbidden
+        type: string
+      message:
+        type: string
+    type: object
+  SupplementMyRemindersRequest:
+    properties:
+      enabled:
+        example: true
+        type: boolean
+    type: object
+  SupplementMyRemindersResponse:
+    properties:
+      myReminders:
+        example: true
+        type: boolean
+    type: object
+  SupplementPlanLimitResponse:
+    properties:
+      error:
+        example: freemium_consultation_limit_exceeded
+        type: string
+      message:
+        type: string
+      reason:
+        description: Reason is "supplements" (creating, editing and resuming routines
+          are the paid plan's).
+        example: supplements
+        type: string
+    type: object
+  SupplementProgressResponse:
+    properties:
+      elapsed:
+        example: 13
+        type: integer
+      taken:
+        example: 12
+        type: integer
+      total:
+        example: 14
+        type: integer
+    type: object
+  SupplementResumeRequest:
+    properties:
+      utcOffsetMinutes:
+        example: -360
+        type: integer
+    type: object
+  SupplementRoutineListResponse:
+    properties:
+      activeCount:
+        example: 3
+        type: integer
+      limit:
+        example: 10
+        type: integer
+      paidPlan:
+        example: true
+        type: boolean
+      routines:
+        items:
+          $ref: '#/definitions/SupplementRoutineResponse'
+        type: array
+    type: object
+  SupplementRoutineRequest:
+    properties:
+      endDate:
+        example: "2026-10-20"
+        type: string
+      firstDate:
+        example: "2026-10-05"
+        type: string
+      firstTime:
+        example: "06:00"
+        type: string
+      intervalHours:
+        example: 8
+        type: integer
+      name:
+        example: Vitamina D
+        type: string
+      note:
+        example: ""
+        type: string
+      period:
+        enum:
+        - daily
+        - weekdays
+        - interval
+        example: daily
+        type: string
+      times:
+        example:
+        - "08:00"
+        items:
+          type: string
+        type: array
+      utcOffsetMinutes:
+        example: -360
+        type: integer
+      weekdays:
+        example:
+        - 0
+        - 2
+        - 4
+        items:
+          type: integer
+        type: array
+    type: object
+  SupplementRoutineResponse:
+    properties:
+      canEdit:
+        description: 'CanEdit: the session can do everything AND the owner''s plan
+          is paid (so the app doesn''t offer a button that would answer 422/403).'
+        example: true
+        type: boolean
+      childId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      createdAt:
+        example: "2026-10-01T14:00:00Z"
+        type: string
+      createdBy:
+        description: CreatedBy is the first name of who created it (never an e-mail).
+        example: Ana
+        type: string
+      doses:
+        items:
+          $ref: '#/definitions/SupplementDoseResponse'
+        type: array
+      endDate:
+        example: "2026-10-20"
+        type: string
+      endedAt:
+        type: string
+      firstDate:
+        example: "2026-10-01"
+        type: string
+      firstTime:
+        example: "06:00"
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      intervalHours:
+        example: 8
+        type: integer
+      myReminders:
+        description: 'MyReminders: the session has not turned this routine''s reminders
+          off («Tus avisos»); each person decides for themselves.'
+        example: true
+        type: boolean
+      name:
+        example: Vitamina D
+        type: string
+      nextDose:
+        allOf:
+        - $ref: '#/definitions/SupplementDoseResponse'
+        description: 'NextDose: the next dose ahead of the window, only for an active
+          routine with no dose in it.'
+      note:
+        example: ""
+        type: string
+      pausedAt:
+        type: string
+      period:
+        enum:
+        - daily
+        - weekdays
+        - interval
+        example: daily
+        type: string
+      progress:
+        $ref: '#/definitions/SupplementProgressResponse'
+      status:
+        enum:
+        - active
+        - paused
+        - ended
+        example: active
+        type: string
+      times:
+        example:
+        - "08:00"
+        items:
+          type: string
+        type: array
+      weekdays:
+        example:
+        - 0
+        - 2
+        - 4
+        items:
+          type: integer
+        type: array
+    type: object
+  SupplementTakenByResponse:
+    properties:
+      at:
+        example: "2026-10-05T14:05:00Z"
+        type: string
+      mine:
+        description: 'Mine: the session''s own account marked it.'
+        example: false
+        type: boolean
+      name:
+        example: Ana
+        type: string
+    type: object
+  SupplementUpdateDoseRequest:
+    properties:
+      taken:
+        example: true
+        type: boolean
+    type: object
+  SupplementValidationResponse:
+    properties:
+      details:
+        items:
+          properties:
+            field:
+              example: times
+              type: string
+            message:
+              type: string
+          type: object
+        type: array
+      error:
+        example: validation_error
+        type: string
+      message:
         type: string
     type: object
   SymptomResponse:
@@ -1826,6 +2098,108 @@ paths:
       summary: A child's doses in a window and active treatment
       tags:
       - consultations
+  /children/{childId}/routines:
+    get:
+      description: |-
+        Lists the child's routines — active first, then paused and ended — each with only the doses of [from, to)
+        (the parent's local day, at most 48 hours), its progress and, for an active routine with nothing in the
+        window, its next dose. Reading never depends on the plan.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: Window start, RFC 3339
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: Window end (exclusive), RFC 3339
+        in: query
+        name: to
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/SupplementRoutineListResponse'
+        "400":
+          description: Missing or invalid window
+          schema:
+            $ref: '#/definitions/SupplementValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "403":
+          description: The session has no access to this child
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: A child's supplement routines
+      tags:
+      - supplements
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Saves the routine the parent wrote, exactly as written, and generates its first doses. Part of the paid
+        plan (the server decides): a free account gets 422 "freemium_consultation_limit_exceeded" with reason
+        "supplements"; a child with 10 active routines gets 422 "routine_limit_exceeded".
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: The routine
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/SupplementRoutineRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/SupplementRoutineResponse'
+        "400":
+          description: An invalid field
+          schema:
+            $ref: '#/definitions/SupplementValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "403":
+          description: The session can't create routines for this child
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "422":
+          description: Free plan, or the child has the maximum of active routines
+            (routineLimitDoc)
+          schema:
+            $ref: '#/definitions/SupplementPlanLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: Create a supplement routine
+      tags:
+      - supplements
   /consultations/{consultationId}:
     get:
       description: |-
@@ -2473,6 +2847,333 @@ paths:
       summary: What a browser needs to turn reminders on
       tags:
       - reminders
+  /routines/{routineId}:
+    get:
+      description: The routine with the doses of [from, to) (one calendar month, at
+        most 62 days) and its progress.
+      parameters:
+      - description: Routine UUID
+        in: path
+        name: routineId
+        required: true
+        type: string
+      - description: Window start, RFC 3339
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: Window end (exclusive), RFC 3339
+        in: query
+        name: to
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/SupplementRoutineResponse'
+        "400":
+          description: Missing or invalid window
+          schema:
+            $ref: '#/definitions/SupplementValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "403":
+          description: The session has no access to this routine
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "404":
+          description: No routine exists for this id
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: A supplement routine with its doses
+      tags:
+      - supplements
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Replaces the routine's form (name, note and schedule). It counts from the next dose: future unmarked doses
+        are dropped and regenerated; past and marked doses never change. Paid plan only (422 reason "supplements");
+        an ended routine cannot be edited (409 routine_ended).
+      parameters:
+      - description: Routine UUID
+        in: path
+        name: routineId
+        required: true
+        type: string
+      - description: The whole routine
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/SupplementRoutineRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/SupplementRoutineResponse'
+        "400":
+          description: An invalid field
+          schema:
+            $ref: '#/definitions/SupplementValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "403":
+          description: The session can't edit this routine
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "404":
+          description: No such routine
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "409":
+          description: The routine has ended
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "422":
+          description: Free plan
+          schema:
+            $ref: '#/definitions/SupplementPlanLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: Edit a supplement routine
+      tags:
+      - supplements
+  /routines/{routineId}/doses/{doseId}:
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Marking: the first mark wins and records who marked it and when. Unmarking: only who marked it, or someone
+        who can do everything. It never depends on the plan.
+      parameters:
+      - description: Routine UUID
+        in: path
+        name: routineId
+        required: true
+        type: string
+      - description: Dose UUID
+        in: path
+        name: doseId
+        required: true
+        type: string
+      - description: New taken status
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/SupplementUpdateDoseRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/SupplementDoseResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "403":
+          description: No access to the routine, or the mark is someone else's
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "404":
+          description: No such dose in this routine
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Mark or unmark a routine's dose
+      tags:
+      - supplements
+  /routines/{routineId}/finish:
+    post:
+      description: |-
+        Ends it for good: no more doses or reminders; future unmarked doses disappear, the history stays. It never
+        needs the paid plan. Idempotent.
+      parameters:
+      - description: Routine UUID
+        in: path
+        name: routineId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/SupplementRoutineResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "403":
+          description: The session can't finish this routine
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "404":
+          description: No such routine
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Finish a supplement routine
+      tags:
+      - supplements
+  /routines/{routineId}/my-reminders:
+    put:
+      consumes:
+      - application/json
+      description: |-
+        «Tus avisos»: only for the person who asks, never for the rest of the family. Idempotent; a Caregiver can too.
+        Only an active routine has reminders (409 routine_not_active).
+      parameters:
+      - description: Routine UUID
+        in: path
+        name: routineId
+        required: true
+        type: string
+      - description: enabled
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/SupplementMyRemindersRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/SupplementMyRemindersResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "403":
+          description: No access to this routine
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "404":
+          description: No such routine
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "409":
+          description: The routine is not active
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Turn the session's own reminders of a routine on or off
+      tags:
+      - supplements
+  /routines/{routineId}/pause:
+    post:
+      description: |-
+        No more doses or reminders from now on; future unmarked doses disappear, past and marked ones stay. It
+        never needs the paid plan.
+      parameters:
+      - description: Routine UUID
+        in: path
+        name: routineId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/SupplementRoutineResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "403":
+          description: The session can't pause this routine
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "404":
+          description: No such routine
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "409":
+          description: The routine is not active
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Pause a supplement routine
+      tags:
+      - supplements
+  /routines/{routineId}/resume:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Active again from now, without the doses of the time it was paused. Paid plan only (422 reason
+        "supplements") and it counts toward the 10 active routines (422 routine_limit_exceeded).
+      parameters:
+      - description: Routine UUID
+        in: path
+        name: routineId
+        required: true
+        type: string
+      - description: The device's UTC offset
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/SupplementResumeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/SupplementRoutineResponse'
+        "400":
+          description: An invalid offset
+          schema:
+            $ref: '#/definitions/SupplementValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "403":
+          description: The session can't resume this routine
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "404":
+          description: No such routine
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "409":
+          description: The routine ended or is already active
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "422":
+          description: Free plan, or the cap of active routines (routineLimitDoc)
+          schema:
+            $ref: '#/definitions/SupplementPlanLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: Resume a paused supplement routine
+      tags:
+      - supplements
 securityDefinitions:
   ClerkSession:
     description: Clerk session token, sent as "Bearer <token>".

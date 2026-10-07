@@ -54,6 +54,7 @@ describe('WelcomeDisclaimer', () => {
     expect(region).toHaveTextContent('no la interpretamos y no autollenamos ningún campo')
     expect(region).toHaveTextContent('la foto se guarda en tu cuenta y solo la ven las personas a las que tú invites')
     expect(region).toHaveTextContent('Compartir significa que otra persona ve los datos médicos del menor')
+    expect(region).toHaveTextContent('solo repiten lo que tú escribiste')
   })
 
   it('is not shown once the account acknowledged it, nor while there is no account yet', () => {

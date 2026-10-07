@@ -7,7 +7,10 @@ import { formatTime } from '../../shared/date'
 export interface ReminderPayload {
   kind: 'detailed' | 'generic'
   doseId: string
-  consultationId: string
+  /** A medication's dose has a consultation; a supplement routine's (specs/033, `source: "supplement"`) has a routine instead. */
+  consultationId?: string
+  routineId?: string
+  source?: 'supplement'
   scheduledAt: string
   medication?: string
   child?: string
@@ -32,7 +35,7 @@ export function parsePayload(read: () => unknown): ReminderPayload | null {
   }
   if (!data || typeof data !== 'object') return null
   const p = data as Partial<ReminderPayload>
-  if ((p.kind !== 'detailed' && p.kind !== 'generic') || !p.doseId || !p.consultationId || !p.scheduledAt) return null
+  if ((p.kind !== 'detailed' && p.kind !== 'generic') || !p.doseId || (!p.consultationId && !p.routineId) || !p.scheduledAt) return null
   return p as ReminderPayload
 }
 
@@ -62,7 +65,7 @@ export function buildNotification(p: ReminderPayload): ReminderNotification {
 
 /** Where tapping a reminder goes: the consultation of that dose. */
 export function targetUrl(p: ReminderPayload): string {
-  return `/consultations/${p.consultationId}`
+  return p.routineId ? `/suplementos/${p.routineId}` : `/consultations/${p.consultationId}`
 }
 
 interface WindowClientLike {

@@ -62,6 +62,10 @@ export function WelcomeDisclaimer({ account }: { account: Account | undefined })
         <strong>Compartir significa que otra persona ve los datos médicos del menor</strong>: sus consultas, recetas,
         síntomas y tomas. Compártelos solo con quien cuida de tu hijo y quita el acceso cuando ya no haga falta.
       </p>
+      <p>
+        Las rutinas de suplementos que registres <strong>solo repiten lo que tú escribiste</strong>: PediTrack no sugiere
+        suplementos, cantidades ni horarios, y avisa a las personas de tu familia que tengan acceso a ese hijo.
+      </p>
       {mutation.isError && (
         <p role="alert" className="font-semibold text-red-700">
           No pudimos guardar tu confirmación. Revisa tu conexión e inténtalo de nuevo.

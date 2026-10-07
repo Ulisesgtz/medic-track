@@ -276,3 +276,37 @@ export async function queryDb<T = Record<string, unknown>>(sql: string, params: 
     await client.end()
   }
 }
+
+// ---- specs/033-recordatorios-suplementos-citas: supplement routines.
+
+/** Today as the browser's own time zone reads it, "YYYY-MM-DD", and its UTC offset: what the app sends the server. */
+export function localToday(now: Date = new Date()) {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return { day: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`, offset: -now.getTimezoneOffset() }
+}
+
+/**
+ * Creates a supplement routine of a child through the API as the tutor whose token this is (the child's owner must be on the
+ * paid plan). By default a daily 08:00 routine that started today; `overrides` replace any field of the request.
+ */
+export async function routineViaApi(
+  request: APIRequestContext,
+  token: string,
+  childId: string,
+  overrides: Record<string, unknown> = {},
+): Promise<{ id: string; name: string; doses: { id: string; scheduledAt: string; taken: boolean }[] }> {
+  const { day, offset } = localToday()
+  return apiPost(request, token, `/children/${childId}/routines`, {
+    name: 'Vitamina D',
+    note: '',
+    period: 'daily',
+    times: ['08:00'],
+    weekdays: [],
+    intervalHours: null,
+    firstDate: day,
+    firstTime: null,
+    endDate: null,
+    utcOffsetMinutes: offset,
+    ...overrides,
+  })
+}

@@ -1,5 +1,5 @@
 import { formatTime } from '../../shared/date'
-import { useDoseToggle } from './useDoseToggle'
+import { useOverviewDoseToggle } from './useDoseToggle'
 import { DOSE_CHIP_STYLE, UNREGISTERED_LABEL, canUnmarkDose, isUnregistered, takenByText } from './doseStatus'
 import type { OverviewDose } from './types'
 
@@ -18,7 +18,7 @@ interface DoseRowProps {
  */
 function DoseRow({ dose, canManage }: DoseRowProps) {
   const time = formatTime(dose.scheduledAt)
-  const mutation = useDoseToggle(dose.consultationId, dose.id)
+  const mutation = useOverviewDoseToggle(dose)
   const unregistered = isUnregistered(dose)
   const label = dose.taken ? 'Tomada' : unregistered ? UNREGISTERED_LABEL : 'Marcar'
   const style = dose.taken ? DOSE_CHIP_STYLE.taken : unregistered ? DOSE_CHIP_STYLE.unregistered : DOSE_CHIP_STYLE.due
@@ -30,6 +30,11 @@ function DoseRow({ dose, canManage }: DoseRowProps) {
         <span className="block truncate">
           {time} {dose.medicationName}
         </span>
+        {dose.kind === 'supplement' && (
+          <span className="mt-0.5 inline-block rounded-full border-[1.5px] border-hint-border bg-hint px-2 py-0.5 text-xs font-extrabold tracking-[0.08em] text-action uppercase">
+            Suplemento
+          </span>
+        )}
         {dose.taken && dose.takenBy && <span className="block truncate text-xs font-semibold text-slate-600">{takenByText(dose.takenBy)}</span>}
       </span>
       <button

@@ -145,7 +145,7 @@ func (r *Repository) ClaimDueDoses(ctx context.Context, now time.Time, window ti
 
 	var due []DueDose
 	for rows.Next() {
-		var d DueDose
+		d := DueDose{Source: SourceMedication}
 		var detail *string
 		if err := rows.Scan(&d.DoseID, &d.ScheduledAt, &d.ConsultationID, &d.MedicationName, &d.ChildFirstName, &d.AccountID, &detail); err != nil {
 			return nil, fmt.Errorf("scanning due dose: %w", err)
@@ -194,17 +194,26 @@ func (r *Repository) ActiveDevicesFor(ctx context.Context, accountID uuid.UUID, 
 // received it (specs/032): that person is the author the others see ("por Ana"), and they must still have access to the
 // dose's child (at least to see and mark) — someone who left or was removed can't mark any more. ErrInvalidActionToken if
 // the device is off or unknown, the dose doesn't exist or the access is gone. Marking an already marked dose is a success
-// that changes nothing (the first mark keeps its author).
+// that changes nothing (the first mark keeps its author). The dose may be a medication's or, if there is no such one, a
+// supplement routine's (specs/033).
 func (r *Repository) MarkTakenByAction(ctx context.Context, doseID, deviceID uuid.UUID) error {
-	var accountID, childID uuid.UUID
-	err := r.pool.QueryRow(ctx, `
+	table := "doses"
+	accountID, childID, err := r.doseAndDevice(ctx, doseID, deviceID, `
 		SELECT rd.account_id, ch.id
 		FROM reminder_devices rd, doses d
 		JOIN medications m ON m.id = d.medication_id
 		JOIN consultations c ON c.id = m.consultation_id
 		JOIN children ch ON ch.id = c.child_id
-		WHERE d.id = $1 AND rd.id = $2 AND rd.active
-	`, doseID, deviceID).Scan(&accountID, &childID)
+		WHERE d.id = $1 AND rd.id = $2 AND rd.active`)
+	if errors.Is(err, pgx.ErrNoRows) {
+		table = "supplement_doses"
+		accountID, childID, err = r.doseAndDevice(ctx, doseID, deviceID, `
+			SELECT rd.account_id, ch.id
+			FROM reminder_devices rd, supplement_doses d
+			JOIN supplement_routines sr ON sr.id = d.routine_id
+			JOIN children ch ON ch.id = sr.child_id
+			WHERE d.id = $1 AND rd.id = $2 AND rd.active`)
+	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrInvalidActionToken
 	}
@@ -220,11 +229,17 @@ func (r *Repository) MarkTakenByAction(ctx context.Context, doseID, deviceID uui
 		return ErrInvalidActionToken
 	}
 
+	// `table` is one of the two constants above, never input.
 	if _, err := r.pool.Exec(ctx, `
-		UPDATE doses SET taken = true, taken_by_account_id = $2, taken_at = now()
+		UPDATE `+table+` SET taken = true, taken_by_account_id = $2, taken_at = now()
 		WHERE id = $1 AND NOT taken
 	`, doseID, accountID); err != nil {
 		return fmt.Errorf("marking dose taken: %w", err)
 	}
 	return nil
+}
+
+func (r *Repository) doseAndDevice(ctx context.Context, doseID, deviceID uuid.UUID, query string) (accountID, childID uuid.UUID, err error) {
+	err = r.pool.QueryRow(ctx, query, doseID, deviceID).Scan(&accountID, &childID)
+	return accountID, childID, err
 }

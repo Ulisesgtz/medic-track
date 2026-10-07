@@ -33,3 +33,9 @@ export const fieldBorder = (invalid: boolean, normal = 'border-slate-300') => (i
 /** The label above a field and the inline error under it. */
 export const labelClass = 'text-[13px] font-bold text-ink-soft'
 export const errorClass = 'text-[13px] font-semibold text-red-700'
+
+/** The supplement routine form (specs/033, mock RutinaForm): 14 px radius, 48 px tall, on the white card. */
+export const fieldRoutine = `min-h-12 w-full min-w-0 ${BORDER_WIDTH} rounded-[14px] bg-surface px-4 text-base font-medium text-ink placeholder:text-slate-500 focus:border-2 focus:border-ink focus:outline-none`
+
+/** The routine form's multi-line note: the same radius, with the vertical padding of a text area. */
+export const fieldRoutineMultiline = `w-full min-w-0 ${BORDER_WIDTH} rounded-[14px] bg-surface px-4 py-3 text-base leading-normal font-medium text-ink placeholder:text-slate-500 focus:border-2 focus:border-ink focus:outline-none`
