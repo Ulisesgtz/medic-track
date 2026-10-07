@@ -128,7 +128,6 @@ export function HomePage() {
       account={account}
       open={showAddChild}
       onClose={() => setShowAddChild(false)}
-      showChildName={isDesktop}
       opener={addChildButton}
     />
   )

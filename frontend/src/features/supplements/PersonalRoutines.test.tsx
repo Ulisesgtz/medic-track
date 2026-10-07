@@ -88,7 +88,8 @@ describe('MisSuplementosSeccion', () => {
     renderIn(<MisSuplementosSeccion />)
     expect(await screen.findByRole('heading', { name: 'Tus rutinas de suplemento' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Crear mi primera rutina' })).not.toBeInTheDocument()
-    await setup().click(screen.getByRole('button', { name: 'Ver el plan completo' }))
+    expect(screen.getByText('MX$499 al año', { exact: false })).toBeInTheDocument()
+    await setup().click(screen.getByRole('link', { name: 'Ver el plan completo →' }))
     expect(await screen.findByText('PLANES')).toBeInTheDocument()
   })
 

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useLocalDay } from '../../shared/useLocalDay'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { dayKey } from '../consultations/treatmentDays'
+import { PlanAvisoCompacto } from '../plans/PlanAvisoCompacto'
 import { RoutineCard } from './RoutineCard'
 import { useAcknowledgePersonalNotice, usePersonalRoutines } from './hooks'
 
@@ -128,17 +129,10 @@ export function MisSuplementosSeccion() {
       )}
 
       {!hasRoutines && !list.paidPlan && (
-        <div className="flex flex-col items-start gap-2.5 rounded-[22px] border-[1.5px] border-hint-border bg-hint p-[22px]">
-          <p className="text-xs font-extrabold tracking-[0.1em] text-action uppercase">Plan completo</p>
-          <h3 className="-mt-0.5 text-[22px] font-black tracking-[-0.02em] text-ink">Tus rutinas de suplemento</h3>
-          <p className="text-[15px] leading-relaxed text-body">
-            Registra lo que tomas de forma regular, con su horario. Cada toma se marca en el inicio y puede llegarte un aviso. Solo tú las
-            ves.
-          </p>
-          <button type="button" onClick={() => navigate('/planes')} className={`mt-1 ${sectionButton} hover:bg-surface`}>
-            Ver el plan completo
-          </button>
-        </div>
+        <PlanAvisoCompacto
+          title="Tus rutinas de suplemento"
+          text="Registra lo que tomas de forma regular, con su horario. Cada toma se marca en el inicio y puede llegarte un aviso. Solo tú las ves."
+        />
       )}
 
       {hasRoutines && !list.paidPlan && (

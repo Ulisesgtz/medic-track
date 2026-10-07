@@ -144,10 +144,10 @@ describe('AppShell', () => {
 
     await user.click(await screen.findByRole('button', { name: /Agregar hijo/ }))
 
-    const dialog = screen.getByRole('dialog', { name: 'Llegaste a un hijo registrado' })
+    const dialog = screen.getByRole('dialog', { name: 'Tu plan incluye un hijo' })
     expect(dialog.closest('aside')).toBeNull()
     expect(document.body.contains(dialog)).toBe(true)
-    expect(screen.getByText(/Luis sigue disponible sin cambios/)).toBeInTheDocument()
+    expect(screen.getByText('Intentaste agregar a otro hijo. El plan gratuito incluye uno.')).toBeInTheDocument()
   })
 
   it('labels a paid account "Plan completo"', async () => {

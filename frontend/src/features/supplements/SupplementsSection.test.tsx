@@ -100,10 +100,10 @@ describe('SupplementsSection', () => {
   it('shows the plan card instead of creating on the free plan, and it goes to the plans', async () => {
     api([], { paidPlan: false }, account({ plan: 'free' }))
     renderSection()
-    expect(await screen.findByText('Rutinas de suplemento')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Rutinas de suplemento' })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Aún no hay rutinas' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Crear la primera rutina' })).not.toBeInTheDocument()
-    await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(screen.getByRole('button', { name: 'Ver el plan completo' }))
+    await userEvent.setup({ advanceTimers: vi.advanceTimersByTime }).click(screen.getByRole('link', { name: 'Ver el plan completo →' }))
     expect(await screen.findByText('PLANES')).toBeInTheDocument()
   })
 

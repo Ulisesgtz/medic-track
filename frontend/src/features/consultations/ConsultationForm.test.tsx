@@ -897,11 +897,11 @@ describe('ConsultationForm, free plan (specs/030)', () => {
       await fillValid(user)
       await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
 
-      expect(await screen.findByRole('dialog', { name: 'Ya tienes un tratamiento activo' })).toBeInTheDocument()
+      expect(await screen.findByRole('dialog', { name: 'Ya hay un tratamiento activo' })).toBeInTheDocument()
       expect(screen.getByLabelText('Doctor')).toHaveValue('Dra. López')
       expect(byId('medications.0.name')).toHaveValue('Amoxicilina 250 mg')
 
-      await user.click(screen.getByRole('button', { name: 'Entendido' }))
+      await user.click(screen.getByRole('button', { name: 'Ahora no' }))
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
       expect(screen.getByLabelText('Doctor')).toHaveValue('Dra. López')
     },
@@ -915,7 +915,7 @@ describe('ConsultationForm, free plan (specs/030)', () => {
     await fillValid(user)
     await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
 
-    expect(await screen.findByRole('dialog', { name: 'Consultas anteriores en el plan completo' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'Consultas «solo registro»' })).toBeInTheDocument()
   })
 
   it('"Ver planes" leaves for the plans screen', async () => {
@@ -925,7 +925,7 @@ describe('ConsultationForm, free plan (specs/030)', () => {
     await fillValid(user)
     await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
 
-    await user.click(await screen.findByRole('button', { name: 'Ver planes' }))
+    await user.click(await screen.findByRole('link', { name: 'Ver el plan completo' }))
 
     expect(screen.getByText('PLANES')).toBeInTheDocument()
   })

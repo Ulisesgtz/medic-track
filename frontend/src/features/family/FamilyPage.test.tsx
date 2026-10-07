@@ -95,18 +95,15 @@ describe('FamilyPage', () => {
     expect(screen.getByText('contando invitaciones pendientes')).toBeInTheDocument()
   })
 
-  it('shows the plan card instead of the invite form on the free plan, and the card opens the plan notice', async () => {
+  it('shows the compact plan notice instead of the invite form on the free plan, with the way to the plans', async () => {
     stubApi(() => family({ plan: 'free' }))
     const user = userEvent.setup()
     renderPage()
 
-    await screen.findByText('Comparte con tu familia')
+    expect(await screen.findByRole('heading', { name: 'Compartir con tu familia' })).toBeInTheDocument()
     expect(screen.queryByRole('form', { name: 'Invitar a alguien' })).not.toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Ver el plan completo' }))
-
-    const dialog = screen.getByRole('dialog')
-    expect(within(dialog).getByText('Compartir con tu familia')).toBeInTheDocument()
-    await user.click(within(dialog).getByRole('button', { name: 'Ver planes' }))
+    expect(screen.getByText(/MX\$499 al año/)).toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: 'Ver el plan completo →' }))
     expect(await screen.findByText('pantalla de planes')).toBeInTheDocument()
   })
 
@@ -115,7 +112,7 @@ describe('FamilyPage', () => {
     renderPage()
     expect(await screen.findByText(/La familia está en el plan gratuito/)).toBeInTheDocument()
     expect(screen.queryByRole('form', { name: 'Invitar a alguien' })).not.toBeInTheDocument()
-    expect(screen.queryByText('Comparte con tu familia')).not.toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Compartir con tu familia' })).not.toBeInTheDocument()
   })
 
   it('does not offer a Caregiver the form nor the invitations', async () => {

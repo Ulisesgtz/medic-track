@@ -28,6 +28,7 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
   const query = useCurrentAccount()
   const account = query.data
   const onFamilyPage = useMatch('/familia') !== null
+  const onPlansPage = useMatch('/planes') !== null
   // Specs/033, part 3: the person's own section, apart from the children; its count comes from the same query the home uses.
   const onPersonalPage = useMatch('/mis-suplementos/*') !== null
   const personalCount = usePersonalRoutines(account?.id, useLocalDay(), { poll: false }).data?.activeCount ?? 0
@@ -128,6 +129,16 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
               </span>
             </span>
           </div>
+          {/* Specs/034: a fixed way to the plans. */}
+          <Link
+            to="/planes"
+            aria-current={onPlansPage ? 'page' : undefined}
+            className={`flex min-h-11 items-center rounded-2xl px-4 text-[15px] font-extrabold transition-colors duration-200 ${
+              onPlansPage ? 'bg-action text-white' : 'text-hint-border hover:bg-ink-soft'
+            }`}
+          >
+            Planes
+          </Link>
           <button
             type="button"
             onClick={logout}
@@ -142,7 +153,6 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
         account={account}
         open={showAddChild}
         onClose={() => setShowAddChild(false)}
-        showChildName
         opener={addChildButton}
       />
     </aside>

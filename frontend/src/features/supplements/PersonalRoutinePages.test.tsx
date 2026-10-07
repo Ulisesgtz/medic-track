@@ -154,7 +154,7 @@ describe('RoutineFormPage — a personal routine', () => {
     await user.type(await screen.findByLabelText('Nombre'), 'Omega 3')
     await user.click(screen.getByRole('button', { name: 'Guardar rutina' }))
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Entendido' }))
+    await user.click(screen.getByRole('button', { name: 'Ahora no' }))
     expect(screen.getByLabelText('Nombre')).toHaveValue('Omega 3')
   })
 
