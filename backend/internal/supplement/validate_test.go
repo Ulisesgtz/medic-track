@@ -1,6 +1,7 @@
 package supplement
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -133,25 +134,11 @@ func TestValidationErrors(t *testing.T) {
 
 func TestDomainErrorsUnwrap(t *testing.T) {
 	var l error = &RoutineLimitError{Limit: 10}
-	if !isErr(l, ErrRoutineLimit) || l.Error() == "" {
+	if !errors.Is(l, ErrRoutineLimit) || l.Error() == "" {
 		t.Fatal("limit")
 	}
 	var p error = &PlanLimitError{Reason: PlanLimitSupplements}
-	if !isErr(p, ErrPlanRequired) || p.Error() == "" {
+	if !errors.Is(p, ErrPlanRequired) || p.Error() == "" {
 		t.Fatal("plan")
 	}
-}
-
-func isErr(err, target error) bool {
-	for err != nil {
-		if err == target {
-			return true
-		}
-		u, ok := err.(interface{ Unwrap() error })
-		if !ok {
-			return false
-		}
-		err = u.Unwrap()
-	}
-	return false
 }
