@@ -175,6 +175,9 @@ func (w *world) routes() []struct {
 		ownerStatus              int
 	}{
 		{"get account", http.MethodGet, "/accounts/" + w.accountA.String(), "", http.StatusOK},
+		{"personal routines", http.MethodGet, "/accounts/" + w.accountA.String() + "/routines" + window, "", http.StatusOK},
+		{"create personal routine", http.MethodPost, "/accounts/" + w.accountA.String() + "/routines", `{}`, http.StatusBadRequest},
+		{"personal routines notice", http.MethodPost, "/accounts/" + w.accountA.String() + "/routines/notice-seen", "", http.StatusNoContent},
 		{"add child", http.MethodPost, "/accounts/" + w.accountA.String() + "/children", `{}`, http.StatusBadRequest},
 		{"accept disclaimer", http.MethodPost, "/accounts/" + w.accountA.String() + "/disclaimer-acceptance", `{}`, http.StatusBadRequest},
 		{"reminder settings", http.MethodPatch, "/accounts/" + w.accountA.String() + "/reminder-settings", `{}`, http.StatusBadRequest},
@@ -302,7 +305,7 @@ func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 // ownRoutes are the person's own account (their notice, reminder settings and devices): never a family's.
 // fullRoutes need the full level (the owner or a Tutor); every other protected route needs only Mark (see and mark).
 var (
-	ownRoutes  = map[string]bool{"get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true}
+	ownRoutes  = map[string]bool{"get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true}
 	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "edit appointment": true, "mark appointment": true}
 )
 

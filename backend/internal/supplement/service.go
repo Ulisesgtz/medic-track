@@ -149,3 +149,50 @@ func (s *Service) Finish(ctx context.Context, routineID uuid.UUID, actor uuid.UU
 func (s *Service) SetMyReminders(ctx context.Context, routineID, accountID uuid.UUID, enabled bool) error {
 	return s.repo.SetMuted(ctx, routineID, accountID, !enabled)
 }
+
+// ListPersonal returns the person's own routines with the doses of [from, to) (at most 48 hours: their local day) and whether
+// they already acknowledged the section's first-time notice (part 3).
+func (s *Service) ListPersonal(ctx context.Context, accountID uuid.UUID, from, to time.Time) (*RoutineList, bool, error) {
+	if err := checkWindow(from, to, maxListWindow); err != nil {
+		return nil, false, err
+	}
+	list, err := s.repo.ListPersonal(ctx, accountID, from, to)
+	if err != nil {
+		return nil, false, err
+	}
+	ids := make([]uuid.UUID, 0, len(list.Routines))
+	for _, v := range list.Routines {
+		ids = append(ids, v.ID)
+	}
+	muted, err := s.repo.MutedAmong(ctx, accountID, ids)
+	if err != nil {
+		return nil, false, err
+	}
+	for i := range list.Routines {
+		list.Routines[i].MyReminders = !muted[list.Routines[i].ID]
+	}
+	seen, err := s.repo.NoticeSeen(ctx, accountID)
+	if err != nil {
+		return nil, false, err
+	}
+	return list, seen, nil
+}
+
+// CreatePersonal validates the form and saves a routine of the person's own (the plan and the cap are the repository's, under the
+// lock); it returns it with its doses of today in its own local day.
+func (s *Service) CreatePersonal(ctx context.Context, accountID uuid.UUID, in Input) (*RoutineView, error) {
+	routine, errs := ValidateInput(in, s.now())
+	if errs.HasErrors() {
+		return nil, errs
+	}
+	id, err := s.repo.CreatePersonal(ctx, accountID, routine)
+	if err != nil {
+		return nil, err
+	}
+	return s.viewToday(ctx, id, routine.UtcOffsetMinutes, accountID)
+}
+
+// AcknowledgeNotice records that the person understood the first-time notice of the personal section.
+func (s *Service) AcknowledgeNotice(ctx context.Context, accountID uuid.UUID) error {
+	return s.repo.MarkNoticeSeen(ctx, accountID)
+}

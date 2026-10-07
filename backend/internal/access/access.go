@@ -163,15 +163,18 @@ func (r *Repository) OfAccountOnChild(ctx context.Context, accountID, childID uu
 	return got.Level, err
 }
 
-// onRoutineQuery: access over a supplement routine (specs/033), resolved through its child. A routine without a child (a
-// parent's own, part 3) has none here: the join drops it, so it is answered as None.
+// onRoutineQuery: access over a supplement routine (specs/033), resolved through its child. A routine without a child is a
+// parent's own (part 3): Full for the account it belongs to and None for everybody else — nobody in the family sees it.
 func onRoutineQuery(actorWhere string) string {
 	return `
-		SELECT a.id, ` + levelCase("m.child_id = ch.id") + `
+		SELECT a.id, CASE
+			WHEN sr.child_id IS NULL THEN CASE WHEN a.id = sr.account_id THEN 2 ELSE 0 END
+			ELSE ` + levelCase("m.child_id = ch.id") + `
+		END
 		FROM accounts a
 		JOIN supplement_routines sr ON sr.id = $2
-		JOIN children ch ON ch.id = sr.child_id
-		JOIN accounts owner ON owner.id = ch.account_id
+		LEFT JOIN children ch ON ch.id = sr.child_id
+		JOIN accounts owner ON owner.id = sr.account_id
 		LEFT JOIN family_members m
 		       ON m.account_id = a.id AND m.family_account_id = owner.id AND m.status = 'active'
 		WHERE ` + actorWhere

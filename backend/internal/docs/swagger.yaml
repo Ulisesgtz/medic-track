@@ -1039,6 +1039,29 @@ definitions:
         example: true
         type: boolean
     type: object
+  SupplementPersonalListResponse:
+    properties:
+      activeCount:
+        example: 3
+        type: integer
+      limit:
+        example: 10
+        type: integer
+      noticeSeen:
+        description: 'NoticeSeen: the person already pressed «Entendido» on the section''s
+          first-time notice (on any device).'
+        example: false
+        type: boolean
+      paidPlan:
+        description: 'PaidPlan: their own plan is paid or they belong to a family
+          whose owner''s is (the server decides).'
+        example: true
+        type: boolean
+      routines:
+        items:
+          $ref: '#/definitions/SupplementRoutineResponse'
+        type: array
+    type: object
   SupplementPlanLimitResponse:
     properties:
       error:
@@ -1976,6 +1999,133 @@ paths:
       summary: Choose what dose reminders show
       tags:
       - accounts
+  /accounts/{accountId}/routines:
+    get:
+      description: |-
+        Lists the routines the person made for themselves — active first, then paused and ended — each with only the
+        doses of [from, to) (their local day, at most 48 hours), its progress and its next dose. Nobody else in the
+        family sees them. Reading never depends on the plan.
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: Window start, RFC 3339
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: Window end (exclusive), RFC 3339
+        in: query
+        name: to
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/SupplementPersonalListResponse'
+        "400":
+          description: Missing or invalid window
+          schema:
+            $ref: '#/definitions/SupplementValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "403":
+          description: The account is not the session's own
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: The person's own supplement routines
+      tags:
+      - supplements
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Saves the routine the person wrote, exactly as written, and generates its first doses. It is the person's own:
+        nobody else in the family sees it or is reminded of it. Part of the paid plan (their own, or the one of a paid
+        family they belong to; the server decides): otherwise 422 "freemium_consultation_limit_exceeded" with reason
+        "supplements"; with 10 active personal routines, 422 "routine_limit_exceeded".
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: The routine
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/SupplementRoutineRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/SupplementRoutineResponse'
+        "400":
+          description: An invalid field
+          schema:
+            $ref: '#/definitions/SupplementValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "403":
+          description: The account is not the session's own
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "422":
+          description: No paid plan, or the person has the maximum of active routines
+            (routineLimitDoc)
+          schema:
+            $ref: '#/definitions/SupplementPlanLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: Create a supplement routine for the person themselves
+      tags:
+      - supplements
+  /accounts/{accountId}/routines/notice-seen:
+    post:
+      description: Records, for the account (every device), that the person read it.
+        Idempotent.
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "403":
+          description: The account is not the session's own
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: «Entendido» on the first-time notice of the personal section
+      tags:
+      - supplements
   /accounts/me:
     get:
       description: |-

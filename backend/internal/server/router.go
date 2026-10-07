@@ -149,6 +149,11 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(fullRoutine).Post("/routines/{routineId}/resume", d.Supplement.ResumeRoutine)
 		r.With(fullRoutine).Post("/routines/{routineId}/finish", d.Supplement.FinishRoutine)
 
+		// The person's own routines (specs/033, part 3): only their own account, never through a child.
+		r.With(ownsAccount).Get("/accounts/{accountId}/routines", d.Supplement.ListPersonalRoutines)
+		r.With(ownsAccount).Post("/accounts/{accountId}/routines", d.Supplement.CreatePersonalRoutine)
+		r.With(ownsAccount).Post("/accounts/{accountId}/routines/notice-seen", d.Supplement.AcknowledgePersonalNotice)
+
 		// Next appointment (specs/033, part 2).
 		r.With(seesChild).Get("/children/{childId}/appointments", d.Appointment.ForChild)
 		r.With(seesConsultation).Get("/consultations/{consultationId}/appointment", d.Appointment.ForConsultation)

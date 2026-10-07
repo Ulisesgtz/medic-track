@@ -215,7 +215,8 @@ func (r *Repository) MarkTakenByAction(ctx context.Context, doseID, deviceID uui
 			WHERE d.id = $1 AND rd.id = $2 AND rd.active`)
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrInvalidActionToken
+		// A person's own routine (specs/033, part 3) has no child: the device must be the owner's own.
+		return r.markOwnSupplementTaken(ctx, doseID, deviceID)
 	}
 	if err != nil {
 		return fmt.Errorf("finding the dose and the device: %w", err)
@@ -242,4 +243,25 @@ func (r *Repository) MarkTakenByAction(ctx context.Context, doseID, deviceID uui
 func (r *Repository) doseAndDevice(ctx context.Context, doseID, deviceID uuid.UUID, query string) (accountID, childID uuid.UUID, err error) {
 	err = r.pool.QueryRow(ctx, query, doseID, deviceID).Scan(&accountID, &childID)
 	return accountID, childID, err
+}
+
+// markOwnSupplementTaken marks a dose of a person's own routine (no child) from the "Tomada" button: only the device of the routine's
+// owner can, and an unknown dose or device is the same ErrInvalidActionToken as anywhere else.
+func (r *Repository) markOwnSupplementTaken(ctx context.Context, doseID, deviceID uuid.UUID) error {
+	var accountID uuid.UUID
+	err := r.pool.QueryRow(ctx, `
+		SELECT rd.account_id
+		FROM reminder_devices rd, supplement_doses d
+		JOIN supplement_routines sr ON sr.id = d.routine_id AND sr.child_id IS NULL
+		WHERE d.id = $1 AND rd.id = $2 AND rd.active AND rd.account_id = sr.account_id`, doseID, deviceID).Scan(&accountID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrInvalidActionToken
+	}
+	if err != nil {
+		return fmt.Errorf("finding the dose and the device: %w", err)
+	}
+	if _, err := r.pool.Exec(ctx, `UPDATE supplement_doses SET taken = true, taken_by_account_id = $2, taken_at = now() WHERE id = $1 AND NOT taken`, doseID, accountID); err != nil {
+		return fmt.Errorf("marking dose taken: %w", err)
+	}
+	return nil
 }
