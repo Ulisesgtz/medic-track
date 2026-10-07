@@ -28,5 +28,5 @@ description: "Lista de tareas de la spec 033, parte 2: próxima cita (historias 
 
 ## Fase 3: E2E y cierre
 
-- [ ] T121 `frontend/e2e/proxima-cita.spec.ts` (390 y 1280 px; Tutor, Cuidador con dos sesiones, plan gratuito)
+- [x] T121 `frontend/e2e/proxima-cita.spec.ts` (390 y 1280 px; Tutor, Cuidador con dos sesiones, plan gratuito)
 - [ ] T122 Documentación (`CLAUDE.md` ×3, `DEPLOY.md` con la `0020`, `README.md`, `BACKLOG.md`), Swagger, desviaciones del mock, code review, PR a `develop`

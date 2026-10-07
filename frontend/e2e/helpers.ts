@@ -310,3 +310,32 @@ export async function routineViaApi(
     ...overrides,
   })
 }
+
+// ---- specs/033-recordatorios-suplementos-citas, parte 2: next appointment.
+
+/** A date `days` from today in the browser's own zone, "YYYY-MM-DD". */
+export function localDayAfter(days: number, now: Date = new Date()) {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + days)
+  return localToday(d).day
+}
+
+/**
+ * Creates the next appointment of a consultation through the API as the tutor whose token this is (the owner must be on the paid
+ * plan). By default `days` from today at 10:30 with the two default notices; `overrides` replace any field of the request.
+ */
+export async function appointmentViaApi(
+  request: APIRequestContext,
+  token: string,
+  consultationId: string,
+  { days = 5, time = '10:30', ...overrides }: { days?: number; time?: string } & Record<string, unknown> = {},
+): Promise<{ id: string }> {
+  const [h, m] = time.split(':').map(Number)
+  const now = new Date()
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + days, h, m)
+  return apiPost(request, token, `/consultations/${consultationId}/appointments`, {
+    startsAt: start.toISOString(),
+    utcOffsetMinutes: -start.getTimezoneOffset(),
+    note: 'Revisión de oído',
+    ...overrides,
+  })
+}
