@@ -4,7 +4,7 @@
 
 **Creado**: 2026-10-08
 
-**Estado**: En implementación
+**Estado**: Implementado (rama `feature/035-actividades-y-suplementos`, PR a `develop`)
 
 **Entrada**: Observación del dueño del producto (2026-10-08, con capturas de un iPhone): en «Mis suplementos» una persona registró «Tomar agua» **cada hora** y la tarjeta escribía las 24 horas, mostraba 24 chips de toma y el calendario del detalle dibujaba 24 puntos por día que se salían de la pantalla; además la pantalla decía «suplemento» y «rutina» a la vez. Decisiones: (1) **dos secciones separadas**, **Suplementos** y **Actividades**, en el hijo y en lo personal; (2) los suplementos solo con **horas fijas** (ya no «cada N horas») y **sin calendario**, con el progreso del día en texto y barra; (3) las actividades se definen **«desde una hora hasta otra, cada cuánto»**, sin chips ni calendario: solo **barra de progreso del día**, «Próxima» y «Última», y un botón **«Realizado»** (en el aviso también); (4) las actividades pueden ser de la persona o de un hijo (las del hijo se comparten con la familia). Diseño entregado: `Actividades PediTrack.dc.html`; decisiones en [referencia/actividades-decisiones.md](./referencia/actividades-decisiones.md). Corrige la spec 033.
 

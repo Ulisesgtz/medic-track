@@ -338,8 +338,10 @@ func (r *Repository) fill(ctx context.Context, items []scanned, from, to time.Ti
 		}
 		c := counts[v.ID]
 		v.Progress = Progress{Taken: c.taken, Elapsed: c.elapsed, Total: c.total}
-		if v.Status == StatusActive && v.EndDate != "" {
-			// Doses still to be generated up to the end (the planner extends the horizon as time passes).
+		if v.Status == StatusActive && v.EndDate != "" && v.Kind == KindSupplement {
+			// Doses still to be generated up to the end (the planner extends the horizon as time passes). Not for an activity: it can
+			// go off up to 288 times a day, so counting its far future on every read would build hundreds of thousands of instants
+			// for a total its screens never show (they count the day).
 			v.Progress.Total += len(Generate(v.Routine, items[i].generatedUntil, farFuture(items[i].generatedUntil)))
 		}
 		if v.Status == StatusActive && len(v.Doses) == 0 {

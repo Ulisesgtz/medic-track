@@ -14,7 +14,7 @@ import {
   test,
 } from './helpers'
 
-// specs/033-recordatorios-suplementos-citas, parte 3 (rutinas personales): quickstart with real people, at 390 and 1280 px. The
+// specs/033-recordatorios-suplementos-citas, parte 3 (suplementos personales; la spec 035 separa las actividades): quickstart with real people, at 390 and 1280 px. The
 // accounts, the invitation and the access are the real thing (Clerk dev instance and the backend); only the setup shortcuts (the
 // plan, a routine made in advance) go through the API or the database.
 
@@ -34,10 +34,10 @@ const windowQuery = () => {
 }
 
 for (const design of designs) {
-  test.describe(`Rutinas personales, ${design.name}`, () => {
+  test.describe(`Suplementos personales, ${design.name}`, () => {
     test.use({ viewport: design.viewport })
 
-    test('the person finds the section from the home, reads the notice once, creates a routine, marks it, pauses and finishes it', async ({ page }) => {
+    test('the person finds the section from the home, reads the notice once, adds a supplement, marks it, pauses and finishes it', async ({ page }) => {
       await allowClerkOn(page)
       await seedChild(page, { withConsultation: false })
       await page.goto('/home')
@@ -45,8 +45,9 @@ for (const design of designs) {
 
       // The home has its own block, apart from the children, with the privacy sentence and a way in.
       await expect(main.getByRole('heading', { name: 'Mis suplementos' })).toBeVisible()
-      await expect(main.getByText('Solo tú ves estas rutinas y solo a ti te llegan los avisos.')).toBeVisible()
-      await expect(main.getByText('Para registrar lo que tomas tú, con su horario.')).toBeVisible()
+      await expect(main.getByText('Personal · solo lo ves tú')).toBeVisible()
+      await expect(main.getByText('Para lo que tomas tú a horas fijas.')).toBeVisible()
+      await expect(main.getByText('Para lo que haces tú varias veces al día.')).toBeVisible()
       if (design.isWeb) await expect(page.getByRole('navigation', { name: 'Personal' }).getByRole('link', { name: 'Mis suplementos' })).toBeVisible()
       await expectNoHorizontalScroll(page)
       await main.getByRole('link', { name: 'Ver mis suplementos →' }).click()
@@ -56,31 +57,32 @@ for (const design of designs) {
       await expect(page.getByRole('heading', { name: 'Mis suplementos', level: 1 })).toBeVisible()
       await expect(page.getByText('Antes de empezar')).toBeVisible()
       await expect(page.getByText(/No sugiere suplementos ni opina sobre ellos/)).toBeVisible()
-      await expect(page.getByRole('heading', { name: 'Aún no tienes rutinas' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Aún no tienes suplementos' })).toBeVisible()
       await page.getByRole('button', { name: 'Entendido' }).click()
       await expect(page.getByText('Antes de empezar')).toHaveCount(0)
       await page.reload()
-      await expect(page.getByRole('heading', { name: 'Aún no tienes rutinas' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Aún no tienes suplementos' })).toBeVisible()
       await expect(page.getByText('Antes de empezar')).toHaveCount(0)
-      await page.getByRole('button', { name: 'Cómo funcionan estas rutinas' }).click()
+      await page.getByRole('button', { name: 'Cómo funcionan los suplementos' }).click()
       await expect(page.getByText('Antes de empezar')).toBeVisible()
       await page.getByRole('button', { name: 'Entendido' }).click()
 
       // The form: personal wording, no example in the fields.
-      await page.getByRole('link', { name: 'Crear mi primera rutina' }).click()
-      await expect(page.getByRole('heading', { name: 'Nueva rutina', level: 1 })).toBeVisible()
-      await expect(page.getByText('Es una rutina personal: solo tú la ves y solo a ti te llegan sus avisos.')).toBeVisible()
+      await page.getByRole('link', { name: '+ Agregar suplemento' }).click()
+      await expect(page.getByRole('heading', { name: 'Agregar suplemento', level: 1 })).toBeVisible()
+      await expect(page.getByText('Es un suplemento personal: solo tú lo ves y solo a ti te llegan sus avisos.')).toBeVisible()
       await expect(page.getByText('Solo la ves tú.')).toBeVisible()
-      await expect(page.getByLabel('Nombre')).toHaveAttribute('placeholder', 'Como lo llaman en casa')
       await page.getByLabel('Nombre').fill('Omega 3')
+      await page.getByLabel('Hora', { exact: true }).fill('08:00')
       await expectNoHorizontalScroll(page)
-      await page.getByRole('button', { name: 'Guardar rutina' }).click()
+      await page.getByRole('button', { name: 'Guardar suplemento' }).click()
 
       // The detail: «Avisos», no family wording, and marking says only when.
       await expect(page.getByRole('heading', { name: 'Omega 3', level: 1 })).toBeVisible()
-      await expect(page.getByRole('heading', { name: 'Avisos' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Tus avisos' })).toBeVisible()
       await expect(page.getByText('Se activan en cada dispositivo por separado.')).toBeVisible()
       await expect(page.getByText(/Cada persona de la familia/)).toHaveCount(0)
+      await expect(page.getByText('Agregado por')).toHaveCount(0)
       await expectNoHorizontalScroll(page)
       const chip = page.getByRole('button', { name: 'Toma de 08:00', exact: true }).first()
       await chip.click()
@@ -96,16 +98,16 @@ for (const design of designs) {
 
       // Pausing needs no confirmation; finishing asks first, in its own words, and is for good.
       await page.getByRole('main').getByRole('link', { name: 'Ver mis suplementos →' }).click()
-      await page.getByRole('link', { name: 'Ver rutina Omega 3' }).click()
+      await page.getByRole('link', { name: 'Ver suplemento Omega 3' }).click()
       await page.getByRole('button', { name: 'Pausar' }).click()
-      await expect(page.getByText('Pausada', { exact: true })).toBeVisible()
+      await expect(page.getByText('Pausado', { exact: true })).toBeVisible()
       await page.getByRole('button', { name: 'Reanudar' }).click()
-      await expect(page.getByText('Activa', { exact: true })).toBeVisible()
-      await page.getByRole('button', { name: 'Finalizar rutina' }).click()
+      await expect(page.getByText('Activo', { exact: true })).toBeVisible()
+      await page.getByRole('button', { name: 'Finalizar suplemento' }).click()
       const dialog = page.getByRole('dialog')
-      await expect(dialog.getByText('Desde ahora no se crean más tomas ni avisos. Las de hoy que aún no llegan dejan de aparecer.')).toBeVisible()
-      await dialog.getByRole('button', { name: 'Finalizar rutina' }).click()
-      await expect(page.getByText(/Terminada el \d+ \w+ · 1 de \d+ tomas/).first()).toBeVisible()
+      await expect(dialog.getByText('Desde hoy no se crean más tomas ni avisos. Las de hoy que no estén marcadas dejan de aparecer.')).toBeVisible()
+      await dialog.getByRole('button', { name: 'Finalizar suplemento' }).click()
+      await expect(page.getByText(/Terminado el \d+ \w+ · 1 de \d+ tomas/).first()).toBeVisible()
     })
 
     test('nobody else in the family sees it, reaches it by its address or through the API, and each person has their own', async ({ page, browser }) => {
@@ -124,11 +126,11 @@ for (const design of designs) {
 
       // A caregiver of the same family sees nothing of it: not in the section, not by its address, not through the API.
       await guest.page.goto('/mis-suplementos')
-      await expect(guest.page.getByRole('heading', { name: 'Aún no tienes rutinas' })).toBeVisible()
+      await expect(guest.page.getByRole('heading', { name: 'Aún no tienes suplementos' })).toBeVisible()
       await expect(guest.page.getByText('Omega privado')).toHaveCount(0)
-      await expect(guest.page.getByText('Las usas con el plan completo de la familia a la que te invitaron. Nadie de esa familia las ve.')).toBeVisible()
+      await expect(guest.page.getByText('Los usas con el plan completo de la familia a la que te invitaron. Nadie de esa familia los ve.')).toBeVisible()
       await guest.page.goto(`/suplementos/${routine.id}`)
-      await expect(guest.page.getByText('No se encontró esta rutina.')).toBeVisible()
+      await expect(guest.page.getByText('No se encontró este suplemento.')).toBeVisible()
       await guest.page.goto('/home')
       await expect(guest.page.getByRole('main').getByText('Omega privado')).toHaveCount(0)
 
@@ -147,9 +149,10 @@ for (const design of designs) {
 
       // The caregiver, invited to a paid family, creates their own with that family's plan; the owner never sees it.
       await guest.page.goto('/mis-suplementos')
-      await guest.page.getByRole('link', { name: 'Crear mi primera rutina' }).click()
+      await guest.page.getByRole('link', { name: '+ Agregar suplemento' }).click()
       await guest.page.getByLabel('Nombre').fill('Magnesio de Luis')
-      await guest.page.getByRole('button', { name: 'Guardar rutina' }).click()
+      await guest.page.getByLabel('Hora', { exact: true }).fill('08:00')
+      await guest.page.getByRole('button', { name: 'Guardar suplemento' }).click()
       await expect(guest.page.getByRole('heading', { name: 'Magnesio de Luis', level: 1 })).toBeVisible()
       await page.goto('/mis-suplementos')
       await expect(page.getByText('Magnesio de Luis')).toHaveCount(0)
@@ -164,8 +167,8 @@ for (const design of designs) {
       const request = page.context().request
 
       await page.goto('/mis-suplementos')
-      await expect(page.getByRole('heading', { name: 'Tus rutinas de suplemento' })).toBeVisible()
-      await expect(page.getByRole('link', { name: 'Crear mi primera rutina' })).toHaveCount(0)
+      await expect(page.getByRole('heading', { name: 'Tus suplementos' })).toBeVisible()
+      await expect(page.getByRole('link', { name: '+ Agregar suplemento' })).toHaveCount(0)
       const { day, offset } = localToday()
       const refused = await request.post(`${API}/accounts/${owner.accountId}/routines`, {
         data: { name: 'x', period: 'daily', times: ['08:00'], firstDate: day, utcOffsetMinutes: offset },
@@ -179,7 +182,7 @@ for (const design of designs) {
       await setAccountPlan(owner.accountId, 'free')
       await page.reload()
       await expect(page.getByText('Tu cuenta está en el plan gratuito')).toBeVisible()
-      await expect(page.getByRole('link', { name: '+ Nueva rutina' })).toHaveCount(0)
+      await expect(page.getByRole('link', { name: '+ Agregar suplemento' })).toHaveCount(0)
       const chip = page.getByRole('button', { name: 'Toma de 08:00', exact: true }).first()
       await chip.click()
       await expect(chip).toHaveAttribute('aria-pressed', 'true')
@@ -188,27 +191,27 @@ for (const design of designs) {
       await expect(page.getByText('Con el plan gratuito puedes ver y marcar las tomas. Para editar, pausar o reanudar se necesita el plan completo.')).toBeVisible()
       await expect(page.getByRole('button', { name: 'Pausar' })).toHaveCount(0)
       await expect(page.getByRole('link', { name: 'Editar' })).toHaveCount(0)
-      await expect(page.getByRole('button', { name: 'Finalizar rutina' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Finalizar suplemento' })).toBeVisible()
       await expectNoHorizontalScroll(page)
     })
 
-    test('with 10 active routines the section explains the cap, which is the person\'s own, and pausing one makes room', async ({ page }) => {
+    test('with 10 active supplements the section explains the cap, which is the person\'s own, and pausing one makes room', async ({ page }) => {
       await allowClerkOn(page)
       const owner = await seedChild(page, { withConsultation: false })
       const request = page.context().request
       const routines = []
-      for (let i = 1; i <= 10; i++) routines.push(await personalRoutineViaApi(request, owner.token, owner.accountId, { name: `Rutina ${i}` }))
+      for (let i = 1; i <= 10; i++) routines.push(await personalRoutineViaApi(request, owner.token, owner.accountId, { name: `Suplemento ${i}` }))
 
       await page.goto('/mis-suplementos')
-      await expect(page.getByRole('status').getByText('Ya tienes 10 rutinas activas')).toBeVisible()
-      await expect(page.getByRole('link', { name: '+ Nueva rutina' })).toHaveCount(0)
+      await expect(page.getByRole('status').getByText('Ya tienes 10 suplementos activos')).toBeVisible()
+      await expect(page.getByRole('link', { name: '+ Agregar suplemento' })).toHaveCount(0)
       await expectNoHorizontalScroll(page)
 
       await page.goto(`/suplementos/${routines[0].id}`)
       await page.getByRole('button', { name: 'Pausar' }).click()
-      await expect(page.getByText('Pausada', { exact: true })).toBeVisible()
+      await expect(page.getByText('Pausado', { exact: true })).toBeVisible()
       await page.goto('/mis-suplementos')
-      await expect(page.getByRole('link', { name: '+ Nueva rutina' })).toBeVisible()
+      await expect(page.getByRole('link', { name: '+ Agregar suplemento' })).toBeVisible()
     })
   })
 }
