@@ -33,12 +33,23 @@ func checkWindow(from, to time.Time, max time.Duration) error {
 	return nil
 }
 
-// List returns a child's routines with the doses of [from, to) (at most 48 hours: the parent's local day).
-func (s *Service) List(ctx context.Context, childID uuid.UUID, from, to time.Time, actor uuid.UUID) (*RoutineList, error) {
+// ParseKind reads the `kind` of a list: empty is a supplement.
+func ParseKind(s string) (Kind, error) {
+	switch Kind(s) {
+	case "", KindSupplement:
+		return KindSupplement, nil
+	case KindActivity:
+		return KindActivity, nil
+	}
+	return "", ValidationErrors{{Field: "kind", Message: "must be supplement or activity"}}
+}
+
+// List returns a child's routines of one kind with the doses of [from, to) (at most 48 hours: the parent's local day).
+func (s *Service) List(ctx context.Context, childID uuid.UUID, kind Kind, from, to time.Time, actor uuid.UUID) (*RoutineList, error) {
 	if err := checkWindow(from, to, maxListWindow); err != nil {
 		return nil, err
 	}
-	list, err := s.repo.ListByChild(ctx, childID, from, to)
+	list, err := s.repo.ListByChild(ctx, childID, kind, from, to)
 	if err != nil {
 		return nil, err
 	}
@@ -94,6 +105,14 @@ func (s *Service) Create(ctx context.Context, childID uuid.UUID, in Input, creat
 	return s.get(ctx, id, from, from.AddDate(0, 0, 1), createdBy)
 }
 
+// MarkNext is «Realizado»: it marks the earliest unmarked dose of [from, to) of an activity (at most 48 hours: the local day).
+func (s *Service) MarkNext(ctx context.Context, routineID uuid.UUID, from, to time.Time, actor Actor) (*Dose, error) {
+	if err := checkWindow(from, to, maxListWindow); err != nil {
+		return nil, err
+	}
+	return s.repo.MarkNext(ctx, routineID, from, to, actor)
+}
+
 // MarkDose marks or unmarks a dose of the routine (see Repository.UpdateDoseStatus).
 func (s *Service) MarkDose(ctx context.Context, routineID, doseID uuid.UUID, taken bool, actor Actor) (*Dose, error) {
 	return s.repo.UpdateDoseStatus(ctx, routineID, doseID, taken, actor)
@@ -108,6 +127,11 @@ func (s *Service) viewToday(ctx context.Context, id uuid.UUID, utcOffsetMinutes 
 
 // Update replaces a routine's form (the paid plan's). The first day may be in the past: the routine already started.
 func (s *Service) Update(ctx context.Context, routineID uuid.UUID, in Input, actor uuid.UUID) (*RoutineView, error) {
+	kind, err := s.repo.KindOf(ctx, routineID)
+	if err != nil {
+		return nil, err
+	}
+	in.Kind = string(kind) // the kind is fixed when the routine is created
 	routine, errs := ValidateEdit(in, s.now())
 	if errs.HasErrors() {
 		return nil, errs
@@ -152,11 +176,11 @@ func (s *Service) SetMyReminders(ctx context.Context, routineID, accountID uuid.
 
 // ListPersonal returns the person's own routines with the doses of [from, to) (at most 48 hours: their local day) and whether
 // they already acknowledged the section's first-time notice (part 3).
-func (s *Service) ListPersonal(ctx context.Context, accountID uuid.UUID, from, to time.Time) (*RoutineList, bool, error) {
+func (s *Service) ListPersonal(ctx context.Context, accountID uuid.UUID, kind Kind, from, to time.Time) (*RoutineList, bool, error) {
 	if err := checkWindow(from, to, maxListWindow); err != nil {
 		return nil, false, err
 	}
-	list, err := s.repo.ListPersonal(ctx, accountID, from, to)
+	list, err := s.repo.ListPersonal(ctx, accountID, kind, from, to)
 	if err != nil {
 		return nil, false, err
 	}

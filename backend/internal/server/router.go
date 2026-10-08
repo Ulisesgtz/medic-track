@@ -144,6 +144,7 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(seesRoutine).Get("/routines/{routineId}", d.Supplement.GetRoutine)
 		r.With(seesRoutine).Patch("/routines/{routineId}/doses/{doseId}", d.Supplement.UpdateDose)
 		r.With(seesRoutine).Put("/routines/{routineId}/my-reminders", d.Supplement.SetMyReminders)
+		r.With(seesRoutine).Post("/routines/{routineId}/done", d.Supplement.MarkRoutineDone)
 		r.With(fullRoutine).Patch("/routines/{routineId}", d.Supplement.UpdateRoutine)
 		r.With(fullRoutine).Post("/routines/{routineId}/pause", d.Supplement.PauseRoutine)
 		r.With(fullRoutine).Post("/routines/{routineId}/resume", d.Supplement.ResumeRoutine)

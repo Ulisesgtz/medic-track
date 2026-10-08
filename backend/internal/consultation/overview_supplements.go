@@ -17,8 +17,9 @@ const (
 	DoseKindSupplement = "supplement"
 )
 
-// addSupplementDoses adds to the overview the doses of [from, to) of the child's ACTIVE supplement routines (paused and
-// ended ones stop being today's), each with the status the routine's own rule gives it, and keeps the whole list ordered by
+// addSupplementDoses adds to the overview the doses of [from, to) of the child's ACTIVE supplements (paused and
+// ended ones stop being today's; the child's activities are not here: a day of them can be dozens of doses, and they are
+// marked from their own card with «Realizado», specs/035), each with the status the routine's own rule gives it, and keeps the whole list ordered by
 // time. They are not an «active treatment»: that stays derived from consultations only.
 func (r *Repository) addSupplementDoses(ctx context.Context, overview *ChildOverview, childID uuid.UUID, from, to, now time.Time) error {
 	rows, err := r.pool.Query(ctx, `
@@ -28,7 +29,7 @@ func (r *Repository) addSupplementDoses(ctx context.Context, overview *ChildOver
 		FROM supplement_doses d
 		JOIN supplement_routines sr ON sr.id = d.routine_id
 		LEFT JOIN accounts a ON a.id = d.taken_by_account_id
-		WHERE sr.child_id = $1 AND sr.status = 'active' AND d.scheduled_at >= $2 AND d.scheduled_at < $3
+		WHERE sr.child_id = $1 AND sr.kind = 'supplement' AND sr.status = 'active' AND d.scheduled_at >= $2 AND d.scheduled_at < $3
 	`, childID, from, to)
 	if err != nil {
 		return fmt.Errorf("querying supplement doses in range: %w", err)

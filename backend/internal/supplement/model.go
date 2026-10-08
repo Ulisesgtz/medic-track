@@ -9,13 +9,23 @@ import (
 	"github.com/google/uuid"
 )
 
-// Period is how a routine repeats.
+// Kind says what a routine is (specs/035): a supplement is taken at fixed hours; an activity is done every so often
+// between two hours of the day. It is fixed when the routine is created.
+type Kind string
+
+const (
+	KindSupplement Kind = "supplement"
+	KindActivity   Kind = "activity"
+)
+
+// Period is how a routine repeats: a supplement is daily or on some weekdays (at fixed times); an activity is a
+// window of the day (from WindowStart to WindowEnd every IntervalMinutes), on all days or on some weekdays.
 type Period string
 
 const (
 	PeriodDaily    Period = "daily"
 	PeriodWeekdays Period = "weekdays"
-	PeriodInterval Period = "interval"
+	PeriodWindow   Period = "window"
 )
 
 // Status is the life of a routine: active -> paused -> active; active|paused -> ended (terminal).
@@ -38,8 +48,12 @@ const (
 )
 
 const (
-	// MaxActivePerChild is the cap of active routines of one child (paused ones don't count).
+	// MaxActivePerChild is the cap of active routines of one kind of one child (paused ones don't count); the same for a
+	// person's own.
 	MaxActivePerChild = 10
+	// MinIntervalMinutes and MaxIntervalMinutes bound «cada N» of an activity: 5 to 59 minutes or 1 to 23 hours.
+	MinIntervalMinutes = 5
+	MaxIntervalMinutes = 23 * 60
 	// MaxTimes is the most times a day a daily/weekdays routine can have.
 	MaxTimes = 6
 	// HorizonDays is how far ahead doses are generated; RefillBelowDays is when the planner extends them (research R2).
@@ -57,14 +71,16 @@ type Routine struct {
 	ID               uuid.UUID
 	AccountID        uuid.UUID
 	ChildID          *uuid.UUID
+	Kind             Kind
 	Name             string
 	Note             string
 	Period           Period
-	Times            []string // "HH:MM", daily/weekdays
-	Weekdays         []int    // 0 = Monday … 6 = Sunday, weekdays only
-	IntervalHours    int      // 1–24, interval only
+	Times            []string // "HH:MM", supplements
+	Weekdays         []int    // 0 = Monday … 6 = Sunday; supplements on weekdays, activities on some days (empty = all)
+	WindowStart      string   // "HH:MM", activities
+	WindowEnd        string   // "HH:MM", activities, after WindowStart
+	IntervalMinutes  int      // activities: 5–1380 (legacy rows up to 1440)
 	FirstDate        string   // "YYYY-MM-DD"
-	FirstTime        string   // "HH:MM", interval only
 	EndDate          string   // "YYYY-MM-DD", empty = no end
 	UtcOffsetMinutes int
 	Status           Status

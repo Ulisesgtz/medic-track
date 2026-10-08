@@ -56,19 +56,22 @@ func TestCreate_EachPeriodKeepsItsOwnFields(t *testing.T) {
 	require.Equal(t, []int{0, 2}, got.Weekdays)
 	require.Equal(t, []string{"09:00", "21:00"}, got.Times)
 	require.Equal(t, "con comida", got.Note)
-	require.Equal(t, 0, got.IntervalHours)
+	require.Equal(t, 0, got.IntervalMinutes)
+	require.Equal(t, supplement.KindSupplement, got.Kind)
 
-	interval := supplement.Routine{Name: "Cada 8", Period: supplement.PeriodInterval, IntervalHours: 8, FirstTime: "06:00", FirstDate: "2026-10-05", EndDate: "2026-10-06", UtcOffsetMinutes: -360}
-	id, err = repo.Create(ctx, f.childID, interval, f.accountID)
+	activity := supplement.Routine{Kind: supplement.KindActivity, Name: "Tomar agua", Period: supplement.PeriodWindow, WindowStart: "06:00", WindowEnd: "08:00", IntervalMinutes: 60, FirstDate: "2026-10-05", EndDate: "2026-10-06", UtcOffsetMinutes: -360}
+	id, err = repo.Create(ctx, f.childID, activity, f.accountID)
 	require.NoError(t, err)
 	got, err = repo.Get(ctx, id, fixedNow.AddDate(0, 0, -1), wide)
 	require.NoError(t, err)
-	require.Equal(t, 8, got.IntervalHours)
-	require.Equal(t, "06:00", got.FirstTime)
+	require.Equal(t, supplement.KindActivity, got.Kind)
+	require.Equal(t, 60, got.IntervalMinutes)
+	require.Equal(t, "06:00", got.WindowStart)
+	require.Equal(t, "08:00", got.WindowEnd)
 	require.Equal(t, "2026-10-06", got.EndDate)
 	require.Equal(t, -360, got.UtcOffsetMinutes)
 	require.Empty(t, got.Times)
-	// Local 06:00 on Oct 5 is 12:00 UTC; every 8 hours until the end of local Oct 6 (06:00 UTC on Oct 7): 6 doses.
+	// 06:00, 07:00 and 08:00 local on Oct 5 and on Oct 6: 6 doses.
 	require.Equal(t, 6, got.Progress.Total)
 }
 
@@ -304,7 +307,7 @@ func TestListByChild_OrdersCountsAndNeverHidesByPlan(t *testing.T) {
 	require.NoError(t, err)
 
 	from := time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC)
-	list, err := repo.ListByChild(ctx, f.childID, from, from.Add(24*time.Hour))
+	list, err := repo.ListByChild(ctx, f.childID, supplement.KindSupplement, from, from.Add(24*time.Hour))
 	require.NoError(t, err)
 	require.False(t, list.PaidPlan)
 	require.Equal(t, 3, list.ActiveCount, "the paused and the ended one are not active")
@@ -335,13 +338,13 @@ func TestListByChild_NoRoutinesIsAnEmptyListAndUnknownChildIsNotFound(t *testing
 	repo := newRepo(pool)
 	f := newFamily(t, pool, account.PlanPaid)
 
-	list, err := repo.ListByChild(context.Background(), f.childID, fixedNow, fixedNow.Add(time.Hour))
+	list, err := repo.ListByChild(context.Background(), f.childID, supplement.KindSupplement, fixedNow, fixedNow.Add(time.Hour))
 	require.NoError(t, err)
 	require.NotNil(t, list.Routines)
 	require.Empty(t, list.Routines)
 	require.True(t, list.PaidPlan)
 
-	_, err = repo.ListByChild(context.Background(), uuid.New(), fixedNow, fixedNow.Add(time.Hour))
+	_, err = repo.ListByChild(context.Background(), uuid.New(), supplement.KindSupplement, fixedNow, fixedNow.Add(time.Hour))
 	require.ErrorIs(t, err, supplement.ErrChildNotFound)
 }
 

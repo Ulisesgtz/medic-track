@@ -5,14 +5,22 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+
+	"github.com/Ulisesgtz/medic-track/backend/internal/access"
 )
 
 type resumeRequest struct {
 	UtcOffsetMinutes int `json:"utcOffsetMinutes" example:"-360"`
 } // @name SupplementResumeRequest
+
+type doneRequest struct {
+	From string `json:"from" example:"2026-10-08T06:00:00Z"`
+	To   string `json:"to" example:"2026-10-09T06:00:00Z"`
+} // @name SupplementDoneRequest
 
 type myRemindersRequest struct {
 	Enabled bool `json:"enabled" example:"true"`
@@ -38,6 +46,8 @@ func (h *Handler) writeMutationError(ctx context.Context, w http.ResponseWriter,
 		h.responder.WriteJSON(ctx, w, http.StatusNotFound, routineNotFoundBody(), actorPtr(actor))
 	case errors.Is(err, ErrRoutineEnded):
 		h.responder.WriteJSON(ctx, w, http.StatusConflict, map[string]string{"error": "routine_ended", "message": "The routine has ended"}, actorPtr(actor))
+	case errors.Is(err, ErrNothingToMark):
+		h.responder.WriteJSON(ctx, w, http.StatusConflict, map[string]string{"error": "nothing_to_mark", "message": "There is no dose left to mark in that window"}, actorPtr(actor))
 	case errors.Is(err, ErrRoutineNotActive):
 		h.responder.WriteJSON(ctx, w, http.StatusConflict, map[string]string{"error": "routine_not_active", "message": "The routine is not active"}, actorPtr(actor))
 	default:
@@ -234,4 +244,62 @@ func (h *Handler) SetMyReminders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.responder.WriteJSON(ctx, w, http.StatusOK, myRemindersResponse{MyReminders: req.Enabled}, nil)
+}
+
+// MarkRoutineDone handles POST /routines/{routineId}/done.
+//
+//	@Summary		«Realizado» on an activity
+//	@Description	Marks the earliest unmarked dose of [from, to) (the person's local day, at most 48 hours) of an active
+//	@Description	activity, with the session as author — also a dose that has not come yet. Two people tapping at once mark two
+//	@Description	different doses. It never depends on the plan. 409 nothing_to_mark when none is left (or the routine is not an
+//	@Description	active activity).
+//	@Tags			supplements
+//	@Accept			json
+//	@Produce		json
+//	@Param			routineId	path		string			true	"Routine UUID"
+//	@Param			payload		body		doneRequest		true	"The local day"
+//	@Success		200			{object}	doseResponse
+//	@Failure		400			{object}	validationDoc	"Missing or invalid window"
+//	@Failure		404			{object}	errorDoc		"No such routine"
+//	@Failure		409			{object}	errorDoc		"Nothing left to mark"
+//	@Security		ClerkSession
+//	@Failure		401			{object}	errorDoc	"No valid Clerk session"
+//	@Failure		403			{object}	errorDoc	"No access to the routine"
+//	@Router			/routines/{routineId}/done [post]
+func (h *Handler) MarkRoutineDone(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
+	id, ok := h.routineIDParam(w, r)
+	if !ok {
+		return
+	}
+	var req doneRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.responder.WriteJSONError(ctx, w, http.StatusBadRequest, "validation_error", "Malformed JSON body", nil)
+		return
+	}
+	var errs ValidationErrors
+	from, err := time.Parse(time.RFC3339, req.From)
+	if err != nil {
+		errs = append(errs, ValidationError{Field: "from", Message: "must be an RFC 3339 timestamp"})
+	}
+	to, err := time.Parse(time.RFC3339, req.To)
+	if err != nil {
+		errs = append(errs, ValidationError{Field: "to", Message: "must be an RFC 3339 timestamp"})
+	}
+	if errs.HasErrors() {
+		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationBody(errs), nil)
+		return
+	}
+	got, ok := access.FromContext(ctx)
+	if !ok {
+		h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", "Could not mark the activity", nil)
+		return
+	}
+	dose, err := h.service.MarkNext(ctx, id, from, to, Actor{AccountID: got.ActorAccountID, Full: got.Level == access.Full})
+	if err != nil {
+		h.writeMutationError(ctx, w, err, got.ActorAccountID, "Could not mark the activity")
+		return
+	}
+	h.responder.WriteJSON(ctx, w, http.StatusOK, toDoseResponse(*dose, got.ActorAccountID), nil)
 }

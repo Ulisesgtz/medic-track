@@ -29,8 +29,8 @@ func localZone(offsetMinutes int) *time.Location {
 }
 
 // Generate returns the instants of the routine's doses in [from, to), in order and without repeats: the routine's
-// times read in its local zone, never before its first day (or first dose, for «every N hours») and never after its
-// end day (included, up to the end of that local day). Pure: no clock, no database.
+// times (a supplement's fixed hours, or an activity's window every N minutes) read in its local zone, never before its
+// first day and never after its end day (included, up to the end of that local day). Pure: no clock, no database.
 func Generate(r Routine, from, to time.Time) []time.Time {
 	loc := localZone(r.UtcOffsetMinutes)
 	first, err := time.ParseInLocation(dateLayout, r.FirstDate, loc)
@@ -53,8 +53,8 @@ func Generate(r Routine, from, to time.Time) []time.Time {
 	if !lo.Before(hi) {
 		return nil
 	}
-	if r.Period == PeriodInterval {
-		return generateInterval(r, first, loc, lo, hi)
+	if r.Period == PeriodWindow {
+		return generateWindow(r, loc, lo, hi)
 	}
 	return generateDays(r, loc, lo, hi)
 }
@@ -91,22 +91,31 @@ func generateDays(r Routine, loc *time.Location, lo, hi time.Time) []time.Time {
 	return out
 }
 
-func generateInterval(r Routine, first time.Time, loc *time.Location, lo, hi time.Time) []time.Time {
-	h, m, ok := parseClock(r.FirstTime)
-	if !ok || r.IntervalHours < 1 {
+// generateWindow lists, for each chosen local day (all days when none is chosen), the instants from WindowStart to
+// WindowEnd (both included) every IntervalMinutes: the last one is the last that fits.
+func generateWindow(r Routine, loc *time.Location, lo, hi time.Time) []time.Time {
+	sh, sm, ok1 := parseClock(r.WindowStart)
+	eh, em, ok2 := parseClock(r.WindowEnd)
+	if !ok1 || !ok2 || r.IntervalMinutes < 1 {
 		return nil
 	}
-	begin := time.Date(first.Year(), first.Month(), first.Day(), h, m, 0, 0, loc)
-	step := time.Duration(r.IntervalHours) * time.Hour
-	t := begin
-	if lo.After(begin) {
-		skipped := (lo.Sub(begin) + step - 1) / step
-		t = begin.Add(skipped * step)
+	startMin, endMin := sh*60+sm, eh*60+em
+	onDay := map[int]bool{}
+	for _, d := range r.Weekdays {
+		onDay[d] = true
 	}
 	var out []time.Time
-	for ; t.Before(hi); t = t.Add(step) {
-		if !t.Before(lo) {
-			out = append(out, t)
+	start := lo.In(loc)
+	day := time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, loc)
+	for ; day.Before(hi); day = day.AddDate(0, 0, 1) {
+		if len(onDay) > 0 && !onDay[(int(day.Weekday())+6)%7] {
+			continue
+		}
+		for m := startMin; m <= endMin; m += r.IntervalMinutes {
+			t := time.Date(day.Year(), day.Month(), day.Day(), m/60, m%60, 0, 0, loc)
+			if !t.Before(lo) && t.Before(hi) {
+				out = append(out, t)
+			}
 		}
 	}
 	return out

@@ -16,6 +16,8 @@ var (
 	ErrRoutineNotActive = errors.New("routine not active")
 	// ErrDoseForbidden: only who marked a dose (or someone who can do everything) takes the mark back.
 	ErrDoseForbidden = errors.New("dose mark not yours")
+	// ErrNothingToMark: «Realizado» found no unmarked dose in the window (or the routine is not an active activity).
+	ErrNothingToMark = errors.New("nothing to mark")
 	// ErrPlanRequired: the owner account is not on the paid plan (creating, editing and resuming are the paid plan's).
 	ErrPlanRequired = errors.New("the plan is not paid")
 )

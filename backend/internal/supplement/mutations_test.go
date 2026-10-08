@@ -201,12 +201,12 @@ func TestUpdate_ChangesTheFutureAndNeverThePastNorTheMarked(t *testing.T) {
 func TestUpdate_CanChangeThePeriodAndAPausedRoutineStaysPausedWithoutDoses(t *testing.T) {
 	repo, _, id, pool := setup(t)
 	ctx := context.Background()
-	require.NoError(t, repo.Update(ctx, id, supplement.Routine{Name: "Cada 8", Period: supplement.PeriodInterval, IntervalHours: 8, FirstTime: "06:00", FirstDate: "2026-10-05", EndDate: "2026-10-30"}))
+	require.NoError(t, repo.Update(ctx, id, supplement.Routine{Name: "Martes y jueves", Period: supplement.PeriodWeekdays, Times: []string{"07:00"}, Weekdays: []int{1, 3}, FirstDate: "2026-10-05", EndDate: "2026-10-30"}))
 	view, err := repo.Get(ctx, id, fixedNow, fixedNow.Add(time.Hour))
 	require.NoError(t, err)
-	require.Equal(t, supplement.PeriodInterval, view.Period)
-	require.Equal(t, 8, view.IntervalHours)
-	require.Empty(t, view.Times)
+	require.Equal(t, supplement.PeriodWeekdays, view.Period)
+	require.Equal(t, []int{1, 3}, view.Weekdays)
+	require.Equal(t, []string{"07:00"}, view.Times)
 	require.Equal(t, "2026-10-30", view.EndDate)
 
 	require.NoError(t, repo.Pause(ctx, id))
@@ -473,7 +473,7 @@ func TestResumeAndFinishAnswerWithTheRoutineThroughTheService(t *testing.T) {
 	got, err := svc.Get(ctx, view.ID, fixedNow.Add(-time.Hour), fixedNow.Add(time.Hour), f.accountID)
 	require.NoError(t, err)
 	require.False(t, got.MyReminders)
-	list, err := svc.List(ctx, f.childID, fixedNow.Add(-time.Hour), fixedNow.Add(time.Hour), f.accountID)
+	list, err := svc.List(ctx, f.childID, supplement.KindSupplement, fixedNow.Add(-time.Hour), fixedNow.Add(time.Hour), f.accountID)
 	require.NoError(t, err)
 	require.False(t, list.Routines[0].MyReminders)
 

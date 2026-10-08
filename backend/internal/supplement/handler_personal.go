@@ -39,6 +39,7 @@ func accountNotFoundBody() map[string]string {
 //	@Param			accountId	path		string	true	"Account UUID"
 //	@Param			from		query		string	true	"Window start, RFC 3339"
 //	@Param			to			query		string	true	"Window end (exclusive), RFC 3339"
+//	@Param			kind		query		string	false	"supplement (default) or activity"	Enums(supplement, activity)
 //	@Success		200			{object}	personalListResponse
 //	@Failure		400			{object}	validationDoc	"Missing or invalid window"
 //	@Failure		404			{object}	errorDoc		"No account exists for this id"
@@ -54,11 +55,15 @@ func (h *Handler) ListPersonalRoutines(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	from, to, errs := parseWindow(r)
+	kind, kindErr := ParseKind(r.URL.Query().Get("kind"))
+	if kindErr != nil {
+		errs = append(errs, ValidationError{Field: "kind", Message: "must be supplement or activity"})
+	}
 	if errs.HasErrors() {
 		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationBody(errs), nil)
 		return
 	}
-	list, seen, err := h.service.ListPersonal(ctx, accountID, from, to)
+	list, seen, err := h.service.ListPersonal(ctx, accountID, kind, from, to)
 	if err != nil {
 		var verrs ValidationErrors
 		switch {

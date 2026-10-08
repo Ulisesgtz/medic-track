@@ -333,10 +333,11 @@ func buildPayload(dose DueDose, actionToken string) Payload {
 		}
 		return p
 	}
-	if dose.Source == SourceSupplement {
-		// A supplement's reminder points at its routine; the name is in the payload only in detailed mode, like a medication's.
+	if dose.Source == SourceSupplement || dose.Source == SourceActivity {
+		// A supplement's or an activity's reminder points at its routine; the name is in the payload only in detailed mode,
+		// like a medication's. The source is what tells the device to word it «Actividad programada» with «Realizado».
 		p.RoutineID = dose.RoutineID.String()
-		p.Source = string(SourceSupplement)
+		p.Source = string(dose.Source)
 	} else {
 		p.ConsultationID = dose.ConsultationID.String()
 	}

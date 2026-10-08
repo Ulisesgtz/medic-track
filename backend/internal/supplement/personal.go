@@ -26,6 +26,9 @@ const personalPlanSQL = `(a.plan = 'paid' OR EXISTS (
 // first and then enforces, in this order, the paid plan (*PlanLimitError, their own or their family's) and the cap of 10 active
 // personal routines (*RoutineLimitError). Nothing is written when either refuses.
 func (r *Repository) CreatePersonal(ctx context.Context, accountID uuid.UUID, in Routine) (uuid.UUID, error) {
+	if in.Kind == "" {
+		in.Kind = KindSupplement
+	}
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("starting transaction: %w", err)
@@ -43,7 +46,7 @@ func (r *Repository) CreatePersonal(ctx context.Context, accountID uuid.UUID, in
 	if !paid {
 		return uuid.Nil, &PlanLimitError{Reason: PlanLimitSupplements}
 	}
-	if err := checkPersonalCap(ctx, tx, accountID); err != nil {
+	if err := checkPersonalCap(ctx, tx, accountID, in.Kind); err != nil {
 		return uuid.Nil, err
 	}
 	id, err := r.insertRoutine(ctx, tx, accountID, nil, in, accountID)
@@ -56,11 +59,11 @@ func (r *Repository) CreatePersonal(ctx context.Context, accountID uuid.UUID, in
 	return id, nil
 }
 
-// checkPersonalCap refuses the routine that would be the person's 11th active one (paused and ended ones don't count). The
-// caller holds the account row lock.
-func checkPersonalCap(ctx context.Context, q querier, accountID uuid.UUID) error {
+// checkPersonalCap refuses the routine that would be the person's 11th active one OF ITS KIND (paused and ended ones don't
+// count). The caller holds the account row lock.
+func checkPersonalCap(ctx context.Context, q querier, accountID uuid.UUID, kind Kind) error {
 	var active int
-	err := q.QueryRow(ctx, `SELECT count(*) FROM supplement_routines WHERE account_id = $1 AND child_id IS NULL AND status = 'active'`, accountID).Scan(&active)
+	err := q.QueryRow(ctx, `SELECT count(*) FROM supplement_routines WHERE account_id = $1 AND child_id IS NULL AND kind = $2 AND status = 'active'`, accountID, string(kind)).Scan(&active)
 	if err != nil {
 		return fmt.Errorf("counting active routines: %w", err)
 	}
@@ -72,7 +75,7 @@ func checkPersonalCap(ctx context.Context, q querier, accountID uuid.UUID) error
 
 // ListPersonal returns the person's own routines — active first, then paused, then ended — like ListByChild: each with only the
 // doses of [from, to), its progress and its next dose. Nothing is hidden by plan.
-func (r *Repository) ListPersonal(ctx context.Context, accountID uuid.UUID, from, to time.Time) (*RoutineList, error) {
+func (r *Repository) ListPersonal(ctx context.Context, accountID uuid.UUID, kind Kind, from, to time.Time) (*RoutineList, error) {
 	var paid bool
 	err := r.pool.QueryRow(ctx, `SELECT `+personalPlanSQL+` FROM accounts a WHERE a.id = $1`, accountID).Scan(&paid)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -81,7 +84,7 @@ func (r *Repository) ListPersonal(ctx context.Context, accountID uuid.UUID, from
 	if err != nil {
 		return nil, fmt.Errorf("reading the account's plan: %w", err)
 	}
-	return r.listWhere(ctx, paid, `r.child_id IS NULL AND r.account_id = $1`, accountID, from, to)
+	return r.listWhere(ctx, paid, `r.child_id IS NULL AND r.account_id = $1 AND r.kind = $2`, accountID, kind, from, to)
 }
 
 // NoticeSeen says whether the account already pressed «Entendido» on the first-time notice of the personal section.

@@ -104,10 +104,10 @@ func (r *Repository) Resume(ctx context.Context, routineID uuid.UUID, utcOffsetM
 		return err
 	}
 	if s.view.ChildID != nil {
-		if err := checkActiveCap(ctx, tx, *s.view.ChildID); err != nil {
+		if err := checkActiveCap(ctx, tx, *s.view.ChildID, s.view.Kind); err != nil {
 			return err
 		}
-	} else if err := checkPersonalCap(ctx, tx, s.view.AccountID); err != nil {
+	} else if err := checkPersonalCap(ctx, tx, s.view.AccountID, s.view.Kind); err != nil {
 		return err
 	}
 	now := r.now()
@@ -145,12 +145,13 @@ func (r *Repository) Update(ctx context.Context, routineID uuid.UUID, in Routine
 	horizon := now.AddDate(0, 0, HorizonDays)
 	if _, err := tx.Exec(ctx, `
 		UPDATE supplement_routines
-		SET name = $2, note = $3, period = $4, times = $5::text[]::time[], weekdays = $6::smallint[], interval_hours = $7,
-		    first_date = $8::date, first_time = NULLIF($9, '')::time, end_date = NULLIF($10, '')::date,
-		    utc_offset_minutes = $11, generated_until = $12, updated_at = $13
+		SET name = $2, note = $3, period = $4, times = $5::text[]::time[], weekdays = $6::smallint[],
+		    window_start = NULLIF($7, '')::time, window_end = NULLIF($8, '')::time, interval_minutes = $9,
+		    first_date = $10::date, end_date = NULLIF($11, '')::date, utc_offset_minutes = $12, generated_until = $13,
+		    updated_at = $14
 		WHERE id = $1`,
-		routineID, in.Name, in.Note, string(in.Period), nonNil(in.Times), smallInts(in.Weekdays), nullableInt(in.IntervalHours),
-		in.FirstDate, in.FirstTime, in.EndDate, in.UtcOffsetMinutes, horizon, now); err != nil {
+		routineID, in.Name, in.Note, string(in.Period), nonNil(in.Times), smallInts(in.Weekdays), in.WindowStart, in.WindowEnd,
+		nullableInt(in.IntervalMinutes), in.FirstDate, in.EndDate, in.UtcOffsetMinutes, horizon, now); err != nil {
 		return fmt.Errorf("updating routine: %w", err)
 	}
 	if err := dropFutureUnmarked(ctx, tx, routineID, now); err != nil {

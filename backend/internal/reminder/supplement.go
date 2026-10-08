@@ -23,7 +23,7 @@ import (
 func (r *Repository) ClaimDueSupplementDoses(ctx context.Context, now time.Time, window time.Duration) ([]DueDose, error) {
 	rows, err := r.pool.Query(ctx, `
 		WITH cand AS (
-			SELECT d.id, d.scheduled_at, d.routine_id, sr.name, ch.id AS child_id, COALESCE(ch.first_name, '') AS first_name,
+			SELECT d.id, d.scheduled_at, d.routine_id, sr.name, sr.kind, ch.id AS child_id, COALESCE(ch.first_name, '') AS first_name,
 			       COALESCE(ch.account_id, sr.account_id) AS owner_id
 			FROM supplement_doses d
 			JOIN supplement_routines sr ON sr.id = d.routine_id AND sr.status = 'active'
@@ -61,7 +61,7 @@ func (r *Repository) ClaimDueSupplementDoses(ctx context.Context, now time.Time,
 			ON CONFLICT (dose_id, account_id) DO NOTHING
 			RETURNING dose_id, account_id
 		)
-		SELECT cand.id, cand.scheduled_at, cand.routine_id, cand.name, cand.first_name, claimed.account_id, a.reminder_detail
+		SELECT cand.id, cand.scheduled_at, cand.routine_id, cand.name, cand.kind, cand.first_name, claimed.account_id, a.reminder_detail
 		FROM claimed
 		JOIN cand ON cand.id = claimed.dose_id
 		JOIN accounts a ON a.id = claimed.account_id
@@ -76,8 +76,12 @@ func (r *Repository) ClaimDueSupplementDoses(ctx context.Context, now time.Time,
 	for rows.Next() {
 		d := DueDose{Source: SourceSupplement}
 		var detail *string
-		if err := rows.Scan(&d.DoseID, &d.ScheduledAt, &d.RoutineID, &d.MedicationName, &d.ChildFirstName, &d.AccountID, &detail); err != nil {
+		var kind string
+		if err := rows.Scan(&d.DoseID, &d.ScheduledAt, &d.RoutineID, &d.MedicationName, &kind, &d.ChildFirstName, &d.AccountID, &detail); err != nil {
 			return nil, fmt.Errorf("scanning due supplement dose: %w", err)
+		}
+		if kind == "activity" {
+			d.Source = SourceActivity
 		}
 		if detail != nil {
 			mode := DetailMode(*detail)

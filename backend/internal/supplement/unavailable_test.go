@@ -28,7 +28,7 @@ func TestRepository_DatabaseUnavailable(t *testing.T) {
 
 	_, err := repo.Create(ctx, id, valid, actor)
 	require.Error(t, err)
-	_, err = repo.ListByChild(ctx, id, fixedNow, fixedNow.Add(time.Hour))
+	_, err = repo.ListByChild(ctx, id, supplement.KindSupplement, fixedNow, fixedNow.Add(time.Hour))
 	require.Error(t, err)
 	_, err = repo.Get(ctx, id, fixedNow, fixedNow.Add(time.Hour))
 	require.Error(t, err)
@@ -51,7 +51,7 @@ func TestService_DatabaseUnavailable(t *testing.T) {
 	id, actor := uuid.New(), uuid.New()
 	in := supplement.Input{Name: "x", Period: "daily", Times: []string{"08:00"}, FirstDate: "2026-10-05"}
 
-	_, err := svc.List(ctx, id, fixedNow, fixedNow.Add(time.Hour), actor)
+	_, err := svc.List(ctx, id, supplement.KindSupplement, fixedNow, fixedNow.Add(time.Hour), actor)
 	require.Error(t, err)
 	_, err = svc.Get(ctx, id, fixedNow, fixedNow.Add(time.Hour), actor)
 	require.Error(t, err)
