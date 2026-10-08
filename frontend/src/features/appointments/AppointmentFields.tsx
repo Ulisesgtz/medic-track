@@ -1,3 +1,4 @@
+import { TimeField } from '../../shared/ui/TimeField'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { errorClass, fieldBorder, fieldRoutine, labelClass } from '../../shared/ui/formStyles'
@@ -119,14 +120,13 @@ export function AppointmentFields({ value, onChange, errors, optional, help, dis
           <label htmlFor="appointment-time" className={labelClass}>
             Hora de la cita
           </label>
-          <input
+          <TimeField
             id="appointment-time"
-            type="time"
             value={value.time}
-            onChange={(e) => set({ time: e.target.value })}
-            aria-invalid={errors.time ? true : undefined}
-            aria-describedby={errors.time ? 'appointment-time-error' : undefined}
-            className={`${rowField} ${fieldBorder(!!errors.time)}`}
+            onChange={(time) => set({ time })}
+            invalid={!!errors.time}
+            describedBy={errors.time ? 'appointment-time-error' : undefined}
+            align="end"
           />
         </div>
       </div>
@@ -365,13 +365,7 @@ function NoticePanel({ initial, start, existing, onSave, onDiscard }: NoticePane
             className="min-h-12 w-20 rounded-[14px] border-2 border-ink bg-surface px-3.5 text-base font-medium text-ink focus:outline-none"
           />
           <span className="text-base font-bold text-ink">días antes, a las</span>
-          <input
-            type="time"
-            aria-label="Hora del aviso"
-            value={atTime}
-            onChange={(e) => setAtTime(e.target.value)}
-            className="min-h-12 min-w-0 rounded-[14px] border-[1.5px] border-slate-300 bg-surface px-3 text-base font-medium text-ink"
-          />
+          <TimeField ariaLabel="Hora del aviso" value={atTime} onChange={setAtTime} align="end" />
         </div>
       )}
       {fire && <p className="text-sm font-semibold text-body">Llegaría el {whenText(fire).replace(', ', ' a las ')}.</p>}

@@ -27,6 +27,8 @@ export interface FormValues {
   every: string
   unit: EveryUnit
   daysMode: 'all' | 'some'
+  /** Activities: «Varias veces al día» (from one hour to another every so often) or «A una hora fija» (the `times`, like a supplement). */
+  activityMode: 'window' | 'fixed'
   firstDate: string
   endMode: 'none' | 'date'
   endDate: string
@@ -48,6 +50,7 @@ export function newRoutineValues(kind: RoutineKind, now: Date = new Date()): For
     every: '',
     unit: 'h',
     daysMode: 'all',
+    activityMode: 'window',
     firstDate: dayKey(now),
     endMode: 'none',
     endDate: '',
@@ -68,7 +71,11 @@ export function valuesOf(routine: Routine): FormValues {
     windowEnd: routine.windowEnd ?? '',
     every: minutes === 0 ? '' : String(hours ? minutes / 60 : minutes),
     unit: hours || minutes === 0 ? 'h' : 'min',
-    daysMode: routine.kind === 'activity' && routine.weekdays.length > 0 && routine.weekdays.length < 7 ? 'some' : 'all',
+    daysMode:
+      routine.kind === 'activity' && (routine.period === 'weekdays' || (routine.period === 'window' && routine.weekdays.length > 0 && routine.weekdays.length < 7))
+        ? 'some'
+        : 'all',
+    activityMode: routine.kind === 'activity' && routine.period !== 'window' ? 'fixed' : 'window',
     firstDate: routine.firstDate,
     endMode: routine.endDate ? 'date' : 'none',
     endDate: routine.endDate ?? '',
@@ -86,7 +93,7 @@ export function serverMessage(kind: RoutineKind, field: string): string | undefi
     name: NAME_MESSAGE[kind],
     times: 'Revisa las horas: de 1 a 6, sin repetir.',
     weekdays: 'Elige al menos un día.',
-    windowStart: 'Escribe la hora en que empieza.',
+    windowStart: 'Elige la hora en que empieza.',
     windowEnd: 'La hora de fin va después de la de inicio.',
     intervalMinutes: 'Elige cuánto tiempo pasa entre avisos.',
     firstDate: kind === 'activity' ? 'La fecha de inicio no puede ser de antes de ayer.' : 'La primera toma no puede ser de antes de ayer.',
@@ -119,17 +126,24 @@ export function validateValues(v: FormValues): FieldErrors {
   const errors: FieldErrors = {}
   const activity = v.kind === 'activity'
   if (v.name.trim() === '') errors.name = NAME_MESSAGE[v.kind]
+  const checkTimes = () => {
+    if (v.times.some((t) => t === '')) errors.times = 'Elige la hora.'
+    else if (new Set(v.times).size !== v.times.length) errors.times = 'Esta hora ya está en la lista.'
+  }
   if (activity) {
-    if (v.windowStart === '') errors.windowStart = 'Escribe la hora en que empieza.'
-    if (v.windowEnd === '') errors.windowEnd = 'Escribe la hora en que termina.'
-    else if (v.windowStart !== '' && v.windowEnd <= v.windowStart) errors.windowEnd = 'La hora de fin va después de la de inicio.'
-    const minutes = everyMinutes(v)
-    if (minutes === null || minutes < MIN_EVERY_MINUTES || minutes > MAX_EVERY_MINUTES) errors.every = 'Elige cuánto tiempo pasa entre avisos.'
+    if (v.activityMode === 'window') {
+      if (v.windowStart === '') errors.windowStart = 'Elige la hora en que empieza.'
+      if (v.windowEnd === '') errors.windowEnd = 'Elige la hora en que termina.'
+      else if (v.windowStart !== '' && v.windowEnd <= v.windowStart) errors.windowEnd = 'La hora de fin va después de la de inicio.'
+      const minutes = everyMinutes(v)
+      if (minutes === null || minutes < MIN_EVERY_MINUTES || minutes > MAX_EVERY_MINUTES) errors.every = 'Elige cuánto tiempo pasa entre avisos.'
+    } else {
+      checkTimes()
+    }
     if (v.daysMode === 'some' && v.weekdays.length === 0) errors.weekdays = 'Elige al menos un día.'
   } else {
     if (v.period === 'weekdays' && v.weekdays.length === 0) errors.weekdays = 'Elige al menos un día.'
-    if (v.times.some((t) => t === '')) errors.times = 'Escribe la hora.'
-    else if (new Set(v.times).size !== v.times.length) errors.times = 'Esta hora ya está en la lista.'
+    checkTimes()
   }
   if (v.firstDate === '') errors.firstDate = activity ? 'Elige la fecha de inicio.' : 'Elige la fecha de la primera toma.'
   if (v.endMode === 'date') {
@@ -152,6 +166,19 @@ export function toInput(v: FormValues): RoutineInput {
     firstDate: v.firstDate,
     endDate: v.endMode === 'date' ? v.endDate : null,
     utcOffsetMinutes: -new Date().getTimezoneOffset(),
+  }
+  if (v.kind === 'activity' && v.activityMode === 'fixed') {
+    // At fixed hours: the same fields a supplement sends — every day or on the chosen ones.
+    const some = v.daysMode === 'some'
+    return {
+      ...base,
+      period: some ? 'weekdays' : 'daily',
+      times: v.times,
+      weekdays: some ? [...v.weekdays].sort((a, b) => a - b) : [],
+      windowStart: null,
+      windowEnd: null,
+      intervalMinutes: null,
+    }
   }
   if (v.kind === 'activity') {
     return {

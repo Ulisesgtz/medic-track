@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test'
 import {
+  pickTime,
   acceptViaApi,
   allowClerkOn,
   appointmentViaApi,
@@ -48,7 +49,7 @@ for (const design of designs) {
       await page.getByLabel('Fecha de la cita').fill(localDayAfter(5))
       await page.getByRole('button', { name: 'Guardar cita' }).click()
       await expect(page.getByText('Escribe la hora de la cita.')).toBeVisible()
-      await page.getByLabel('Hora de la cita').fill('10:30')
+      await pickTime(page, 'Hora de la cita', '10:30')
       await page.getByLabel('Nota', { exact: false }).fill('Llevar la cartilla')
       await page.getByRole('button', { name: 'Guardar cita' }).click()
 
@@ -120,7 +121,7 @@ for (const design of designs) {
       await page.locator('#medications\\.0\\.durationDays').fill('7 días')
       await page.locator('#medications\\.0\\.startTime').fill('08:00')
       await page.getByLabel('Fecha de la cita').fill(localDayAfter(14, d))
-      await page.getByLabel('Hora de la cita').fill('16:00')
+      await pickTime(page, 'Hora de la cita', '16:00')
       await page.getByRole('button', { name: 'Guardar consulta' }).click()
 
       await expect(page).toHaveURL(/\/consultations\/(?!new)/)
