@@ -62,7 +62,8 @@ func validateInput(in Input, now time.Time, checkFirstDate bool) (Routine, Valid
 	}
 
 	switch {
-	case r.Kind == KindSupplement && (r.Period == PeriodDaily || r.Period == PeriodWeekdays):
+	case r.Period == PeriodDaily || r.Period == PeriodWeekdays:
+		// Fixed hours (1–6): what a supplement always is and what an activity can be («práctica de fut» on certain days at 17:00).
 		r.Times = validTimes(in.Times, add)
 		if r.Period == PeriodWeekdays {
 			r.Weekdays = validWeekdays(in.Weekdays, add)
@@ -70,8 +71,8 @@ func validateInput(in Input, now time.Time, checkFirstDate bool) (Routine, Valid
 	case r.Kind == KindActivity && r.Period == PeriodWindow:
 		validWindow(&r, in, add)
 	case r.Kind == KindActivity:
-		add("period", "an activity is repeated by window")
-	case r.Kind == KindSupplement:
+		add("period", "must be daily, weekdays or window")
+	default:
 		add("period", "must be daily or weekdays")
 	}
 

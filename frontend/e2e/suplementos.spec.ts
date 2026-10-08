@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test'
 import {
+  pickTime,
   acceptViaApi,
   allowClerkOn,
   designs,
@@ -46,9 +47,9 @@ for (const design of designs) {
       // The form, as a page: a name that is long, written as is.
       await expect(page.getByRole('heading', { name: 'Agregar suplemento', level: 1 })).toBeVisible()
       // No hour is suggested: the field starts empty and the parent writes it.
-      await expect(page.getByLabel('Hora', { exact: true })).toHaveValue('')
+      await expect(page.getByRole('button', { name: 'Hora', exact: true })).toContainText('Elegir hora')
       await page.getByLabel('Nombre').fill(LONG_NAME)
-      await page.getByLabel('Hora', { exact: true }).fill('08:00')
+      await pickTime(page, 'Hora', '08:00')
       await expectNoHorizontalScroll(page)
       await page.getByRole('button', { name: 'Guardar suplemento' }).click()
 
@@ -76,7 +77,7 @@ for (const design of designs) {
       await page.getByRole('link', { name: 'Editar' }).click()
       await expect(page.getByRole('heading', { name: 'Editar suplemento' })).toBeVisible()
       await expect(page.getByText('Los cambios cuentan desde la siguiente toma. Las tomas ya marcadas no cambian.')).toBeVisible()
-      await page.getByLabel('Hora', { exact: true }).fill('21:00')
+      await pickTime(page, 'Hora', '21:00')
       await page.getByRole('button', { name: 'Guardar cambios' }).click()
       await expect(page.locator('dd').filter({ hasText: '21:00' })).toBeVisible()
       await expect(page.getByRole('button', { name: 'Toma de 08:00', exact: true })).toHaveAttribute('aria-pressed', 'true')

@@ -24,7 +24,7 @@ tutor un lugar centralizado para:
   tomas marcables y avisos por persona. La app solo repite lo que el padre escribió; nunca sugiere
   suplementos, cantidades ni horarios.
 - **Actividades** (plan de pago): lo que el hijo hace varias veces al día, **desde una hora hasta otra y cada cuánto**
-  (por ejemplo, tomar agua cada hora de 08:00 a 20:00). No se marca cada hora: un botón «Realizado» y una barra del día,
+  (por ejemplo, tomar agua cada hora de 08:00 a 20:00) **o a una hora fija** en ciertos días (la práctica de fut los martes y jueves a las 17:00). No se marca cada hora: un botón «Realizado» y una barra del día,
   con un aviso que también trae «Realizado». Se comparten con la familia como las demás cosas del hijo.
 - **Próxima cita** (plan de pago): al registrar una consulta, o después, se anota cuándo es la siguiente cita con avisos
   (por omisión un día y dos horas antes, editables); cada persona de la familia recibe los suyos y se puede marcar

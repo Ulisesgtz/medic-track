@@ -118,6 +118,16 @@ describe('activities', () => {
     expect(activityRange(activity({ firstDate: '2026-09-28', endDate: '2026-10-03' }))).toBe('Todos los días · del 28 sep al 3 oct')
   })
 
+  it('at fixed hours say the days and the hours, and the range apart', () => {
+    const fixed = activity({ period: 'weekdays', times: ['17:00'], weekdays: [3, 1], windowStart: null, windowEnd: null, intervalMinutes: null })
+    expect(activityRule(fixed)).toBe('Mar, Jue · a las 17:00')
+    expect(activityRule({ ...fixed, period: 'daily', weekdays: [], times: ['08:00', '20:00'] })).toBe('Todos los días · a las 08:00 y 20:00')
+    expect(activityRange(fixed)).toBe('Desde el 1 oct · sin fecha de fin')
+    expect(activityRange({ ...fixed, firstDate: '2026-10-02', endDate: '2026-10-20' })).toBe('Del 2 al 20 oct')
+    expect(detailRows(fixed).map((r) => r.k)).toEqual(['Días', 'Horas', 'Fechas', 'Agregada por'])
+    expect(detailRows(fixed)[1].v).toBe('17:00')
+  })
+
   it('count the doses of a day, the last one the last that fits', () => {
     expect(perDay('08:00', '20:00', 60)).toBe(13)
     expect(perDay('09:00', '18:00', 120)).toBe(5)

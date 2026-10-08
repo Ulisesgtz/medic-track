@@ -82,7 +82,7 @@ func TestActivity_InvalidWindowsAreRefusedWithTheirField(t *testing.T) {
 	for field, body := range map[string]string{
 		"windowEnd":       activityBody("x", "10:00", "09:00", 30),
 		"intervalMinutes": activityBody("x", "08:00", "09:00", 3),
-		"period":          fmt.Sprintf(`{"kind":"activity","name":"x","period":"daily","times":["08:00"],"firstDate":%q}`, today()),
+		"period":          fmt.Sprintf(`{"kind":"activity","name":"x","period":"interval","firstDate":%q}`, today()),
 	} {
 		code, got := e.do(t, e.owner, http.MethodPost, path, body)
 		require.Equal(t, http.StatusBadRequest, code, got)
@@ -94,9 +94,12 @@ func TestActivity_EditKeepsItsKindWhateverTheBodySays(t *testing.T) {
 	e := newEnv(t, account.PlanPaid)
 	id := e.createActivity(t, "Tomar agua", "08:00", "10:00", 60)
 
-	// A body for a supplement does not turn the activity into one: the window is what an activity needs.
+	// A body of fixed hours makes it an activity at fixed hours — never a supplement: the kind is fixed when it is created.
 	code, got := e.do(t, e.owner, http.MethodPatch, "/routines/"+id, createBody("Tomar agua"))
-	require.Equal(t, http.StatusBadRequest, code, got)
+	require.Equal(t, http.StatusOK, code, got)
+	require.Equal(t, "activity", got["kind"])
+	require.Equal(t, "daily", got["period"])
+	require.Nil(t, got["windowStart"])
 
 	code, got = e.do(t, e.owner, http.MethodPatch, "/routines/"+id, activityBody("Tomar mucha agua", "09:00", "11:00", 30))
 	require.Equal(t, http.StatusOK, code, got)
@@ -265,5 +268,26 @@ func TestPersonalActivities_AreCappedAndListedApartFromPersonalSupplements(t *te
 	require.Equal(t, http.StatusOK, code, list)
 	require.Len(t, list["routines"], 1)
 	code, _ = pe.do(t, pe.owner, http.MethodGet, path+windowQuery()+"&kind=nope", "")
+	require.Equal(t, http.StatusBadRequest, code)
+}
+
+func TestActivity_AtFixedHoursIsCreatedAndMarkedWithRealizado(t *testing.T) {
+	e := newEnv(t, account.PlanPaid)
+	body := fmt.Sprintf(`{"kind":"activity","name":"Práctica de fut","note":"","period":"daily","times":["00:00","23:30"],"weekdays":[],"firstDate":%q,"utcOffsetMinutes":0}`, today())
+	code, got := e.do(t, e.owner, http.MethodPost, "/children/"+e.childID.String()+"/routines", body)
+	require.Equal(t, http.StatusCreated, code, got)
+	require.Equal(t, "activity", got["kind"])
+	require.Equal(t, "daily", got["period"])
+	require.Equal(t, []any{"00:00", "23:30"}, got["times"])
+	require.Nil(t, got["windowStart"])
+	require.Len(t, got["doses"], 2)
+
+	code, first := e.do(t, e.owner, http.MethodPost, "/routines/"+got["id"].(string)+"/done", dayBody())
+	require.Equal(t, http.StatusOK, code, first)
+	require.Contains(t, first["scheduledAt"], "T00:00:00Z")
+
+	// A supplement can't be a window, and an activity can be neither «cada N horas» nor hourless.
+	bad := fmt.Sprintf(`{"kind":"activity","name":"x","period":"daily","times":[],"firstDate":%q}`, today())
+	code, _ = e.do(t, e.owner, http.MethodPost, "/children/"+e.childID.String()+"/routines", bad)
 	require.Equal(t, http.StatusBadRequest, code)
 }

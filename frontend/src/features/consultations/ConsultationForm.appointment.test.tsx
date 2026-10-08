@@ -4,6 +4,10 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ConsultationForm } from './ConsultationForm'
+import { pickTime } from '../../shared/ui/timeField.test-utils'
+
+// The form is large and each hour is picked on the grid: under the coverage run these tests are slow, so they get more time.
+vi.setConfig({ testTimeout: 20_000 })
 
 // specs/033, part 2: the «Próxima cita» field of «Nueva consulta». The appointment is its own call, made after the consultation.
 
@@ -78,7 +82,7 @@ describe('ConsultationForm, next appointment (specs/033 part 2)', () => {
     const { onSuccess } = renderForm(variant)
     await fillValid(user)
     await user.type(screen.getByLabelText('Fecha de la cita'), '2026-02-10')
-    await user.type(screen.getByLabelText('Hora de la cita'), '1030')
+    await pickTime(user, 'Hora de la cita', '10:30')
     await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('consultation-1', false))
@@ -108,7 +112,7 @@ describe('ConsultationForm, next appointment (specs/033 part 2)', () => {
     const { onSuccess } = renderForm()
     await fillValid(user)
     await user.type(screen.getByLabelText('Fecha de la cita'), '2026-02-10')
-    await user.type(screen.getByLabelText('Hora de la cita'), '1030')
+    await pickTime(user, 'Hora de la cita', '10:30')
     await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
 
     await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('consultation-1', true))
@@ -133,7 +137,7 @@ describe('ConsultationForm, next appointment (specs/033 part 2)', () => {
     renderForm()
     await fillValid(user)
     await user.type(screen.getByLabelText('Fecha de la cita'), '2026-01-10')
-    await user.type(screen.getByLabelText('Hora de la cita'), '1030')
+    await pickTime(user, 'Hora de la cita', '10:30')
     await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
 
     expect(await screen.findByText('La próxima cita va después de la consulta (15 ene 2026).')).toBeInTheDocument()

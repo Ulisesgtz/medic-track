@@ -36,8 +36,8 @@ describe('validateValues · supplement', () => {
   })
 
   it('asks for the hour, and not twice the same one', () => {
-    expect(validateValues({ ...supplement(), times: [''] }).times).toBe('Escribe la hora.')
-    expect(validateValues({ ...supplement(), times: ['08:00', ''] }).times).toBe('Escribe la hora.')
+    expect(validateValues({ ...supplement(), times: [''] }).times).toBe('Elige la hora.')
+    expect(validateValues({ ...supplement(), times: ['08:00', ''] }).times).toBe('Elige la hora.')
     expect(validateValues({ ...supplement(), times: ['08:00', '08:00'] }).times).toBe('Esta hora ya está en la lista.')
   })
 
@@ -67,10 +67,20 @@ describe('validateValues · activity', () => {
   })
 
   it('asks for both hours, the end after the start', () => {
-    expect(validateValues({ ...activity(), windowStart: '' }).windowStart).toBe('Escribe la hora en que empieza.')
-    expect(validateValues({ ...activity(), windowEnd: '' }).windowEnd).toBe('Escribe la hora en que termina.')
+    expect(validateValues({ ...activity(), windowStart: '' }).windowStart).toBe('Elige la hora en que empieza.')
+    expect(validateValues({ ...activity(), windowEnd: '' }).windowEnd).toBe('Elige la hora en que termina.')
     expect(validateValues({ ...activity(), windowEnd: '08:00' }).windowEnd).toBe('La hora de fin va después de la de inicio.')
     expect(validateValues({ ...activity(), windowEnd: '07:00' }).windowEnd).toBe('La hora de fin va después de la de inicio.')
+  })
+
+  it('at fixed hours asks for the hours like a supplement and for a day when it is on certain days', () => {
+    const fixed = { ...activity(), activityMode: 'fixed' as const, times: ['17:00'] }
+    expect(validateValues(fixed)).toEqual({})
+    expect(validateValues({ ...fixed, times: [''] }).times).toBe('Elige la hora.')
+    expect(validateValues({ ...fixed, times: ['17:00', '17:00'] }).times).toBe('Esta hora ya está en la lista.')
+    expect(validateValues({ ...fixed, daysMode: 'some', weekdays: [] }).weekdays).toBe('Elige al menos un día.')
+    // The window's fields don't matter when it is at fixed hours.
+    expect(validateValues({ ...fixed, windowStart: '', windowEnd: '', every: '' })).toEqual({})
   })
 
   it('asks for «cada» between 5 minutes and 23 hours', () => {
@@ -125,6 +135,15 @@ describe('serverMessage', () => {
   })
 })
 
+describe('toInput · activity at fixed hours', () => {
+  const fixed = { ...activity(), activityMode: 'fixed' as const, times: ['17:00', '09:00'] }
+
+  it('sends the hours of a supplement: daily on all days, weekdays on the chosen ones, and no window', () => {
+    expect(toInput(fixed)).toMatchObject({ kind: 'activity', period: 'daily', times: ['17:00', '09:00'], weekdays: [], windowStart: null, windowEnd: null, intervalMinutes: null })
+    expect(toInput({ ...fixed, daysMode: 'some', weekdays: [3, 1] })).toMatchObject({ period: 'weekdays', weekdays: [1, 3], times: ['17:00', '09:00'] })
+  })
+})
+
 describe('toInput', () => {
   it('sends a supplement with only its own fields, trimmed', () => {
     const daily = toInput({ ...supplement(), name: '  Zinc ', note: ' con la cena ', period: 'daily', weekdays: [1], windowStart: '09:00' })
@@ -168,6 +187,13 @@ describe('valuesOf', () => {
     expect(valuesOf(routine({}))).toMatchObject({ kind: 'supplement', name: 'N', times: ['09:00'], endMode: 'none', daysMode: 'all' })
     expect(valuesOf(routine({ times: [] })).times).toEqual([''])
     expect(valuesOf(routine({ period: 'weekdays', weekdays: [1, 2] }))).toMatchObject({ period: 'weekdays', weekdays: [1, 2] })
+  })
+
+  it('reads an activity at fixed hours back as «A una hora fija»', () => {
+    const fixed = { kind: 'activity' as const, times: ['17:00'], windowStart: null, windowEnd: null, intervalMinutes: null }
+    expect(valuesOf(routine({ ...fixed, period: 'daily' }))).toMatchObject({ activityMode: 'fixed', times: ['17:00'], daysMode: 'all' })
+    expect(valuesOf(routine({ ...fixed, period: 'weekdays', weekdays: [1, 3] }))).toMatchObject({ activityMode: 'fixed', daysMode: 'some', weekdays: [1, 3] })
+    expect(valuesOf(routine({ kind: 'activity', period: 'window', times: [], windowStart: '08:00', windowEnd: '20:00', intervalMinutes: 60 })).activityMode).toBe('window')
   })
 
   it('reads an activity back, in hours when it is whole hours', () => {

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { errorClass, fieldBorder, fieldRoutine, fieldRoutineMultiline, labelClass } from '../../shared/ui/formStyles'
 import { Notice } from '../../shared/ui/Notice'
+import { TimeField } from '../../shared/ui/TimeField'
 import { SupplementApiError } from './api'
 import {
   FIELD_OF_SERVER,
@@ -19,7 +20,7 @@ import { PERIOD_OPTIONS, WEEKDAY_SEGMENTS, activityPreview } from './scheduleTex
 import type { Routine, RoutineInput, RoutineKind } from './types'
 
 interface RoutineFormProps {
-  /** Supplement (fixed hours) or activity (from one hour to another, every so often); an edit keeps its routine's. */
+  /** Supplement (fixed hours) or activity (from one hour to another every so often, or at fixed hours); an edit keeps its routine's. */
   kind: RoutineKind
   /** The one being edited; absent when creating. */
   routine?: Routine
@@ -38,6 +39,8 @@ const segmented = 'grid overflow-hidden rounded-[14px] border-[1.5px] border-sla
 const segmentOn = 'bg-ink text-white'
 const segmentOff = 'bg-surface text-ink hover:bg-hint'
 const segmentBase = 'min-h-12 cursor-pointer text-[15px] font-extrabold focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-inset'
+/** A date field: never wider than its card (iOS draws the native one past it) and, on the web, no wider than a date needs. */
+const dateField = `${fieldRoutine} appearance-none min-w-0 max-w-full sm:max-w-[220px] [&::-webkit-date-and-time-value]:text-left`
 
 /** The weekday bar (0 = Monday): seven toggles, the chosen ones in `ink`. */
 function WeekdayBar({ value, onToggle }: { value: number[]; onToggle: (day: number) => void }) {
@@ -92,11 +95,53 @@ function Segmented<T extends string>({
   )
 }
 
+/** «Horas»: one to six fixed hours, each picked on the grid; a supplement's and an activity «a una hora fija». */
+function HoursEditor({ times, error, onChange }: { times: string[]; error?: string; onChange: (times: string[]) => void }) {
+  const full = times.length >= MAX_TIMES
+  return (
+    <div className="flex flex-col gap-2.5">
+      <span className={labelClass}>Horas</span>
+      {times.map((time, index) => (
+        <div key={index} className="flex items-center gap-2.5">
+          <TimeField
+            value={time}
+            onChange={(next) => onChange(times.map((t, i) => (i === index ? next : t)))}
+            ariaLabel={times.length > 1 ? `Hora ${index + 1}` : 'Hora'}
+            invalid={!!error}
+          />
+          {times.length > 1 && (
+            <button
+              type="button"
+              onClick={() => onChange(times.filter((_, i) => i !== index))}
+              aria-label={`Quitar la hora ${time || index + 1}`}
+              className="min-h-12 shrink-0 cursor-pointer rounded-2xl border-2 border-red-700 px-4 text-[15px] font-extrabold text-red-700 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:ring-offset-2"
+            >
+              Quitar
+            </button>
+          )}
+        </div>
+      ))}
+      {error && <span className={errorClass}>{error}</span>}
+      <span className="text-[13px] font-medium text-slate-600">{full ? 'Ya son seis horas, el máximo.' : 'De una a seis horas.'}</span>
+      {!full && (
+        <button
+          type="button"
+          onClick={() => onChange([...times, ''])}
+          className="min-h-12 cursor-pointer rounded-[14px] border-2 border-dashed border-hint-border text-[15px] font-extrabold text-action hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+        >
+          + Agregar otra hora
+        </button>
+      )}
+    </div>
+  )
+}
+
 /**
- * Create and edit a supplement or an activity (mocks RutinaForm / ActividadForm): one form, two schedules. A supplement is
- * «Todos los días» or «Ciertos días» with one to six fixed hours; an activity is «Desde las / Hasta las» and «Cada [n] minutos u
- * horas», on all days or some. It records what the parent writes exactly: no example in the fields, no check of the name, the amount
- * or the hours (Principio I) — it says so in the fixed sentence under the form. Errors go under their field.
+ * Create and edit a supplement or an activity (mocks RutinaForm / ActividadForm): one form, three schedules. A supplement is
+ * «Todos los días» or «Ciertos días» at one to six fixed hours; an activity is either «Varias veces al día» («Desde las / Hasta las»
+ * and «Cada [n] minutos u horas») or «A una hora fija» (the same hours as a supplement, for a practice on certain days at 17:00), on
+ * all days or some. Hours are picked on a grid (`TimeField`), never typed. It records what the parent writes exactly: no example in
+ * the fields, no check of the name, the amount or the hours (Principio I) — it says so in the fixed sentence under the form.
  */
 export function RoutineForm({ kind, routine, onSubmit, onCancel, onPlanRequired, onDirtyChange, personal = false }: RoutineFormProps) {
   const editing = routine !== undefined
@@ -154,16 +199,13 @@ export function RoutineForm({ kind, routine, onSubmit, onCancel, onPlanRequired,
     }
   }
 
-  const updateTime = (index: number, value: string) => set('times', values.times.map((t, i) => (i === index ? value : t)))
   const toggleDay = (day: number) =>
     set('weekdays', values.weekdays.includes(day) ? values.weekdays.filter((d) => d !== day) : [...values.weekdays, day])
-  const full = values.times.length >= MAX_TIMES
+  const windowMode = activity && values.activityMode === 'window'
 
   const minutes = everyMinutes(values)
   const preview =
-    activity && minutes !== null
-      ? activityPreview(values.windowStart, values.windowEnd, minutes, values.daysMode === 'some' ? values.weekdays : [])
-      : null
+    windowMode && minutes !== null ? activityPreview(values.windowStart, values.windowEnd, minutes, values.daysMode === 'some' ? values.weekdays : []) : null
 
   return (
     <form
@@ -201,31 +243,41 @@ export function RoutineForm({ kind, routine, onSubmit, onCancel, onPlanRequired,
         )}
       </div>
 
-      {activity ? (
+      {activity && (
+        <fieldset className="flex flex-col gap-1.5">
+          <legend className={`${labelClass} mb-2`}>Cuándo se hace</legend>
+          <Segmented<'window' | 'fixed'>
+            label="Cuándo se hace"
+            options={[
+              { value: 'window', label: 'Varias veces al día' },
+              { value: 'fixed', label: 'A una hora fija' },
+            ]}
+            value={values.activityMode}
+            onChange={(mode) => set('activityMode', mode)}
+          />
+          <span className="text-[13px] font-medium text-slate-600">
+            {windowMode ? 'Desde una hora hasta otra, cada cierto tiempo.' : 'A una o varias horas fijas, como una práctica o una salida.'}
+          </span>
+        </fieldset>
+      )}
+
+      {windowMode && (
         <>
           <fieldset className="flex flex-col">
             <legend className={`${labelClass} mb-2`}>Horario del día</legend>
-            <div className="grid grid-cols-2 gap-2.5">
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-semibold text-body">Desde las</span>
-                <input
-                  type="time"
-                  value={values.windowStart}
-                  onChange={(e) => set('windowStart', e.target.value)}
-                  aria-invalid={errors.windowStart ? true : undefined}
-                  className={`${fieldRoutine} ${fieldBorder(!!errors.windowStart)}`}
-                />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-semibold text-body">Hasta las</span>
-                <input
-                  type="time"
-                  value={values.windowEnd}
-                  onChange={(e) => set('windowEnd', e.target.value)}
-                  aria-invalid={errors.windowEnd ? true : undefined}
-                  className={`${fieldRoutine} ${fieldBorder(!!errors.windowEnd)}`}
-                />
-              </label>
+            <div className="flex flex-wrap gap-x-4 gap-y-3">
+              <div className="flex flex-col gap-1">
+                <label htmlFor="window-start" className="text-sm font-semibold text-body">
+                  Desde las
+                </label>
+                <TimeField id="window-start" value={values.windowStart} onChange={(v) => set('windowStart', v)} invalid={!!errors.windowStart} />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label htmlFor="window-end" className="text-sm font-semibold text-body">
+                  Hasta las
+                </label>
+                <TimeField id="window-end" value={values.windowEnd} onChange={(v) => set('windowEnd', v)} invalid={!!errors.windowEnd} />
+              </div>
             </div>
             {errors.windowStart && <span className={`mt-1.5 ${errorClass}`}>{errors.windowStart}</span>}
             {errors.windowEnd && <span className={`mt-1.5 ${errorClass}`}>{errors.windowEnd}</span>}
@@ -245,7 +297,7 @@ export function RoutineForm({ kind, routine, onSubmit, onCancel, onPlanRequired,
                 aria-invalid={errors.every ? true : undefined}
                 className={`${fieldRoutine} !w-[84px] ${fieldBorder(!!errors.every)}`}
               />
-              <div className="min-w-[170px] flex-[1_1_170px]">
+              <div className="min-w-[170px] flex-[1_1_170px] sm:max-w-[260px]">
                 <Segmented<EveryUnit>
                   label="Unidad"
                   options={[
@@ -260,27 +312,33 @@ export function RoutineForm({ kind, routine, onSubmit, onCancel, onPlanRequired,
             {errors.every && <span className={`mt-1.5 ${errorClass}`}>{errors.every}</span>}
             {preview && <p className="mt-2.5 rounded-[14px] bg-hint px-3.5 py-3 text-sm leading-normal font-semibold text-ink">{preview}</p>}
           </fieldset>
-
-          <fieldset className="flex flex-col gap-2.5">
-            <legend className={`${labelClass} mb-2`}>Días</legend>
-            <Segmented<'all' | 'some'>
-              label="Días"
-              options={[
-                { value: 'all', label: 'Todos los días' },
-                { value: 'some', label: 'Ciertos días' },
-              ]}
-              value={values.daysMode}
-              onChange={(mode) => set('daysMode', mode)}
-            />
-            {values.daysMode === 'some' && (
-              <>
-                <WeekdayBar value={values.weekdays} onToggle={toggleDay} />
-                {errors.weekdays && <span className={errorClass}>{errors.weekdays}</span>}
-              </>
-            )}
-          </fieldset>
         </>
-      ) : (
+      )}
+
+      {activity && !windowMode && <HoursEditor times={values.times} error={errors.times} onChange={(times) => set('times', times)} />}
+
+      {activity && (
+        <fieldset className="flex flex-col gap-2.5">
+          <legend className={`${labelClass} mb-2`}>Días</legend>
+          <Segmented<'all' | 'some'>
+            label="Días"
+            options={[
+              { value: 'all', label: 'Todos los días' },
+              { value: 'some', label: 'Ciertos días' },
+            ]}
+            value={values.daysMode}
+            onChange={(mode) => set('daysMode', mode)}
+          />
+          {values.daysMode === 'some' && (
+            <>
+              <WeekdayBar value={values.weekdays} onToggle={toggleDay} />
+              {errors.weekdays && <span className={errorClass}>{errors.weekdays}</span>}
+            </>
+          )}
+        </fieldset>
+      )}
+
+      {!activity && (
         <>
           <fieldset className="flex flex-col gap-2.5">
             <legend className={`${labelClass} mb-2`}>Cada cuánto</legend>
@@ -324,42 +382,7 @@ export function RoutineForm({ kind, routine, onSubmit, onCancel, onPlanRequired,
             </fieldset>
           )}
 
-          <div className="flex flex-col gap-2.5">
-            <span className={labelClass}>Horas</span>
-            {values.times.map((time, index) => (
-              <div key={index} className="flex gap-2.5">
-                <input
-                  type="time"
-                  value={time}
-                  onChange={(e) => updateTime(index, e.target.value)}
-                  aria-label={values.times.length > 1 ? `Hora ${index + 1}` : 'Hora'}
-                  aria-invalid={errors.times ? true : undefined}
-                  className={`${fieldRoutine} flex-1 ${fieldBorder(!!errors.times)}`}
-                />
-                {values.times.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={() => set('times', values.times.filter((_, i) => i !== index))}
-                    aria-label={`Quitar la hora ${time || index + 1}`}
-                    className="min-h-12 shrink-0 cursor-pointer rounded-2xl border-2 border-red-700 px-4 text-[15px] font-extrabold text-red-700 hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-700 focus-visible:ring-offset-2"
-                  >
-                    Quitar
-                  </button>
-                )}
-              </div>
-            ))}
-            {errors.times && <span className={errorClass}>{errors.times}</span>}
-            <span className="text-[13px] font-medium text-slate-600">{full ? 'Ya son seis horas, el máximo.' : 'De una a seis horas.'}</span>
-            {!full && (
-              <button
-                type="button"
-                onClick={() => set('times', [...values.times, ''])}
-                className="min-h-12 cursor-pointer rounded-[14px] border-2 border-dashed border-hint-border text-[15px] font-extrabold text-action hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
-              >
-                + Agregar otra hora
-              </button>
-            )}
-          </div>
+          <HoursEditor times={values.times} error={errors.times} onChange={(times) => set('times', times)} />
         </>
       )}
 
@@ -373,7 +396,7 @@ export function RoutineForm({ kind, routine, onSubmit, onCancel, onPlanRequired,
           value={values.firstDate}
           onChange={(e) => set('firstDate', e.target.value)}
           aria-invalid={errors.firstDate ? true : undefined}
-          className={`${fieldRoutine} ${fieldBorder(!!errors.firstDate)}`}
+          className={`${dateField} ${fieldBorder(!!errors.firstDate)}`}
         />
         {errors.firstDate && <span className={errorClass}>{errors.firstDate}</span>}
       </div>
@@ -397,7 +420,7 @@ export function RoutineForm({ kind, routine, onSubmit, onCancel, onPlanRequired,
             onChange={(e) => set('endDate', e.target.value)}
             aria-label={activity ? 'Último día' : 'Última toma el'}
             aria-invalid={errors.endDate ? true : undefined}
-            className={`${fieldRoutine} mt-2.5 ${fieldBorder(!!errors.endDate)}`}
+            className={`${dateField} mt-2.5 ${fieldBorder(!!errors.endDate)}`}
           />
         )}
         {errors.endDate && <span className={`mt-1.5 ${errorClass}`}>{errors.endDate}</span>}
