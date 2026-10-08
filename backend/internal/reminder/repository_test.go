@@ -14,9 +14,9 @@ import (
 )
 
 // uniqueNow is a clock far from any real dose and from every other test's clock, so a claim only
-// ever sees the doses the test itself created (the dev database is shared).
+// ever sees the doses the test itself created (the dev database is shared). Under 2.5M hours: more overflows time.Duration.
 func uniqueNow() time.Time {
-	return time.Date(2090, 1, 1, 12, 0, 0, 0, time.UTC).Add(time.Duration(rand.IntN(3_000_000)) * time.Hour)
+	return time.Date(2090, 1, 1, 12, 0, 0, 0, time.UTC).Add(time.Duration(rand.IntN(2_000_000)) * time.Hour)
 }
 
 const window = 60 * time.Minute
