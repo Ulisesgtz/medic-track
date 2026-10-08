@@ -16,14 +16,16 @@ export function routine(over: Partial<Routine> = {}): Routine {
   return {
     id: 'r1',
     childId: 'child-1',
+    kind: 'supplement',
     name: 'Vitamina D',
     note: '',
     period: 'daily',
     times: ['08:00'],
     weekdays: [],
-    intervalHours: null,
+    windowStart: null,
+    windowEnd: null,
+    intervalMinutes: null,
     firstDate: '2026-10-01',
-    firstTime: null,
     endDate: null,
     status: 'active',
     pausedAt: null,
@@ -37,6 +39,29 @@ export function routine(over: Partial<Routine> = {}): Routine {
     nextDose: null,
     ...over,
   }
+}
+
+/** An activity (specs/035): from 08:00 to 20:00 every hour, four of today's doses (08, 09, 10 marked by Ana; 14 not yet). */
+export function activity(over: Partial<Routine> = {}): Routine {
+  return routine({
+    id: 'a1',
+    kind: 'activity',
+    name: 'Tomar agua',
+    period: 'window',
+    times: [],
+    windowStart: '08:00',
+    windowEnd: '20:00',
+    intervalMinutes: 60,
+    progress: { taken: 3, elapsed: 7, total: 13 },
+    doses: [
+      dose('x8', 8, { taken: true, takenBy: { name: 'Ana', at: at(8, 5), mine: true } }),
+      dose('x9', 9, { taken: true, takenBy: { name: 'Ana', at: at(9, 2), mine: true } }),
+      dose('x10', 10, { taken: true, takenBy: { name: 'Rosa', at: at(10, 4), mine: false } }),
+      dose('x14', 14, { status: 'due' }),
+      dose('x16', 16, { status: 'pending' }),
+    ],
+    ...over,
+  })
 }
 
 export const account = (over: Record<string, unknown> = {}, child: Record<string, unknown> = {}) => ({
@@ -59,6 +84,11 @@ export const list = (routines: Routine[], over: Partial<RoutineList> = {}): Rout
   paidPlan: true,
   ...over,
 })
+
+/** A list route that answers each kind with its own routines (the screens ask for one kind at a time, in `?kind=`). */
+export function byKind(supplements: Routine[], activities: Routine[], over: Partial<RoutineList> = {}) {
+  return (url: URL) => ({ body: list(url.searchParams.get('kind') === 'activity' ? activities : supplements, over) })
+}
 
 type Reply = { status?: number; body: unknown }
 type Handler = Reply | ((url: URL, init?: RequestInit) => Reply)

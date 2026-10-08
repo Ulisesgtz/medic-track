@@ -91,7 +91,15 @@ function App() {
             path="/children/:childId/suplementos/nueva"
             element={
               <RequireSession>
-                <RoutineFormPage />
+                <RoutineFormPage kind="supplement" />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/children/:childId/actividades/nueva"
+            element={
+              <RequireSession>
+                <RoutineFormPage kind="activity" />
               </RequireSession>
             }
           />
@@ -99,7 +107,15 @@ function App() {
             path="/mis-suplementos"
             element={
               <RequireSession>
-                <PersonalRoutinesPage />
+                <PersonalRoutinesPage kind="supplement" />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/mis-actividades"
+            element={
+              <RequireSession>
+                <PersonalRoutinesPage kind="activity" />
               </RequireSession>
             }
           />
@@ -107,7 +123,15 @@ function App() {
             path="/mis-suplementos/nueva"
             element={
               <RequireSession>
-                <RoutineFormPage personal />
+                <RoutineFormPage kind="supplement" personal />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/mis-actividades/nueva"
+            element={
+              <RequireSession>
+                <RoutineFormPage kind="activity" personal />
               </RequireSession>
             }
           />
@@ -120,7 +144,23 @@ function App() {
             }
           />
           <Route
+            path="/actividades/:routineId"
+            element={
+              <RequireSession>
+                <RoutineDetailPage />
+              </RequireSession>
+            }
+          />
+          <Route
             path="/suplementos/:routineId/editar"
+            element={
+              <RequireSession>
+                <RoutineFormPage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/actividades/:routineId/editar"
             element={
               <RequireSession>
                 <RoutineFormPage />

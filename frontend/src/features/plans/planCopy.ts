@@ -32,7 +32,7 @@ export const FULL_ITEMS = [
   'Consultas anteriores «solo registro» (sin horarios ni avisos).',
   'Historial con búsqueda y filtros (doctor, medicamento, síntomas, fechas).',
   'Compartir con tu familia: hasta 4 personas (Tutores y Cuidadores), cada una con sus avisos y «por Ana, 08:05» en cada toma marcada.',
-  'Rutinas de suplementos de tus hijos y las tuyas, con tomas marcables y avisos (hasta 10 activas por hijo y 10 propias).',
+  'Suplementos y actividades de tus hijos y los tuyos, con tomas marcables, «Realizado» y avisos (hasta 10 activos de cada tipo por hijo y 10 propios).',
   'Próxima cita con avisos editables (por omisión un día y dos horas antes) para toda la familia.',
   'Una suscripción por familia: quienes invitas quedan incluidos.',
 ]
@@ -107,11 +107,11 @@ export const LIMIT_MOTIVES: Record<PlanLimitReason, LimitMotive> = {
     ],
   },
   supplements: {
-    title: 'Rutinas de suplemento',
-    line: 'Intentaste crear una rutina de suplemento. Las rutinas, de tus hijos y las tuyas, son del plan completo.',
+    title: 'Suplementos y actividades',
+    line: 'Intentaste agregar un suplemento o una actividad. Los suplementos y las actividades, de tus hijos y tuyos, son del plan completo.',
     rows: [
-      row('Rutinas de suplemento', NO, 'Hasta 10 activas por hijo y 10 tuyas'),
-      row('Avisos', 'Tomas del tratamiento activo', 'También de rutinas y citas'),
+      row('Suplementos y actividades', NO, 'Hasta 10 de cada tipo por hijo y 10 tuyos'),
+      row('Avisos', 'Tomas del tratamiento activo', 'También de suplementos, actividades y citas'),
       row('Familia', 'Solo tú', 'Hasta 4 personas'),
     ],
   },

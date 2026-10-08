@@ -16,7 +16,7 @@ import { SummaryCard } from './SummaryCard'
 import { TodayDosesBlock } from './TodayDosesBlock'
 import { TodayDosesPanel } from './TodayDosesPanel'
 import { ChildAppointmentSection } from '../appointments/AppointmentSections'
-import { SupplementsSection } from '../supplements/SupplementsSection'
+import { RegistroSeccion } from '../supplements/RegistroSeccion'
 import { DOSE_REFETCH_MS, isUnmarked, isUnregistered, unregisteredText } from './doseStatus'
 
 /**
@@ -182,7 +182,12 @@ export function ChildDetailPage() {
             <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-start gap-[22px]">
               <div className="flex min-w-0 flex-col gap-[30px]">
                 {childId && <ChildAppointmentSection childId={childId} historyPath={`/children/${childId}/citas`} />}
-                {childId && <SupplementsSection childId={childId} childName={child?.firstName ?? 'tu hijo'} />}
+                {childId && <RegistroSeccion kind="supplement" childId={childId} childName={child?.firstName ?? 'tu hijo'} />}
+                {childId && (
+                  <div className="border-t-2 border-hint-border pt-[30px]">
+                    <RegistroSeccion kind="activity" childId={childId} childName={child?.firstName ?? 'tu hijo'} />
+                  </div>
+                )}
                 <section className="flex min-w-0 flex-col gap-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <h2 className="text-xl font-black tracking-[-0.02em] text-ink">Consultas</h2>
@@ -248,7 +253,13 @@ export function ChildDetailPage() {
 
         {childId && (
           <div className="px-6 pt-7">
-            <SupplementsSection childId={childId} childName={child?.firstName ?? 'tu hijo'} />
+            <RegistroSeccion kind="supplement" childId={childId} childName={child?.firstName ?? 'tu hijo'} />
+          </div>
+        )}
+
+        {childId && (
+          <div className="mx-6 mt-7 border-t-2 border-hint-border pt-7">
+            <RegistroSeccion kind="activity" childId={childId} childName={child?.firstName ?? 'tu hijo'} />
           </div>
         )}
 

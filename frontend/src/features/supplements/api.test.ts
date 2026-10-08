@@ -8,6 +8,7 @@ import {
   fetchRoutine,
   fetchRoutines,
   finishRoutine,
+  markRoutineDone,
   pauseRoutine,
   resumeRoutine,
   setMyReminders,
@@ -17,14 +18,16 @@ import {
 import type { RoutineInput } from './types'
 
 const input: RoutineInput = {
+  kind: 'supplement',
   name: 'Secreto',
   note: 'Nota secreta',
   period: 'daily',
   times: ['08:00'],
   weekdays: [],
-  intervalHours: null,
+  windowStart: null,
+  windowEnd: null,
+  intervalMinutes: null,
   firstDate: '2026-10-06',
-  firstTime: null,
   endDate: null,
   utcOffsetMinutes: -360,
 }
@@ -42,8 +45,8 @@ describe('requests', () => {
     const mock = stub(200, { routines: [] })
     const from = new Date('2026-10-06T00:00:00Z')
     const to = new Date('2026-10-07T00:00:00Z')
-    await fetchRoutines('c1', from, to, 'tok')
-    expect(String(mock.mock.calls[0][0])).toContain('/children/c1/routines?from=2026-10-06T00%3A00%3A00.000Z&to=2026-10-07T00%3A00%3A00.000Z')
+    await fetchRoutines('c1', 'activity', from, to, 'tok')
+    expect(String(mock.mock.calls[0][0])).toContain('/children/c1/routines?from=2026-10-06T00%3A00%3A00.000Z&to=2026-10-07T00%3A00%3A00.000Z&kind=activity')
     expect(mock.mock.calls[0][1].headers.Authorization).toBe('Bearer tok')
     await fetchRoutine('r1', from, to, 'tok')
     expect(String(mock.mock.calls[1][0])).toContain('/routines/r1?from=')
@@ -101,6 +104,7 @@ describe('errors', () => {
     expect((await kindOf(404, { error: 'child_not_found' })).kind).toBe('child_not_found')
     expect((await kindOf(409, { error: 'routine_ended' })).kind).toBe('routine_ended')
     expect((await kindOf(409, { error: 'routine_not_active' })).kind).toBe('routine_not_active')
+    expect((await kindOf(409, { error: 'nothing_to_mark' })).kind).toBe('nothing_to_mark')
     expect((await kindOf(500, {})).kind).toBe('unknown')
   })
 
@@ -122,10 +126,11 @@ describe('errors', () => {
 describe('the person\'s own routines (specs/033, part 3)', () => {
   it('reads and creates through the account, never through a child, with what was written only in the body', async () => {
     const mock = stub(200, { routines: [], noticeSeen: false })
-    await fetchPersonalRoutines('acc1', new Date('2026-10-06T00:00:00Z'), new Date('2026-10-07T00:00:00Z'), 'tok')
+    await fetchPersonalRoutines('acc1', 'supplement', new Date('2026-10-06T00:00:00Z'), new Date('2026-10-07T00:00:00Z'), 'tok')
     await createPersonalRoutine('acc1', input, 'tok')
     const [[readUrl, readInit], [createUrl, createInit]] = mock.mock.calls
     expect(String(readUrl)).toContain('/accounts/acc1/routines?from=2026-10-06T00%3A00%3A00.000Z')
+    expect(String(readUrl)).toContain('&kind=supplement')
     expect(readInit.method).toBe('GET')
     expect(String(createUrl)).toMatch(/\/accounts\/acc1\/routines$/)
     expect(createInit.method).toBe('POST')
@@ -144,12 +149,30 @@ describe('the person\'s own routines (specs/033, part 3)', () => {
 
   it('knows an unknown account and keeps the plan and cap answers', async () => {
     stub(404, { error: 'account_not_found', message: 'x' })
-    await expect(fetchPersonalRoutines('acc1', new Date(), new Date(), null)).rejects.toMatchObject({ kind: 'account_not_found' })
+    await expect(fetchPersonalRoutines('acc1', 'activity', new Date(), new Date(), null)).rejects.toMatchObject({ kind: 'account_not_found' })
     stub(422, { error: 'freemium_consultation_limit_exceeded', reason: 'supplements' })
     await expect(createPersonalRoutine('acc1', input, null)).rejects.toMatchObject({ kind: 'plan_required' })
     stub(422, { error: 'routine_limit_exceeded', limit: 10 })
     await expect(createPersonalRoutine('acc1', input, null)).rejects.toMatchObject({ kind: 'routine_limit', limit: 10 })
     stub(500, null as never)
     await expect(acknowledgePersonalNotice('acc1', null)).rejects.toBeInstanceOf(SupplementApiError)
+  })
+})
+
+describe('«Realizado» (specs/035)', () => {
+  it('is a POST with the person’s local day in the body and the dose back', async () => {
+    const mock = stub(200, { id: 'd1', taken: true })
+    const from = new Date('2026-10-06T06:00:00Z')
+    const to = new Date('2026-10-07T06:00:00Z')
+    await expect(markRoutineDone('a1', from, to, 'tok')).resolves.toEqual({ id: 'd1', taken: true })
+    expect(String(mock.mock.calls[0][0])).toMatch(/\/routines\/a1\/done$/)
+    expect(mock.mock.calls[0][1].method).toBe('POST')
+    expect(JSON.parse(mock.mock.calls[0][1].body)).toEqual({ from: from.toISOString(), to: to.toISOString() })
+    expect(mock.mock.calls[0][1].headers.Authorization).toBe('Bearer tok')
+  })
+
+  it('knows when there is nothing left to mark', async () => {
+    stub(409, { error: 'nothing_to_mark', message: 'x' })
+    await expect(markRoutineDone('a1', new Date(), new Date(), null)).rejects.toMatchObject({ kind: 'nothing_to_mark' })
   })
 })

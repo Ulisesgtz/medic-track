@@ -30,8 +30,11 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
   const onFamilyPage = useMatch('/familia') !== null
   const onPlansPage = useMatch('/planes') !== null
   // Specs/033, part 3: the person's own section, apart from the children; its count comes from the same query the home uses.
-  const onPersonalPage = useMatch('/mis-suplementos/*') !== null
-  const personalCount = usePersonalRoutines(account?.id, useLocalDay(), { poll: false }).data?.activeCount ?? 0
+  const onPersonalSupplements = useMatch('/mis-suplementos/*') !== null
+  const onPersonalActivities = useMatch('/mis-actividades/*') !== null
+  const day = useLocalDay()
+  const supplementCount = usePersonalRoutines(account?.id, 'supplement', day, { poll: false }).data?.activeCount ?? 0
+  const activityCount = usePersonalRoutines(account?.id, 'activity', day, { poll: false }).data?.activeCount ?? 0
 
   return (
     <aside className="sticky top-0 flex h-screen w-[280px] shrink-0 flex-col gap-8 overflow-y-auto bg-ink px-6 py-7">
@@ -95,15 +98,29 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
           <p className="px-4 text-xs font-extrabold tracking-[0.1em] text-ink-muted uppercase">Personal</p>
           <Link
             to="/mis-suplementos"
-            aria-current={onPersonalPage ? 'page' : undefined}
+            aria-current={onPersonalSupplements ? 'page' : undefined}
             className={`flex min-h-12 items-center justify-between gap-3 rounded-2xl px-4 transition-colors duration-200 ${
-              onPersonalPage ? 'bg-action' : 'hover:bg-ink-soft'
+              onPersonalSupplements ? 'bg-action' : 'hover:bg-ink-soft'
             }`}
           >
-            <span className={`text-base font-extrabold ${onPersonalPage ? 'text-white' : 'text-hint-border'}`}>Mis suplementos</span>
-            {personalCount > 0 && (
-              <span className={`shrink-0 text-[13px] font-semibold ${onPersonalPage ? 'text-hint-edge' : 'text-ink-muted'}`}>
-                {personalCount} {personalCount === 1 ? 'activa' : 'activas'}
+            <span className={`text-base font-extrabold ${onPersonalSupplements ? 'text-white' : 'text-hint-border'}`}>Mis suplementos</span>
+            {supplementCount > 0 && (
+              <span className={`shrink-0 text-[13px] font-semibold ${onPersonalSupplements ? 'text-hint-edge' : 'text-ink-muted'}`}>
+                {supplementCount} {supplementCount === 1 ? 'activa' : 'activas'}
+              </span>
+            )}
+          </Link>
+          <Link
+            to="/mis-actividades"
+            aria-current={onPersonalActivities ? 'page' : undefined}
+            className={`flex min-h-12 items-center justify-between gap-3 rounded-2xl px-4 transition-colors duration-200 ${
+              onPersonalActivities ? 'bg-action' : 'hover:bg-ink-soft'
+            }`}
+          >
+            <span className={`text-base font-extrabold ${onPersonalActivities ? 'text-white' : 'text-hint-border'}`}>Mis actividades</span>
+            {activityCount > 0 && (
+              <span className={`shrink-0 text-[13px] font-semibold ${onPersonalActivities ? 'text-hint-edge' : 'text-ink-muted'}`}>
+                {activityCount} {activityCount === 1 ? 'activa' : 'activas'}
               </span>
             )}
           </Link>

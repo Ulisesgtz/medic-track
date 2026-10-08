@@ -34,3 +34,51 @@ describe('a supplement reminder', () => {
     expect(JSON.stringify(generic)).not.toContain('Vitamina')
   })
 })
+
+// specs/035: an activity's reminder says «Actividad programada» and its button says «Realizado».
+
+const activity: ReminderPayload = {
+  kind: 'detailed',
+  doseId: 'd2',
+  routineId: 'a1',
+  source: 'activity',
+  scheduledAt: '2026-10-08T21:00:00Z',
+  medication: 'Tomar agua',
+  child: 'Mateo',
+  actionToken: 'tok',
+}
+
+describe('an activity reminder', () => {
+  it('is accepted with a routine and opens the activity, never the supplement', () => {
+    expect(parsePayload(() => activity)).toEqual(activity)
+    expect(targetUrl(activity)).toBe('/actividades/a1')
+  })
+
+  it('with detail names the activity and the child, with «Realizado» and no imperative', () => {
+    const n = buildNotification(activity)
+    expect(n.title).toBe('Actividad programada · Tomar agua')
+    expect(n.options.body).toMatch(/^Mateo · /)
+    expect(n.options.actions).toEqual([{ action: 'taken', title: 'Realizado' }])
+    expect(n.options.tag).toBe('dose-d2')
+  })
+
+  it('the person’s own carries only the hour', () => {
+    const own = buildNotification({ ...activity, child: undefined })
+    expect(own.title).toBe('Actividad programada · Tomar agua')
+    expect(own.options.body).not.toContain('Mateo')
+    expect(own.options.body).toMatch(/^\d{2}:\d{2}$/)
+  })
+
+  it('generic carries no name and no child, and says there is one for now', () => {
+    const generic = buildNotification({ kind: 'generic', doseId: 'd2', routineId: 'a1', source: 'activity', scheduledAt: activity.scheduledAt, actionToken: 'tok' })
+    expect(generic.title).toBe('Actividad programada')
+    expect(generic.options.body).toBe('Hay una actividad registrada para ahora.')
+    expect(JSON.stringify(generic)).not.toContain('agua')
+    expect(generic.options.actions).toEqual([{ action: 'taken', title: 'Realizado' }])
+  })
+
+  it('has no button without a token', () => {
+    const none = buildNotification({ ...activity, actionToken: undefined })
+    expect(none.options.actions).toBeUndefined()
+  })
+})

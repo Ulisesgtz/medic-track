@@ -11,32 +11,33 @@ import {
   fetchRoutine,
   fetchRoutines,
   finishRoutine,
+  markRoutineDone,
   pauseRoutine,
   resumeRoutine,
   setMyReminders,
   updateRoutine,
   updateRoutineDose,
 } from './api'
-import type { RoutineInput } from './types'
+import type { RoutineInput, RoutineKind } from './types'
 
-/** The child's routines with the doses of the parent's local day; asked again every minute so a dose turns "sin registrar" on its own. */
-export function useRoutines(childId: string | undefined, day: { from: Date; to: Date }) {
+/** The child's supplements or activities with the doses of the parent's local day; asked again every minute so a dose turns "sin registrar" on its own. */
+export function useRoutines(childId: string | undefined, kind: RoutineKind, day: { from: Date; to: Date }) {
   const { getToken } = useAuth()
   return useQuery({
-    queryKey: ['routines', childId, day.from.toISOString()],
-    queryFn: async () => fetchRoutines(childId!, day.from, day.to, await getToken()),
+    queryKey: ['routines', childId, kind, day.from.toISOString()],
+    queryFn: async () => fetchRoutines(childId!, kind, day.from, day.to, await getToken()),
     enabled: !!childId,
     retry: false,
     refetchInterval: DOSE_REFETCH_MS,
   })
 }
 
-/** The person's OWN routines (specs/033, part 3) with the doses of their local day; same refresh as a child's. */
-export function usePersonalRoutines(accountId: string | undefined, day: { from: Date; to: Date }, { poll = true }: { poll?: boolean } = {}) {
+/** The person's OWN supplements or activities (specs/033, part 3) with the doses of their local day; same refresh as a child's. */
+export function usePersonalRoutines(accountId: string | undefined, kind: RoutineKind, day: { from: Date; to: Date }, { poll = true }: { poll?: boolean } = {}) {
   const { getToken } = useAuth()
   return useQuery({
-    queryKey: ['routines', 'personal', accountId, day.from.toISOString()],
-    queryFn: async () => fetchPersonalRoutines(accountId!, day.from, day.to, await getToken()),
+    queryKey: ['routines', 'personal', accountId, kind, day.from.toISOString()],
+    queryFn: async () => fetchPersonalRoutines(accountId!, kind, day.from, day.to, await getToken()),
     enabled: !!accountId,
     retry: false,
     // The sidebar only wants the count: it doesn't ask again every minute on every screen (the screens that show doses do).
@@ -129,6 +130,19 @@ export function useMyReminders(routineId: string) {
   return useMutation({
     mutationFn: async (enabled: boolean) => setMyReminders(routineId, enabled, await getToken()),
     onSuccess: refresh,
+  })
+}
+
+/**
+ * «Realizado» on an activity (specs/035): the server marks the earliest unmarked dose of the person's local day. A 409
+ * («nothing_to_mark», another device marked the last one first) is not an error to the person: the screens ask again.
+ */
+export function useMarkDone(routineId: string, day: { from: Date; to: Date }) {
+  const { getToken } = useAuth()
+  const refresh = useRefreshAfterChange()
+  return useMutation({
+    mutationFn: async () => markRoutineDone(routineId, day.from, day.to, await getToken()),
+    onSettled: refresh,
   })
 }
 
