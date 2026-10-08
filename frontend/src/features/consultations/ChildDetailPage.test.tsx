@@ -455,7 +455,7 @@ describe('ChildDetailPage, "Nueva consulta" and the free plan (specs/030)', () =
     expect(screen.queryByRole('link', { name })).not.toBeInTheDocument()
     await user.click(button)
 
-    expect(await screen.findByRole('dialog', { name: 'Ya tienes un tratamiento activo' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'Ya hay un tratamiento activo' })).toBeInTheDocument()
   })
 
   it('stays a link when nothing is running', async () => {
@@ -522,7 +522,7 @@ describe('ChildDetailPage, the history entry (specs/031)', () => {
 
     await user.click(button)
 
-    expect(await screen.findByRole('dialog', { name: 'Historial con búsqueda y filtros' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'Búsqueda en el historial' })).toBeInTheDocument()
   })
 })
 

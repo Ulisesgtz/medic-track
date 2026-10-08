@@ -225,7 +225,7 @@ describe('AddChildModal', () => {
       await fillValid(user)
       await user.click(screen.getByRole('button', { name: 'Guardar' }))
 
-      expect(await screen.findByText(/Llegaste a un hijo registrado/i)).toBeInTheDocument()
+      expect(await screen.findByText(/Tu plan incluye un hijo/i)).toBeInTheDocument()
       expect(onClose).not.toHaveBeenCalled()
     })
 
@@ -238,8 +238,8 @@ describe('AddChildModal', () => {
 
       await fillValid(user)
       await user.click(screen.getByRole('button', { name: 'Guardar' }))
-      await screen.findByText(/Llegaste a un hijo registrado/i)
-      await user.click(screen.getByRole('button', { name: 'Ver planes' }))
+      await screen.findByText(/Tu plan incluye un hijo/i)
+      await user.click(screen.getByRole('link', { name: 'Ver el plan completo' }))
 
       expect(assign).toHaveBeenCalledWith('/planes')
     })
@@ -251,10 +251,10 @@ describe('AddChildModal', () => {
 
       await fillValid(user)
       await user.click(screen.getByRole('button', { name: 'Guardar' }))
-      await screen.findByText(/Llegaste a un hijo registrado/i)
-      await user.click(screen.getByRole('button', { name: 'Entendido' }))
+      await screen.findByText(/Tu plan incluye un hijo/i)
+      await user.click(screen.getByRole('button', { name: 'Ahora no' }))
 
-      expect(screen.queryByText(/Llegaste a un hijo registrado/i)).not.toBeInTheDocument()
+      expect(screen.queryByText(/Tu plan incluye un hijo/i)).not.toBeInTheDocument()
       expect(screen.getByRole('dialog', { name: 'Agregar hijo' })).toBeInTheDocument()
       expect(screen.getByLabelText('Nombre')).toHaveValue('Luis')
     })

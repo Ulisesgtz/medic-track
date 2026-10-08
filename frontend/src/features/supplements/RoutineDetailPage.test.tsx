@@ -221,8 +221,8 @@ describe('RoutineDetailPage', () => {
     const user = setup()
     await user.click(await screen.findByRole('button', { name: 'Reanudar' }))
     const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByText('Suplementos con recordatorio')).toBeInTheDocument()
-    await user.click(within(dialog).getByRole('button', { name: 'Ver planes' }))
+    expect(within(dialog).getByRole('heading', { name: 'Rutinas de suplemento' })).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('link', { name: 'Ver el plan completo' }))
     expect(await screen.findByText('PLANES')).toBeInTheDocument()
   })
 

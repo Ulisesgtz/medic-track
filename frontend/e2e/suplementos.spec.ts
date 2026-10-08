@@ -5,6 +5,7 @@ import {
   designs,
   expect,
   inviteViaApi,
+  localToday,
   queryDb,
   routineViaApi,
   secondPerson,
@@ -143,11 +144,11 @@ for (const design of designs) {
 
       await page.goto(`/children/${owner.childId}`)
       const main = page.getByRole('main')
-      await expect(main.getByText('Rutinas de suplemento')).toBeVisible()
-      await expect(main.getByRole('button', { name: 'Ver el plan completo' })).toBeVisible()
+      await expect(main.getByRole('heading', { name: 'Rutinas de suplemento' })).toBeVisible()
+      await expect(main.getByRole('link', { name: 'Ver el plan completo →' })).toBeVisible()
       await expect(main.getByRole('link', { name: 'Crear la primera rutina' })).toHaveCount(0)
       const refused = await request.post(`${API}/children/${owner.childId}/routines`, {
-        data: { name: 'x', period: 'daily', times: ['08:00'], firstDate: '2026-10-06', utcOffsetMinutes: 0 },
+        data: { name: 'x', period: 'daily', times: ['08:00'], firstDate: localToday().day, utcOffsetMinutes: localToday().offset },
         headers: { Authorization: `Bearer ${owner.token}` },
       })
       expect(refused.status()).toBe(422)
@@ -168,7 +169,7 @@ for (const design of designs) {
       await page.getByRole('button', { name: 'Pausar' }).click()
       await expect(page.getByText('Pausada', { exact: true })).toBeVisible()
       await page.getByRole('button', { name: 'Reanudar' }).click()
-      await expect(page.getByRole('dialog').getByText('Suplementos con recordatorio')).toBeVisible()
+      await expect(page.getByRole('dialog').getByRole('heading', { name: 'Rutinas de suplemento' })).toBeVisible()
     })
 
     test('with 10 active routines the section explains the cap, and pausing one makes room for another', async ({ page }) => {

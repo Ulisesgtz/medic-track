@@ -173,10 +173,10 @@ for (const design of designs) {
 
       await page.goto('/familia')
       const main = page.getByRole('main')
-      await expect(main.getByRole('heading', { name: 'Comparte con tu familia' })).toBeVisible()
-      await expect(main.getByLabel('Correo', { exact: true })).toHaveCount(0)
-      await main.getByRole('button', { name: 'Ver el plan completo' }).click()
-      await expect(page.getByRole('dialog', { name: 'Compartir con tu familia' })).toBeVisible()
+      await expect(main.getByRole('heading', { name: 'Compartir con tu familia' })).toBeVisible()
+      await expect(main.getByText(/MX\$499 al año/)).toBeVisible()
+      await main.getByRole('link', { name: 'Ver el plan completo →' }).click()
+      await expect(page).toHaveURL(/\/planes$/)
       await expectNoHorizontalScroll(page)
     })
 

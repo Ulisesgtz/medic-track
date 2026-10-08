@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { Notice } from '../../shared/ui/Notice'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
+import { PlanAvisoCompacto } from '../plans/PlanAvisoCompacto'
 import { AppShell } from '../home/AppShell'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { cancelInvitation, createInvitation, FamilyApiError, leaveFamily, removeMember, resendInvitation } from './api'
@@ -39,7 +40,6 @@ export function FamilyPage() {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [planOpen, setPlanOpen] = useState(false)
-  const planOpener = useRef<HTMLButtonElement>(null)
   // Leaving and removing ask first; each dialog gives the focus back to the button that opened it.
   const [removing, setRemoving] = useState<FamilyMember | null>(null)
   const [leaving, setLeaving] = useState(false)
@@ -193,23 +193,10 @@ export function FamilyPage() {
           />
         )}
         {full && !paid && !d.readOnly && (
-          <section
-            className={`flex flex-col gap-3 rounded-[22px] border-[1.5px] border-hint-border bg-hint ${isDesktop ? 'p-6' : 'p-[22px]'}`}
-          >
-            <p className="text-xs font-extrabold tracking-[0.1em] text-action uppercase">Plan completo</p>
-            <h2 className="-mt-1 text-[22px] font-black tracking-[-0.02em] text-ink">Comparte con tu familia</h2>
-            <p className="text-[15px] leading-relaxed text-body">
-              Hasta {d.capacity.max - 1} personas más pueden ver a {names} y marcar tomas: tu pareja, la abuela o quien {plural ? 'los cuida' : 'lo cuida'}.
-            </p>
-            <button
-              ref={planOpener}
-              type="button"
-              onClick={() => setPlanOpen(true)}
-              className="mt-1 min-h-12 cursor-pointer rounded-2xl bg-confirmed text-base font-extrabold text-white transition-colors hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-confirmed focus-visible:ring-offset-2"
-            >
-              Ver el plan completo
-            </button>
-          </section>
+          <PlanAvisoCompacto
+            title="Compartir con tu familia"
+            text={`Hasta ${d.capacity.max} personas ven y marcan las tomas, cada una con sus avisos. Quienes invitas quedan incluidos en tu suscripción.`}
+          />
         )}
         {d.role !== 'owner' && (
           <section className={`flex flex-col gap-3 ${isDesktop ? 'rounded-[22px] bg-surface p-6 shadow-[0_8px_20px_rgba(4,37,43,0.07)]' : 'pt-1'}`}>
@@ -287,7 +274,7 @@ export function FamilyPage() {
   )
 
   const planModal = planOpen && (
-    <FreemiumLimitModal reason="family" onStayFree={closePlan} onViewPlans={() => navigate('/planes')} opener={planOpener} />
+    <FreemiumLimitModal reason="family" onStayFree={closePlan} onViewPlans={() => navigate('/planes')} />
   )
   const leavingNames = namesText(childNames)
   const dialogs = (

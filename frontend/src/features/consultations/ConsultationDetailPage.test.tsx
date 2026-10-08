@@ -485,7 +485,7 @@ describe('ConsultationDetailPage', () => {
       expect(screen.queryByRole('link', { name: 'Nueva consulta' })).not.toBeInTheDocument()
       await userEvent.setup().click(button)
 
-      expect(await screen.findByRole('dialog', { name: 'Ya tienes un tratamiento activo' })).toBeInTheDocument()
+      expect(await screen.findByRole('dialog', { name: 'Ya hay un tratamiento activo' })).toBeInTheDocument()
     })
 
     it('shows the symptoms and the notes in one card on the left, and each only when it has something', async () => {

@@ -166,7 +166,7 @@ test.describe('web: un diálogo abierto desde la barra lateral queda por encima 
     await expect(page).toHaveURL(/\/children\//)
 
     await page.locator('aside').getByRole('button', { name: '+ Agregar hijo' }).click()
-    const dialog = page.getByRole('dialog', { name: 'Llegaste a un hijo registrado' })
+    const dialog = page.getByRole('dialog', { name: 'Tu plan incluye un hijo' })
     await expect(dialog).toBeVisible()
 
     // Sample a grid of points across the dialog: every one must hit the dialog itself.

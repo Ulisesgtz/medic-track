@@ -8,6 +8,7 @@ import { ConsultationDetailPage } from './features/consultations/ConsultationDet
 import { HistoryPage } from './features/consultations/HistoryPage'
 import { AppointmentFormPage } from './features/appointments/AppointmentFormPage'
 import { AppointmentHistoryPage } from './features/appointments/AppointmentHistoryPage'
+import { PlansPage } from './features/plans/PlansPage'
 import { PersonalRoutinesPage } from './features/supplements/PersonalRoutinesPage'
 import { RoutineDetailPage } from './features/supplements/RoutineDetailPage'
 import { RoutineFormPage } from './features/supplements/RoutineFormPage'
@@ -161,14 +162,13 @@ function App() {
           {/* Public on purpose: an invitation is opened before the person has a session; the page itself asks for one. */}
           <Route path="/familia/invitacion" element={<InvitationPage />} />
           <Route path="/" element={<Navigate to="/signup" replace />} />
-          {/* "Ver planes" of the freemium pop-up lands here until the plans screen exists (BACKLOG). */}
+          {/* The plans (specs/034): every "Ver el plan completo" lands here. */}
           <Route
             path="/planes"
             element={
-              <MessagePage
-                title="Planes de pago"
-                message="Estamos preparando los planes. Mientras tanto puedes seguir usando PediTrack con un hijo sin costo."
-              />
+              <RequireSession>
+                <PlansPage />
+              </RequireSession>
             }
           />
           <Route

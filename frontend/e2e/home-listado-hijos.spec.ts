@@ -39,32 +39,30 @@ for (const design of designs) {
       // FR-004: on the free plan with a child already registered, the limit pop-up
       // appears right away (mocks 05/15) — no form to fill first.
       await addChildButton(page).click()
-      const dialog = page.getByRole('dialog', { name: 'Llegaste a un hijo registrado' })
+      const dialog = page.getByRole('dialog', { name: 'Tu plan incluye un hijo' })
       await expect(dialog).toBeVisible()
-      await expect(dialog.getByText('Plan gratuito')).toBeVisible()
-      await expect(dialog.getByText(/Para dar de alta a otro hijo necesitas ampliar tu plan/)).toBeVisible()
-      // Wide layouts name the existing child; the phone one doesn't (mocks 15 vs 05).
-      await expect(dialog.getByText('Luis sigue disponible sin cambios')).toHaveCount(design.isWeb ? 1 : 0)
-      // Focus starts on "Ver planes".
-      await expect(dialog.getByRole('button', { name: 'Ver planes' })).toBeFocused()
+      await expect(dialog.getByText('Plan completo', { exact: true })).toBeVisible()
+      await expect(dialog.getByText('Intentaste agregar a otro hijo. El plan gratuito incluye uno.')).toBeVisible()
+      // Focus starts on «Ahora no»: the way out without pressure.
+      await expect(dialog.getByRole('button', { name: 'Ahora no' })).toBeFocused()
 
-      // "Entendido" closes it; only the original child is listed.
-      await dialog.getByRole('button', { name: 'Entendido' }).click()
+      // «Ahora no» closes it; only the original child is listed.
+      await dialog.getByRole('button', { name: 'Ahora no' }).click()
       await expect(dialog).toBeHidden()
       await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
     })
 
-    test('el pop-up del plan gratuito se cierra con Escape y "Ver planes" abre /planes', async ({ page }) => {
+    test('el pop-up del plan gratuito se cierra con Escape y «Ver el plan completo» abre /planes', async ({ page }) => {
       await signUp(page)
       await addChildButton(page).click()
-      const dialog = page.getByRole('dialog', { name: 'Llegaste a un hijo registrado' })
+      const dialog = page.getByRole('dialog', { name: 'Tu plan incluye un hijo' })
       await expect(dialog).toBeVisible()
 
       await page.keyboard.press('Escape')
       await expect(dialog).toBeHidden()
 
       await addChildButton(page).click()
-      await page.getByRole('button', { name: 'Ver planes' }).click()
+      await page.getByRole('link', { name: 'Ver el plan completo' }).click()
       await expect(page).toHaveURL(/\/planes/)
     })
 
@@ -106,7 +104,7 @@ for (const design of designs) {
 
       // On the free plan the next one is refused with the plan pop-up.
       await addChildButton(page).click()
-      await expect(page.getByRole('dialog', { name: 'Llegaste a un hijo registrado' })).toBeVisible()
+      await expect(page.getByRole('dialog', { name: 'Tu plan incluye un hijo' })).toBeVisible()
     })
 
     test('sin sesión, /home lleva al login, que ofrece crear cuenta (FR-002)', async ({ page }) => {

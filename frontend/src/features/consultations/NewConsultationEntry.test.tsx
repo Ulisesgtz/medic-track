@@ -48,7 +48,7 @@ describe('NewConsultationEntry', () => {
 
     await user.click(button)
 
-    expect(screen.getByRole('dialog', { name: 'Ya tienes un tratamiento activo' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Ya hay un tratamiento activo' })).toBeInTheDocument()
     expect(screen.queryByText('FORMULARIO')).not.toBeInTheDocument()
   })
 
@@ -57,7 +57,7 @@ describe('NewConsultationEntry', () => {
     renderEntry(true)
     await user.click(screen.getByRole('button', { name: 'Nueva consulta' }))
 
-    await user.click(screen.getByRole('button', { name: 'Entendido' }))
+    await user.click(screen.getByRole('button', { name: 'Ahora no' }))
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Nueva consulta' })).toHaveFocus()
@@ -68,7 +68,7 @@ describe('NewConsultationEntry', () => {
     renderEntry(true)
     await user.click(screen.getByRole('button', { name: 'Nueva consulta' }))
 
-    await user.click(screen.getByRole('button', { name: 'Ver planes' }))
+    await user.click(screen.getByRole('link', { name: 'Ver el plan completo' }))
 
     expect(await screen.findByText('PLANES')).toBeInTheDocument()
   })

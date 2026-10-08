@@ -194,7 +194,7 @@ describe('HomePage', () => {
 
     await user.click(await screen.findByRole('button', { name: /Agregar hijo/ }))
 
-    expect(await screen.findByRole('dialog', { name: 'Llegaste a un hijo registrado' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'Tu plan incluye un hijo' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Nombre')).not.toBeInTheDocument()
     expect(screen.getByText('El plan gratuito incluye un hijo.')).toBeInTheDocument()
   })
@@ -210,9 +210,9 @@ describe('HomePage', () => {
     renderHome()
     const opener = await screen.findByRole('button', { name: '+ Agregar hijo' })
 
-    // A click that leaves the button unfocused, as Safari does; the pop-up is the one that focuses "Ver planes".
+    // A click that leaves the button unfocused, as Safari does; the pop-up is the one that focuses "Ahora no".
     fireEvent.click(opener)
-    expect(await screen.findByRole('button', { name: 'Ver planes' })).toHaveFocus()
+    expect(await screen.findByRole('button', { name: 'Ahora no' })).toHaveFocus()
     expect(opener).not.toHaveFocus()
 
     await user.keyboard('{Escape}')
@@ -398,7 +398,7 @@ describe('HomePage', () => {
 
       await user.click(await screen.findByRole('button', { name: 'Agregar hijo' }))
 
-      expect(await screen.findByText(/Luis sigue disponible sin cambios/)).toBeInTheDocument()
+      expect(await screen.findByText('Intentaste agregar a otro hijo. El plan gratuito incluye uno.')).toBeInTheDocument()
     })
 
     it('shows the empty state (with the sidebar) when there are no children yet', async () => {

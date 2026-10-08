@@ -300,14 +300,14 @@ describe.each([
       const { searches, urls } = stubApi({ plan: 'free' })
       renderPage()
 
-      const dialog = await screen.findByRole('dialog', { name: 'Historial con búsqueda y filtros' })
-      expect(within(dialog).getByText(/es parte del plan completo/)).toBeInTheDocument()
-      expect(within(dialog).getByText(/lo sigues viendo en tu lista/)).toBeInTheDocument()
+      const dialog = await screen.findByRole('dialog', { name: 'Búsqueda en el historial' })
+      expect(within(dialog).getByText(/la búsqueda y los filtros son del plan completo/)).toBeInTheDocument()
+      expect(within(dialog).getByText(/Tu historial se sigue viendo completo/)).toBeInTheDocument()
       expect(screen.queryByLabelText('Buscar')).not.toBeInTheDocument()
       expect(searches).toHaveLength(0)
       expect(urls.some((u) => u.endsWith('/history-options'))).toBe(false)
 
-      await user.click(within(dialog).getByRole('button', { name: 'Entendido' }))
+      await user.click(within(dialog).getByRole('button', { name: 'Ahora no' }))
       expect(await screen.findByText('DETALLE DEL HIJO')).toBeInTheDocument()
     })
 
@@ -316,7 +316,7 @@ describe.each([
       stubApi({ plan: 'free' })
       renderPage()
 
-      await user.click(await screen.findByRole('button', { name: 'Ver planes' }))
+      await user.click(await screen.findByRole('link', { name: 'Ver el plan completo' }))
 
       expect(await screen.findByText('PLANES')).toBeInTheDocument()
     })
@@ -326,7 +326,7 @@ describe.each([
     stubApi({ plan: 'paid', searchStatus: 422, searchBody: { error: 'freemium_consultation_limit_exceeded', reason: 'history_search', message: 'paid plan' } })
     renderPage()
 
-    expect(await screen.findByRole('dialog', { name: 'Historial con búsqueda y filtros' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'Búsqueda en el historial' })).toBeInTheDocument()
   })
 })
 
@@ -355,9 +355,9 @@ describe('HistoryEntry', () => {
     expect(screen.queryByRole('link')).not.toBeInTheDocument()
     expect(within(button).getByText('Plan completo')).toBeInTheDocument()
     await user.click(button)
-    const dialog = screen.getByRole('dialog', { name: 'Historial con búsqueda y filtros' })
+    const dialog = screen.getByRole('dialog', { name: 'Búsqueda en el historial' })
 
-    await user.click(within(dialog).getByRole('button', { name: 'Entendido' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Ahora no' }))
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(button).toHaveFocus()

@@ -1,8 +1,9 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useLocalDay } from '../../shared/useLocalDay'
 import { dayKey } from '../consultations/treatmentDays'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { useChildAccess } from '../family/useChildAccess'
+import { PlanAvisoCompacto } from '../plans/PlanAvisoCompacto'
 import { RoutineCard } from './RoutineCard'
 import { useRoutineAccess, useRoutines } from './hooks'
 
@@ -16,7 +17,6 @@ const sectionButton =
  * marks and chooses their own reminders. What was already created is always shown and markable, whatever the plan.
  */
 export function SupplementsSection({ childId, childName }: { childId: string; childName: string }) {
-  const navigate = useNavigate()
   const day = useLocalDay()
   const today = dayKey(day.from)
   const accountQuery = useCurrentAccount()
@@ -112,21 +112,10 @@ export function SupplementsSection({ childId, childName }: { childId: string; ch
       )}
 
       {access.showPlan && (
-        <div className="flex flex-col items-start gap-2.5 rounded-[22px] border-[1.5px] border-hint-border bg-hint p-[22px]">
-          <p className="text-xs font-extrabold tracking-[0.1em] text-action uppercase">Plan completo</p>
-          <h3 className="-mt-0.5 text-[22px] font-black tracking-[-0.02em] text-ink">Rutinas de suplemento</h3>
-          <p className="text-[15px] leading-relaxed text-body">
-            Registra lo que {childName} toma de forma regular, con su horario. Cada toma se marca igual que las de medicamento, con
-            avisos, y la ve tu familia.
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate('/planes')}
-            className={`mt-1 ${sectionButton} hover:bg-surface`}
-          >
-            Ver el plan completo
-          </button>
-        </div>
+        <PlanAvisoCompacto
+          title="Rutinas de suplemento"
+          text={`Registra lo que ${childName} toma de forma regular, con su horario. Cada toma se marca como las de medicamento, con avisos para la familia.`}
+        />
       )}
 
       {active.length > 0 && (
