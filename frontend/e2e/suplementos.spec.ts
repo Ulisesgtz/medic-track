@@ -5,6 +5,7 @@ import {
   designs,
   expect,
   inviteViaApi,
+  localToday,
   queryDb,
   routineViaApi,
   secondPerson,
@@ -147,7 +148,7 @@ for (const design of designs) {
       await expect(main.getByRole('link', { name: 'Ver el plan completo →' })).toBeVisible()
       await expect(main.getByRole('link', { name: 'Crear la primera rutina' })).toHaveCount(0)
       const refused = await request.post(`${API}/children/${owner.childId}/routines`, {
-        data: { name: 'x', period: 'daily', times: ['08:00'], firstDate: '2026-10-06', utcOffsetMinutes: 0 },
+        data: { name: 'x', period: 'daily', times: ['08:00'], firstDate: localToday().day, utcOffsetMinutes: localToday().offset },
         headers: { Authorization: `Bearer ${owner.token}` },
       })
       expect(refused.status()).toBe(422)
