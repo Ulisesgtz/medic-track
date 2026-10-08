@@ -195,7 +195,7 @@ export function FamilyPage() {
         {full && !paid && !d.readOnly && (
           <PlanAvisoCompacto
             title="Compartir con tu familia"
-            text="Hasta 4 personas ven y marcan las tomas, cada una con sus avisos. Quienes invitas quedan incluidos en tu suscripción."
+            text={`Hasta ${d.capacity.max} personas ven y marcan las tomas, cada una con sus avisos. Quienes invitas quedan incluidos en tu suscripción.`}
           />
         )}
         {d.role !== 'owner' && (

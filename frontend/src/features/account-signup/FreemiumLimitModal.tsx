@@ -43,6 +43,12 @@ export function FreemiumLimitModal({ reason = 'children', onViewPlans, onStayFre
   const stayButtonRef = useRef<HTMLButtonElement>(null)
   const desktop = useIsDesktop()
   const motive = LIMIT_MOTIVES[reason]
+  // Callers pass inline closures: keep the latest one without re-running the focus setup (which would pull the focus back to «Ahora no»
+  // every time the screen behind re-renders, e.g. on its minute refetch).
+  const onStayFreeRef = useRef(onStayFree)
+  useEffect(() => {
+    onStayFreeRef.current = onStayFree
+  }, [onStayFree])
 
   useEffect(() => {
     // Only capture document.activeElement as a fallback opener — a caller-supplied `opener`
@@ -53,7 +59,7 @@ export function FreemiumLimitModal({ reason = 'children', onViewPlans, onStayFre
 
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        onStayFree()
+        onStayFreeRef.current()
         return
       }
       if (event.key !== 'Tab') return
@@ -77,7 +83,7 @@ export function FreemiumLimitModal({ reason = 'children', onViewPlans, onStayFre
       document.removeEventListener('keydown', handleKeyDown)
       capturedOpener?.focus()
     }
-  }, [onStayFree, opener])
+  }, [opener])
 
   const [main, ...rest] = motive.rows
 

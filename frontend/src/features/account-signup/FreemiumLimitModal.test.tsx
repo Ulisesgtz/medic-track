@@ -158,6 +158,23 @@ describe('FreemiumLimitModal', () => {
     expect(screen.getByRole('button', { name: 'Ahora no' }).parentElement).toHaveClass('justify-end')
   })
 
+  it('does not pull the focus back to «Ahora no» when the screen behind re-renders with a new closure', async () => {
+    const user = userEvent.setup()
+    const first = vi.fn()
+    const second = vi.fn()
+    const { rerender } = render(<FreemiumLimitModal onViewPlans={() => {}} onStayFree={() => first()} />)
+    await user.tab()
+    const link = screen.getByRole('link', { name: 'Ver el plan completo' })
+    expect(link).toHaveFocus()
+
+    rerender(<FreemiumLimitModal onViewPlans={() => {}} onStayFree={() => second()} />)
+
+    expect(link).toHaveFocus()
+    await user.keyboard('{Escape}')
+    expect(first).not.toHaveBeenCalled()
+    expect(second).toHaveBeenCalledOnce()
+  })
+
   it('keeps Tab where it is when something unexpected leaves nothing to focus (no crash)', async () => {
     const user = userEvent.setup()
     render(<FreemiumLimitModal onViewPlans={() => {}} onStayFree={() => {}} />)

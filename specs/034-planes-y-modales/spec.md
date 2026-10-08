@@ -4,7 +4,7 @@
 
 **Creado**: 2026-10-07
 
-**Estado**: En implementación
+**Estado**: Implementado
 
 **Entrada**: Decisión del dueño del producto (2026-10-07): un solo plan de pago a **MX$499 al año**, una suscripción por familia, y una pantalla de planes con dos recuadros (Gratis y Plan completo) más el modal de límite rediseñado para todos los motivos. Diseño entregado: `Planes PediTrack.dc.html` (+ `PlanTarjeta`, `LimiteModal`, `PlanAvisoCompacto`); decisiones en [referencia/planes-decisiones.md](./referencia/planes-decisiones.md). **El cobro con Mercado Pago NO está en esta entrega**: la pantalla se publica con el botón en estado «Pronto».
 
