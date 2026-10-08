@@ -1,66 +1,148 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import { LONG_MONTHS } from '../../shared/date'
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useLocalDay } from '../../shared/useLocalDay'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
-import { dayKey, type Month } from '../consultations/treatmentDays'
+import { dayKey } from '../consultations/treatmentDays'
 import { useChildAccess } from '../family/useChildAccess'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { SupplementApiError } from './api'
+import { DayProgress } from './DayProgress'
 import { FinishRoutineDialog } from './FinishRoutineDialog'
-import { useFinishRoutine, usePauseRoutine, useResumeRoutine, useRoutine } from './hooks'
+import { useFinishRoutine, usePauseRoutine, useResumeRoutine, useRoutine, useRoutineDoseToggle } from './hooks'
 import { MyRemindersToggle } from './MyRemindersToggle'
-import { RoutineStatusChip } from './RoutineCard'
-import { RoutineCalendar } from './RoutineCalendar'
+import { RealizadoButton } from './RealizadoButton'
 import { RoutineDoseChip } from './RoutineDoseChip'
 import { RoutinePageFrame } from './RoutineFormPage'
-import { detailRows, endedNote, pausedNote, progressSummary } from './scheduleText'
+import { RoutineStatusChip } from './RoutineStatusChip'
+import { dayCount, detailRows, endedNote, lastMarked, lastMarkedDose, nextUnmarked, noTodayText, pausedNote, todayLabel } from './scheduleText'
 import type { Routine } from './types'
 
 const card = 'rounded-[22px] bg-surface shadow-[0_8px_20px_rgba(4,37,43,0.07)]'
 const outlineButton =
   'inline-flex min-h-12 flex-[1_1_110px] cursor-pointer items-center justify-center rounded-2xl border-2 border-action px-[18px] text-base font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60'
+const linkButton =
+  'min-h-11 cursor-pointer rounded-2xl px-3.5 text-[15px] font-extrabold text-action underline hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2'
 
-const monthOf = (key: string): Month => {
-  const [y, m] = key.split('-').map(Number)
-  return { year: y, month: m - 1 }
+/** «Quitar la última marca» (mock D3): takes back the last dose marked today, for a tap by mistake. The server decides who may. */
+function UndoLastMark({ routine, canManage }: { routine: Routine; canManage: boolean }) {
+  const last = lastMarkedDose(routine.doses)
+  const mutation = useRoutineDoseToggle(routine.id, last?.id ?? '')
+  if (!last || !(canManage || last.takenBy?.mine)) return null
+  return (
+    <button type="button" disabled={mutation.isPending} onClick={() => mutation.mutate(false)} className={`self-center ${linkButton}`}>
+      Quitar la última marca
+    </button>
+  )
 }
-const monthIndex = (m: Month) => m.year * 12 + m.month
-const monthRange = (m: Month) => ({ from: new Date(m.year, m.month, 1), to: new Date(m.year, m.month + 1, 1) })
 
-/** The last day the routine has doses to show: its end date, the day it ended or paused, or — a running one with no end — today. */
-function lastDayOf(routine: Routine, today: string): string {
-  if (routine.status === 'ended' && routine.endedAt) return dayKey(routine.endedAt)
-  if (routine.endDate && routine.endDate < today) return routine.endDate
-  if (routine.status === 'paused' && routine.pausedAt) return dayKey(routine.pausedAt)
-  return routine.endDate ?? today
+/** The detail's day card of a supplement (mock SuplementoDetalle): «Hoy · jue 8 oct», «2 de 6 tomas hoy», the bar and the doses to mark. */
+function SupplementToday({ routine, canManage, own, today }: { routine: Routine; canManage: boolean; own: boolean; today: string }) {
+  const count = dayCount(routine.doses)
+  const paused = routine.status === 'paused'
+  if (routine.status === 'ended') return null
+  if (routine.doses.length > 0) {
+    return (
+      <>
+        <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="text-[34px] font-black tracking-[-0.03em] text-ink tabular-nums">
+            {count.done} de {count.total}
+          </span>
+          <span className="text-[17px] font-bold text-body">tomas hoy</span>
+        </p>
+        <DayProgress done={count.done} total={count.total} label={`${count.done} de ${count.total} tomas hoy`} />
+        <div className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-2 pt-1">
+          {routine.doses.map((dose) => (
+            <RoutineDoseChip key={dose.id} routineId={routine.id} dose={dose} canManage={canManage} own={own} />
+          ))}
+        </div>
+      </>
+    )
+  }
+  if (paused) return <p className="text-[15px] leading-normal text-body">En pausa: hoy no hay tomas.</p>
+  return (
+    <p className="text-[15px] leading-normal text-body">
+      {routine.nextDose ? noTodayText(routine.nextDose.scheduledAt, today, own) : 'Hoy no hay tomas.'}
+    </p>
+  )
+}
+
+/** The detail's day card of an activity (mock ActividadDetalle): the count, the bar, «Próxima» and «Última marcada», «✓ Realizado». */
+function ActivityToday({ routine, canManage, own, today }: { routine: Routine; canManage: boolean; own: boolean; today: string }) {
+  const count = dayCount(routine.doses)
+  if (routine.status === 'paused' || routine.status === 'ended') {
+    return routine.status === 'ended' && count.total > 0 ? (
+      <>
+        <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="text-[34px] font-black tracking-[-0.03em] text-ink tabular-nums">
+            {count.done} de {count.total}
+          </span>
+          <span className="text-[17px] font-bold text-body">hechas hoy</span>
+        </p>
+        <DayProgress done={count.done} total={count.total} label={`${count.done} de ${count.total} hechas hoy`} />
+      </>
+    ) : null
+  }
+  if (count.total === 0) {
+    return (
+      <p className="text-[15px] leading-normal text-body">{routine.nextDose ? noTodayText(routine.nextDose.scheduledAt, today, own) : 'Hoy no hay avisos.'}</p>
+    )
+  }
+  const next = nextUnmarked(routine.doses)
+  const last = lastMarked(routine.doses)
+  const allDone = count.done >= count.total
+  return (
+    <>
+      <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className="text-[34px] font-black tracking-[-0.03em] text-ink tabular-nums">
+          {count.done} de {count.total}
+        </span>
+        <span className="text-[17px] font-bold text-body">hechas hoy</span>
+      </p>
+      <DayProgress done={count.done} total={count.total} label={`${count.done} de ${count.total} hechas hoy`} />
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="flex flex-col gap-0.5 rounded-[14px] bg-hint px-3.5 py-3">
+          <span className="text-[13px] font-bold text-body">Próxima</span>
+          <span className="text-xl font-black text-ink tabular-nums">{next ?? '—'}</span>
+        </div>
+        <div className="flex flex-col gap-0.5 rounded-[14px] bg-hint px-3.5 py-3">
+          <span className="text-[13px] font-bold text-body">Última marcada</span>
+          <span className="text-xl font-black text-ink tabular-nums">{last?.at ?? '—'}</span>
+          {last && !own && <span className="text-[13px] font-bold text-body">por {last.by}</span>}
+        </div>
+      </div>
+      {allDone ? (
+        <p className="text-[15px] leading-normal text-body">No quedan avisos hoy.</p>
+      ) : (
+        <RealizadoButton routineId={routine.id} name={routine.name} variant="solid" />
+      )}
+      <UndoLastMark routine={routine} canManage={canManage} />
+    </>
+  )
 }
 
 /**
- * `/suplementos/:routineId` — a routine's detail (mock RutinaDetalle), two designs: the phone stacks everything in one column,
- * the web puts the data and the actions at the left and the progress and the calendar at the right. Pausing needs no
+ * `/suplementos/:routineId` and `/actividades/:routineId` — the detail of a supplement or an activity (mocks SuplementoDetalle /
+ * ActividadDetalle), two designs: the phone stacks everything in one column, the web puts the day card and «Tus avisos» at the left
+ * and the data and the actions at the right. There is no calendar: the day is the one card (specs/035 B8). Pausing needs no
  * confirmation (resuming undoes it); finishing asks first. Who can do what: a Tutor pauses, edits (paid plan) and finishes; a
- * Caregiver sees, marks and chooses their own reminders.
+ * Caregiver sees, marks («Realizado» too) and chooses their own reminders. The address that doesn't match the kind goes to the right one.
  */
 export function RoutineDetailPage() {
   const { routineId } = useParams<{ routineId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { isDesktop } = useSidebarSession()
   const day = useLocalDay()
   const today = dayKey(day.from)
   const accountQuery = useCurrentAccount()
 
-  const [picked, setPicked] = useState<{ routineId: string; month: Month | null; day: string | null } | null>(null)
   const [finishOpen, setFinishOpen] = useState(false)
   const [planOpen, setPlanOpen] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const finishButtonRef = useRef<HTMLButtonElement>(null)
 
-  const current = picked && picked.routineId === routineId ? picked : null
-  const todayMonth = monthOf(today)
-  const month = current?.month ?? todayMonth
-  const query = useRoutine(routineId, monthRange(month))
+  const query = useRoutine(routineId, day)
   const pause = usePauseRoutine(routineId ?? '')
   const resume = useResumeRoutine(routineId ?? '')
   const finish = useFinishRoutine(routineId ?? '')
@@ -70,63 +152,57 @@ export function RoutineDetailPage() {
   const child = accountQuery.data?.children.find((c) => c.id === childId)
   const access = useChildAccess(accountQuery.data, childId)
 
-  // A person's own routine (specs/033, part 3) has no child: it belongs to the section «Mis suplementos» and only they reach it.
+  // A person's own (specs/033, part 3) has no child: it belongs to «Mis suplementos» / «Mis actividades» and only they reach it.
   const personal = routine !== undefined && routine.childId === null
-  const backTo = personal ? '/mis-suplementos' : childId ? `/children/${childId}` : '/home'
+  // Until the routine is read, the address says which kind it is.
+  const kind = routine?.kind ?? (location.pathname.startsWith('/actividades') ? 'activity' : 'supplement')
+  const activity = kind === 'activity'
+  const noun = activity ? 'Actividad' : 'Suplemento'
+  const base = activity ? '/actividades' : '/suplementos'
+  const personalHome = activity ? '/mis-actividades' : '/mis-suplementos'
+  const backTo = personal ? personalHome : childId ? `/children/${childId}` : '/home'
   const frameFor = (title: string, content: ReactNode) => (
     <RoutinePageFrame
       isDesktop={isDesktop}
       childId={childId}
-      backLabel={personal ? '← Mis suplementos' : child ? `← ${child.firstName}` : '← Tus hijos'}
+      backLabel={personal ? (activity ? '← Mis actividades' : '← Mis suplementos') : child ? `← ${child.firstName}` : '← Tus hijos'}
       backTo={backTo}
-      eyebrow={personal ? 'Mis suplementos' : child ? `Suplemento · ${child.firstName} ${child.lastName}` : 'Suplemento'}
+      eyebrow={personal ? (activity ? 'Mis actividades' : 'Mis suplementos') : child ? `${noun} · ${child.firstName} ${child.lastName}` : noun}
       title={title}
     >
       {content}
     </RoutinePageFrame>
   )
 
-  if (query.isPending) return frameFor('Rutina', <p className="text-base font-semibold text-action">Cargando…</p>)
+  if (query.isPending) return frameFor(noun, <p className="text-base font-semibold text-action">Cargando…</p>)
   if (query.isError || !routine) {
     const missing = query.error instanceof SupplementApiError && (query.error.kind === 'routine_not_found' || query.error.kind === 'forbidden')
     return frameFor(
-      'Rutina',
+      noun,
       <p className={`${card} p-6 text-base leading-relaxed text-body`}>
-        {missing ? 'No se encontró esta rutina.' : 'No se pudo cargar la rutina.'}{' '}
+        {missing ? `No se encontró ${activity ? 'esta actividad' : 'este suplemento'}.` : `No se pudo cargar ${activity ? 'la actividad' : 'el suplemento'}.`}{' '}
         <Link to={backTo} className="font-bold text-action hover:underline">
           Volver
         </Link>
       </p>,
     )
   }
+  // The old address of an activity (a reminder from before, a bookmark) lands on the right one.
+  if (!location.pathname.startsWith(base)) return <Navigate to={`${base}/${routine.id}`} replace />
 
-  const firstMonth = monthOf(routine.firstDate)
-  const lastDay = lastDayOf(routine, today)
-  const lastMonth = routine.status === 'active' && !routine.endDate ? { year: todayMonth.year, month: todayMonth.month + 1 } : monthOf(lastDay)
-  const selected = current?.day ?? (today < routine.firstDate ? routine.firstDate : today > lastDay ? lastDay : today)
-  const selectedDoses = routine.doses.filter((d) => dayKey(d.scheduledAt) === selected)
-  const [, sm, sd] = selected.split('-').map(Number)
-  const dayTitle = `Tomas del ${sd} de ${LONG_MONTHS[sm - 1]}`
-  const progress = progressSummary(routine, today)
-  const rows = detailRows(routine)
-  // Their own routine: they are its owner (Full) once the account is known; with the plan not paid only «Finalizar» is left (mock G3).
+  const rows = detailRows(routine, personal)
+  // Their own: they are its owner (Full) once the account is known; with the plan not paid only «Finalizar» is left (mock G3).
   const canManage = accountQuery.data !== undefined && (personal || access.canAdd)
   const planLapsed = personal && !routine.canEdit
   const paused = routine.status === 'paused'
   const ended = routine.status === 'ended'
 
-  const select = (key: string) => setPicked({ routineId: routineId!, month: current?.month ?? null, day: key })
-  const moveMonth = (delta: -1 | 1) => {
-    const next = new Date(month.year, month.month + delta, 1)
-    setPicked({ routineId: routineId!, month: { year: next.getFullYear(), month: next.getMonth() }, day: current?.day ?? null })
-  }
-  const dayEmpty = paused ? 'En pausa: este día no tiene tomas.' : 'Este día no tiene tomas.'
-
   const failure = (error: unknown): string => {
     if (error instanceof SupplementApiError && error.kind === 'routine_limit') {
+      const what = activity ? 'actividades activas' : 'suplementos activos'
       return personal
-        ? 'Ya tienes el máximo de rutinas activas. Pausa o finaliza una para poder reanudar esta.'
-        : 'Este hijo ya tiene el máximo de rutinas activas. Pausa o finaliza una para poder reanudar esta.'
+        ? `Ya tienes el máximo de ${what}. Pausa o finaliza ${activity ? 'una' : 'uno'} para poder reanudar ${activity ? 'esta' : 'este'}.`
+        : `Este hijo ya tiene el máximo de ${what}. Pausa o finaliza ${activity ? 'una' : 'uno'} para poder reanudar ${activity ? 'esta' : 'este'}.`
     }
     return 'No se pudo completar. Inténtalo de nuevo.'
   }
@@ -151,21 +227,33 @@ export function RoutineDetailPage() {
     })
   }
 
-  const dataCard = (
-    <div className={`${card} flex flex-col gap-4 p-[22px]`}>
-      <div className="flex">
-        <RoutineStatusChip status={routine.status} />
+  const finishLabel = activity ? 'Finalizar actividad' : 'Finalizar suplemento'
+  const dayCard = (
+    <div className={`${card} flex flex-col gap-3.5 p-[22px]`}>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-extrabold tracking-[0.1em] text-action uppercase">{todayLabel(day.from)}</p>
+        <RoutineStatusChip kind={kind} status={routine.status} />
       </div>
+      {activity ? (
+        <ActivityToday routine={routine} canManage={canManage} own={personal} today={today} />
+      ) : (
+        <SupplementToday routine={routine} canManage={canManage} own={personal} today={today} />
+      )}
       {paused && routine.pausedAt && (
         <p role="status" className="rounded-[14px] border-[1.5px] border-hint-border bg-hint px-4 py-3.5 text-[15px] leading-normal text-body">
-          {pausedNote(routine.pausedAt)}
+          {pausedNote(routine, routine.pausedAt)}
         </p>
       )}
       {ended && routine.endedAt && (
         <p className="rounded-[14px] bg-slate-100 px-4 py-3.5 text-[15px] leading-normal text-calendar-text">
-          {endedNote(routine.endedAt, routine.progress.taken, routine.progress.total)}
+          {endedNote(routine, routine.endedAt, routine.progress.taken, routine.progress.total)}
         </p>
       )}
+    </div>
+  )
+
+  const dataCard = (
+    <div className={`${card} flex flex-col gap-4 p-[22px]`}>
       <dl className="flex flex-col gap-3">
         {rows.map((r) => (
           <div key={r.k} className="flex flex-col gap-0.5">
@@ -175,9 +263,16 @@ export function RoutineDetailPage() {
         ))}
       </dl>
       {planLapsed && !ended && (
-        <p role="status" className="rounded-[14px] border-[1.5px] border-hint-border bg-hint px-4 py-3.5 text-[15px] leading-normal text-body">
-          Con el plan gratuito puedes ver y marcar las tomas. Para editar, pausar o reanudar se necesita el plan completo.
-        </p>
+        <div className="flex flex-col gap-1.5 pt-1">
+          <p role="note" className="rounded-[14px] border-[1.5px] border-hint-border bg-hint px-4 py-3.5 text-sm leading-normal text-body">
+            {activity
+              ? 'Con el plan gratuito puedes ver la actividad y marcar «Realizado». Para editar, pausar o reanudar se necesita el plan completo.'
+              : 'Con el plan gratuito puedes ver y marcar las tomas. Para editar, pausar o reanudar se necesita el plan completo.'}
+          </p>
+          <Link to="/planes" className="inline-flex min-h-11 items-center self-start text-[15px] font-extrabold text-action hover:underline">
+            Ver el plan completo →
+          </Link>
+        </div>
       )}
       {!ended && canManage && (
         <div className="flex flex-wrap gap-2.5 pt-1">
@@ -196,21 +291,18 @@ export function RoutineDetailPage() {
             </button>
           )}
           {routine.canEdit && (
-            <Link to={`/suplementos/${routine.id}/editar`} className={outlineButton}>
+            <Link to={`${base}/${routine.id}/editar`} className={outlineButton}>
               Editar
             </Link>
           )}
-          <button
-            ref={finishButtonRef}
-            type="button"
-            onClick={() => setFinishOpen(true)}
-            className="min-h-11 flex-[1_1_100%] cursor-pointer rounded-2xl px-3.5 text-[15px] font-extrabold text-action underline hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
-          >
-            Finalizar rutina
+          <button ref={finishButtonRef} type="button" onClick={() => setFinishOpen(true)} className={`flex-[1_1_100%] ${linkButton}`}>
+            {finishLabel}
           </button>
         </div>
       )}
-      {!ended && !canManage && !personal && <p className="text-sm leading-normal text-slate-600">Un Tutor puede pausar, editar o finalizar esta rutina.</p>}
+      {!ended && !canManage && !personal && (
+        <p className="text-sm leading-normal text-slate-600">Un Tutor puede pausar, editar o finalizar {activity ? 'esta actividad' : 'este suplemento'}.</p>
+      )}
       {actionError && (
         <p role="alert" className="text-[13px] font-semibold text-red-700">
           {actionError}
@@ -221,48 +313,8 @@ export function RoutineDetailPage() {
 
   const left = (
     <div className="flex min-w-0 flex-col gap-5">
-      {dataCard}
-      {routine.status === 'active' && <MyRemindersToggle routineId={routine.id} enabled={routine.myReminders} personal={personal} />}
-    </div>
-  )
-
-  const right = (
-    <div className="flex min-w-0 flex-col gap-5">
-      <div className={`${card} flex flex-col gap-1.5 px-[22px] py-5`}>
-        <p className="text-xs font-extrabold tracking-[0.1em] text-action uppercase">Progreso</p>
-        <p className="text-[34px] font-black tracking-[-0.03em] text-ink">{progress.big}</p>
-        <p className="text-[15px] font-semibold text-body">{progress.sub}</p>
-        {progress.pct !== null && (
-          <div aria-hidden="true" className="mt-1.5 h-2 overflow-hidden rounded-full bg-hint-edge">
-            <div className="h-full rounded-full bg-bright" style={{ width: `${progress.pct}%` }} />
-          </div>
-        )}
-      </div>
-
-      <div className={`${card} flex flex-col gap-3.5 px-3 py-4`}>
-        <RoutineCalendar
-          month={month}
-          doses={routine.doses}
-          selected={selected}
-          onSelect={select}
-          onMonth={moveMonth}
-          canPrev={monthIndex(month) > monthIndex(firstMonth)}
-          canNext={monthIndex(month) < monthIndex(lastMonth)}
-        />
-        <div className="h-px bg-hint-edge" />
-        <div className="flex flex-col gap-2.5 px-1.5 pb-1.5">
-          <h3 className="text-[17px] font-black text-ink">{dayTitle}</h3>
-          {selectedDoses.length > 0 ? (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-2">
-              {selectedDoses.map((dose) => (
-                <RoutineDoseChip key={dose.id} routineId={routine.id} dose={dose} canManage={canManage} own={personal} />
-              ))}
-            </div>
-          ) : (
-            <p className="text-[15px] leading-normal text-body">{dayEmpty}</p>
-          )}
-        </div>
-      </div>
+      {dayCard}
+      {routine.status === 'active' && <MyRemindersToggle kind={kind} routineId={routine.id} enabled={routine.myReminders} personal={personal} />}
     </div>
   )
 
@@ -272,20 +324,20 @@ export function RoutineDetailPage() {
         routine.name,
         isDesktop ? (
           <div className="flex flex-wrap items-start gap-x-7 gap-y-5">
-            <div className="min-w-0 flex-[1_1_320px]">{left}</div>
-            <div className="min-w-0 flex-[1.6_1_440px]">{right}</div>
+            <div className="min-w-0 flex-[1.25_1_340px]">{left}</div>
+            <div className="min-w-0 flex-[1_1_320px]">{dataCard}</div>
           </div>
         ) : (
           <>
             {left}
-            {right}
+            {dataCard}
           </>
         ),
       )}
       {finishOpen && (
         <FinishRoutineDialog
+          kind={kind}
           name={routine.name}
-          taken={routine.progress.taken}
           busy={finish.isPending}
           error={finish.isError ? actionError : null}
           onConfirm={doFinish}

@@ -15,6 +15,10 @@ func valid() Input {
 	return Input{Name: "  Vitamina D ", Period: "daily", Times: []string{"20:00", "08:00"}, FirstDate: "2026-10-05"}
 }
 
+func activity() Input {
+	return Input{Kind: "activity", Name: "Tomar agua", Period: "window", WindowStart: ptr("08:00"), WindowEnd: ptr("20:00"), IntervalMinutes: ptr(60), FirstDate: "2026-10-05"}
+}
+
 func fields(errs ValidationErrors) map[string]string {
 	out := map[string]string{}
 	for _, e := range errs {
@@ -36,27 +40,32 @@ func TestValidateInput_NormalizesAValidRoutine(t *testing.T) {
 func TestValidateInput_OnlyTheFieldsOfItsPeriodStay(t *testing.T) {
 	in := valid()
 	in.Weekdays = []int{1, 2}
-	in.IntervalHours = ptr(8)
-	in.FirstTime = ptr("06:00")
+	in.WindowStart = ptr("06:00")
+	in.WindowEnd = ptr("07:00")
+	in.IntervalMinutes = ptr(30)
 	r, errs := ValidateInput(in, now)
-	if errs.HasErrors() || r.Weekdays != nil || r.IntervalHours != 0 || r.FirstTime != "" {
+	if errs.HasErrors() || r.Weekdays != nil || r.IntervalMinutes != 0 || r.WindowStart != "" || r.WindowEnd != "" {
 		t.Fatalf("daily kept foreign fields: %+v %v", r, errs)
 	}
 
-	w := Input{Name: "x", Period: "weekdays", Times: []string{"09:00"}, Weekdays: []int{4, 0, 2}, FirstDate: "2026-10-05", IntervalHours: ptr(3)}
+	w := Input{Name: "x", Period: "weekdays", Times: []string{"09:00"}, Weekdays: []int{4, 0, 2}, FirstDate: "2026-10-05", IntervalMinutes: ptr(30)}
 	r, errs = ValidateInput(w, now)
-	if errs.HasErrors() || len(r.Weekdays) != 3 || r.Weekdays[0] != 0 || r.Weekdays[2] != 4 || r.IntervalHours != 0 {
+	if errs.HasErrors() || len(r.Weekdays) != 3 || r.Weekdays[0] != 0 || r.Weekdays[2] != 4 || r.IntervalMinutes != 0 {
 		t.Fatalf("weekdays: %+v %v", r, errs)
 	}
 
-	iv := Input{Name: "x", Period: "interval", IntervalHours: ptr(8), FirstTime: ptr("6:00"), FirstDate: "2026-10-05", Times: []string{"08:00"}}
-	if _, errs = ValidateInput(iv, now); fields(errs)["firstTime"] == "" {
+	act := Input{Kind: "activity", Name: "x", Period: "window", WindowStart: ptr("6:00"), WindowEnd: ptr("20:00"), IntervalMinutes: ptr(60), FirstDate: "2026-10-05", Times: []string{"08:00"}, Weekdays: []int{4, 0}}
+	if _, errs = ValidateInput(act, now); fields(errs)["windowStart"] == "" {
 		t.Fatalf("6:00 isn't HH:MM: %v", errs)
 	}
-	iv.FirstTime = ptr("06:00")
-	r, errs = ValidateInput(iv, now)
-	if errs.HasErrors() || r.Times != nil || r.IntervalHours != 8 || r.FirstTime != "06:00" {
-		t.Fatalf("interval: %+v %v", r, errs)
+	act.WindowStart = ptr("06:00")
+	r, errs = ValidateInput(act, now)
+	if errs.HasErrors() || r.Kind != KindActivity || r.Period != PeriodWindow || r.Times != nil || r.WindowStart != "06:00" || r.WindowEnd != "20:00" || r.IntervalMinutes != 60 || len(r.Weekdays) != 2 || r.Weekdays[0] != 0 {
+		t.Fatalf("activity: %+v %v", r, errs)
+	}
+	act.Weekdays = nil
+	if r, errs = ValidateInput(act, now); errs.HasErrors() || r.Weekdays != nil {
+		t.Fatalf("an activity with no weekdays happens every day: %+v %v", r, errs)
 	}
 }
 
@@ -79,9 +88,18 @@ func TestValidateInput_Rules(t *testing.T) {
 		{"weekdays out of range", func(i *Input) { i.Period = "weekdays"; i.Weekdays = []int{7} }, "weekdays"},
 		{"weekdays repeated", func(i *Input) { i.Period = "weekdays"; i.Weekdays = []int{1, 1} }, "weekdays"},
 		{"weekdays too many", func(i *Input) { i.Period = "weekdays"; i.Weekdays = []int{0, 1, 2, 3, 4, 5, 6, 0} }, "weekdays"},
-		{"interval without hours", func(i *Input) { i.Period = "interval"; i.FirstTime = ptr("06:00") }, "intervalHours"},
-		{"interval 25 hours", func(i *Input) { i.Period = "interval"; i.IntervalHours = ptr(25); i.FirstTime = ptr("06:00") }, "intervalHours"},
-		{"interval without first time", func(i *Input) { i.Period = "interval"; i.IntervalHours = ptr(8) }, "firstTime"},
+		{"supplement can't be a window", func(i *Input) { i.Period = "window" }, "period"},
+		{"supplement can't be every N hours", func(i *Input) { i.Period = "interval" }, "period"},
+		{"unknown kind", func(i *Input) { i.Kind = "routine" }, "kind"},
+		{"activity must be a window", func(i *Input) { i.Kind = "activity"; i.Period = "daily" }, "period"},
+		{"activity without start", func(i *Input) { *i = activity(); i.WindowStart = nil }, "windowStart"},
+		{"activity without end", func(i *Input) { *i = activity(); i.WindowEnd = nil }, "windowEnd"},
+		{"activity bad end", func(i *Input) { *i = activity(); i.WindowEnd = ptr("25:00") }, "windowEnd"},
+		{"activity end not after start", func(i *Input) { *i = activity(); i.WindowEnd = ptr("08:00") }, "windowEnd"},
+		{"activity without interval", func(i *Input) { *i = activity(); i.IntervalMinutes = nil }, "intervalMinutes"},
+		{"activity every 4 minutes", func(i *Input) { *i = activity(); i.IntervalMinutes = ptr(4) }, "intervalMinutes"},
+		{"activity every 24 hours", func(i *Input) { *i = activity(); i.IntervalMinutes = ptr(24 * 60) }, "intervalMinutes"},
+		{"activity weekdays out of range", func(i *Input) { *i = activity(); i.Weekdays = []int{7} }, "weekdays"},
 		{"bad first date", func(i *Input) { i.FirstDate = "5/10/2026" }, "firstDate"},
 		{"first date two days ago", func(i *Input) { i.FirstDate = "2026-10-03" }, "firstDate"},
 		{"bad end date", func(i *Input) { i.EndDate = ptr("nope") }, "endDate"},

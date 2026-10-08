@@ -86,12 +86,15 @@ for (const design of designs) {
 
       await page.goto(`/children/${owner.childId}`)
       const main = page.getByRole('main')
-      await expect(main.getByRole('heading', { name: 'Rutinas de suplemento' })).toBeVisible()
+      await expect(main.getByRole('heading', { name: 'Suplementos', level: 3 })).toBeVisible()
+      await expect(main.getByRole('heading', { name: 'Actividades', level: 3 })).toBeVisible()
       await expect(main.getByText(/MX\$499 al año/).first()).toBeVisible()
       await expect(main.getByRole('button', { name: 'Ver el plan completo' })).toHaveCount(0)
 
       await page.goto('/mis-suplementos')
-      await expect(page.getByRole('heading', { name: 'Tus rutinas de suplemento' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Tus suplementos' })).toBeVisible()
+      await page.goto('/mis-actividades')
+      await expect(page.getByRole('heading', { name: 'Tus actividades' })).toBeVisible()
       await expect(page.getByText(/MX\$499 al año/).first()).toBeVisible()
 
       await page.goto('/familia')

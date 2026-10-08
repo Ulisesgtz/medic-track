@@ -577,6 +577,16 @@ const docTemplate = `{
                         "name": "to",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "enum": [
+                            "supplement",
+                            "activity"
+                        ],
+                        "type": "string",
+                        "description": "supplement (default) or activity",
+                        "name": "kind",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -1504,7 +1514,7 @@ const docTemplate = `{
                 "tags": [
                     "supplements"
                 ],
-                "summary": "A child's supplement routines",
+                "summary": "A child's supplements or activities",
                 "parameters": [
                     {
                         "type": "string",
@@ -1526,6 +1536,16 @@ const docTemplate = `{
                         "name": "to",
                         "in": "query",
                         "required": true
+                    },
+                    {
+                        "enum": [
+                            "supplement",
+                            "activity"
+                        ],
+                        "type": "string",
+                        "description": "supplement (default) or activity",
+                        "name": "kind",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -2868,6 +2888,82 @@ const docTemplate = `{
                         "description": "Free plan",
                         "schema": {
                             "$ref": "#/definitions/SupplementPlanLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/routines/{routineId}/done": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Marks the earliest unmarked dose of [from, to) (the person's local day, at most 48 hours) of an active\nactivity, with the session as author — also a dose that has not come yet. Two people tapping at once mark two\ndifferent doses. It never depends on the plan. 409 nothing_to_mark when none is left (or the routine is not an\nactive activity).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "supplements"
+                ],
+                "summary": "«Realizado» on an activity",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Routine UUID",
+                        "name": "routineId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The local day",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/SupplementDoneRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementDoseResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing or invalid window",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "No access to the routine",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such routine",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Nothing left to mark",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
                         }
                     }
                 }
@@ -4569,6 +4665,19 @@ const docTemplate = `{
                 }
             }
         },
+        "SupplementDoneRequest": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "type": "string",
+                    "example": "2026-10-08T06:00:00Z"
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-10-09T06:00:00Z"
+                }
+            }
+        },
         "SupplementDoseResponse": {
             "type": "object",
             "properties": {
@@ -4736,13 +4845,18 @@ const docTemplate = `{
                     "type": "string",
                     "example": "2026-10-05"
                 },
-                "firstTime": {
-                    "type": "string",
-                    "example": "06:00"
-                },
-                "intervalHours": {
+                "intervalMinutes": {
                     "type": "integer",
-                    "example": 8
+                    "example": 60
+                },
+                "kind": {
+                    "description": "Kind: \"supplement\" (default) or \"activity\"; an edit keeps the routine's own kind.",
+                    "type": "string",
+                    "enum": [
+                        "supplement",
+                        "activity"
+                    ],
+                    "example": "supplement"
                 },
                 "name": {
                     "type": "string",
@@ -4757,7 +4871,7 @@ const docTemplate = `{
                     "enum": [
                         "daily",
                         "weekdays",
-                        "interval"
+                        "window"
                     ],
                     "example": "daily"
                 },
@@ -4775,6 +4889,7 @@ const docTemplate = `{
                     "example": -360
                 },
                 "weekdays": {
+                    "description": "Weekdays: 0 = Monday … 6 = Sunday; an activity with none happens every day.",
                     "type": "array",
                     "items": {
                         "type": "integer"
@@ -4784,6 +4899,14 @@ const docTemplate = `{
                         2,
                         4
                     ]
+                },
+                "windowEnd": {
+                    "type": "string",
+                    "example": "20:00"
+                },
+                "windowStart": {
+                    "type": "string",
+                    "example": "08:00"
                 }
             }
         },
@@ -4825,17 +4948,22 @@ const docTemplate = `{
                     "type": "string",
                     "example": "2026-10-01"
                 },
-                "firstTime": {
-                    "type": "string",
-                    "example": "06:00"
-                },
                 "id": {
                     "type": "string",
                     "example": "a1b2c3d4-0000-0000-0000-000000000000"
                 },
-                "intervalHours": {
+                "intervalMinutes": {
                     "type": "integer",
-                    "example": 8
+                    "example": 60
+                },
+                "kind": {
+                    "description": "Kind: a supplement is taken at fixed hours (times); an activity is done every so often from windowStart to windowEnd.",
+                    "type": "string",
+                    "enum": [
+                        "supplement",
+                        "activity"
+                    ],
+                    "example": "supplement"
                 },
                 "myReminders": {
                     "description": "MyReminders: the session has not turned this routine's reminders off («Tus avisos»); each person decides for themselves.",
@@ -4866,7 +4994,7 @@ const docTemplate = `{
                     "enum": [
                         "daily",
                         "weekdays",
-                        "interval"
+                        "window"
                     ],
                     "example": "daily"
                 },
@@ -4892,6 +5020,7 @@ const docTemplate = `{
                     ]
                 },
                 "weekdays": {
+                    "description": "Weekdays: 0 = Monday … 6 = Sunday; an activity with none happens every day.",
                     "type": "array",
                     "items": {
                         "type": "integer"
@@ -4901,6 +5030,14 @@ const docTemplate = `{
                         2,
                         4
                     ]
+                },
+                "windowEnd": {
+                    "type": "string",
+                    "example": "20:00"
+                },
+                "windowStart": {
+                    "type": "string",
+                    "example": "08:00"
                 }
             }
         },

@@ -297,16 +297,40 @@ export async function routineViaApi(
 ): Promise<{ id: string; name: string; doses: { id: string; scheduledAt: string; taken: boolean }[] }> {
   const { day, offset } = localToday()
   return apiPost(request, token, `/children/${childId}/routines`, {
+    kind: 'supplement',
     name: 'Vitamina D',
     note: '',
     period: 'daily',
     times: ['08:00'],
     weekdays: [],
-    intervalHours: null,
+    windowStart: null,
+    windowEnd: null,
+    intervalMinutes: null,
     firstDate: day,
-    firstTime: null,
     endDate: null,
     utcOffsetMinutes: offset,
+    ...overrides,
+  })
+}
+
+/**
+ * Creates an activity of a child (specs/035) through the API as the tutor whose token this is. By default «Tomar agua» every hour
+ * from 00:00 to 23:00 every day, starting today — so that a dose is always there to mark whatever the hour of the test.
+ */
+export async function activityViaApi(
+  request: APIRequestContext,
+  token: string,
+  childId: string,
+  overrides: Record<string, unknown> = {},
+): Promise<{ id: string; name: string; doses: { id: string; scheduledAt: string; taken: boolean }[] }> {
+  return routineViaApi(request, token, childId, {
+    kind: 'activity',
+    name: 'Tomar agua',
+    period: 'window',
+    times: [],
+    windowStart: '00:00',
+    windowEnd: '23:00',
+    intervalMinutes: 60,
     ...overrides,
   })
 }
@@ -354,16 +378,37 @@ export async function personalRoutineViaApi(
 ): Promise<{ id: string; name: string; doses: { id: string; scheduledAt: string; taken: boolean }[] }> {
   const { day, offset } = localToday()
   return apiPost(request, token, `/accounts/${accountId}/routines`, {
+    kind: 'supplement',
     name: 'Omega 3',
     note: '',
     period: 'daily',
     times: ['08:00'],
     weekdays: [],
-    intervalHours: null,
+    windowStart: null,
+    windowEnd: null,
+    intervalMinutes: null,
     firstDate: day,
-    firstTime: null,
     endDate: null,
     utcOffsetMinutes: offset,
+    ...overrides,
+  })
+}
+
+/** The person's own activity (specs/035): every hour of the day by default, starting today. */
+export async function personalActivityViaApi(
+  request: APIRequestContext,
+  token: string,
+  accountId: string,
+  overrides: Record<string, unknown> = {},
+) {
+  return personalRoutineViaApi(request, token, accountId, {
+    kind: 'activity',
+    name: 'Pararse a estirar',
+    period: 'window',
+    times: [],
+    windowStart: '00:00',
+    windowEnd: '23:00',
+    intervalMinutes: 60,
     ...overrides,
   })
 }

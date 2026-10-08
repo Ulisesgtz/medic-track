@@ -27,6 +27,7 @@ type Source string
 const (
 	SourceMedication  Source = "medication"
 	SourceSupplement  Source = "supplement"
+	SourceActivity    Source = "activity"
 	SourceAppointment Source = "appointment"
 )
 
@@ -45,7 +46,8 @@ type Device struct {
 // an active device, once each), with what that reminder needs to say.
 type DueDose struct {
 	DoseID uuid.UUID
-	// Source is where the dose comes from: SourceMedication (a consultation's) or SourceSupplement (a routine's, specs/033).
+	// Source is where the dose comes from: SourceMedication (a consultation's), SourceSupplement (a routine's, specs/033) or
+	// SourceActivity (an activity's, specs/035: it is reminded like a supplement but its button says «Realizado»).
 	Source Source
 	// ConsultationID is set for a medication's dose, RoutineID for a supplement's.
 	ConsultationID uuid.UUID

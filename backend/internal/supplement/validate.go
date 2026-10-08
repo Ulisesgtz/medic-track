@@ -10,14 +10,17 @@ import (
 
 // Input is a routine as the form sends it (create and edit send the whole routine). Pointers say "not sent".
 type Input struct {
+	// Kind is "supplement" (the default when omitted) or "activity"; an edit keeps the routine's own kind.
+	Kind             string   `json:"kind"`
 	Name             string   `json:"name"`
 	Note             string   `json:"note"`
 	Period           string   `json:"period"`
 	Times            []string `json:"times"`
 	Weekdays         []int    `json:"weekdays"`
-	IntervalHours    *int     `json:"intervalHours"`
+	WindowStart      *string  `json:"windowStart"`
+	WindowEnd        *string  `json:"windowEnd"`
+	IntervalMinutes  *int     `json:"intervalMinutes"`
 	FirstDate        string   `json:"firstDate"`
-	FirstTime        *string  `json:"firstTime"`
 	EndDate          *string  `json:"endDate"`
 	UtcOffsetMinutes int      `json:"utcOffsetMinutes"`
 }
@@ -39,7 +42,13 @@ func validateInput(in Input, now time.Time, checkFirstDate bool) (Routine, Valid
 	var errs ValidationErrors
 	add := func(field, msg string) { errs = append(errs, ValidationError{Field: field, Message: msg}) }
 
-	r := Routine{Name: strings.TrimSpace(in.Name), Note: strings.TrimSpace(in.Note), Period: Period(in.Period), UtcOffsetMinutes: in.UtcOffsetMinutes}
+	r := Routine{Kind: Kind(in.Kind), Name: strings.TrimSpace(in.Name), Note: strings.TrimSpace(in.Note), Period: Period(in.Period), UtcOffsetMinutes: in.UtcOffsetMinutes}
+	if r.Kind == "" {
+		r.Kind = KindSupplement
+	}
+	if r.Kind != KindSupplement && r.Kind != KindActivity {
+		add("kind", "must be supplement or activity")
+	}
 	if n := utf8.RuneCountInString(r.Name); n == 0 {
 		add("name", "name is required")
 	} else if n > MaxNameLength {
@@ -52,27 +61,18 @@ func validateInput(in Input, now time.Time, checkFirstDate bool) (Routine, Valid
 		add("utcOffsetMinutes", "must be between -840 and 840")
 	}
 
-	switch r.Period {
-	case PeriodDaily, PeriodWeekdays:
+	switch {
+	case r.Kind == KindSupplement && (r.Period == PeriodDaily || r.Period == PeriodWeekdays):
 		r.Times = validTimes(in.Times, add)
 		if r.Period == PeriodWeekdays {
 			r.Weekdays = validWeekdays(in.Weekdays, add)
 		}
-	case PeriodInterval:
-		if in.IntervalHours == nil || *in.IntervalHours < 1 || *in.IntervalHours > 24 {
-			add("intervalHours", "must be between 1 and 24")
-		} else {
-			r.IntervalHours = *in.IntervalHours
-		}
-		if in.FirstTime == nil {
-			add("firstTime", "first time is required")
-		} else if h, m, ok := parseClock(*in.FirstTime); !ok {
-			add("firstTime", "must be HH:MM")
-		} else {
-			r.FirstTime = fmt.Sprintf("%02d:%02d", h, m)
-		}
-	default:
-		add("period", "must be daily, weekdays or interval")
+	case r.Kind == KindActivity && r.Period == PeriodWindow:
+		validWindow(&r, in, add)
+	case r.Kind == KindActivity:
+		add("period", "an activity is repeated by window")
+	case r.Kind == KindSupplement:
+		add("period", "must be daily or weekdays")
 	}
 
 	loc := localZone(in.UtcOffsetMinutes)
@@ -146,4 +146,40 @@ func validWeekdays(in []int, add func(field, msg string)) []int {
 	}
 	sort.Ints(out)
 	return out
+}
+
+// validWindow checks an activity's window: both hours HH:MM with the end after the start, «every N» from 5 minutes to 23
+// hours, and 0–7 distinct weekdays (none = every day).
+func validWindow(r *Routine, in Input, add func(field, msg string)) {
+	r.Period = PeriodWindow
+	start, startOK := clockOf(in.WindowStart, "windowStart", add)
+	end, endOK := clockOf(in.WindowEnd, "windowEnd", add)
+	if startOK && endOK {
+		if !(end > start) {
+			add("windowEnd", "must be after windowStart")
+		}
+		r.WindowStart, r.WindowEnd = fmt.Sprintf("%02d:%02d", start/60, start%60), fmt.Sprintf("%02d:%02d", end/60, end%60)
+	}
+	if in.IntervalMinutes == nil || *in.IntervalMinutes < MinIntervalMinutes || *in.IntervalMinutes > MaxIntervalMinutes {
+		add("intervalMinutes", fmt.Sprintf("must be between %d and %d", MinIntervalMinutes, MaxIntervalMinutes))
+	} else {
+		r.IntervalMinutes = *in.IntervalMinutes
+	}
+	if len(in.Weekdays) > 0 {
+		r.Weekdays = validWeekdays(in.Weekdays, add)
+	}
+}
+
+// clockOf reads a required "HH:MM" into minutes of the day.
+func clockOf(s *string, field string, add func(field, msg string)) (int, bool) {
+	if s == nil {
+		add(field, "is required")
+		return 0, false
+	}
+	h, m, ok := parseClock(*s)
+	if !ok {
+		add(field, "must be HH:MM")
+		return 0, false
+	}
+	return h*60 + m, true
 }

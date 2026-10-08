@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, type ReactNode } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useUnsavedWork } from '../../shared/appVersion/unsavedWork'
 import { useLocalDay } from '../../shared/useLocalDay'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
@@ -9,7 +9,7 @@ import { AppShell } from '../home/AppShell'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { useCreatePersonalRoutine, useCreateRoutine, useRoutine, useUpdateRoutine } from './hooks'
 import { RoutineForm } from './RoutineForm'
-import type { RoutineInput } from './types'
+import type { RoutineInput, RoutineKind } from './types'
 
 /** The page frame of the routine form and detail, in the two designs: the phone's dark header and the web's text header. */
 export function RoutinePageFrame({
@@ -64,22 +64,26 @@ export function RoutinePageFrame({
 }
 
 /**
- * `/children/:childId/suplementos/nueva` and `/suplementos/:routineId/editar`: the routine form as a PAGE (it is long and
- * changes with the periodicity). Leaving with something typed asks first. If the server answers that the plan isn't paid,
- * the plan notice opens and what was typed stays.
+ * `/children/:childId/suplementos/nueva`, `/children/:childId/actividades/nueva`, `/mis-suplementos/nueva`, `/mis-actividades/nueva` and
+ * `/suplementos/:routineId/editar`, `/actividades/:routineId/editar`: the form as a PAGE (it is long and changes with the kind).
+ * Leaving with something typed asks first. If the server answers that the plan isn't paid, the plan notice opens and what was typed
+ * stays. The kind of an existing one is its own; the address that doesn't match goes to the right one.
  */
-export function RoutineFormPage({ personal: creatingPersonal = false }: { personal?: boolean } = {}) {
+export function RoutineFormPage({ kind: creatingKind = 'supplement', personal: creatingPersonal = false }: { kind?: RoutineKind; personal?: boolean } = {}) {
   const params = useParams<{ childId: string; routineId: string }>()
   const routineId = params.routineId
   const navigate = useNavigate()
+  const location = useLocation()
   const { isDesktop } = useSidebarSession()
   const day = useLocalDay()
   const accountQuery = useCurrentAccount()
 
   const routineQuery = useRoutine(routineId, day)
   const routine = routineQuery.data
+  const kind = routine?.kind ?? creatingKind
+  const activity = kind === 'activity'
   const childId = params.childId ?? routine?.childId ?? undefined
-  // A person's own routine (specs/033, part 3): the new-routine route of the section, or an existing routine with no child.
+  // A person's own (specs/033, part 3): the new route of their section, or an existing one with no child.
   const personal = creatingPersonal || (routine !== undefined && routine.childId === null)
   const child = accountQuery.data?.children.find((c) => c.id === childId)
   const access = useChildAccess(accountQuery.data, childId)
@@ -99,9 +103,13 @@ export function RoutineFormPage({ personal: creatingPersonal = false }: { person
   const closePlan = useCallback(() => setPlanOpen(false), [])
 
   const editing = routineId !== undefined
-  const backTo = editing ? `/suplementos/${routineId}` : personal ? '/mis-suplementos' : `/children/${childId}`
-  const childName = personal ? 'Mis suplementos' : (child?.firstName ?? 'Volver')
-  const eyebrow = personal ? 'Mis suplementos' : child ? `Suplemento · ${child.firstName} ${child.lastName}` : 'Suplemento'
+  const base = activity ? '/actividades' : '/suplementos'
+  const personalHome = activity ? '/mis-actividades' : '/mis-suplementos'
+  const noun = activity ? 'actividad' : 'suplemento'
+  const backTo = editing ? `${base}/${routineId}` : personal ? personalHome : `/children/${childId}`
+  const personalTitle = activity ? 'Mis actividades' : 'Mis suplementos'
+  const childName = personal ? personalTitle : (child?.firstName ?? 'Volver')
+  const eyebrow = personal ? personalTitle : child ? `${activity ? 'Actividad' : 'Suplemento'} · ${child.firstName} ${child.lastName}` : activity ? 'Actividad' : 'Suplemento'
   const frame = (content: ReactNode) => (
     <RoutinePageFrame
       isDesktop={isDesktop}
@@ -109,7 +117,7 @@ export function RoutineFormPage({ personal: creatingPersonal = false }: { person
       backLabel={editing && routine ? `← ${routine.name}` : `← ${childName}`}
       backTo={backTo}
       eyebrow={eyebrow}
-      title={editing ? 'Editar rutina' : 'Nueva rutina'}
+      title={`${editing ? 'Editar' : 'Agregar'} ${noun}`}
       maxWidth="max-w-[640px]"
     >
       {content}
@@ -121,14 +129,21 @@ export function RoutineFormPage({ personal: creatingPersonal = false }: { person
   )
 
   if (editing && routineQuery.isPending) return frame(<p className="text-base font-semibold text-action">Cargando…</p>)
-  if (editing && (routineQuery.isError || !routine)) return frame(message('No se encontró esta rutina.'))
-  if (!personal && accountQuery.data && !access.canAdd) return frame(message('Solo un Tutor puede crear o editar rutinas.'))
+  if (editing && (routineQuery.isError || !routine)) return frame(message(`No se encontró ${activity ? 'esta actividad' : 'este suplemento'}.`))
+  if (editing && routine && !location.pathname.startsWith(base)) return <Navigate to={`${base}/${routine.id}/editar`} replace />
+  if (!personal && accountQuery.data && !access.canAdd) {
+    return frame(message(`Solo un Tutor puede agregar o editar ${activity ? 'actividades' : 'suplementos'}.`))
+  }
   if (routine && routine.status === 'ended') {
-    return frame(message('Esta rutina ya terminó y no se puede editar. Para volver a registrarla, crea una rutina nueva.'))
+    return frame(
+      message(
+        `${activity ? 'Esta actividad' : 'Este suplemento'} ya terminó y no se puede editar. Para volver a registrar${activity ? 'la' : 'lo'}, agrega ${activity ? 'una actividad nueva' : 'un suplemento nuevo'}.`,
+      ),
+    )
   }
 
   const leave = () => {
-    if (dirtyRef.current && !window.confirm('¿Descartar la rutina? Se perderá lo que capturaste.')) return
+    if (dirtyRef.current && !window.confirm(`¿Descartar ${activity ? 'la' : 'el'} ${noun}? Se perderá lo que capturaste.`)) return
     navigate(backTo)
   }
 
@@ -139,8 +154,8 @@ export function RoutineFormPage({ personal: creatingPersonal = false }: { person
         ? await createPersonalMutation.mutateAsync(input)
         : await createMutation.mutateAsync(input)
     dirtyRef.current = false
-    // replace: "back" from the routine lands on the child, not on an already-sent form.
-    navigate(`/suplementos/${saved.id}`, { replace: true })
+    // replace: "back" from the detail lands on the child, not on an already-sent form.
+    navigate(`${base}/${saved.id}`, { replace: true })
   }
 
   return (
@@ -149,6 +164,7 @@ export function RoutineFormPage({ personal: creatingPersonal = false }: { person
         <RoutineForm
           // A fresh form per routine: the initial values are the routine's.
           key={routine?.id ?? 'new'}
+          kind={kind}
           routine={routine}
           onSubmit={save}
           onCancel={leave}

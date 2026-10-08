@@ -51,17 +51,21 @@ type progressResponse struct {
 } // @name SupplementProgressResponse
 
 type routineResponse struct {
-	ID            string   `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
-	ChildID       *string  `json:"childId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
-	Name          string   `json:"name" example:"Vitamina D"`
-	Note          string   `json:"note" example:""`
-	Period        string   `json:"period" enums:"daily,weekdays,interval" example:"daily"`
-	Times         []string `json:"times" example:"08:00"`
-	Weekdays      []int    `json:"weekdays" example:"0,2,4"`
-	IntervalHours *int     `json:"intervalHours" example:"8"`
-	FirstDate     string   `json:"firstDate" example:"2026-10-01"`
-	FirstTime     *string  `json:"firstTime" example:"06:00"`
-	EndDate       *string  `json:"endDate" example:"2026-10-20"`
+	ID      string  `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	ChildID *string `json:"childId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	// Kind: a supplement is taken at fixed hours (times); an activity is done every so often from windowStart to windowEnd.
+	Kind   string   `json:"kind" enums:"supplement,activity" example:"supplement"`
+	Name   string   `json:"name" example:"Vitamina D"`
+	Note   string   `json:"note" example:""`
+	Period string   `json:"period" enums:"daily,weekdays,window" example:"daily"`
+	Times  []string `json:"times" example:"08:00"`
+	// Weekdays: 0 = Monday … 6 = Sunday; an activity with none happens every day.
+	Weekdays        []int   `json:"weekdays" example:"0,2,4"`
+	WindowStart     *string `json:"windowStart" example:"08:00"`
+	WindowEnd       *string `json:"windowEnd" example:"20:00"`
+	IntervalMinutes *int    `json:"intervalMinutes" example:"60"`
+	FirstDate       string  `json:"firstDate" example:"2026-10-01"`
+	EndDate         *string `json:"endDate" example:"2026-10-20"`
 	Status        string   `json:"status" enums:"active,paused,ended" example:"active"`
 	PausedAt      *string  `json:"pausedAt"`
 	EndedAt       *string  `json:"endedAt"`
@@ -86,16 +90,20 @@ type routineListResponse struct {
 } // @name SupplementRoutineListResponse
 
 type createRoutineRequest struct {
-	Name             string   `json:"name" example:"Vitamina D"`
-	Note             string   `json:"note" example:""`
-	Period           string   `json:"period" enums:"daily,weekdays,interval" example:"daily"`
-	Times            []string `json:"times" example:"08:00"`
-	Weekdays         []int    `json:"weekdays" example:"0,2,4"`
-	IntervalHours    *int     `json:"intervalHours" example:"8"`
-	FirstDate        string   `json:"firstDate" example:"2026-10-05"`
-	FirstTime        *string  `json:"firstTime" example:"06:00"`
-	EndDate          *string  `json:"endDate" example:"2026-10-20"`
-	UtcOffsetMinutes int      `json:"utcOffsetMinutes" example:"-360"`
+	// Kind: "supplement" (default) or "activity"; an edit keeps the routine's own kind.
+	Kind   string   `json:"kind" enums:"supplement,activity" example:"supplement"`
+	Name   string   `json:"name" example:"Vitamina D"`
+	Note   string   `json:"note" example:""`
+	Period string   `json:"period" enums:"daily,weekdays,window" example:"daily"`
+	Times  []string `json:"times" example:"08:00"`
+	// Weekdays: 0 = Monday … 6 = Sunday; an activity with none happens every day.
+	Weekdays         []int   `json:"weekdays" example:"0,2,4"`
+	WindowStart      *string `json:"windowStart" example:"08:00"`
+	WindowEnd        *string `json:"windowEnd" example:"20:00"`
+	IntervalMinutes  *int    `json:"intervalMinutes" example:"60"`
+	FirstDate        string  `json:"firstDate" example:"2026-10-05"`
+	EndDate          *string `json:"endDate" example:"2026-10-20"`
+	UtcOffsetMinutes int     `json:"utcOffsetMinutes" example:"-360"`
 } // @name SupplementRoutineRequest
 
 type updateDoseRequest struct {
@@ -164,8 +172,9 @@ func toDoseResponse(d Dose, actor uuid.UUID) doseResponse {
 
 func toRoutineResponse(v RoutineView, level access.Level, actor uuid.UUID) routineResponse {
 	out := routineResponse{
-		ID: v.ID.String(), Name: v.Name, Note: v.Note, Period: string(v.Period), Times: v.Times, Weekdays: v.Weekdays,
-		FirstDate: v.FirstDate, FirstTime: optString(v.FirstTime), EndDate: optString(v.EndDate), Status: string(v.Status),
+		ID: v.ID.String(), Kind: string(v.Kind), Name: v.Name, Note: v.Note, Period: string(v.Period), Times: v.Times, Weekdays: v.Weekdays,
+		WindowStart: optString(v.WindowStart), WindowEnd: optString(v.WindowEnd),
+		FirstDate: v.FirstDate, EndDate: optString(v.EndDate), Status: string(v.Status),
 		PausedAt: optTime(v.PausedAt), EndedAt: optTime(v.EndedAt), CreatedBy: v.CreatedBy, CreatedAt: formatTime(v.CreatedAt),
 		CanEdit: level == access.Full && v.PaidPlan, MyReminders: v.MyReminders,
 		Progress: progressResponse{Taken: v.Progress.Taken, Elapsed: v.Progress.Elapsed, Total: v.Progress.Total},
@@ -181,9 +190,9 @@ func toRoutineResponse(v RoutineView, level access.Level, actor uuid.UUID) routi
 	if out.Weekdays == nil {
 		out.Weekdays = []int{}
 	}
-	if v.IntervalHours > 0 {
-		h := v.IntervalHours
-		out.IntervalHours = &h
+	if v.IntervalMinutes > 0 {
+		m := v.IntervalMinutes
+		out.IntervalMinutes = &m
 	}
 	for _, d := range v.Doses {
 		out.Doses = append(out.Doses, toDoseResponse(d, actor))
@@ -250,7 +259,7 @@ func parseWindow(r *http.Request) (time.Time, time.Time, ValidationErrors) {
 
 // ListRoutines handles GET /children/{childId}/routines.
 //
-//	@Summary		A child's supplement routines
+//	@Summary		A child's supplements or activities
 //	@Description	Lists the child's routines — active first, then paused and ended — each with only the doses of [from, to)
 //	@Description	(the parent's local day, at most 48 hours), its progress and, for an active routine with nothing in the
 //	@Description	window, its next dose. Reading never depends on the plan.
@@ -259,6 +268,7 @@ func parseWindow(r *http.Request) (time.Time, time.Time, ValidationErrors) {
 //	@Param			childId	path		string	true	"Child UUID"
 //	@Param			from	query		string	true	"Window start, RFC 3339"
 //	@Param			to		query		string	true	"Window end (exclusive), RFC 3339"
+//	@Param			kind	query		string	false	"supplement (default) or activity"	Enums(supplement, activity)
 //	@Success		200		{object}	routineListResponse
 //	@Failure		400		{object}	validationDoc	"Missing or invalid window"
 //	@Failure		404		{object}	errorDoc		"No child exists for this id"
@@ -274,11 +284,15 @@ func (h *Handler) ListRoutines(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	from, to, errs := parseWindow(r)
+	kind, kindErr := ParseKind(r.URL.Query().Get("kind"))
+	if kindErr != nil {
+		errs = append(errs, ValidationError{Field: "kind", Message: "must be supplement or activity"})
+	}
 	if errs.HasErrors() {
 		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, validationBody(errs), nil)
 		return
 	}
-	list, err := h.service.List(ctx, childID, from, to, actorOf(ctx))
+	list, err := h.service.List(ctx, childID, kind, from, to, actorOf(ctx))
 	if err != nil {
 		var verrs ValidationErrors
 		switch {

@@ -88,3 +88,25 @@ func TestGetOverview_ASupplementOnlyChildHasNoActiveTreatment(t *testing.T) {
 	require.Len(t, got.Doses, 1)
 	require.Nil(t, got.ActiveTreatment)
 }
+
+// specs/035: a child's activities are marked from their own card, so they are not in «Tomas de hoy».
+func TestGetOverview_ActivitiesOfTheChildAreNotInTheTodayList(t *testing.T) {
+	pool := testPool(t)
+	repo := consultation.NewRepository(pool)
+	childID := createTestChild(t, pool)
+	var activity uuid.UUID
+	require.NoError(t, pool.QueryRow(context.Background(), `
+		INSERT INTO supplement_routines (account_id, child_id, kind, name, period, window_start, window_end, interval_minutes, first_date, utc_offset_minutes, generated_until, created_by_account_id)
+		SELECT ch.account_id, ch.id, 'activity', 'Tomar agua', 'window', '08:00', '20:00', 60, current_date - 2, 0, now() + interval '14 days', ch.account_id
+		FROM children ch WHERE ch.id = $1
+		RETURNING id`, childID).Scan(&activity))
+	at := time.Now().UTC().Truncate(time.Hour)
+	insertRoutineDose(t, pool, activity, at, false)
+	supplement := insertRoutine(t, pool, childID, "Vitamina D", "active")
+	shown := insertRoutineDose(t, pool, supplement, at.Add(time.Minute), false)
+
+	got, err := repo.GetOverview(context.Background(), childID, at.Add(-time.Hour), at.Add(time.Hour), at.Add(30*time.Minute))
+	require.NoError(t, err)
+	require.Len(t, got.Doses, 1, "only the supplement's dose")
+	require.Equal(t, shown, got.Doses[0].ID)
+}

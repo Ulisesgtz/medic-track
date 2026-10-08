@@ -58,9 +58,9 @@ func TestService_WindowsAreChecked(t *testing.T) {
 	from := fixedNow
 	var verrs supplement.ValidationErrors
 
-	_, err := svc.List(ctx, uuid.New(), from, from, uuid.Nil)
+	_, err := svc.List(ctx, uuid.New(), supplement.KindSupplement, from, from, uuid.Nil)
 	require.ErrorAs(t, err, &verrs)
-	_, err = svc.List(ctx, uuid.New(), from, from.Add(49*time.Hour), uuid.Nil)
+	_, err = svc.List(ctx, uuid.New(), supplement.KindSupplement, from, from.Add(49*time.Hour), uuid.Nil)
 	require.ErrorAs(t, err, &verrs)
 	_, err = svc.Get(ctx, uuid.New(), from, from.Add(-time.Hour), uuid.Nil)
 	require.ErrorAs(t, err, &verrs)
@@ -77,7 +77,7 @@ func TestService_ListGetAndMarkGoThroughTheRepository(t *testing.T) {
 	require.NoError(t, err)
 
 	day := time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC)
-	list, err := svc.List(ctx, f.childID, day, day.Add(24*time.Hour), f.accountID)
+	list, err := svc.List(ctx, f.childID, supplement.KindSupplement, day, day.Add(24*time.Hour), f.accountID)
 	require.NoError(t, err)
 	require.Len(t, list.Routines, 1)
 	got, err := svc.Get(ctx, view.ID, day, day.Add(24*time.Hour), f.accountID)

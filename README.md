@@ -20,14 +20,17 @@ tutor un lugar centralizado para:
 - **Marcar cada toma de medicamento** como tomada o no tomada, sin restricción de fecha.
 - **Compartir con la familia** (plan de pago): invitar a otro tutor o a quien cuida; cada toma guarda
   quién la marcó y cada persona recibe sus propios recordatorios.
-- **Rutinas de suplementos** (plan de pago): lo que el hijo toma de forma regular, con su horario, sus
+- **Suplementos** (plan de pago): lo que el hijo toma **a horas fijas** (de una a seis al día), con sus
   tomas marcables y avisos por persona. La app solo repite lo que el padre escribió; nunca sugiere
   suplementos, cantidades ni horarios.
+- **Actividades** (plan de pago): lo que el hijo hace varias veces al día, **desde una hora hasta otra y cada cuánto**
+  (por ejemplo, tomar agua cada hora de 08:00 a 20:00). No se marca cada hora: un botón «Realizado» y una barra del día,
+  con un aviso que también trae «Realizado». Se comparten con la familia como las demás cosas del hijo.
 - **Próxima cita** (plan de pago): al registrar una consulta, o después, se anota cuándo es la siguiente cita con avisos
   (por omisión un día y dos horas antes, editables); cada persona de la familia recibe los suyos y se puede marcar
   como realizada o cancelada. Nunca se borra: queda en el historial.
-- **Mis suplementos** (plan de pago): rutinas de suplemento de la propia persona, con sus tomas marcables y sus avisos. Solo ella las
-  ve y solo a ella le llegan los avisos; nadie de su familia las alcanza.
+- **Mis suplementos** y **Mis actividades** (plan de pago): los suplementos y las actividades de la propia persona, cada uno en su
+  página, con sus avisos. Solo ella los ve y solo a ella le llegan los avisos; nadie de su familia los alcanza.
 - **Planes**: un plan gratuito y un plan completo (MX$499 al año, una suscripción para toda la familia), con una pantalla que compara los dos y
   un aviso que dice qué incluye el plan completo cuando algo lo requiere. Lo ya registrado nunca se oculta. El cobro con tarjeta todavía no está disponible.
 

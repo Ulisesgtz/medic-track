@@ -283,3 +283,39 @@ func TestMarkTakenByAction_ASupplementDoseIsMarkedInTheNameOfTheDevicesAccount(t
 	taken, _ = supplementTaken(t, pool, other)
 	require.False(t, taken)
 }
+
+// specs/035: an activity's doses are reminded like a supplement's, but their source says «activity» (the device words it
+// «Actividad programada» and its button says «Realizado»).
+func TestClaimDueSupplementDoses_AnActivityIsClaimedWithItsOwnSource(t *testing.T) {
+	pool := testPool(t)
+	repo := reminder.NewRepository(pool)
+	now := uniqueNow()
+	owner := newFamily(t, pool, nil)
+	ready(t, owner, repo, now)
+	var id uuid.UUID
+	require.NoError(t, pool.QueryRow(context.Background(), `
+		INSERT INTO supplement_routines (account_id, child_id, kind, name, period, window_start, window_end, interval_minutes, first_date, utc_offset_minutes, generated_until, created_by_account_id)
+		VALUES ($1, $2, 'activity', 'Tomar agua', 'window', '08:00', '20:00', 60, current_date - 2, 0, now() + interval '14 days', $1)
+		RETURNING id`, owner.accountID, owner.childID).Scan(&id))
+	dose := supplementDose(t, pool, id, now.Add(-5*time.Minute), false)
+
+	due, err := repo.ClaimDueSupplementDoses(context.Background(), now, window)
+	require.NoError(t, err)
+	require.Len(t, due, 1)
+	require.Equal(t, dose, due[0].DoseID)
+	require.Equal(t, reminder.SourceActivity, due[0].Source)
+	require.Equal(t, "Tomar agua", due[0].MedicationName)
+
+	detailed := reminder.DetailDetailed
+	due[0].Detail = &detailed
+	p := reminder.BuildPayload(due[0], "tok")
+	require.Equal(t, "activity", p.Source)
+	require.Equal(t, id.String(), p.RoutineID)
+	require.Equal(t, "Tomar agua", p.Medication)
+	require.Equal(t, "Mateo", p.Child)
+
+	generic := reminder.BuildPayload(reminder.DueDose{DoseID: dose, Source: reminder.SourceActivity, RoutineID: id, ScheduledAt: now, MedicationName: "Tomar agua", ChildFirstName: "Mateo"}, "tok")
+	require.Equal(t, "activity", generic.Source)
+	require.Empty(t, generic.Medication, "the generic one carries no name")
+	require.Empty(t, generic.Child)
+}

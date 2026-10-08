@@ -142,7 +142,11 @@ func TestCreate_AnswersWithTheAppointmentItsNoticesAndWhatTheSessionCanDo(t *tes
 	require.Equal(t, "1 día antes", first["label"])
 	require.EqualValues(t, 1440, first["leadMinutes"])
 	require.Nil(t, first["daysBefore"])
-	require.Equal(t, false, first["past"], "the service clock is two days before")
+	// Past also compares with when the row was saved (the database's own clock), so it depends on the real day: the notice is past
+	// exactly when it fires at or before now.
+	fireAt, err := time.Parse(time.RFC3339, first["fireAt"].(string))
+	require.NoError(t, err)
+	require.Equal(t, !fireAt.After(time.Now()), first["past"])
 }
 
 func TestCreate_FixedHourNoticesAndPastOnes(t *testing.T) {

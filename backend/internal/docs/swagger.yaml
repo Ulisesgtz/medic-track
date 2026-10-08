@@ -995,6 +995,15 @@ definitions:
         example: "2026-06-30"
         type: string
     type: object
+  SupplementDoneRequest:
+    properties:
+      from:
+        example: "2026-10-08T06:00:00Z"
+        type: string
+      to:
+        example: "2026-10-09T06:00:00Z"
+        type: string
+    type: object
   SupplementDoseResponse:
     properties:
       id:
@@ -1117,12 +1126,17 @@ definitions:
       firstDate:
         example: "2026-10-05"
         type: string
-      firstTime:
-        example: "06:00"
-        type: string
-      intervalHours:
-        example: 8
+      intervalMinutes:
+        example: 60
         type: integer
+      kind:
+        description: 'Kind: "supplement" (default) or "activity"; an edit keeps the
+          routine''s own kind.'
+        enum:
+        - supplement
+        - activity
+        example: supplement
+        type: string
       name:
         example: Vitamina D
         type: string
@@ -1133,7 +1147,7 @@ definitions:
         enum:
         - daily
         - weekdays
-        - interval
+        - window
         example: daily
         type: string
       times:
@@ -1146,6 +1160,8 @@ definitions:
         example: -360
         type: integer
       weekdays:
+        description: 'Weekdays: 0 = Monday … 6 = Sunday; an activity with none happens
+          every day.'
         example:
         - 0
         - 2
@@ -1153,6 +1169,12 @@ definitions:
         items:
           type: integer
         type: array
+      windowEnd:
+        example: "20:00"
+        type: string
+      windowStart:
+        example: "08:00"
+        type: string
     type: object
   SupplementRoutineResponse:
     properties:
@@ -1183,15 +1205,20 @@ definitions:
       firstDate:
         example: "2026-10-01"
         type: string
-      firstTime:
-        example: "06:00"
-        type: string
       id:
         example: a1b2c3d4-0000-0000-0000-000000000000
         type: string
-      intervalHours:
-        example: 8
+      intervalMinutes:
+        example: 60
         type: integer
+      kind:
+        description: 'Kind: a supplement is taken at fixed hours (times); an activity
+          is done every so often from windowStart to windowEnd.'
+        enum:
+        - supplement
+        - activity
+        example: supplement
+        type: string
       myReminders:
         description: 'MyReminders: the session has not turned this routine''s reminders
           off («Tus avisos»); each person decides for themselves.'
@@ -1214,7 +1241,7 @@ definitions:
         enum:
         - daily
         - weekdays
-        - interval
+        - window
         example: daily
         type: string
       progress:
@@ -1233,6 +1260,8 @@ definitions:
           type: string
         type: array
       weekdays:
+        description: 'Weekdays: 0 = Monday … 6 = Sunday; an activity with none happens
+          every day.'
         example:
         - 0
         - 2
@@ -1240,6 +1269,12 @@ definitions:
         items:
           type: integer
         type: array
+      windowEnd:
+        example: "20:00"
+        type: string
+      windowStart:
+        example: "08:00"
+        type: string
     type: object
   SupplementTakenByResponse:
     properties:
@@ -2021,6 +2056,13 @@ paths:
         name: to
         required: true
         type: string
+      - description: supplement (default) or activity
+        enum:
+        - supplement
+        - activity
+        in: query
+        name: kind
+        type: string
       produces:
       - application/json
       responses:
@@ -2696,6 +2738,13 @@ paths:
         name: to
         required: true
         type: string
+      - description: supplement (default) or activity
+        enum:
+        - supplement
+        - activity
+        in: query
+        name: kind
+        type: string
       produces:
       - application/json
       responses:
@@ -2721,7 +2770,7 @@ paths:
             $ref: '#/definitions/SupplementErrorResponse'
       security:
       - ClerkSession: []
-      summary: A child's supplement routines
+      summary: A child's supplements or activities
       tags:
       - supplements
     post:
@@ -3614,6 +3663,59 @@ paths:
       security:
       - ClerkSession: []
       summary: Edit a supplement routine
+      tags:
+      - supplements
+  /routines/{routineId}/done:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Marks the earliest unmarked dose of [from, to) (the person's local day, at most 48 hours) of an active
+        activity, with the session as author — also a dose that has not come yet. Two people tapping at once mark two
+        different doses. It never depends on the plan. 409 nothing_to_mark when none is left (or the routine is not an
+        active activity).
+      parameters:
+      - description: Routine UUID
+        in: path
+        name: routineId
+        required: true
+        type: string
+      - description: The local day
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/SupplementDoneRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/SupplementDoseResponse'
+        "400":
+          description: Missing or invalid window
+          schema:
+            $ref: '#/definitions/SupplementValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "403":
+          description: No access to the routine
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "404":
+          description: No such routine
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "409":
+          description: Nothing left to mark
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: «Realizado» on an activity
       tags:
       - supplements
   /routines/{routineId}/doses/{doseId}:

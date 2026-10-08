@@ -1,8 +1,10 @@
 import type { DoseStatus, TakenBy } from '../consultations/types'
 
-// Mirrors specs/033-recordatorios-suplementos-citas/contracts/routines.md.
+// Mirrors specs/033-recordatorios-suplementos-citas/contracts/routines.md and specs/035-actividades-y-suplementos.
 
-export type RoutinePeriod = 'daily' | 'weekdays' | 'interval'
+/** A supplement is taken at fixed hours; an activity is done every so often between two hours of the day (specs/035). */
+export type RoutineKind = 'supplement' | 'activity'
+export type RoutinePeriod = 'daily' | 'weekdays' | 'window'
 export type RoutineStatus = 'active' | 'paused' | 'ended'
 
 /** One scheduled intake of a routine: the same states and the same "who marked it" as a medication's dose. */
@@ -24,17 +26,20 @@ export interface RoutineProgress {
 export interface Routine {
   id: string
   childId: string | null
+  kind: RoutineKind
   name: string
   note: string
   period: RoutinePeriod
-  /** "HH:MM" local to the routine; empty for "cada N horas". */
+  /** "HH:MM" local to the routine; supplements only (an activity has a window instead). */
   times: string[]
-  /** 0 = Monday … 6 = Sunday. */
+  /** 0 = Monday … 6 = Sunday; an activity with none happens every day. */
   weekdays: number[]
-  intervalHours: number | null
+  /** Activities: "HH:MM" from which and until which they happen every `intervalMinutes`. */
+  windowStart: string | null
+  windowEnd: string | null
+  intervalMinutes: number | null
   /** "YYYY-MM-DD". */
   firstDate: string
-  firstTime: string | null
   endDate: string | null
   status: RoutineStatus
   pausedAt: string | null
@@ -63,14 +68,16 @@ export interface RoutineList {
 
 /** What the form sends, for creating and for editing (the whole routine). */
 export interface RoutineInput {
+  kind: RoutineKind
   name: string
   note: string
   period: RoutinePeriod
   times: string[]
   weekdays: number[]
-  intervalHours: number | null
+  windowStart: string | null
+  windowEnd: string | null
+  intervalMinutes: number | null
   firstDate: string
-  firstTime: string | null
   endDate: string | null
   utcOffsetMinutes: number
 }

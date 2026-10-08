@@ -35,8 +35,8 @@ type querier interface {
 
 // routineSelect reads a routine with who created it and the owner's plan.
 const routineSelect = `
-	SELECT r.id, r.account_id, r.child_id, r.name, r.note, r.period, r.times::text[], r.weekdays, r.interval_hours,
-	       r.first_date::text, r.first_time::text, r.end_date::text, r.utc_offset_minutes, r.status,
+	SELECT r.id, r.account_id, r.child_id, r.kind, r.name, r.note, r.period, r.times::text[], r.weekdays, r.window_start::text,
+	       r.window_end::text, r.interval_minutes, r.first_date::text, r.end_date::text, r.utc_offset_minutes, r.status,
 	       r.paused_at, r.ended_at, r.generated_until, r.created_at, c.first_name,
 	       CASE WHEN r.child_id IS NULL AND (owner.plan = 'paid' OR EXISTS (
 		       SELECT 1 FROM family_members fm JOIN accounts fo ON fo.id = fm.family_account_id
@@ -54,29 +54,32 @@ func scanRoutine(row pgx.Row) (scanned, error) {
 	var s scanned
 	var times []string
 	var weekdays []int16
-	var intervalHours *int16
-	var firstTime, endDate *string
+	var intervalMinutes *int16
+	var windowStart, windowEnd, endDate *string
 	var offset int16
-	var period, status, plan string
+	var kind, period, status, plan string
 	v := &s.view
-	err := row.Scan(&v.ID, &v.AccountID, &v.ChildID, &v.Name, &v.Note, &period, &times, &weekdays, &intervalHours,
-		&v.FirstDate, &firstTime, &endDate, &offset, &status, &v.PausedAt, &v.EndedAt, &s.generatedUntil, &v.CreatedAt,
-		&v.CreatedBy, &plan)
+	err := row.Scan(&v.ID, &v.AccountID, &v.ChildID, &kind, &v.Name, &v.Note, &period, &times, &weekdays, &windowStart,
+		&windowEnd, &intervalMinutes, &v.FirstDate, &endDate, &offset, &status, &v.PausedAt, &v.EndedAt, &s.generatedUntil,
+		&v.CreatedAt, &v.CreatedBy, &plan)
 	if err != nil {
 		return s, err
 	}
-	v.Period, v.Status, v.UtcOffsetMinutes, v.PaidPlan = Period(period), Status(status), int(offset), plan == planPaid
+	v.Kind, v.Period, v.Status, v.UtcOffsetMinutes, v.PaidPlan = Kind(kind), Period(period), Status(status), int(offset), plan == planPaid
 	for _, t := range times {
 		v.Times = append(v.Times, t[:5])
 	}
 	for _, d := range weekdays {
 		v.Weekdays = append(v.Weekdays, int(d))
 	}
-	if intervalHours != nil {
-		v.IntervalHours = int(*intervalHours)
+	if intervalMinutes != nil {
+		v.IntervalMinutes = int(*intervalMinutes)
 	}
-	if firstTime != nil {
-		v.FirstTime = (*firstTime)[:5]
+	if windowStart != nil {
+		v.WindowStart = (*windowStart)[:5]
+	}
+	if windowEnd != nil {
+		v.WindowEnd = (*windowEnd)[:5]
 	}
 	if endDate != nil {
 		v.EndDate = *endDate
@@ -89,9 +92,12 @@ func farFuture(from time.Time) time.Time { return from.AddDate(100, 0, 0) }
 
 // Create saves a routine and its first doses in one transaction (contracts/routines.md). It locks the owner's account row
 // first — so two requests of one account are checked one after the other — and then enforces, in this order, the paid
-// plan (*PlanLimitError) and the cap of active routines per child (*RoutineLimitError). Nothing is written when either
+// plan (*PlanLimitError) and the cap of active routines of its kind per child (*RoutineLimitError). Nothing is written when either
 // refuses. Doses are generated from the routine's first day up to HorizonDays ahead (research R2).
 func (r *Repository) Create(ctx context.Context, childID uuid.UUID, in Routine, createdBy uuid.UUID) (uuid.UUID, error) {
+	if in.Kind == "" {
+		in.Kind = KindSupplement
+	}
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("starting transaction: %w", err)
@@ -114,7 +120,7 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, in Routine, 
 	if plan != planPaid {
 		return uuid.Nil, &PlanLimitError{Reason: PlanLimitSupplements}
 	}
-	if err := checkActiveCap(ctx, tx, childID); err != nil {
+	if err := checkActiveCap(ctx, tx, childID, in.Kind); err != nil {
 		return uuid.Nil, err
 	}
 
@@ -136,13 +142,13 @@ func (r *Repository) insertRoutine(ctx context.Context, tx pgx.Tx, accountID uui
 	var id uuid.UUID
 	err := tx.QueryRow(ctx, `
 		INSERT INTO supplement_routines
-			(account_id, child_id, name, note, period, times, weekdays, interval_hours, first_date, first_time, end_date,
-			 utc_offset_minutes, generated_until, created_by_account_id)
-		VALUES ($1, $2, $3, $4, $5, $6::text[]::time[], $7::smallint[], $8, $9::date, NULLIF($10, '')::time,
-		        NULLIF($11, '')::date, $12, $13, $14)
-		RETURNING id`,
-		accountID, childID, in.Name, in.Note, string(in.Period), nonNil(in.Times), smallInts(in.Weekdays),
-		nullableInt(in.IntervalHours), in.FirstDate, in.FirstTime, in.EndDate, in.UtcOffsetMinutes, horizon, createdBy,
+			(account_id, child_id, kind, name, note, period, times, weekdays, window_start, window_end, interval_minutes,
+				 first_date, end_date, utc_offset_minutes, generated_until, created_by_account_id)
+			VALUES ($1, $2, $3, $4, $5, $6, $7::text[]::time[], $8::smallint[], NULLIF($9, '')::time, NULLIF($10, '')::time,
+			        $11, $12::date, NULLIF($13, '')::date, $14, $15, $16)
+			RETURNING id`,
+		accountID, childID, string(in.Kind), in.Name, in.Note, string(in.Period), nonNil(in.Times), smallInts(in.Weekdays),
+		in.WindowStart, in.WindowEnd, nullableInt(in.IntervalMinutes), in.FirstDate, in.EndDate, in.UtcOffsetMinutes, horizon, createdBy,
 	).Scan(&id)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("inserting routine: %w", err)
@@ -154,11 +160,12 @@ func (r *Repository) insertRoutine(ctx context.Context, tx pgx.Tx, accountID uui
 	return id, nil
 }
 
-// checkActiveCap refuses the routine that would be the 11th active one of the child (paused and ended ones don't count).
-// The caller holds the account row lock, so concurrent creations can't both pass.
-func checkActiveCap(ctx context.Context, q querier, childID uuid.UUID) error {
+// checkActiveCap refuses the routine that would be the 11th active one OF ITS KIND of the child (paused and ended ones
+// don't count; supplements and activities are counted apart). The caller holds the account row lock, so concurrent
+// creations can't both pass.
+func checkActiveCap(ctx context.Context, q querier, childID uuid.UUID, kind Kind) error {
 	var active int
-	err := q.QueryRow(ctx, `SELECT count(*) FROM supplement_routines WHERE child_id = $1 AND status = 'active'`, childID).Scan(&active)
+	err := q.QueryRow(ctx, `SELECT count(*) FROM supplement_routines WHERE child_id = $1 AND kind = $2 AND status = 'active'`, childID, string(kind)).Scan(&active)
 	if err != nil {
 		return fmt.Errorf("counting active routines: %w", err)
 	}
@@ -205,10 +212,10 @@ func nullableInt(n int) *int {
 	return &n
 }
 
-// ListByChild returns the child's routines — active ones first (by the hour of their first dose in the window), then
+// ListByChild returns the child's routines of one kind — active ones first (by the hour of their first dose in the window), then
 // paused, then ended — each with only the doses of [from, to), its progress and, when an active routine has nothing in
 // the window, its next dose. Nothing is hidden by plan: a lapsed owner's routines are read as ever.
-func (r *Repository) ListByChild(ctx context.Context, childID uuid.UUID, from, to time.Time) (*RoutineList, error) {
+func (r *Repository) ListByChild(ctx context.Context, childID uuid.UUID, kind Kind, from, to time.Time) (*RoutineList, error) {
 	var plan string
 	err := r.pool.QueryRow(ctx, `
 		SELECT a.plan::text FROM accounts a JOIN children ch ON ch.account_id = a.id WHERE ch.id = $1`, childID).Scan(&plan)
@@ -219,13 +226,13 @@ func (r *Repository) ListByChild(ctx context.Context, childID uuid.UUID, from, t
 		return nil, fmt.Errorf("reading the account's plan: %w", err)
 	}
 
-	return r.listWhere(ctx, plan == planPaid, `r.child_id = $1`, childID, from, to)
+	return r.listWhere(ctx, plan == planPaid, `r.child_id = $1 AND r.kind = $2`, childID, kind, from, to)
 }
 
-// listWhere reads the routines that match `where` (one positional argument) with the doses of [from, to), their progress and the
-// numbers the section needs; `paid` is the plan the list reports.
-func (r *Repository) listWhere(ctx context.Context, paid bool, where string, arg uuid.UUID, from, to time.Time) (*RoutineList, error) {
-	rows, err := r.pool.Query(ctx, routineSelect+` WHERE `+where+` ORDER BY r.created_at, r.id`, arg)
+// listWhere reads the routines that match `where` (two positional arguments: the owner and the kind) with the doses of
+// [from, to), their progress and the numbers the section needs; `paid` is the plan the list reports.
+func (r *Repository) listWhere(ctx context.Context, paid bool, where string, arg uuid.UUID, kind Kind, from, to time.Time) (*RoutineList, error) {
+	rows, err := r.pool.Query(ctx, routineSelect+` WHERE `+where+` ORDER BY r.created_at, r.id`, arg, string(kind))
 	if err != nil {
 		return nil, fmt.Errorf("listing routines: %w", err)
 	}
@@ -331,8 +338,10 @@ func (r *Repository) fill(ctx context.Context, items []scanned, from, to time.Ti
 		}
 		c := counts[v.ID]
 		v.Progress = Progress{Taken: c.taken, Elapsed: c.elapsed, Total: c.total}
-		if v.Status == StatusActive && v.EndDate != "" {
-			// Doses still to be generated up to the end (the planner extends the horizon as time passes).
+		if v.Status == StatusActive && v.EndDate != "" && v.Kind == KindSupplement {
+			// Doses still to be generated up to the end (the planner extends the horizon as time passes). Not for an activity: it can
+			// go off up to 288 times a day, so counting its far future on every read would build hundreds of thousands of instants
+			// for a total its screens never show (they count the day).
 			v.Progress.Total += len(Generate(v.Routine, items[i].generatedUntil, farFuture(items[i].generatedUntil)))
 		}
 		if v.Status == StatusActive && len(v.Doses) == 0 {
@@ -473,4 +482,46 @@ func authorOrNil(id uuid.UUID) *uuid.UUID {
 		return nil
 	}
 	return &id
+}
+
+// KindOf is the kind of a routine (fixed when it was created). ErrRoutineNotFound if there is none.
+func (r *Repository) KindOf(ctx context.Context, routineID uuid.UUID) (Kind, error) {
+	var kind string
+	err := r.pool.QueryRow(ctx, `SELECT kind FROM supplement_routines WHERE id = $1`, routineID).Scan(&kind)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrRoutineNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("reading the routine's kind: %w", err)
+	}
+	return Kind(kind), nil
+}
+
+// MarkNext is «Realizado» (specs/035): it marks the EARLIEST unmarked dose of [from, to) of an ACTIVE ACTIVITY with the
+// actor as author — also a dose that has not come yet, so tapping early counts toward the day. The dose is picked and
+// marked in one statement that skips rows another request is marking (FOR UPDATE SKIP LOCKED), so two people tapping at
+// once mark two different doses, never the same one. It never depends on the plan. ErrNothingToMark when there is none.
+func (r *Repository) MarkNext(ctx context.Context, routineID uuid.UUID, from, to time.Time, actor Actor) (*Dose, error) {
+	var doseID uuid.UUID
+	err := r.pool.QueryRow(ctx, `
+		UPDATE supplement_doses SET taken = true, taken_by_account_id = $4, taken_at = now()
+		WHERE id = (
+			SELECT d.id FROM supplement_doses d JOIN supplement_routines sr ON sr.id = d.routine_id
+			WHERE d.routine_id = $1 AND sr.kind = 'activity' AND sr.status = 'active'
+			  AND d.scheduled_at >= $2 AND d.scheduled_at < $3 AND NOT d.taken
+			ORDER BY d.scheduled_at
+			LIMIT 1
+			FOR UPDATE OF d SKIP LOCKED)
+		RETURNING id`, routineID, from, to, authorOrNil(actor.AccountID)).Scan(&doseID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNothingToMark
+	}
+	if err != nil {
+		return nil, fmt.Errorf("marking the next dose: %w", err)
+	}
+	d, err := r.scanDose(r.pool.QueryRow(ctx, doseSelect+` WHERE d.id = $1`, doseID), r.now())
+	if err != nil {
+		return nil, fmt.Errorf("reading dose: %w", err)
+	}
+	return &d, nil
 }

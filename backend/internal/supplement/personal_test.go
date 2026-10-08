@@ -52,6 +52,7 @@ func newPersonalEnv(t *testing.T, plan account.Plan) *personalEnv {
 	r.With(owns).Post("/accounts/{accountId}/routines/notice-seen", h.AcknowledgePersonalNotice)
 	r.With(seesRoutine).Get("/routines/{routineId}", h.GetRoutine)
 	r.With(seesRoutine).Patch("/routines/{routineId}/doses/{doseId}", h.UpdateDose)
+	r.With(seesRoutine).Post("/routines/{routineId}/done", h.MarkRoutineDone)
 	r.With(fullRoutine).Post("/routines/{routineId}/pause", h.PauseRoutine)
 	r.With(fullRoutine).Post("/routines/{routineId}/resume", h.ResumeRoutine)
 	r.With(fullRoutine).Post("/routines/{routineId}/finish", h.FinishRoutine)
@@ -268,16 +269,16 @@ func TestPersonal_RepositoryAndServiceAnswerCleanlyForAnUnknownAccountAndAnUnava
 	unknown := uuid.New()
 	in := supplement.Input{Name: "x", Period: "daily", Times: []string{"08:00"}, FirstDate: "2026-10-05"}
 
-	_, _, err := svc.ListPersonal(ctx, unknown, fixedNow, fixedNow.Add(time.Hour))
+	_, _, err := svc.ListPersonal(ctx, unknown, supplement.KindSupplement, fixedNow, fixedNow.Add(time.Hour))
 	require.ErrorIs(t, err, supplement.ErrAccountNotFound)
 	_, err = svc.CreatePersonal(ctx, unknown, in)
 	require.ErrorIs(t, err, supplement.ErrAccountNotFound)
-	_, _, err = svc.ListPersonal(ctx, unknown, fixedNow, fixedNow)
+	_, _, err = svc.ListPersonal(ctx, unknown, supplement.KindSupplement, fixedNow, fixedNow)
 	var verrs supplement.ValidationErrors
 	require.ErrorAs(t, err, &verrs, "an empty window is refused before asking")
 
 	down := newService(newRepo(closedSupplementPool(t, nil)))
-	_, _, err = down.ListPersonal(ctx, unknown, fixedNow, fixedNow.Add(time.Hour))
+	_, _, err = down.ListPersonal(ctx, unknown, supplement.KindSupplement, fixedNow, fixedNow.Add(time.Hour))
 	require.Error(t, err)
 	require.NotErrorIs(t, err, supplement.ErrAccountNotFound)
 	_, err = down.CreatePersonal(ctx, unknown, in)

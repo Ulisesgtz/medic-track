@@ -1,27 +1,41 @@
 import { useState } from 'react'
 import { useMyReminders } from './hooks'
+import type { RoutineKind } from './types'
 
 /**
- * «Tus avisos» (mock D1/D4): each person turns the reminders of THIS routine on or off for themselves, a Caregiver included.
- * Only an active routine has reminders, so the card isn't drawn for a paused or finished one. A switch with a fixed name;
- * the state is only `aria-checked`.
+ * «Tus avisos» (mock D1/D4): each person turns the reminders of THIS supplement or activity on or off for themselves, a Caregiver
+ * included — also on the person's own ones. Only an active one has reminders, so the card isn't drawn for a paused or finished one.
+ * A switch with a fixed name; the state is only `aria-checked`.
  */
-export function MyRemindersToggle({ routineId, enabled, personal = false }: { routineId: string; enabled: boolean; personal?: boolean }) {
+export function MyRemindersToggle({
+  kind,
+  routineId,
+  enabled,
+  personal = false,
+}: {
+  kind: RoutineKind
+  routineId: string
+  enabled: boolean
+  personal?: boolean
+}) {
   const mutation = useMyReminders(routineId)
   const [failed, setFailed] = useState(false)
+  const activity = kind === 'activity'
 
   return (
     <div className="flex flex-col gap-2.5 rounded-[22px] bg-surface px-[22px] py-5 shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
       <div className="flex items-center justify-between gap-4">
         <div className="flex flex-col gap-0.5">
-          <h3 className="text-[17px] font-black tracking-[-0.01em] text-ink">{personal ? 'Avisos' : 'Tus avisos'}</h3>
-          <p className="text-sm leading-normal text-body">A la hora de cada toma, en este dispositivo.</p>
+          <h3 className="text-[17px] font-black tracking-[-0.01em] text-ink">Tus avisos</h3>
+          <p className="text-sm leading-normal text-body">
+            {activity ? 'A cada hora programada, en este dispositivo.' : 'A la hora de cada toma, en este dispositivo.'}
+          </p>
         </div>
         <button
           type="button"
           role="switch"
           aria-checked={enabled}
-          aria-label={personal ? 'Avisos de esta rutina' : 'Avisos de esta rutina para ti'}
+          aria-label={activity ? 'Tus avisos de esta actividad' : 'Tus avisos de este suplemento'}
           disabled={mutation.isPending}
           onClick={() => {
             setFailed(false)

@@ -63,8 +63,8 @@ export function WelcomeDisclaimer({ account }: { account: Account | undefined })
         síntomas y tomas. Compártelos solo con quien cuida de tu hijo y quita el acceso cuando ya no haga falta.
       </p>
       <p>
-        Las rutinas de suplementos que registres <strong>solo repiten lo que tú escribiste</strong>: PediTrack no sugiere
-        suplementos, cantidades ni horarios, y avisa a las personas de tu familia que tengan acceso a ese hijo.
+        Los suplementos y las actividades que registres <strong>solo repiten lo que tú escribiste</strong>: PediTrack no sugiere
+        suplementos, actividades, cantidades ni horarios, y avisa a las personas de tu familia que tengan acceso a ese hijo.
       </p>
       {mutation.isError && (
         <p role="alert" className="font-semibold text-red-700">

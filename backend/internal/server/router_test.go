@@ -200,6 +200,7 @@ func (w *world) routes() []struct {
 		{"get routine", http.MethodGet, "/routines/" + w.routineA.String() + window, "", http.StatusOK},
 		{"mark routine dose", http.MethodPatch, "/routines/" + w.routineA.String() + "/doses/" + w.routineDoseA.String(), `{"taken":true}`, http.StatusOK},
 		{"my routine reminders", http.MethodPut, "/routines/" + w.routineA.String() + "/my-reminders", `{"enabled":false}`, http.StatusOK},
+		{"routine done", http.MethodPost, "/routines/" + w.routineA.String() + "/done", `{"from":"2026-01-15T00:00:00Z","to":"2026-01-16T00:00:00Z"}`, http.StatusConflict},
 		// In this order: the owner is on the free plan, so editing and resuming are the plan's and pausing and finishing never are.
 		{"edit routine", http.MethodPatch, "/routines/" + w.routineA.String(), `{}`, http.StatusBadRequest},
 		{"pause routine", http.MethodPost, "/routines/" + w.routineA.String() + "/pause", "", http.StatusOK},

@@ -49,22 +49,34 @@ func TestGenerate(t *testing.T) {
 			want: []string{"2026-10-11 09:00"},
 		},
 		{
-			name: "every 8 hours from 06:00",
-			r:    Routine{Period: PeriodInterval, IntervalHours: 8, FirstTime: "06:00", FirstDate: "2026-10-05"},
-			from: "2026-10-05 00:00", to: "2026-10-06 12:00",
-			want: []string{"2026-10-05 06:00", "2026-10-05 14:00", "2026-10-05 22:00", "2026-10-06 06:00"},
+			name: "activity every 30 minutes from 08:00 to 10:00 includes both ends",
+			r:    Routine{Kind: KindActivity, Period: PeriodWindow, WindowStart: "08:00", WindowEnd: "10:00", IntervalMinutes: 30, FirstDate: "2026-10-05"},
+			from: "2026-10-05 00:00", to: "2026-10-06 00:00",
+			want: []string{"2026-10-05 08:00", "2026-10-05 08:30", "2026-10-05 09:00", "2026-10-05 09:30", "2026-10-05 10:00"},
 		},
 		{
-			name: "interval crosses midnight without restarting each day",
-			r:    Routine{Period: PeriodInterval, IntervalHours: 10, FirstTime: "20:00", FirstDate: "2026-10-05"},
-			from: "2026-10-05 00:00", to: "2026-10-07 00:00",
-			want: []string{"2026-10-05 20:00", "2026-10-06 06:00", "2026-10-06 16:00"},
+			name: "activity: the last dose is the last that fits",
+			r:    Routine{Kind: KindActivity, Period: PeriodWindow, WindowStart: "09:00", WindowEnd: "18:00", IntervalMinutes: 120, FirstDate: "2026-10-05"},
+			from: "2026-10-05 00:00", to: "2026-10-06 00:00",
+			want: []string{"2026-10-05 09:00", "2026-10-05 11:00", "2026-10-05 13:00", "2026-10-05 15:00", "2026-10-05 17:00"},
 		},
 		{
-			name: "interval window starting after the first dose skips to the next multiple",
-			r:    Routine{Period: PeriodInterval, IntervalHours: 8, FirstTime: "06:00", FirstDate: "2026-10-05"},
-			from: "2026-10-05 15:00", to: "2026-10-06 07:00",
-			want: []string{"2026-10-05 22:00", "2026-10-06 06:00"},
+			name: "activity on chosen weekdays only",
+			r:    Routine{Kind: KindActivity, Period: PeriodWindow, WindowStart: "09:00", WindowEnd: "10:00", IntervalMinutes: 60, Weekdays: []int{0, 2}, FirstDate: "2026-10-05"},
+			from: "2026-10-05 00:00", to: "2026-10-09 00:00",
+			want: []string{"2026-10-05 09:00", "2026-10-05 10:00", "2026-10-07 09:00", "2026-10-07 10:00"},
+		},
+		{
+			name: "activity: a window starting mid day leaves out the earlier doses",
+			r:    Routine{Kind: KindActivity, Period: PeriodWindow, WindowStart: "08:00", WindowEnd: "10:00", IntervalMinutes: 60, FirstDate: "2026-10-05"},
+			from: "2026-10-05 09:00", to: "2026-10-05 23:00",
+			want: []string{"2026-10-05 09:00", "2026-10-05 10:00"},
+		},
+		{
+			name: "activity in a local zone reads the window in local hours",
+			r:    Routine{Kind: KindActivity, Period: PeriodWindow, WindowStart: "08:00", WindowEnd: "09:00", IntervalMinutes: 60, FirstDate: "2026-10-05", UtcOffsetMinutes: -360},
+			from: "2026-10-05 00:00", to: "2026-10-06 00:00",
+			want: []string{"2026-10-05 14:00", "2026-10-05 15:00"},
 		},
 		{
 			name: "end date is included to the end of that day",
@@ -127,8 +139,9 @@ func TestGenerateBadData(t *testing.T) {
 	for name, r := range map[string]Routine{
 		"bad first date":    {Period: PeriodDaily, Times: []string{"08:00"}, FirstDate: "nope"},
 		"bad end date":      {Period: PeriodDaily, Times: []string{"08:00"}, FirstDate: "2026-10-05", EndDate: "nope"},
-		"bad interval time": {Period: PeriodInterval, IntervalHours: 8, FirstTime: "xx", FirstDate: "2026-10-05"},
-		"no interval hours": {Period: PeriodInterval, FirstTime: "06:00", FirstDate: "2026-10-05"},
+		"bad window start":  {Period: PeriodWindow, WindowStart: "xx", WindowEnd: "10:00", IntervalMinutes: 30, FirstDate: "2026-10-05"},
+		"bad window end":    {Period: PeriodWindow, WindowStart: "08:00", WindowEnd: "yy", IntervalMinutes: 30, FirstDate: "2026-10-05"},
+		"no interval":       {Period: PeriodWindow, WindowStart: "08:00", WindowEnd: "10:00", FirstDate: "2026-10-05"},
 	} {
 		if got := Generate(r, from, to); len(got) != 0 {
 			t.Errorf("%s: want nothing, got %v", name, got)

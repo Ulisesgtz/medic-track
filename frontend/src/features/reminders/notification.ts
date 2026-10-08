@@ -11,7 +11,7 @@ export interface ReminderPayload {
   /** A medication's dose has a consultation; a supplement routine's (specs/033, `source: "supplement"`) has a routine instead. */
   consultationId?: string
   routineId?: string
-  source?: 'supplement' | 'appointment'
+  source?: 'supplement' | 'activity' | 'appointment'
   /** An appointment's reminder (specs/033, part 2): when it starts is `scheduledAt`; this is how long before it this one goes off. */
   appointmentId?: string
   leadMinutes?: number
@@ -28,7 +28,7 @@ export interface ReminderNotification {
   options: NotificationOptions & { actions?: { action: string; title: string }[] }
 }
 
-/** The "Tomada" action of a reminder. */
+/** The action of a reminder that marks its dose: «Tomada» on a dose, «Realizado» on an activity (the same action id, the server marks the dose). */
 export const TAKEN_ACTION = 'taken'
 
 /** Reads a push's data; anything that isn't a reminder is ignored (null). */
@@ -91,6 +91,26 @@ function buildAppointmentNotification(p: ReminderPayload, now: Date): ReminderNo
 }
 
 /**
+ * The reminder of an activity (specs/035, mock N1/N2): «Actividad programada», with the button «Realizado». Generic: that there is one
+ * for now. With detail: the name and, for a child's, the child and the hour («Mateo · 15:00»); the person's own, only the hour.
+ * Never an imperative (Principio I).
+ */
+function buildActivityNotification(p: ReminderPayload, time: string): ReminderNotification {
+  const detailed = p.kind === 'detailed' && p.medication
+  return {
+    title: detailed ? `Actividad programada · ${p.medication}` : 'Actividad programada',
+    options: {
+      body: detailed ? [p.child, time].filter(Boolean).join(' · ') : 'Hay una actividad registrada para ahora.',
+      tag: `dose-${p.doseId}`,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      data: p,
+      ...(p.actionToken ? { actions: [{ action: TAKEN_ACTION, title: 'Realizado' }] } : {}),
+    },
+  }
+}
+
+/**
  * The notification shown for a reminder. It only repeats the schedule the tutor registered —
  * never an indication (Principio I). The time is in the device's own zone; `tag` makes a repeated
  * push replace the first one instead of stacking.
@@ -98,6 +118,7 @@ function buildAppointmentNotification(p: ReminderPayload, now: Date): ReminderNo
 export function buildNotification(p: ReminderPayload, now: Date = new Date()): ReminderNotification {
   if (p.source === 'appointment') return buildAppointmentNotification(p, now)
   const time = formatTime(p.scheduledAt)
+  if (p.source === 'activity') return buildActivityNotification(p, time)
   const body =
     p.kind === 'detailed' && p.medication
       ? [p.medication, time, p.child].filter(Boolean).join(' · ')
@@ -117,7 +138,8 @@ export function buildNotification(p: ReminderPayload, now: Date = new Date()): R
 
 /** Where tapping a reminder goes: the consultation of that dose. */
 export function targetUrl(p: ReminderPayload): string {
-  return p.routineId ? `/suplementos/${p.routineId}` : `/consultations/${p.consultationId}` // an appointment's carries its consultation
+  if (p.routineId) return `${p.source === 'activity' ? '/actividades' : '/suplementos'}/${p.routineId}`
+  return `/consultations/${p.consultationId}` // an appointment's carries its consultation
 }
 
 interface WindowClientLike {

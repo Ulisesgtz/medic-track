@@ -1,11 +1,14 @@
-// How a routine is said in words (specs/033, mocks RutinaTarjeta / RutinaDetalle / RutinaForm). Pure: only what the parent wrote,
-// repeated back — arithmetic of the times they chose, never a suggestion (Principio I).
+// How a supplement or an activity is said in words (specs/033, specs/035, mocks SuplementoTarjeta / ActividadTarjeta /
+// SuplementoDetalle / ActividadDetalle / ActividadForm). Pure: only what the parent wrote, repeated back — arithmetic of the
+// hours they chose, never a suggestion (Principio I).
 
+import { formatTime } from '../../shared/date'
 import { dayKey } from '../consultations/treatmentDays'
-import type { Routine, RoutinePeriod } from './types'
+import type { Routine, RoutineDose, RoutinePeriod } from './types'
 
 const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 const WEEKDAYS_SHORT = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+const WEEKDAYS_FULL = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
 const WEEKDAYS_LOWER = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'] // Date.getDay() order
 
 /** "08:00", "08:00 y 20:00", "06:00, 14:00 y 22:00". */
@@ -30,51 +33,51 @@ export function dayMonthYear(iso: string): string {
   return `${dayMonth(iso)} ${parseDay(iso).y}`
 }
 
+/** "Hoy · jue 8 oct": the label of the detail's day card. */
+export function todayLabel(date: Date): string {
+  return `Hoy · ${WEEKDAYS_LOWER[date.getDay()]} ${dayMonth(dayKey(date))}`
+}
+
 /** The local day of an instant as "2 oct". */
 export const instantDayMonth = (instant: string | Date) => dayMonth(dayKey(instant))
 
-/**
- * The hours of every day when a routine repeats "cada N horas" from `firstTime`: only when N divides 24, because then each
- * day has the same hours ("06:00, 14:00 y 22:00"). Otherwise the hours slide from one day to the next and there is no fixed list.
- */
-export function intervalDayTimes(firstTime: string, everyHours: number): string[] | null {
-  const [h, m] = firstTime.split(':').map(Number)
-  if (!Number.isInteger(everyHours) || everyHours < 1 || everyHours > 24 || Number.isNaN(h) || Number.isNaN(m)) return null
-  if (24 % everyHours !== 0) return null
-  const start = h * 60 + m
-  const step = everyHours * 60
-  const out: number[] = []
-  for (let minute = start % step; minute < 24 * 60; minute += step) out.push(minute)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return out.map((minute) => `${pad(Math.floor(minute / 60))}:${pad(minute % 60)}`)
+const everyDay = (weekdays: number[]) => weekdays.length === 0 || weekdays.length === 7
+
+/** "Todos los días" or "Lun, Mié, Vie". */
+export function daysText(weekdays: number[]): string {
+  if (everyDay(weekdays)) return 'Todos los días'
+  return [...weekdays].sort((a, b) => a - b).map((d) => WEEKDAYS_SHORT[d]).join(', ')
 }
 
-/** The form's preview for "cada N horas" (R3): the arithmetic of what the parent typed. Null while it can't be computed. */
-export function intervalPreview(firstTime: string, everyHours: number): string | null {
-  if (!Number.isInteger(everyHours) || everyHours < 1 || everyHours > 24 || !/^\d{2}:\d{2}$/.test(firstTime)) return null
-  const times = intervalDayTimes(firstTime, everyHours)
-  if (times) return `Con esto, cada día las tomas quedan a las ${joinTimes(times)}.`
-  return `Con esto, las tomas siguen cada ${everyHours} horas desde la primera y la hora cambia de un día al otro.`
+/** "martes y jueves", "lunes, miércoles y viernes" (the form's preview). */
+function namesText(weekdays: number[]): string {
+  const names = [...weekdays].sort((a, b) => a - b).map((d) => WEEKDAYS_FULL[d])
+  return joinTimes(names)
 }
 
-const everyText = (n: number) => (n === 1 ? 'Cada hora' : `Cada ${n} horas`)
+const tomas = (n: number) => `${n} ${n === 1 ? 'toma' : 'tomas'}`
 
-/** "Todos los días · 08:00", "Lun, Mié, Vie · 09:00", "Cada 8 horas · 06:00, 14:00 y 22:00". */
-export function periodText(r: Pick<Routine, 'period' | 'times' | 'weekdays' | 'intervalHours' | 'firstTime'>): string {
-  if (r.period === 'interval') {
-    const n = r.intervalHours ?? 0
-    const times = r.firstTime ? intervalDayTimes(r.firstTime, n) : null
-    return times ? `${everyText(n)} · ${joinTimes(times)}` : `${everyText(n)} · desde las ${r.firstTime ?? ''}`
+/** A supplement's line: "Todos los días · 6 tomas", "Lun, Mié, Vie · 2 tomas" (the hours are the chips'). */
+export function supplementPeriodText(r: Pick<Routine, 'period' | 'times' | 'weekdays'>): string {
+  const days = r.period === 'weekdays' ? daysText(r.weekdays) : 'Todos los días'
+  return `${days} · ${tomas(r.times.length)}`
+}
+
+/** "Cada hora", "Cada 2 horas", "Cada 30 min": «cada N» as the parent chose it. */
+export function everyText(minutes: number): string {
+  if (minutes % 60 === 0) {
+    const h = minutes / 60
+    return h === 1 ? 'Cada hora' : `Cada ${h} horas`
   }
-  const times = joinTimes(r.times)
-  if (r.period === 'weekdays') {
-    const days = [...r.weekdays].sort((a, b) => a - b).map((d) => WEEKDAYS_SHORT[d])
-    return `${days.join(', ')} · ${times}`
-  }
-  return `Todos los días · ${times}`
+  return `Cada ${minutes} min`
 }
 
-/** "Desde el 1 oct · sin fecha de fin" or "Del 2 al 20 oct" (the second month only when it differs). */
+/** An activity's rule: "Cada hora, de 08:00 a 20:00". */
+export function activityRule(r: Pick<Routine, 'windowStart' | 'windowEnd' | 'intervalMinutes'>): string {
+  return `${everyText(r.intervalMinutes ?? 0)}, de ${r.windowStart ?? ''} a ${r.windowEnd ?? ''}`
+}
+
+/** "Del 2 al 20 oct" (the second month only when it differs). */
 export function rangeText(r: Pick<Routine, 'firstDate' | 'endDate'>): string {
   if (!r.endDate) return `Desde el ${dayMonth(r.firstDate)} · sin fecha de fin`
   const a = parseDay(r.firstDate)
@@ -83,91 +86,156 @@ export function rangeText(r: Pick<Routine, 'firstDate' | 'endDate'>): string {
   return `Del ${dayMonth(r.firstDate)} al ${dayMonth(r.endDate)}`
 }
 
-const dayNumber = (iso: string) => {
-  const { y, m, d } = parseDay(iso)
-  return Math.round(Date.UTC(y, m - 1, d) / 86_400_000)
+/** An activity's second line: "Todos los días · desde el 1 oct" / "Lun, Mié · del 2 al 20 oct". */
+export function activityRange(r: Pick<Routine, 'weekdays' | 'firstDate' | 'endDate'>): string {
+  const range = r.endDate ? rangeText(r).replace(/^D/, 'd') : `desde el ${dayMonth(r.firstDate)}`
+  return `${daysText(r.weekdays)} · ${range}`
 }
 
-export interface ProgressSummary {
-  /** The big line: "Día 5 de 19", "24 tomas" or "12 de 14". */
-  big: string
-  sub: string
-  /** Percent of the days elapsed; only for a routine with an end date. */
-  pct: number | null
+/** How many times a day an activity goes off: from its start to its end every N minutes, the last one the last that fits. */
+export function perDay(windowStart: string, windowEnd: string, everyMinutes: number): number {
+  const [sh, sm] = windowStart.split(':').map(Number)
+  const [eh, em] = windowEnd.split(':').map(Number)
+  if ([sh, sm, eh, em].some(Number.isNaN) || !Number.isInteger(everyMinutes) || everyMinutes < 1) return 0
+  const span = eh * 60 + em - (sh * 60 + sm)
+  return span < 0 ? 0 : Math.floor(span / everyMinutes) + 1
 }
 
-/** The progress of a routine (the card's line and the detail's panel). Counts only what the server counted. */
-export function progressSummary(r: Routine, today: string): ProgressSummary {
-  const { taken, elapsed, total } = r.progress
-  if (r.status === 'ended') return { big: `${taken} de ${total}`, sub: 'tomas marcadas', pct: null }
-  if (r.endDate) {
-    const days = dayNumber(r.endDate) - dayNumber(r.firstDate) + 1
-    const n = Math.min(Math.max(dayNumber(today) - dayNumber(r.firstDate) + 1, 1), days)
-    return {
-      big: `Día ${n} de ${days}`,
-      sub: `${taken} de ${elapsed} tomas marcadas hasta ahora · termina el ${dayMonth(r.endDate)}`,
-      pct: Math.round((n / days) * 100),
-    }
-  }
-  return { big: `${taken} ${taken === 1 ? 'toma' : 'tomas'}`, sub: `marcadas de ${elapsed} hasta ahora`, pct: null }
+/** The hour of the last dose of the day of an activity, "HH:MM". */
+export function lastOfDay(windowStart: string, windowEnd: string, everyMinutes: number): string {
+  const [sh, sm] = windowStart.split(':').map(Number)
+  const n = perDay(windowStart, windowEnd, everyMinutes)
+  const minute = sh * 60 + sm + (n - 1) * everyMinutes
+  const pad = (v: number) => String(v).padStart(2, '0')
+  return `${pad(Math.floor(minute / 60))}:${pad(minute % 60)}`
 }
 
-/** The card's one line of progress: "Día 5 de 19" with an end date, "24 tomas marcadas de 26" without; none before any dose came. */
-export function cardProgress(r: Routine, today: string): { text: string; pct: number | null } | null {
-  if (r.status === 'ended' || r.progress.elapsed === 0) return null
-  const s = progressSummary(r, today)
-  if (s.pct !== null) return { text: s.big, pct: s.pct }
-  return { text: `${r.progress.taken} ${r.progress.taken === 1 ? 'toma marcada' : 'tomas marcadas'} de ${r.progress.elapsed}`, pct: null }
+/**
+ * The activity form's preview (mock F5): the arithmetic of what the parent typed, without listing the hours. Null while it can't
+ * be computed. «Con esto, cada martes y jueves hay 4 avisos: el primero a las 09:00 y el último a las 18:00.»
+ */
+export function activityPreview(windowStart: string, windowEnd: string, everyMinutes: number, weekdays: number[]): string | null {
+  if (!/^\d{2}:\d{2}$/.test(windowStart) || !/^\d{2}:\d{2}$/.test(windowEnd)) return null
+  const n = perDay(windowStart, windowEnd, everyMinutes)
+  if (n === 0) return null
+  const days = everyDay(weekdays) ? 'día' : namesText(weekdays)
+  const count = n === 1 ? '1 aviso' : `${n} avisos`
+  const last = lastOfDay(windowStart, windowEnd, everyMinutes)
+  if (n === 1) return `Con esto, cada ${days} hay ${count}: a las ${windowStart}.`
+  return `Con esto, cada ${days} hay ${count}: el primero a las ${windowStart} y el último a las ${last}.`
 }
 
-/** "Hoy no le toca. La siguiente es mañana, mié 7 oct, a las 09:00." */
-export function noTodayText(nextAt: string, today: string): string {
+// ---------------------------------------------------------------------------------------------------------------------
+// What the doses of the asked day say (the server sends only those of the window).
+
+/** The day's count: how many doses it has and how many were marked. */
+export function dayCount(doses: RoutineDose[]): { done: number; total: number } {
+  return { done: doses.filter((d) => d.taken).length, total: doses.length }
+}
+
+/** The pct of the day's bar, 0–100. */
+export function dayPct({ done, total }: { done: number; total: number }): number {
+  return total === 0 ? 0 : Math.round((done / total) * 100)
+}
+
+/** "15:00": the first unmarked dose of the day that has not come yet (the reminders that are still to go); null when none. */
+export function nextUnmarked(doses: RoutineDose[], now: Date = new Date()): string | null {
+  const next = [...doses]
+    .filter((d) => !d.taken && new Date(d.scheduledAt).getTime() > now.getTime())
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())[0]
+  return next ? formatTime(next.scheduledAt) : null
+}
+
+/** The last dose marked today: its marking time and who (only the name; never an e-mail). Null when none was marked. */
+export function lastMarked(doses: RoutineDose[]): { at: string; by: string } | null {
+  const marked = doses.filter((d) => d.taken && d.takenBy)
+  if (marked.length === 0) return null
+  const last = marked.reduce((a, b) => (new Date(a.takenBy!.at).getTime() >= new Date(b.takenBy!.at).getTime() ? a : b))
+  return { at: formatTime(last.takenBy!.at), by: last.takenBy!.name }
+}
+
+/** The dose that «Quitar la última marca» takes back: the last one marked today. */
+export function lastMarkedDose(doses: RoutineDose[]): RoutineDose | null {
+  const marked = doses.filter((d) => d.taken && d.takenBy)
+  if (marked.length === 0) return null
+  return marked.reduce((a, b) => (new Date(a.takenBy!.at).getTime() >= new Date(b.takenBy!.at).getTime() ? a : b))
+}
+
+/** "Hoy no le toca. La siguiente es mañana, mié 7 oct, a las 09:00." (the person's own: "Hoy no toca…"). */
+export function noTodayText(nextAt: string, today: string, own = false): string {
   const next = new Date(nextAt)
   const key = dayKey(next)
   const hh = String(next.getHours()).padStart(2, '0')
   const mm = String(next.getMinutes()).padStart(2, '0')
   const label = `${WEEKDAYS_LOWER[next.getDay()]} ${dayMonth(key)}, a las ${hh}:${mm}`
-  return dayNumber(key) - dayNumber(today) === 1 ? `Hoy no le toca. La siguiente es mañana, ${label}.` : `Hoy no le toca. La siguiente es el ${label}.`
+  const lead = own ? 'Hoy no toca.' : 'Hoy no le toca.'
+  return dayNumber(key) - dayNumber(today) === 1 ? `${lead} La siguiente es mañana, ${label}.` : `${lead} La siguiente es el ${label}.`
 }
 
-export const pausedCardText = (pausedAt: string) =>
-  `Pausada desde el ${instantDayMonth(pausedAt)}. Mientras esté pausada no genera tomas ni avisos.`
+const dayNumber = (iso: string) => {
+  const { y, m, d } = parseDay(iso)
+  return Math.round(Date.UTC(y, m - 1, d) / 86_400_000)
+}
 
-export const pausedNote = (pausedAt: string) =>
-  `Pausada desde el ${instantDayMonth(pausedAt)}. Mientras esté pausada no se crean tomas ni avisos. Lo marcado se conserva.`
+// ---------------------------------------------------------------------------------------------------------------------
+// Paused and ended.
 
-export const endedCardText = (endedAt: string, taken: number, total: number) =>
-  `Terminada el ${instantDayMonth(endedAt)} · ${taken} de ${total} tomas`
+type Gendered = Pick<Routine, 'kind'>
 
-export const endedNote = (endedAt: string, taken: number, total: number) =>
-  `Terminada el ${instantDayMonth(endedAt)} · ${taken} de ${total} tomas. Para volver a registrarla, crea una rutina nueva.`
+export const pausedCardText = (r: Gendered, pausedAt: string) =>
+  r.kind === 'activity'
+    ? `Pausada desde el ${instantDayMonth(pausedAt)}. Mientras esté pausada no llegan avisos. Lo marcado se conserva.`
+    : `Pausado desde el ${instantDayMonth(pausedAt)}. Mientras esté pausado no genera tomas ni avisos.`
 
-/** The rows of the detail's data card. */
-export function detailRows(r: Routine): { k: string; v: string }[] {
-  const first = `${dayMonthYear(r.firstDate)}${r.period === 'interval' && r.firstTime ? `, ${r.firstTime}` : ''}`
-  let dates: string
+export const pausedNote = (r: Gendered, pausedAt: string) =>
+  r.kind === 'activity'
+    ? `Pausada desde el ${instantDayMonth(pausedAt)}. Mientras esté pausada no llegan avisos. Lo marcado se conserva.`
+    : `Pausado desde el ${instantDayMonth(pausedAt)}. Mientras esté pausado no se crean tomas ni avisos. Lo marcado se conserva.`
+
+export const endedCardText = (r: Gendered, endedAt: string, taken: number, total: number) =>
+  r.kind === 'activity' ? `Terminada el ${instantDayMonth(endedAt)}` : `Terminado el ${instantDayMonth(endedAt)} · ${taken} de ${total} tomas`
+
+export const endedNote = (r: Gendered, endedAt: string, taken: number, total: number) =>
+  r.kind === 'activity'
+    ? `Terminada el ${instantDayMonth(endedAt)}. Para volver a registrarla, agrega una actividad nueva.`
+    : `Terminado el ${instantDayMonth(endedAt)} · ${taken} de ${total} tomas. Para volver a registrarlo, agrega un suplemento nuevo.`
+
+// ---------------------------------------------------------------------------------------------------------------------
+// The detail's data card.
+
+function datesText(r: Routine): string {
   if (r.status === 'ended') {
     const a = parseDay(r.firstDate)
     const b = r.endDate ? parseDay(r.endDate) : null
-    dates = b && a.y === b.y && a.m === b.m ? `Del ${a.d} al ${dayMonthYear(r.endDate as string)}` : `Del ${dayMonth(r.firstDate)} al ${dayMonthYear(r.endDate ?? dayKey(r.endedAt ?? r.createdAt))}`
-  } else if (r.endDate) {
-    dates = `Primera toma el ${first} · última el ${dayMonthYear(r.endDate)}`
-  } else {
-    dates = `Primera toma el ${first} · sin fecha de fin`
+    return b && a.y === b.y && a.m === b.m
+      ? `Del ${a.d} al ${dayMonthYear(r.endDate as string)}`
+      : `Del ${dayMonth(r.firstDate)} al ${dayMonthYear(r.endDate ?? dayKey(r.endedAt ?? r.createdAt))}`
   }
-  const rows = [
-    { k: 'Cada cuánto', v: periodText(r) },
-    { k: 'Fechas', v: dates },
-  ]
+  const from = r.kind === 'activity' ? `Desde el ${dayMonthYear(r.firstDate)}` : `Primera toma el ${dayMonthYear(r.firstDate)}`
+  const to = r.kind === 'activity' ? 'hasta el' : 'última el'
+  return r.endDate ? `${from} · ${to} ${dayMonthYear(r.endDate)}` : `${from} · sin fecha de fin`
+}
+
+/** The rows of the detail's data card. `personal`: the person's own, so nobody «agregó» it. */
+export function detailRows(r: Routine, personal = false): { k: string; v: string }[] {
+  const rows: { k: string; v: string }[] = []
+  if (r.kind === 'activity') {
+    rows.push({ k: 'Cada cuánto', v: activityRule(r) })
+    rows.push({ k: 'Días', v: daysText(r.weekdays) })
+    rows.push({ k: 'Avisos al día', v: String(perDay(r.windowStart ?? '', r.windowEnd ?? '', r.intervalMinutes ?? 0)) })
+  } else {
+    if (r.period === 'weekdays') rows.push({ k: 'Días', v: daysText(r.weekdays) })
+    rows.push({ k: 'Horas', v: joinTimes(r.times) })
+  }
+  rows.push({ k: 'Fechas', v: datesText(r) })
   if (r.note.trim() !== '') rows.push({ k: 'Nota', v: r.note })
-  rows.push({ k: 'Creada por', v: `${r.createdBy}, el ${instantDayMonth(r.createdAt)}` })
+  if (!personal) rows.push({ k: r.kind === 'activity' ? 'Agregada por' : 'Agregado por', v: `${r.createdBy}, el ${instantDayMonth(r.createdAt)}` })
   return rows
 }
 
-export const PERIOD_OPTIONS: { value: RoutinePeriod; label: string; desc: string }[] = [
+export const PERIOD_OPTIONS: { value: Exclude<RoutinePeriod, 'window'>; label: string; desc: string }[] = [
   { value: 'daily', label: 'Todos los días', desc: 'A una o varias horas fijas.' },
-  { value: 'weekdays', label: 'Ciertos días de la semana', desc: 'Eliges los días y la hora.' },
-  { value: 'interval', label: 'Cada cierto número de horas', desc: 'Desde la primera toma, cada tantas horas.' },
+  { value: 'weekdays', label: 'Ciertos días de la semana', desc: 'Eliges los días y las horas.' },
 ]
 
 /** Segments of the weekday bar (0 = Monday): the short label and the full name for the accessible one. */
