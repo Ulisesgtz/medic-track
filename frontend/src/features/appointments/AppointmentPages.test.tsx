@@ -7,6 +7,7 @@ import { account, callsOf, stubApi, stubWeb } from '../supplements/supplements.t
 import { AppointmentFormPage } from './AppointmentFormPage'
 import { AppointmentHistoryPage } from './AppointmentHistoryPage'
 import { appointment } from './appointments.test-utils'
+import { pickTime } from '../../shared/ui/timeField.test-utils'
 
 function renderAt(path: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -59,7 +60,7 @@ describe('AppointmentFormPage — edit', () => {
     renderAt('/citas/ap1/editar')
     expect(await screen.findByRole('heading', { name: 'Editar cita', level: 1 })).toBeInTheDocument()
     expect(await screen.findByLabelText('Fecha de la cita')).toHaveValue('2026-10-09')
-    expect(screen.getByLabelText('Hora de la cita')).toHaveValue('10:30')
+    expect(screen.getByLabelText('Hora de la cita')).toHaveTextContent('10:30')
     expect(screen.getByText('Los cambios los ve toda la familia y los avisos se vuelven a programar.')).toBeInTheDocument()
     expect(await screen.findByText('Próxima cita · Mateo Morales')).toBeInTheDocument()
 
@@ -203,7 +204,7 @@ describe('AppointmentFormPage — add to a saved consultation', () => {
     expect(callsOf(mock)).not.toContain('POST /consultations/c1/appointments')
 
     await user.type(screen.getByLabelText('Fecha de la cita'), '2026-10-20')
-    await user.type(screen.getByLabelText('Hora de la cita'), '09:30')
+    await pickTime(user, 'Hora de la cita', '09:30')
     await user.click(screen.getByRole('button', { name: 'Guardar cita' }))
     expect(await screen.findByText('CONSULTA')).toBeInTheDocument()
     expect(sentBody(mock, 'POST').startsAt).toBe(new Date(2026, 9, 20, 9, 30).toISOString())
@@ -215,7 +216,7 @@ describe('AppointmentFormPage — add to a saved consultation', () => {
     renderAt('/consultations/c1/cita/nueva')
     const user = setup()
     await user.type(await screen.findByLabelText('Fecha de la cita'), '2026-08-01')
-    await user.type(screen.getByLabelText('Hora de la cita'), '09:30')
+    await pickTime(user, 'Hora de la cita', '09:30')
     await user.click(screen.getByRole('button', { name: 'Guardar cita' }))
     expect(await screen.findByText('La próxima cita va después de la consulta (14 ago 2026).')).toBeInTheDocument()
     expect(callsOf(mock)).not.toContain('POST /consultations/c1/appointments')
@@ -226,7 +227,7 @@ describe('AppointmentFormPage — add to a saved consultation', () => {
     renderAt('/consultations/c1/cita/nueva')
     const user = setup()
     await user.type(await screen.findByLabelText('Fecha de la cita'), '2026-10-20')
-    await user.type(screen.getByLabelText('Hora de la cita'), '09:30')
+    await pickTime(user, 'Hora de la cita', '09:30')
     await user.click(screen.getByRole('button', { name: 'Guardar cita' }))
     expect(await screen.findByRole('alert')).toHaveTextContent('Esta consulta ya tiene una próxima cita.')
   })

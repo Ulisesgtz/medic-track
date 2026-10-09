@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { AppointmentFields } from './AppointmentFields'
 import { emptyAppointmentValues, type AppointmentErrors, type AppointmentValues } from './appointmentValues'
 import { NOW } from './appointments.test-utils'
+import { pickTime } from '../../shared/ui/timeField.test-utils'
 
 function Harness({ initial, errors = {}, disabled, optional }: { initial?: Partial<AppointmentValues>; errors?: AppointmentErrors; disabled?: boolean; optional?: boolean }) {
   const [value, setValue] = useState<AppointmentValues>({ ...emptyAppointmentValues(), ...initial })
@@ -42,7 +43,7 @@ describe('AppointmentFields', () => {
     await user.type(screen.getByLabelText('Nota', { exact: false }), 'Cartilla')
     expect(screen.getByLabelText('Nota', { exact: false })).toHaveValue('Cartilla')
     expect(screen.getByLabelText('Fecha de la cita')).toHaveValue('')
-    expect(screen.getByLabelText('Hora de la cita')).toHaveValue('')
+    expect(screen.getByLabelText('Hora de la cita')).toHaveTextContent('Elegir hora')
   })
 
   it('shows the errors next to the fields', () => {
@@ -81,7 +82,7 @@ describe('AppointmentFields', () => {
     expect(notices()).toBe('')
     expect(screen.getByRole('radio', { name: 'A una hora fija' })).toHaveAttribute('aria-checked', 'true')
     expect(screen.getByLabelText('Días antes')).toHaveValue(1)
-    expect(screen.getByLabelText('Hora del aviso')).toHaveValue('20:00')
+    expect(screen.getByLabelText('Hora del aviso')).toHaveTextContent('20:00')
     expect(screen.getByText('Llegaría el jue 8 oct a las 20:00.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Agregar este aviso' }))
     expect(notices()).toBe('at_time:1:20:00')
@@ -128,8 +129,7 @@ describe('AppointmentFields', () => {
     await user.click(screen.getByRole('radio', { name: 'A una hora fija' }))
     await user.clear(screen.getByLabelText('Días antes'))
     await user.type(screen.getByLabelText('Días antes'), '0')
-    await user.clear(screen.getByLabelText('Hora del aviso'))
-    await user.type(screen.getByLabelText('Hora del aviso'), '23:00')
+    await pickTime(user, 'Hora del aviso', '23:00')
     await user.click(screen.getByRole('button', { name: 'Agregar este aviso' }))
     expect(screen.getByRole('alert')).toHaveTextContent('Un aviso no puede caer después de la cita.')
 

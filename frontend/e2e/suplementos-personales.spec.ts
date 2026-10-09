@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test'
 import {
+  pickTime,
   acceptViaApi,
   allowClerkOn,
   designs,
@@ -73,7 +74,7 @@ for (const design of designs) {
       await expect(page.getByText('Es un suplemento personal: solo tú lo ves y solo a ti te llegan sus avisos.')).toBeVisible()
       await expect(page.getByText('Solo la ves tú.')).toBeVisible()
       await page.getByLabel('Nombre').fill('Omega 3')
-      await page.getByLabel('Hora', { exact: true }).fill('08:00')
+      await pickTime(page, 'Hora', '08:00')
       await expectNoHorizontalScroll(page)
       await page.getByRole('button', { name: 'Guardar suplemento' }).click()
 
@@ -151,7 +152,7 @@ for (const design of designs) {
       await guest.page.goto('/mis-suplementos')
       await guest.page.getByRole('link', { name: '+ Agregar suplemento' }).click()
       await guest.page.getByLabel('Nombre').fill('Magnesio de Luis')
-      await guest.page.getByLabel('Hora', { exact: true }).fill('08:00')
+      await pickTime(guest.page, 'Hora', '08:00')
       await guest.page.getByRole('button', { name: 'Guardar suplemento' }).click()
       await expect(guest.page.getByRole('heading', { name: 'Magnesio de Luis', level: 1 })).toBeVisible()
       await page.goto('/mis-suplementos')

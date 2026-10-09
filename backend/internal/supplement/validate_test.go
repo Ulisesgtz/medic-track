@@ -91,7 +91,9 @@ func TestValidateInput_Rules(t *testing.T) {
 		{"supplement can't be a window", func(i *Input) { i.Period = "window" }, "period"},
 		{"supplement can't be every N hours", func(i *Input) { i.Period = "interval" }, "period"},
 		{"unknown kind", func(i *Input) { i.Kind = "routine" }, "kind"},
-		{"activity must be a window", func(i *Input) { i.Kind = "activity"; i.Period = "daily" }, "period"},
+		{"activity can't be every N hours", func(i *Input) { *i = activity(); i.Period = "interval" }, "period"},
+		{"activity at fixed hours needs them", func(i *Input) { *i = activity(); i.Period = "daily"; i.Times = nil }, "times"},
+		{"activity on weekdays needs a day", func(i *Input) { *i = activity(); i.Period = "weekdays"; i.Times = []string{"17:00"}; i.Weekdays = nil }, "weekdays"},
 		{"activity without start", func(i *Input) { *i = activity(); i.WindowStart = nil }, "windowStart"},
 		{"activity without end", func(i *Input) { *i = activity(); i.WindowEnd = nil }, "windowEnd"},
 		{"activity bad end", func(i *Input) { *i = activity(); i.WindowEnd = ptr("25:00") }, "windowEnd"},
@@ -158,5 +160,20 @@ func TestDomainErrorsUnwrap(t *testing.T) {
 	var p error = &PlanLimitError{Reason: PlanLimitSupplements}
 	if !errors.Is(p, ErrPlanRequired) || p.Error() == "" {
 		t.Fatal("plan")
+	}
+}
+
+func TestValidateInput_AnActivityCanBeAtFixedHours(t *testing.T) {
+	in := Input{Kind: "activity", Name: "Práctica de fut", Period: "weekdays", Times: []string{"17:00"}, Weekdays: []int{3, 1}, FirstDate: "2026-10-05", WindowStart: ptr("08:00"), IntervalMinutes: ptr(30)}
+	r, errs := ValidateInput(in, now)
+	if errs.HasErrors() || r.Kind != KindActivity || r.Period != PeriodWeekdays || len(r.Times) != 1 || r.Weekdays[0] != 1 || r.Weekdays[1] != 3 {
+		t.Fatalf("fixed-hour activity: %+v %v", r, errs)
+	}
+	if r.WindowStart != "" || r.WindowEnd != "" || r.IntervalMinutes != 0 {
+		t.Fatalf("the window fields must be dropped: %+v", r)
+	}
+	in.Period, in.Weekdays = "daily", nil
+	if r, errs = ValidateInput(in, now); errs.HasErrors() || r.Period != PeriodDaily || r.Weekdays != nil {
+		t.Fatalf("daily activity: %+v %v", r, errs)
 	}
 }

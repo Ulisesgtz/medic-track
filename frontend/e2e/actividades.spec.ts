@@ -1,5 +1,6 @@
 import type { Page } from '@playwright/test'
 import {
+  pickTime,
   acceptViaApi,
   activityViaApi,
   allowClerkOn,
@@ -57,11 +58,11 @@ for (const design of designs) {
 
       // The form: «Horario del día» and «Cada [n] minutos u horas», empty, and the reminders counted without listing them.
       await expect(page.getByRole('heading', { name: 'Agregar actividad', level: 1 })).toBeVisible()
-      await expect(page.getByLabel('Desde las')).toHaveValue('')
-      await expect(page.getByLabel('Hasta las')).toHaveValue('')
+      await expect(page.getByRole('button', { name: 'Desde las', exact: true })).toContainText('Elegir hora')
+      await expect(page.getByRole('button', { name: 'Hasta las', exact: true })).toContainText('Elegir hora')
       await page.getByLabel('Nombre').fill('Tomar agua')
-      await page.getByLabel('Desde las').fill('00:00')
-      await page.getByLabel('Hasta las').fill('23:00')
+      await pickTime(page, 'Desde las', '00:00')
+      await pickTime(page, 'Hasta las', '23:00')
       await page.getByLabel('Cantidad').fill('1')
       await expect(page.getByText('Con esto, cada día hay 24 avisos: el primero a las 00:00 y el último a las 23:00.')).toBeVisible()
       await expectNoHorizontalScroll(page)
@@ -136,6 +137,33 @@ for (const design of designs) {
       await expect(page.getByRole('button', { name: 'Reanudar' })).toHaveCount(0)
       await expect(page.getByRole('link', { name: 'Editar' })).toHaveCount(0)
       await expect(page.getByRole('button', { name: /Realizado/ })).toHaveCount(0)
+    })
+
+    test('an activity at a fixed hour on certain days: «práctica de fut», picked on the grid and marked with «Realizado»', async ({ page }) => {
+      await allowClerkOn(page)
+      const owner = await seedChild(page, { withConsultation: false })
+      await page.goto(`/children/${owner.childId}`)
+      await page.getByRole('main').getByRole('link', { name: '+ Agregar actividad' }).click()
+
+      await page.getByLabel('Nombre').fill('Práctica de fut')
+      await page.getByRole('radio', { name: 'A una hora fija' }).click()
+      await expect(page.getByLabel('Desde las')).toHaveCount(0)
+      // The hour is picked on the grid: the field never shows the browser's own time popup, and it fits its card.
+      await pickTime(page, 'Hora', '17:00')
+      await expect(page.getByRole('button', { name: 'Hora', exact: true })).toContainText('17:00')
+      await page.getByRole('radio', { name: 'Ciertos días' }).click()
+      for (const day of ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']) await page.getByRole('button', { name: day, exact: true }).click()
+      await expectNoHorizontalScroll(page)
+      await page.getByRole('button', { name: 'Guardar actividad' }).click()
+
+      // Every day was chosen, so there is a dose today at 17:00: one «Realizado» marks it.
+      await expect(page.getByRole('heading', { name: 'Práctica de fut', level: 1 })).toBeVisible()
+      await expect(page.locator('dd').filter({ hasText: 'Todos los días' })).toBeVisible()
+      await expect(page.locator('dd').filter({ hasText: '17:00' })).toBeVisible()
+      await expect(page.getByText('0 de 1')).toBeVisible()
+      await page.getByRole('button', { name: 'Realizado: Práctica de fut' }).click()
+      await expect(page.getByText('1 de 1')).toBeVisible()
+      await expect(page.getByText('No quedan avisos hoy.')).toBeVisible()
     })
 
     test('a Caregiver taps «Realizado» too, two people at once mark two different ones, and nobody else manages it', async ({ page, browser }) => {
@@ -298,8 +326,8 @@ for (const design of designs) {
       await expect(page.getByText('Es una actividad personal: solo tú la ves y solo a ti te llegan sus avisos.')).toBeVisible()
       await expect(page.getByText('Solo la ves tú.')).toBeVisible()
       await page.getByLabel('Nombre').fill('Pararse a estirar')
-      await page.getByLabel('Desde las').fill('00:00')
-      await page.getByLabel('Hasta las').fill('23:00')
+      await pickTime(page, 'Desde las', '00:00')
+      await pickTime(page, 'Hasta las', '23:00')
       await page.getByLabel('Cantidad').fill('1')
       await page.getByRole('button', { name: 'Guardar actividad' }).click()
 

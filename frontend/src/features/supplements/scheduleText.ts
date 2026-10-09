@@ -72,8 +72,9 @@ export function everyText(minutes: number): string {
   return `Cada ${minutes} min`
 }
 
-/** An activity's rule: "Cada hora, de 08:00 a 20:00". */
-export function activityRule(r: Pick<Routine, 'windowStart' | 'windowEnd' | 'intervalMinutes'>): string {
+/** An activity's rule: "Cada hora, de 08:00 a 20:00" or, at fixed hours, "Mar, Jue · a las 17:00". */
+export function activityRule(r: Pick<Routine, 'period' | 'times' | 'weekdays' | 'windowStart' | 'windowEnd' | 'intervalMinutes'>): string {
+  if (r.period !== 'window') return `${daysText(r.weekdays)} · a las ${joinTimes(r.times)}`
   return `${everyText(r.intervalMinutes ?? 0)}, de ${r.windowStart ?? ''} a ${r.windowEnd ?? ''}`
 }
 
@@ -86,8 +87,9 @@ export function rangeText(r: Pick<Routine, 'firstDate' | 'endDate'>): string {
   return `Del ${dayMonth(r.firstDate)} al ${dayMonth(r.endDate)}`
 }
 
-/** An activity's second line: "Todos los días · desde el 1 oct" / "Lun, Mié · del 2 al 20 oct". */
-export function activityRange(r: Pick<Routine, 'weekdays' | 'firstDate' | 'endDate'>): string {
+/** An activity's second line: "Todos los días · desde el 1 oct" / "Lun, Mié · del 2 al 20 oct" (at fixed hours the days are in the rule). */
+export function activityRange(r: Pick<Routine, 'period' | 'weekdays' | 'firstDate' | 'endDate'>): string {
+  if (r.period !== 'window') return rangeText(r)
   const range = r.endDate ? rangeText(r).replace(/^D/, 'd') : `desde el ${dayMonth(r.firstDate)}`
   return `${daysText(r.weekdays)} · ${range}`
 }
@@ -219,10 +221,13 @@ function datesText(r: Routine): string {
 /** The rows of the detail's data card. `personal`: the person's own, so nobody «agregó» it. */
 export function detailRows(r: Routine, personal = false): { k: string; v: string }[] {
   const rows: { k: string; v: string }[] = []
-  if (r.kind === 'activity') {
+  if (r.kind === 'activity' && r.period === 'window') {
     rows.push({ k: 'Cada cuánto', v: activityRule(r) })
     rows.push({ k: 'Días', v: daysText(r.weekdays) })
     rows.push({ k: 'Avisos al día', v: String(perDay(r.windowStart ?? '', r.windowEnd ?? '', r.intervalMinutes ?? 0)) })
+  } else if (r.kind === 'activity') {
+    rows.push({ k: 'Días', v: daysText(r.weekdays) })
+    rows.push({ k: 'Horas', v: joinTimes(r.times) })
   } else {
     if (r.period === 'weekdays') rows.push({ k: 'Días', v: daysText(r.weekdays) })
     rows.push({ k: 'Horas', v: joinTimes(r.times) })

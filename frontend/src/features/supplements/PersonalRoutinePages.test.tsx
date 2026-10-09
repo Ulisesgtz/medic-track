@@ -7,6 +7,7 @@ import { RoutineDetailPage } from './RoutineDetailPage'
 import { RoutineFormPage } from './RoutineFormPage'
 import { TODAY, account, activity, at, callsOf, dose, routine, stubApi, stubWeb } from './supplements.test-utils'
 import type { Routine } from './types'
+import { pickTime } from '../../shared/ui/timeField.test-utils'
 
 // specs/033 part 3 and specs/035: the detail, the form and «Tus avisos» of a supplement or an activity that is the person's own (no child).
 
@@ -176,7 +177,7 @@ describe('RoutineFormPage — a personal supplement', () => {
     expect(screen.getByText('Solo la ves tú.')).toBeInTheDocument()
     expect(screen.getByText('Mis suplementos', { selector: 'p' })).toBeInTheDocument()
     await user.type(screen.getByLabelText('Nombre'), 'Omega 3')
-    fireValue(screen.getByLabelText('Hora'), '08:00')
+    await pickTime(user, 'Hora', '08:00')
     await user.click(screen.getByRole('button', { name: 'Guardar suplemento' }))
     expect(await screen.findByText('Se activan en cada dispositivo por separado.')).toBeInTheDocument()
     expect(callsOf(mock)).toContain('POST /accounts/a1/routines')
@@ -189,7 +190,7 @@ describe('RoutineFormPage — a personal supplement', () => {
     renderAt('/mis-suplementos/nueva')
     const user = setup()
     await user.type(await screen.findByLabelText('Nombre'), 'Omega 3')
-    fireValue(screen.getByLabelText('Hora'), '08:00')
+    await pickTime(user, 'Hora', '08:00')
     await user.click(screen.getByRole('button', { name: 'Guardar suplemento' }))
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Ahora no' }))
@@ -214,9 +215,3 @@ describe('RoutineFormPage — a personal supplement', () => {
     expect(await screen.findByText('MIS SUPLEMENTOS')).toBeInTheDocument()
   })
 })
-
-function fireValue(input: HTMLElement, value: string) {
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!
-  setter.call(input, value)
-  input.dispatchEvent(new Event('input', { bubbles: true }))
-}
