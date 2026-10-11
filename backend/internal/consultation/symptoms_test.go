@@ -215,7 +215,7 @@ func TestHandler_CreateConsultation_WithSymptoms(t *testing.T) {
 	body := func(codes ...string) map[string]any {
 		return map[string]any{
 			"doctorName": "Dra. López", "consultDate": "2026-01-15",
-			"photoBase64": base64.StdEncoding.EncodeToString([]byte("fake-jpeg")),
+			"photoBase64": base64.StdEncoding.EncodeToString(testJPEG),
 			"notes":       "Comió mariscos", "symptomCodes": codes,
 			"medications": []map[string]any{validMedicationPayload()},
 		}

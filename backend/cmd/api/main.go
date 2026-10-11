@@ -142,7 +142,7 @@ func main() {
 		Ownership:      ownership.NewRepository(pool),
 		Access:         access.NewRepository(pool),
 		FrontendOrigin: frontendOrigin,
-		RequireSession: authmw.RequireSession(responder),
+		RequireSession: authmw.RequireSession(responder, authmw.PartyOptions(os.Getenv("CLERK_AUTHORIZED_PARTIES"))...),
 	})
 
 	// Swagger UI, generated from the @swag annotations on the handlers below

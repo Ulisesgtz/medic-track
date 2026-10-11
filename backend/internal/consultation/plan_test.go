@@ -177,7 +177,7 @@ func TestHandler_CreateConsultation_FreePlanLimits(t *testing.T) {
 	path := "/children/" + childID.String() + "/consultations"
 	body := func(extra map[string]any) map[string]any {
 		b := map[string]any{
-			"doctorName": "Dra. López", "consultDate": time.Now().Format("2006-01-02"), "photoBase64": base64.StdEncoding.EncodeToString([]byte("x")),
+			"doctorName": "Dra. López", "consultDate": time.Now().Format("2006-01-02"), "photoBase64": base64.StdEncoding.EncodeToString(testJPEG),
 			"utcOffsetMinutes": 0,
 			"medications":      []map[string]any{{"name": "Amoxicilina", "frequencyHours": 8, "durationDays": 3, "startTime": "00:00"}},
 		}

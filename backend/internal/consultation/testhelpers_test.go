@@ -74,3 +74,6 @@ func strPtr(s string) *string { return &s }
 // anyone is who marks in the tests that aren't about who marked: someone who can do everything, with no account of their own
 // (so no author is stored).
 var anyone = consultation.Actor{Full: true}
+
+// testJPEG is the smallest thing the create-consultation handler accepts as a photo (its signature).
+var testJPEG = []byte{0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 'J', 'F', 'I', 'F'}

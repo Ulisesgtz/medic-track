@@ -9,6 +9,7 @@ package authmw
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	clerk "github.com/clerk/clerk-sdk-go/v2"
 	clerkhttp "github.com/clerk/clerk-sdk-go/v2/http"
@@ -52,6 +53,22 @@ func RequireSession(responder *httpx.Responder, opts ...clerkhttp.AuthorizationO
 			next.ServeHTTP(w, r)
 		}))
 	}
+}
+
+// PartyOptions turns a comma-separated list of origins (the CLERK_AUTHORIZED_PARTIES variable) into the option that makes
+// RequireSession refuse a session Clerk issued to any other origin (its "azp" claim). An empty list adds nothing: every
+// origin of the Clerk instance is accepted, as before (specs/037).
+func PartyOptions(list string) []clerkhttp.AuthorizationOption {
+	var parties []string
+	for _, p := range strings.Split(list, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			parties = append(parties, p)
+		}
+	}
+	if len(parties) == 0 {
+		return nil
+	}
+	return []clerkhttp.AuthorizationOption{clerkhttp.AuthorizedPartyMatches(parties...)}
 }
 
 // ClerkUserIDFromContext returns the verified Clerk user id (the session

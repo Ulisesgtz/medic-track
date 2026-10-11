@@ -101,11 +101,14 @@ CI fails the build if `internal/docs/` is stale relative to the annotations (it 
 | `CLERK_SECRET_KEY` | yes | The API refuses to start without it (spec 008) |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `REMINDER_ACTION_SECRET` | for reminders | Spec 011. Without all four the API runs and reminders are "unavailable". `VAPID_SUBJECT` is a contact e-mail (a leading `mailto:` is dropped). Generate the keys once (e.g. `npx web-push generate-vapid-keys`); CI makes throwaway ones with Node's `crypto` |
 
+| `CLERK_AUTHORIZED_PARTIES` | optional | Spec 037. Comma-separated origins (`https://dev.pedi-track.com`) a Clerk session must have been issued to (its `azp` claim, `authmw.PartyOptions`); a session issued to any other origin gets 401. Unset: every origin of the Clerk instance is accepted (local dev, tunnels, E2E) |
 | `SWAGGER_ENABLED` | optional | Spec 037. `true` serves `/swagger/*` on a deployed API; `false` hides it locally. Unset: on only when `FRONTEND_ORIGIN` is unset or on localhost |
 | `OPS_API_KEY` | optional | Spec 021. The operation key for `GET /ops/error-logs[/summary]`; **without it those routes don't exist**. Long and random; never logged or returned |
 | `ERROR_LOGS_RETENTION_DAYS` | optional | Spec 021. How long an error is kept: 90 by default, never less than 7 |
 
 The reminder scheduler runs inside the API process: **reminders only go out while the API runs**, so production needs an always-on process (not a platform that sleeps when idle).
+
+**Prescription photos (spec 037).** `photoBase64` must decode to JPEG, PNG, GIF, WebP or HEIC/HEIF by its first bytes (`consultation.looksLikeImage`); anything else is a 400 `validation_error` on `photoBase64`. Tests that go through the handler send `testJPEG` (a bare JPEG signature), never `"x"`.
 
 ## Known vulnerabilities (specs/037)
 

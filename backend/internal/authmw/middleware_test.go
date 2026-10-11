@@ -262,3 +262,26 @@ func TestRequireAccess_MalformedIDFallsThroughAndNoSessionIs401(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, getThing(router, "/things/not-a-uuid", verifier.Token(t, "user_x")).Code)
 	require.Equal(t, http.StatusUnauthorized, getThing(router, "/no-session/"+uuid.NewString(), "").Code)
 }
+
+func TestPartyOptions(t *testing.T) {
+	require.Empty(t, authmw.PartyOptions(""))
+	require.Empty(t, authmw.PartyOptions(" , ,"))
+	require.Len(t, authmw.PartyOptions("https://dev.pedi-track.com, https://app.pedi-track.com"), 1)
+}
+
+func TestRequireSession_AuthorizedParty(t *testing.T) {
+	responder := newTestResponder()
+	verifier := authmwtest.NewVerifier(t, responder, authmw.PartyOptions("https://dev.pedi-track.com")...)
+	mux := http.NewServeMux()
+	mux.Handle("/protected", verifier.Middleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })))
+
+	call := func(token string) int {
+		req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		return rec.Code
+	}
+	require.Equal(t, http.StatusNoContent, call(verifier.TokenForParty(t, "user_1", "https://dev.pedi-track.com")))
+	require.Equal(t, http.StatusUnauthorized, call(verifier.TokenForParty(t, "user_1", "https://otra-app.example.com")))
+}

@@ -154,7 +154,7 @@ func TestHandler_CreateConsultation_RecordOnly(t *testing.T) {
 	rec := doPostPath(t, router, "/children/"+childID.String()+"/consultations", map[string]any{
 		"doctorName":  "Dra. López",
 		"consultDate": "2026-01-15",
-		"photoBase64": base64.StdEncoding.EncodeToString([]byte("x")),
+		"photoBase64": base64.StdEncoding.EncodeToString(testJPEG),
 		"recordOnly":  true,
 		"medications": []map[string]any{{"name": "Amoxicilina", "frequencyHours": 8, "durationDays": 7}},
 	})
@@ -188,7 +188,7 @@ func TestHandler_CreateConsultation_WithoutRecordOnlyIsFalse(t *testing.T) {
 	rec := doPostPath(t, router, "/children/"+childID.String()+"/consultations", map[string]any{
 		"doctorName":  "Dra. López",
 		"consultDate": "2026-01-15",
-		"photoBase64": base64.StdEncoding.EncodeToString([]byte("x")),
+		"photoBase64": base64.StdEncoding.EncodeToString(testJPEG),
 		"medications": []map[string]any{validMedicationPayload()},
 	})
 
