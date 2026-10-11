@@ -21,9 +21,10 @@ import (
 
 // RequireSession returns chi-compatible middleware that verifies a Clerk
 // session token from the Authorization header. A missing or invalid token
-// is rejected with 401 through responder, so it is captured in error_logs
-// like any other 4xx/5xx response (specs/002-registro-log-errores) instead
-// of clerkhttp's default empty-body response. Extra opts are appended after
+// is rejected with 401 through responder (a JSON body instead of
+// clerkhttp's default empty one). That 401 is deliberately NOT written to
+// error_logs (specs/037): anyone without a session can provoke it, and it
+// says nothing about the service. Extra opts are appended after
 // the failure handler below — production code passes none (verification
 // fetches Clerk's real JWKS over the network); tests pass
 // clerkhttp.JSONWebKey(...) to verify locally instead (see authmwtest).
@@ -35,7 +36,7 @@ import (
 // entirely. Checking the claims here too makes both cases behave the same.
 func RequireSession(responder *httpx.Responder, opts ...clerkhttp.AuthorizationOption) func(http.Handler) http.Handler {
 	unauthorized := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		responder.WriteJSONError(r.Context(), w, http.StatusUnauthorized, "unauthorized", "A valid session is required", nil)
+		responder.WriteJSONErrorUnlogged(w, http.StatusUnauthorized, "unauthorized", "A valid session is required")
 	})
 	allOpts := append([]clerkhttp.AuthorizationOption{
 		clerkhttp.AuthorizationFailureHandler(unauthorized),
@@ -83,7 +84,7 @@ func RequireOwner(responder *httpx.Responder, param string, check OwnerCheck) fu
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			clerkUserID, ok := ClerkUserIDFromContext(r.Context())
 			if !ok {
-				responder.WriteJSONError(r.Context(), w, http.StatusUnauthorized, "unauthorized", "A valid session is required", nil)
+				responder.WriteJSONErrorUnlogged(w, http.StatusUnauthorized, "unauthorized", "A valid session is required")
 				return
 			}
 			id, err := uuid.Parse(chi.URLParam(r, param))
@@ -119,7 +120,7 @@ func RequireAccess(responder *httpx.Responder, param string, min access.Level, c
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			clerkUserID, ok := ClerkUserIDFromContext(r.Context())
 			if !ok {
-				responder.WriteJSONError(r.Context(), w, http.StatusUnauthorized, "unauthorized", "A valid session is required", nil)
+				responder.WriteJSONErrorUnlogged(w, http.StatusUnauthorized, "unauthorized", "A valid session is required")
 				return
 			}
 			id, err := uuid.Parse(chi.URLParam(r, param))

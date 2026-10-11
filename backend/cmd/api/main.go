@@ -148,7 +148,10 @@ func main() {
 	// Swagger UI, generated from the @swag annotations on the handlers below
 	// (run `swag init` from backend/ after changing any of them — see
 	// backend/CLAUDE.md).
-	r.Get("/swagger/*", httpSwagger.WrapHandler)
+	// Only on a developer's machine, or when SWAGGER_ENABLED=true: a deployed API does not describe itself (specs/037).
+	if server.SwaggerEnabled(os.Getenv("SWAGGER_ENABLED"), os.Getenv("FRONTEND_ORIGIN")) {
+		r.Get("/swagger/*", httpSwagger.WrapHandler)
+	}
 
 	port := os.Getenv("PORT")
 	if port == "" {

@@ -233,3 +233,9 @@ desarrollo; es normal). En el teléfono sigue `PROBAR.md` (instalar, **Activar r
 - Respaldos de la base y claves VAPID de producción.
 - Desplegar desde `master` (merge `develop → master`), como pide la constitución.
 - Correo del dominio (`@pedi-track.com`): decidir proveedor antes de tocar los registros `MX` (ver `BACKLOG.md`).
+
+## Seguridad del despliegue (spec 037)
+
+- **Cabeceras del frontend**: `frontend/public/_headers` (Cloudflare Pages) fija el CSP, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, COOP y HSTS. El CSP nombra los únicos orígenes externos: Clerk (`*.clerk.accounts.dev`, `clerk.pedi-track.com`), el captcha de Cloudflare, jsDelivr (el OCR local baja de ahí su worker, su núcleo y el idioma), `*.pedi-track.com` y el dominio `up.railway.app` de la API. **Si se agrega otro servicio externo o otro dominio de API, hay que sumarlo ahí** o el navegador lo bloquea.
+- **Swagger**: el API desplegado ya no sirve `/swagger/*`. Para verlo en DEV, poner `SWAGGER_ENABLED=true` en Railway.
+- **Límite de peticiones**: el API no limita peticiones por IP. Pendiente en Cloudflare (regla de *Rate limiting* sobre `api-dev.pedi-track.com` y `api.pedi-track.com`, p. ej. 100 peticiones por minuto por IP, con más rigor para `POST /reminders/actions/taken` y `POST /family/invitations/preview`); ver `BACKLOG.md`.

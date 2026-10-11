@@ -78,11 +78,12 @@ Every handler constructor now takes a `*httpx.Responder` (built once in `cmd/api
 - The actual DB write happens in a detached background goroutine with its own timeout — a slow/down `error_logs` insert must never delay or break the HTTP response already sent (verified by `TestResponder_WriteJSONError_RecorderFailureDoesNotAffectResponse` and the latency test in `internal/httpx/json_test.go`).
 - The log NEVER stores the user's email — only `account_id` (nullable UUID). Don't add an email field to `errorlog.Entry`.
 - Reading it and purging it by age is spec 021 (`internal/ops`, `internal/retention`); no edit or export, and the weekly e-mail digest is still future work — see `BACKLOG.md`.
+- **Exception (specs/037): `Responder.WriteJSONErrorUnlogged`** writes the error but does not log it. Only for what anyone can provoke without a session or a valid token: the 401 of `authmw` and the 403 `invalid_action_token` of `POST /reminders/actions/taken` — a script could otherwise fill `error_logs` and bury the real errors. Everything else still goes through `WriteJSONError`/`WriteJSON`.
 - Background processes (no request) report through `internal/jobreport`, not `httpx` (specs/018).
 
 ## API docs (Swagger)
 
-Every handler (`account`, `catalog`, `consultation`, `reminder` — every route registered in `internal/server/router.go` has its `@Router`) carries `@Summary`/`@Param`/`@Success`/`@Failure`/`@Router` doc comments (swaggo/swag syntax) directly above the function. The Swagger UI is served at `http://localhost:8080/swagger/index.html` when the API is running (`go run ./cmd/api`) — use it to explore endpoints, payload/response shapes, and to try requests live against your local DB.
+Every handler (`account`, `catalog`, `consultation`, `reminder` — every route registered in `internal/server/router.go` has its `@Router`) carries `@Summary`/`@Param`/`@Success`/`@Failure`/`@Router` doc comments (swaggo/swag syntax) directly above the function. The Swagger UI is served at `http://localhost:8080/swagger/index.html` when the API is running on a developer's machine (a deployed API does not serve it unless `SWAGGER_ENABLED=true`, `server.SwaggerEnabled`, specs/037) (`go run ./cmd/api`) — use it to explore endpoints, payload/response shapes, and to try requests live against your local DB.
 
 **After changing any handler's request/response types or doc comments**, regenerate the docs:
 
@@ -100,10 +101,15 @@ CI fails the build if `internal/docs/` is stale relative to the annotations (it 
 | `CLERK_SECRET_KEY` | yes | The API refuses to start without it (spec 008) |
 | `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `REMINDER_ACTION_SECRET` | for reminders | Spec 011. Without all four the API runs and reminders are "unavailable". `VAPID_SUBJECT` is a contact e-mail (a leading `mailto:` is dropped). Generate the keys once (e.g. `npx web-push generate-vapid-keys`); CI makes throwaway ones with Node's `crypto` |
 
+| `SWAGGER_ENABLED` | optional | Spec 037. `true` serves `/swagger/*` on a deployed API; `false` hides it locally. Unset: on only when `FRONTEND_ORIGIN` is unset or on localhost |
 | `OPS_API_KEY` | optional | Spec 021. The operation key for `GET /ops/error-logs[/summary]`; **without it those routes don't exist**. Long and random; never logged or returned |
 | `ERROR_LOGS_RETENTION_DAYS` | optional | Spec 021. How long an error is kept: 90 by default, never less than 7 |
 
 The reminder scheduler runs inside the API process: **reminders only go out while the API runs**, so production needs an always-on process (not a platform that sleeps when idle).
+
+## Known vulnerabilities (specs/037)
+
+CI runs `govulncheck` (blocking: only vulnerabilities in code the API calls). Locally: `go install golang.org/x/vuln/cmd/govulncheck@latest && govulncheck ./...` from `backend/`. Most findings are fixed by raising `go` in `go.mod` (standard library) or `go get <module>@<fixed version> && go mod tidy`; the Dockerfile's `golang:1.27-alpine` follows the latest patch.
 
 ## Running tests
 
