@@ -47,6 +47,10 @@ type Deps struct {
 	// Access answers "what can the session do with this child, consultation or family?" (specs/032-compartir-con-familia).
 	Access         *access.Repository
 	FrontendOrigin string
+	// RateLimit limits every route per client address; StrictRateLimit adds a tighter limit to the ones anyone can reach
+	// or that guess a secret (the "Tomada" button, the invitation preview, accept and decline). Nil = no limit (tests).
+	RateLimit       func(http.Handler) http.Handler
+	StrictRateLimit func(http.Handler) http.Handler
 	// RequireSession verifies the Clerk session (authmw.RequireSession in
 	// production; tests inject one that verifies against a local key).
 	RequireSession func(http.Handler) http.Handler
@@ -67,6 +71,14 @@ func NewRouter(d Deps) *chi.Mux {
 		MaxAge:           300,
 	}))
 
+	if d.RateLimit != nil {
+		r.Use(d.RateLimit)
+	}
+	strict := func(next http.Handler) http.Handler { return next }
+	if d.StrictRateLimit != nil {
+		strict = d.StrictRateLimit
+	}
+
 	r.Get("/catalog/countries", d.Catalog.ListCountries)
 	r.Get("/catalog/countries/{countryCode}/states", d.Catalog.ListStates)
 	r.Get("/catalog/symptoms", d.Catalog.ListSymptoms)
@@ -81,7 +93,7 @@ func NewRouter(d Deps) *chi.Mux {
 
 	// The "Tomada" button of a reminder, sent by the service worker, which has no session: the
 	// signed action token is the only thing it accepts, and it names a single dose (specs/011).
-	r.Post("/reminders/actions/taken", d.Reminder.MarkTaken)
+	r.With(strict).Post("/reminders/actions/taken", d.Reminder.MarkTaken)
 
 	// The person's own account: their notice, reminder settings and devices stay theirs, never a family's.
 	ownsAccount := authmw.RequireOwner(d.Responder, "accountId", d.Ownership.OwnsAccount)
@@ -117,9 +129,9 @@ func NewRouter(d Deps) *chi.Mux {
 		// e-mail can accept) are enforced by the service from the session itself.
 		r.Get("/family", d.Family.GetFamily)
 		r.Post("/family/invitations", d.Family.CreateInvitation)
-		r.Post("/family/invitations/preview", d.Family.PreviewInvitation)
-		r.Post("/family/invitations/accept", d.Family.AcceptInvitation)
-		r.Post("/family/invitations/decline", d.Family.DeclineInvitation)
+		r.With(strict).Post("/family/invitations/preview", d.Family.PreviewInvitation)
+		r.With(strict).Post("/family/invitations/accept", d.Family.AcceptInvitation)
+		r.With(strict).Post("/family/invitations/decline", d.Family.DeclineInvitation)
 		r.Post("/family/invitations/{invitationId}/resend", d.Family.ResendInvitation)
 		r.Post("/family/invitations/{invitationId}/cancel", d.Family.CancelInvitation)
 		r.Post("/family/members/{memberId}/remove", d.Family.RemoveMember)

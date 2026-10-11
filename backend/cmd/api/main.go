@@ -17,6 +17,8 @@
 package main
 
 import (
+	"strconv"
+	"strings"
 	"context"
 	"log"
 	"net/http"
@@ -42,6 +44,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/ops"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
 	"github.com/Ulisesgtz/medic-track/backend/internal/platform"
+	"github.com/Ulisesgtz/medic-track/backend/internal/ratelimit"
 	"github.com/Ulisesgtz/medic-track/backend/internal/reminder"
 	"github.com/Ulisesgtz/medic-track/backend/internal/retention"
 	"github.com/Ulisesgtz/medic-track/backend/internal/server"
@@ -128,7 +131,21 @@ func main() {
 		frontendOrigin = "http://localhost:5173"
 	}
 
+	// Requests per minute per client address (specs/037). RATE_LIMIT_PER_MINUTE=0 turns the limit off. TRUSTED_PROXY_HOPS is
+	// how many proxies stand in front of the API (Railway = 1; with Cloudflare in front of Railway = 2).
+	rateLimit, strictLimit := envInt("RATE_LIMIT_PER_MINUTE", 240), envInt("RATE_LIMIT_STRICT_PER_MINUTE", 20)
+	proxyHops := envInt("TRUSTED_PROXY_HOPS", 1)
+	var generalMW, strictMW func(http.Handler) http.Handler
+	if rateLimit > 0 {
+		generalMW = ratelimit.Middleware(ratelimit.New(rateLimit, time.Minute), responder, proxyHops)
+	}
+	if strictLimit > 0 {
+		strictMW = ratelimit.Middleware(ratelimit.New(strictLimit, time.Minute), responder, proxyHops)
+	}
+
 	r := server.NewRouter(server.Deps{
+		RateLimit:       generalMW,
+		StrictRateLimit: strictMW,
 		Responder:      responder,
 		Catalog:        catalogHandler,
 		Account:        accountHandler,
@@ -179,4 +196,12 @@ func main() {
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("server error: %v", err)
 	}
+}
+
+// envInt reads an integer environment variable; unset or invalid gives def.
+func envInt(name string, def int) int {
+	if v, err := strconv.Atoi(strings.TrimSpace(os.Getenv(name))); err == nil && v >= 0 {
+		return v
+	}
+	return def
 }
