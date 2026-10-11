@@ -158,7 +158,16 @@ func main() {
 		port = "8080"
 	}
 
-	srv := &http.Server{Addr: ":" + port, Handler: r, ReadHeaderTimeout: 10 * time.Second}
+	// The timeouts keep a slow or idle connection from holding the server (the largest body is the 11 MiB consultation with
+	// its photo: two minutes are enough even on a poor mobile connection).
+	srv := &http.Server{
+		Addr:              ":" + port,
+		Handler:           r,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       2 * time.Minute,
+		WriteTimeout:      2 * time.Minute,
+		IdleTimeout:       2 * time.Minute,
+	}
 	go func() {
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
