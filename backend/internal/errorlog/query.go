@@ -24,10 +24,13 @@ type Filter struct {
 	Since, Until   time.Time
 	Endpoint       string // exact
 	EndpointPrefix string // e.g. "job:"
-	Status         *int
-	AccountID      *uuid.UUID
-	Limit          int     // List only
-	After          *Cursor // List only
+	// ExcludeEndpointPrefix leaves out the entries whose endpoint starts with it (specs/039: the digest separates the
+	// requests from the background processes, "job:").
+	ExcludeEndpointPrefix string
+	Status                *int
+	AccountID             *uuid.UUID
+	Limit                 int     // List only
+	After                 *Cursor // List only
 }
 
 // SummaryRow is one group of the summary: the same error (endpoint, status and message) and how often it happened.
@@ -67,6 +70,9 @@ func (f Filter) where() (string, []any) {
 	}
 	if f.EndpointPrefix != "" {
 		add(`endpoint LIKE $%d ESCAPE '\'`, escapeLike(f.EndpointPrefix)+"%")
+	}
+	if f.ExcludeEndpointPrefix != "" {
+		add(`endpoint NOT LIKE $%d ESCAPE '\'`, escapeLike(f.ExcludeEndpointPrefix)+"%")
 	}
 	if f.Status != nil {
 		add("http_status = $%d", *f.Status)
@@ -159,4 +165,38 @@ func (r *Repository) DeleteOlderThan(ctx context.Context, cutoff time.Time, batc
 		return 0, fmt.Errorf("deleting old error log entries: %w", err)
 	}
 	return int(tag.RowsAffected()), nil
+}
+
+// Stats counts what a filter selects (specs/039-digest-semanal-errores): how many entries, in how many groups (the same
+// groups Summary makes: endpoint, status and message) and from how many distinct accounts. The digest shows the count of
+// accounts, never which ones, so the identifiers never leave the database.
+type Stats struct {
+	Entries  int
+	Groups   int
+	Accounts int
+}
+
+// Stats counts the entries, groups and distinct accounts of a period. An entry with no account is not counted as one.
+func (r *Repository) Stats(ctx context.Context, f Filter) (Stats, error) {
+	where, args := f.where()
+	var s Stats
+	err := r.pool.QueryRow(ctx, `
+		SELECT count(*), count(DISTINCT account_id),
+		       (SELECT count(*) FROM (SELECT 1 FROM error_logs`+where+` GROUP BY endpoint, http_status, message) g)
+		FROM error_logs`+where, args...).Scan(&s.Entries, &s.Accounts, &s.Groups)
+	if err != nil {
+		return Stats{}, fmt.Errorf("counting error log entries: %w", err)
+	}
+	return s, nil
+}
+
+// OldestEntry is when the oldest entry the filter selects was written, or nil if it selects none. The digest uses it (with
+// no filter) to tell a quiet week from a service too young to have one.
+func (r *Repository) OldestEntry(ctx context.Context, f Filter) (*time.Time, error) {
+	where, args := f.where()
+	var oldest *time.Time
+	if err := r.pool.QueryRow(ctx, `SELECT min(created_at) FROM error_logs`+where, args...).Scan(&oldest); err != nil {
+		return nil, fmt.Errorf("finding the oldest error log entry: %w", err)
+	}
+	return oldest, nil
 }
