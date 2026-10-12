@@ -1,17 +1,43 @@
+import { existsSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { defineConfig, devices } from '@playwright/test'
 import { loadLocalEnv } from './e2e/clerkApi'
 
 // The workers and the dev server inherit these: the keys of the Clerk *development* instance.
 loadLocalEnv()
 
+// Chromium runs every spec; Firefox and WebKit run only the ones where the browser engine can make a difference — signing in and
+// out, the account, the consultation forms and detail (dates, files, layout at 390 and 1280 px), the family's two-person flows and
+// the reminders' service worker. The other ~20 specs test the app's own logic and layout rules, which behave the same in the
+// three engines; running them three times took the suite from ~13 to ~22 minutes (816 tests). The whole matrix still runs on
+// `master` (the release) and when asked: `E2E_ALL_BROWSERS=1 npx playwright test`.
+const CROSS_BROWSER_SPECS = [
+  'autenticacion',
+  'account-signup',
+  'familia',
+  'nueva-consulta-movil',
+  'nueva-consulta-web',
+  'detalle-consulta-movil',
+  'detalle-consulta-web',
+  'recordatorios',
+]
+for (const name of CROSS_BROWSER_SPECS) {
+  // A renamed spec must not silently drop out of the cross-browser run.
+  if (!existsSync(fileURLToPath(new URL(`./e2e/${name}.spec.ts`, import.meta.url)))) throw new Error(`playwright.config.ts: e2e/${name}.spec.ts does not exist`)
+}
+const everyBrowserEverything =
+  process.env.E2E_ALL_BROWSERS === '1' || process.env.GITHUB_BASE_REF === 'master' || process.env.GITHUB_REF_NAME === 'master'
+const crossBrowserOnly = everyBrowserEverything ? undefined : new RegExp(`/(${CROSS_BROWSER_SPECS.join('|')})\\.spec\\.ts$`)
+
 export default defineConfig({
   testDir: './e2e',
   globalSetup: './e2e/global.setup.ts',
   fullyParallel: true,
   // CI used to run with Playwright's default (half the cores: one worker on a 2-core runner), so ~535 tests went one after
-  // the other (~40 min). The tests mostly wait on Clerk and the pages, not on the CPU, so a few workers fit; Clerk's own
-  // rate limit is absorbed by retryWhileRateLimited (e2e/clerkApi.ts). `E2E_WORKERS` overrides it.
-  workers: process.env.CI ? Number(process.env.E2E_WORKERS) || 3 : undefined,
+  // the other (~40 min). The tests mostly wait on Clerk and the pages, not on the CPU, so a few workers fit; the repository is
+  // public, so the runner has 4 cores (3 workers then 4: one browser each, and the API and the preview server are light). Clerk's
+  // own rate limit is absorbed by retryWhileRateLimited (e2e/clerkApi.ts). `E2E_WORKERS` overrides it.
+  workers: process.env.CI ? Number(process.env.E2E_WORKERS) || 4 : undefined,
   // Every flow goes through Clerk's real servers, and CI's shared runners are slower than a laptop.
   expect: { timeout: process.env.CI ? 15_000 : 5_000 },
   // Room for the waits of retryWhileRateLimited (e2e/clerkApi.ts) when Clerk rate limits the instance.
@@ -39,7 +65,7 @@ export default defineConfig({
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    { name: 'firefox', use: { ...devices['Desktop Firefox'] }, testMatch: crossBrowserOnly },
+    { name: 'webkit', use: { ...devices['Desktop Safari'] }, testMatch: crossBrowserOnly },
   ],
 })

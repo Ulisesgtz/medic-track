@@ -216,7 +216,7 @@ jobs:
         # or Playwright refuses to bind :5173 ("already used") since
         # reuseExistingServer is false in CI (process.env.CI is set). The build
         # reads VITE_CLERK_PUBLISHABLE_KEY from the env below. Several workers
-        # (E2E_WORKERS, 3 by default) share the run.
+        # (E2E_WORKERS, 4 by default) share the run.
         run: npx playwright test
         env:
           # Tells the suite the API was started with MAIL_DRIVER=discard (specs/040).
