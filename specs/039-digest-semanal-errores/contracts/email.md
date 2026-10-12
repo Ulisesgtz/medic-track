@@ -32,7 +32,7 @@ RESUMEN
 - Peticiones: 33
 - Procesos en segundo plano: 5
 
-PETICIONES (10 grupos más frecuentes)
+PETICIONES (los 10 grupos más frecuentes)
  1. 14 × 404  /accounts/me — Account not found
     primera: lun 5 oct 09:12 · última: dom 11 oct 22:40
  2. 9 × 500  /children/{childId}/consultations — Could not create consultation
@@ -57,7 +57,7 @@ Lo que se ve aquí son los mensajes fijos de error y su conteo; el detalle está
 4. **Hora**: de Ciudad de México, `lun 5 oct 09:12`.
 5. **Semana sin errores**: el bloque RESUMEN dice `- Total: 0 errores` y debajo, en lugar de las secciones, **«No hubo errores esta semana.»**
 6. **Sin comparación**: la línea de semana anterior dice `- Semana anterior: sin comparación (no hay datos suficientes)`.
-7. **Diez grupos por sección** como máximo; si hay más: `y N grupos más que no caben aquí.`
+7. **Diez grupos por sección** como máximo; si hay más, el título dice `(los 10 grupos más frecuentes)` y al final `y N grupos más que no caben aquí.` (sin el paréntesis cuando caben todos)
 8. **Pie** fijo (las dos líneas finales), siempre presente.
 
 ## Lo que el correo NUNCA lleva (verificado por pruebas, SC-004)

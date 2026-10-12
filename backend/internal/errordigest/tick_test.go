@@ -266,3 +266,25 @@ func TestRunEvery_TicksUntilTheContextIsDone(t *testing.T) {
 		t.Fatal("RunEvery did not stop with its context")
 	}
 }
+
+func TestRun_StopsAsSoonAsItsContextIsDone(t *testing.T) {
+	cfg := testConfig
+	cfg.Weekday, cfg.Hour = 1, 0 // due at any moment of the week
+	counting := &countingClaimer{Claimer: doneClaimer{}}
+	svc := NewService(newFake(), &fakeSender{}, counting, cfg, 90)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // already cancelled: Run ticks once and returns instead of waiting a minute
+
+	finished := make(chan struct{})
+	go func() {
+		svc.Run(ctx)
+		close(finished)
+	}()
+
+	select {
+	case <-finished:
+	case <-time.After(3 * time.Second):
+		t.Fatal("Run did not stop with its context")
+	}
+	require.Equal(t, 1, counting.claims, "it checked once before stopping")
+}
