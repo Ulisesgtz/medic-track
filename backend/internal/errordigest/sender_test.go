@@ -72,7 +72,7 @@ func TestResendSender_ClassifiesTheAnswers(t *testing.T) {
 		retryable bool
 		ok        bool
 	}{
-		{200, false, true}, {202, false, true},
+		{200, false, true}, {202, false, true}, {409, false, true},
 		{408, true, false}, {429, true, false}, {500, true, false}, {503, true, false},
 		{400, false, false}, {401, false, false}, {403, false, false}, {422, false, false},
 		{302, false, false},

@@ -12,7 +12,7 @@ Una fila por semana en que el servicio intentó mandar el digest. Es lo único q
 | `status` | `TEXT NOT NULL` | `CHECK (status IN ('sending', 'sent', 'failed'))` |
 | `claimed_at` | `TIMESTAMPTZ NOT NULL` | cuándo se reclamó por última vez |
 | `lease_until` | `TIMESTAMPTZ NOT NULL` | hasta cuándo el reclamo es de quien lo tomó (30 min); vencido y `sending` ⇒ otro puede retomarlo |
-| `attempts` | `INTEGER NOT NULL DEFAULT 1` | `CHECK (attempts >= 1)`; cuántas veces se reclamó la semana |
+| `attempts` | `INTEGER NOT NULL DEFAULT 1` | `CHECK (attempts >= 1)`; cuántas veces se **reclamó** la semana (no cuántos envíos: un reclamo que se libera por una falla de la base también suma); sirve para depurar |
 | `sent_at` | `TIMESTAMPTZ` | solo con `status = 'sent'` |
 | `failed_at` | `TIMESTAMPTZ` | solo con `status = 'failed'` |
 

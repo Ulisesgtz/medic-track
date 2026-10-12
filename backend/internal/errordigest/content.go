@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
+	"github.com/Ulisesgtz/medic-track/backend/internal/jobreport"
 )
 
 const (
@@ -15,8 +16,6 @@ const (
 	// comparisonRetentionDays: the comparison with the previous week needs 14 days of data, so it only makes sense when the
 	// retention keeps at least that much (specs/021; 90 by default, never less than 7).
 	comparisonRetentionDays = 14
-	// jobPrefix is the endpoint prefix of the background processes (specs/018).
-	jobPrefix = "job:"
 )
 
 // Source is what the digest reads from error_logs (satisfied by *errorlog.Repository).
@@ -68,9 +67,9 @@ func Build(ctx context.Context, src Source, now time.Time, retentionDays int) (D
 	since, until, previousSince := Window(now)
 	week := errorlog.Filter{Since: since, Until: until}
 	requests := week
-	requests.ExcludeEndpointPrefix = jobPrefix
+	requests.ExcludeEndpointPrefix = jobreport.EndpointPrefix
 	jobs := week
-	jobs.EndpointPrefix = jobPrefix
+	jobs.EndpointPrefix = jobreport.EndpointPrefix
 	// The previous week ends where this one begins; the upper bound of a filter is inclusive, so step back one microsecond
 	// (the resolution of the database) to not count an entry that sits exactly on the boundary twice.
 	previous := errorlog.Filter{Since: previousSince, Until: since.Add(-time.Microsecond)}

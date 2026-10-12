@@ -129,7 +129,7 @@ description: "Lista de tareas de la spec 039: digest semanal de errores por corr
 - [X] T033 [P] `BACKLOG.md`: marcar el «Digest semanal de errores por correo» como **hecho en `specs/039-digest-semanal-errores/`**; agregar el pendiente «Invitaciones a la familia por correo» (spec 032) que **reutiliza el adaptador `errordigest.ResendSender` o lo extrae a un paquete común** y la misma `RESEND_API_KEY`
 - [X] T034 Verificación completa: `cd backend && go vet ./... && go test ./internal/... -coverprofile=/tmp/c.out && go tool cover -func=/tmp/c.out | grep total` (>90 % total y alta en `errordigest` y lo nuevo de `errorlog`); `go run github.com/swaggo/swag/cmd/swag init -g cmd/api/main.go -o internal/docs --pd` **sin cambios** en `internal/docs` (no hay rutas nuevas); `govulncheck ./...` con 0 alcanzables; `gofmt -l` sobre los archivos nuevos
 - [ ] T035 Prueba real local según `quickstart.md` §2–§4 (un correo, reinicio y dos copias sin duplicados, sin clave, clave inválida): **requiere T038 y T039** (la clave y el dominio de Resend); mientras tanto las pruebas automáticas ya cubren cada escenario con un envío falso
-- [ ] T036 Revisión de código (`/code-review`) del diff completo y corregir lo que salga
+- [X] T036 Revisión de código (`/code-review`) del diff completo y corregir lo que salga
 - [ ] T037 Abrir el PR a `develop` con el resumen, los pendientes del dueño (abajo) y la nota de la migración `0024`; esperar el CI en verde (**no** hacer polling; el app avisa) y fusionar solo si el usuario lo pide
 
 ### Tareas del dueño del producto (no son código; no bloquean la implementación)

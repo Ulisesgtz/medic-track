@@ -32,11 +32,22 @@ func cleanMessage(s string) string {
 	s = strings.Join(strings.Fields(s), " ")
 	s = emailPattern.ReplaceAllString(s, "[correo]")
 	s = uuidPattern.ReplaceAllString(s, "[id]")
-	s = tokenPattern.ReplaceAllString(s, "[token]")
+	s = redactTokens(s)
 
 	runes := []rune(s)
 	if len(runes) > maxMessageRunes {
 		return string(runes[:maxMessageRunes-1]) + "…"
 	}
 	return s
+}
+
+// redactTokens replaces the long runs that look like a token. A real one (a bearer token, a key, a hash) always has digits among
+// its letters; a long run of letters only is a word, and the operator needs to read it.
+func redactTokens(s string) string {
+	return tokenPattern.ReplaceAllStringFunc(s, func(run string) string {
+		if strings.ContainsAny(run, "0123456789") {
+			return "[token]"
+		}
+		return run
+	})
 }

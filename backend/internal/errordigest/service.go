@@ -252,9 +252,16 @@ func (s *Service) Run(ctx context.Context) { s.RunEvery(ctx, Interval) }
 func (s *Service) RunEvery(ctx context.Context, interval time.Duration) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+	failing := false // a streak of failures is said once in the console; error_logs already groups them (specs/018)
 	for {
-		if err := s.Tick(ctx, time.Now()); err != nil && ctx.Err() == nil {
-			log.Printf("errordigest: the weekly digest could not be sent this time")
+		switch err := s.Tick(ctx, time.Now()); {
+		case err != nil && ctx.Err() == nil:
+			if !failing {
+				log.Printf("errordigest: the weekly digest could not be sent; it keeps trying every %s and reports to error_logs", interval)
+			}
+			failing = true
+		case err == nil:
+			failing = false
 		}
 		select {
 		case <-ctx.Done():

@@ -1,8 +1,12 @@
 package errordigest
 
 import (
+	"bytes"
 	"context"
+	"log"
 	"math/rand/v2"
+	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -287,4 +291,19 @@ func TestRun_StopsAsSoonAsItsContextIsDone(t *testing.T) {
 		t.Fatal("Run did not stop with its context")
 	}
 	require.Equal(t, 1, counting.claims, "it checked once before stopping")
+}
+
+func TestRunEvery_SaysAStreakOfFailuresOnceInTheConsole(t *testing.T) {
+	var out bytes.Buffer
+	log.SetOutput(&out)
+	t.Cleanup(func() { log.SetOutput(os.Stderr) })
+	cfg := testConfig
+	cfg.Weekday, cfg.Hour = 1, 0                                           // due at any moment of the week
+	svc := NewService(newFake(), &fakeSender{}, failingClaimer{}, cfg, 90) // every tick fails to claim
+	ctx, cancel := context.WithTimeout(context.Background(), 250*time.Millisecond)
+	defer cancel()
+
+	svc.RunEvery(ctx, 10*time.Millisecond) // about twenty ticks, every one failing
+
+	require.Equal(t, 1, strings.Count(out.String(), "the weekly digest could not be sent"), out.String())
 }

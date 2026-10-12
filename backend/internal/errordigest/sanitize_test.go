@@ -55,3 +55,10 @@ func TestCleanMessage_ReplacesEmailsUUIDsAndTokensBeforeCutting(t *testing.T) {
 	require.NotContains(t, got, "@")
 	require.NotContains(t, got, "someone")
 }
+
+func TestCleanMessage_ATokenHasDigitsALongWordDoesNot(t *testing.T) {
+	word := "internationalizationlocalizationconfiguration" // 45 letters, no digits: a word, not a secret
+	require.Equal(t, "failed to load "+word, cleanMessage("failed to load "+word))
+	// 32 hexadecimal characters (a hash without dashes) do have digits.
+	require.Equal(t, "hash [token]", cleanMessage("hash 9f86d081884c7d659a2feaa0c55ad015"))
+}

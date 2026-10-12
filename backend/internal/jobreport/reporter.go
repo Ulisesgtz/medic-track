@@ -21,6 +21,10 @@ type Recorder interface {
 	Create(ctx context.Context, e *errorlog.Entry) error
 }
 
+// EndpointPrefix starts the endpoint of every row a background process writes: "job:<name>". The digest (specs/039) uses it to
+// tell those rows from the requests' ones.
+const EndpointPrefix = "job:"
+
 // GroupWindow: the same kind of failure is written at most once in this time — a ticker that fails every 30 s must not
 // fill the table. The next row says how many times it was left out.
 const GroupWindow = 15 * time.Minute
@@ -51,7 +55,7 @@ type Reporter struct {
 func New(recorder Recorder, job string) *Reporter {
 	return &Reporter{
 		recorder: recorder,
-		endpoint: "job:" + job,
+		endpoint: EndpointPrefix + job,
 		now:      time.Now,
 		spawn:    func(f func()) { go f() },
 		kinds:    map[string]*kindState{},

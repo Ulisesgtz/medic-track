@@ -77,7 +77,7 @@ func NewResendSender(apiKey string, client *http.Client, baseURL string) *Resend
 	return &ResendSender{apiKey: apiKey, baseURL: baseURL, client: client}
 }
 
-// Send posts the e-mail. A 2xx is success; a network error, a timeout, 408, 429 and any 5xx are retryable; any other answer is
+// Send posts the e-mail. A 2xx is success, and so is a 409 (the idempotency key was already used: see below); a network error, a timeout, 408, 429 and any 5xx are retryable; any other answer is
 // not (an invalid key, an unverified domain or a rejected address won't get better by asking again).
 func (s *ResendSender) Send(ctx context.Context, m Message) error {
 	payload, err := json.Marshal(map[string]any{
@@ -113,6 +113,11 @@ func (s *ResendSender) Send(ctx context.Context, m Message) error {
 
 	switch {
 	case resp.StatusCode >= 200 && resp.StatusCode < 300:
+		return nil
+	case resp.StatusCode == http.StatusConflict:
+		// Resend answers 409 when the idempotency key was already used: either that request is still being processed or it was
+		// accepted earlier with a different body (a retaken week is rebuilt a few minutes later, so its text differs). In both
+		// cases the e-mail of this week is already out or on its way, so this is not a failure and must not mark the week 'failed'.
 		return nil
 	case resp.StatusCode == http.StatusRequestTimeout || resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500:
 		return &SendError{Retryable: true, Status: resp.StatusCode}
