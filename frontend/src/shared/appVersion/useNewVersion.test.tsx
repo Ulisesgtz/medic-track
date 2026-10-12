@@ -59,6 +59,9 @@ describe('useNewVersion (specs/017)', () => {
     answer({ version: 'otra' })
     render(<Probe />)
     expect(await screen.findByText('nueva')).toBeInTheDocument()
+    // The old listener is removed in React's cleanup, which runs just after the new render: let it finish (on a slow machine
+    // the event below could otherwise still reach the old listener and ask once more).
+    await act(async () => {})
 
     const calls = vi.mocked(fetch).mock.calls.length
     act(() => {
