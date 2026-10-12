@@ -409,7 +409,6 @@ func TestFailuresNeverCarryTheAddressTheLinkOrTheKey(t *testing.T) {
 		require.NotContains(t, line, "SECRETTOKEN")
 		require.False(t, strings.Contains(line, "http"))
 	}
-	require.Eventually(t, func() bool { return len(r.log.all()) >= 0 }, time.Second, time.Millisecond)
 	for _, entry := range r.log.all() {
 		text := fmt.Sprintf("%+v", entry)
 		require.NotContains(t, text, secret)
@@ -419,4 +418,36 @@ func TestFailuresNeverCarryTheAddressTheLinkOrTheKey(t *testing.T) {
 	require.NoError(t, r.pool.QueryRow(context.Background(), `SELECT row_to_json(i)::text FROM family_invitations i WHERE id = $1`, job.InvitationID).Scan(&stored))
 	require.NotContains(t, stored, "SECRETTOKEN")
 	require.NotContains(t, stored, secret)
+}
+
+// panicProvider panics on its first send.
+type panicProvider struct{ fakeProvider }
+
+func (p *panicProvider) Send(ctx context.Context, m mailer.Message) error {
+	p.mu.Lock()
+	first := p.calls == 0
+	p.calls++
+	p.mu.Unlock()
+	if first {
+		panic("provider client exploded")
+	}
+	return nil
+}
+
+func TestAWorkerSurvivesAPanicInASendAndClosesThatEmailAsFailed(t *testing.T) {
+	r := newDispatchRig(t)
+	p := &panicProvider{}
+	d := family.NewEmailDispatcher(r.repo, p, r.quota, r.reports)
+	d.Fast(time.Hour)
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() { d.Start(ctx); close(done) }()
+	boom, fine := r.job(t), r.job(t)
+	require.True(t, d.Enqueue(boom))
+	require.Eventually(t, func() bool { return r.state(t, boom) == "failed" }, 5*time.Second, 10*time.Millisecond)
+	require.True(t, d.Enqueue(fine))
+	require.Eventually(t, func() bool { return r.state(t, fine) == "sent" }, 5*time.Second, 10*time.Millisecond)
+	cancel()
+	<-done
+	require.Contains(t, r.reports.all(), "send: invitation e-mail failed: could not send")
 }

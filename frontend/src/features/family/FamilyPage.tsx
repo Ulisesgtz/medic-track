@@ -13,6 +13,7 @@ import { ConfirmDialog } from './ConfirmDialog'
 import { FamilyCounter } from './FamilyCounter'
 import { InvitationsList } from './InvitationsList'
 import { InviteForm } from './InviteForm'
+import { liveEmailStatus } from './emailStatus'
 import { InviteLink } from './InviteLink'
 import { MembersList } from './MembersList'
 import { namesText, ROLE_LABEL } from './roles'
@@ -183,7 +184,7 @@ export function FamilyPage() {
         {link && (
           <InviteLink
             invitation={link}
-            emailStatus={d.invitations.find((i) => i.id === link.id)?.emailStatus}
+            emailStatus={liveEmailStatus(d.invitations, link)}
             onDone={() => setLink(null)}
             variant={variant}
           />

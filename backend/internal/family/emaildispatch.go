@@ -113,7 +113,7 @@ func (d *EmailDispatcher) Start(ctx context.Context) {
 				case <-ctx.Done():
 					return
 				case job := <-d.queue:
-					d.deliver(ctx, job)
+					d.deliverSafely(ctx, job)
 				}
 			}
 		}()
@@ -174,6 +174,19 @@ func (g *obsoleteGuard) Send(ctx context.Context, m mailer.Message) error {
 		return &mailer.SendError{Retryable: false}
 	}
 	return g.d.sender.Send(ctx, m)
+}
+
+// deliverSafely is deliver for a worker: whatever goes wrong inside one send (a panic of the provider's client, say) must not take
+// the API down with it; that e-mail is closed as failed and the worker goes on.
+func (d *EmailDispatcher) deliverSafely(ctx context.Context, job EmailJob) {
+	defer func() {
+		if recover() != nil {
+			log.Print("family: an invitation e-mail send panicked")
+			d.setStatus(ctx, job, EmailFailed)
+			d.report(mailer.FailureSend, sendFailureMessage)
+		}
+	}()
+	d.deliver(ctx, job)
 }
 
 // deliver sends one job: reserve a place of the day, send with bounded tries, and record how it ended — only on the invitation

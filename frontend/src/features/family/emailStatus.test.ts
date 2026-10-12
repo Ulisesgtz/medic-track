@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { anySending, emailLine, emailShort } from './emailStatus'
+import { anySending, emailLine, emailShort, liveEmailStatus } from './emailStatus'
+import type { CreatedInvitation, FamilyInvitation } from './types'
 
 describe('emailStatus', () => {
   it('words each state for the card without blaming anybody', () => {
@@ -26,5 +27,19 @@ describe('emailStatus', () => {
     expect(anySending([])).toBe(false)
     expect(anySending([{ emailStatus: 'sent' }, { emailStatus: 'failed' }, {}])).toBe(false)
     expect(anySending([{ emailStatus: 'sent' }, { emailStatus: 'sending' }])).toBe(true)
+  })
+
+  it('takes the list state only when it is not older than the answer of this send', () => {
+    const created = { id: 'i1', emailStatus: 'sending', emailStatusAt: '2026-10-12T14:00:10Z' } as CreatedInvitation
+    const row = (emailStatus: FamilyInvitation['emailStatus'], emailStatusAt: string | null) => [{ id: 'i1', emailStatus, emailStatusAt }] as FamilyInvitation[]
+    // the cached list still has the previous send («enviada» from a minute ago): not this send's
+    expect(liveEmailStatus(row('sent', '2026-10-12T14:00:00Z'), created)).toBeUndefined()
+    expect(liveEmailStatus(row('sending', '2026-10-12T14:00:10Z'), created)).toBe('sending')
+    expect(liveEmailStatus(row('sent', '2026-10-12T14:00:12Z'), created)).toBe('sent')
+    // the same instant written in another offset
+    expect(liveEmailStatus(row('sent', '2026-10-12T08:00:12-06:00'), created)).toBe('sent')
+    expect(liveEmailStatus([], created)).toBeUndefined()
+    expect(liveEmailStatus(row('none', null), created)).toBeUndefined()
+    expect(liveEmailStatus(row('sent', '2026-10-12T14:00:12Z'), { ...created, emailStatusAt: null })).toBeUndefined()
   })
 })
