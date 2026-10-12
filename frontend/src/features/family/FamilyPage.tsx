@@ -180,7 +180,14 @@ export function FamilyPage() {
     return (
       <>
         {actionError && <Notice tone="error">{actionError}</Notice>}
-        {link && <InviteLink invitation={link} onDone={() => setLink(null)} variant={variant} />}
+        {link && (
+          <InviteLink
+            invitation={link}
+            emailStatus={d.invitations.find((i) => i.id === link.id)?.emailStatus}
+            onDone={() => setLink(null)}
+            variant={variant}
+          />
+        )}
         {!link && canInvite && (
           <InviteForm
             onInvite={onInvite}

@@ -86,7 +86,7 @@ describe('FamilyPage', () => {
   it('says the places include pending invitations when some are waiting', async () => {
     stubApi(() =>
       family({
-        invitations: [{ id: 'i1', email: 'p@x.com', role: 'caregiver', status: 'pending', expiresAt: '2026-10-13T10:00:00Z', childId: null }],
+        invitations: [{ id: 'i1', email: 'p@x.com', role: 'caregiver', status: 'pending', expiresAt: '2026-10-13T10:00:00Z', childId: null, emailStatus: 'none', emailStatusAt: null }],
         capacity: { max: 4, used: 2 },
       }),
     )
@@ -228,8 +228,8 @@ describe('FamilyPage', () => {
   describe('invitations waiting', () => {
     const pending = family({
       invitations: [
-        { id: 'i1', email: 'p@x.com', role: 'caregiver', status: 'pending', expiresAt: '2026-10-13T10:00:00Z', childId: null },
-        { id: 'i2', email: 'old@x.com', role: 'tutor', status: 'expired', expiresAt: '2026-09-01T10:00:00Z', childId: null },
+        { id: 'i1', email: 'p@x.com', role: 'caregiver', status: 'pending', expiresAt: '2026-10-13T10:00:00Z', childId: null, emailStatus: 'none', emailStatusAt: null },
+        { id: 'i2', email: 'old@x.com', role: 'tutor', status: 'expired', expiresAt: '2026-09-01T10:00:00Z', childId: null, emailStatus: 'none', emailStatusAt: null },
       ],
       capacity: { max: 4, used: 2 },
     })
@@ -425,5 +425,91 @@ describe('FamilyPage', () => {
       await user.keyboard('{Escape}')
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
+  })
+})
+
+// specs/040: the e-mail of an invitation, on the card and in the list.
+describe('the e-mail of an invitation', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  const created = (emailStatus: string) => ({
+    status: 201,
+    body: { id: 'i1', email: 'papa@example.com', role: 'tutor', status: 'pending', expiresAt: '2026-10-13T10:00:00Z', token: 'TOK', emailStatus, emailStatusAt: '2026-10-12T14:00:00Z' },
+  })
+  const waiting = (emailStatus: 'none' | 'sending' | 'sent' | 'failed') =>
+    family({
+      invitations: [
+        { id: 'i1', email: 'papa@example.com', role: 'tutor', status: 'pending', expiresAt: '2026-10-13T10:00:00Z', childId: null, emailStatus, emailStatusAt: emailStatus === 'none' ? null : '2026-10-12T14:00:00Z' },
+      ],
+    })
+
+  async function invite() {
+    const user = userEvent.setup()
+    renderPage()
+    await user.type(await screen.findByLabelText('Correo'), 'papa@example.com')
+    await user.click(screen.getByRole('button', { name: 'Crear liga' }))
+    return user
+  }
+
+  it('says it is sending, then that it was sent, without reloading, and keeps «Copiar liga»', async () => {
+    let state: 'sending' | 'sent' = 'sending'
+    stubApi(() => waiting(state), { 'POST /family/invitations': created('sending') })
+    await invite()
+
+    expect(await screen.findByText('Enviamos la invitación a papa@example.com · enviándose…')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copiar liga' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Enviamos la invitación por correo' })).toBeInTheDocument()
+
+    state = 'sent'
+    await waitFor(() => expect(screen.getByText('Enviamos la invitación a papa@example.com · enviada ✓')).toBeInTheDocument(), { timeout: 6000 })
+    expect(screen.getByRole('button', { name: 'Copiar liga' })).toBeInTheDocument()
+  }, 15000)
+
+  it('says it could not be sent and offers the link, without blaming', async () => {
+    stubApi(() => waiting('failed'), { 'POST /family/invitations': created('failed') })
+    await invite()
+    expect(await screen.findByText('No se pudo enviar el correo a papa@example.com. Copia la liga y mándala tú.')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Envíale esta liga por mensaje' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Copiar liga' })).toBeInTheDocument()
+  })
+
+  it('says nothing about e-mail when none was asked', async () => {
+    stubApi(() => waiting('none'), { 'POST /family/invitations': created('none') })
+    await invite()
+    expect(await screen.findByLabelText('Liga de invitación')).toBeInTheDocument()
+    expect(screen.queryByText(/Enviamos la invitación/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/No se pudo enviar el correo/)).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Envíale esta liga por mensaje' })).toBeInTheDocument()
+  })
+
+  it('works with an answer from before the e-mail existed (no field at all)', async () => {
+    stubApi(() => family(), { 'POST /family/invitations': { status: 201, body: { id: 'i1', email: 'a@b.com', role: 'tutor', status: 'pending', expiresAt: '2026-10-13T10:00:00Z', token: 'T' } } })
+    await invite()
+    expect(await screen.findByLabelText('Liga de invitación')).toBeInTheDocument()
+    expect(screen.queryByText(/Enviamos la invitación/)).not.toBeInTheDocument()
+  })
+
+  it.each([
+    ['sending', 'Correo: enviándose…'],
+    ['sent', 'Correo enviado'],
+    ['failed', 'Correo no enviado'],
+  ] as const)('shows the state of the e-mail of each pending invitation: %s', async (status, text) => {
+    stubApi(() => waiting(status))
+    renderPage()
+    expect(await screen.findByTestId('invitation-email-state')).toHaveTextContent(text)
+  })
+
+  it('shows no line for an invitation whose e-mail was never asked, nor for an expired one', async () => {
+    stubApi(() =>
+      family({
+        invitations: [
+          { id: 'i1', email: 'a@x.com', role: 'tutor', status: 'pending', expiresAt: '2026-10-13T10:00:00Z', childId: null, emailStatus: 'none', emailStatusAt: null },
+          { id: 'i2', email: 'b@x.com', role: 'tutor', status: 'expired', expiresAt: '2026-09-01T10:00:00Z', childId: null, emailStatus: 'sent', emailStatusAt: '2026-09-01T10:00:00Z' },
+        ],
+      }),
+    )
+    renderPage()
+    await screen.findByText('a@x.com')
+    expect(screen.queryByTestId('invitation-email-state')).not.toBeInTheDocument()
   })
 })

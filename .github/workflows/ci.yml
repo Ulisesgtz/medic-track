@@ -174,6 +174,8 @@ jobs:
         run: nohup go run ./cmd/api > /tmp/backend.log 2>&1 &
         env:
           FRONTEND_ORIGIN: http://localhost:5173
+          # The invitations' e-mail flow runs for real but nothing is sent (specs/040); the E2E suite checks the states it shows.
+          MAIL_DRIVER: discard
           # The API refuses to start without it (specs/008). Repository secret: the *test* (sk_test_) key of the Clerk development instance.
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
 
@@ -217,6 +219,8 @@ jobs:
         # (E2E_WORKERS, 3 by default) share the run.
         run: npx playwright test
         env:
+          # Tells the suite the API was started with MAIL_DRIVER=discard (specs/040).
+          MAIL_DRIVER: discard
           # The frontend throws without it (specs/008). Repository secret: the *test* (pk_test_) key of the Clerk development instance.
           VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
           # The suite signs up and signs in as real users of that development instance (Clerk testing token, `+clerk_test`

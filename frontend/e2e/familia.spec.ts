@@ -70,6 +70,28 @@ for (const design of designs) {
       await guest.context.close()
     })
 
+    // specs/040: needs the API started with MAIL_DRIVER=discard (the whole e-mail flow runs, nothing leaves the machine).
+    test('the card says the invitation was e-mailed, the list says so too, and the link can still be copied', async ({ page }) => {
+      test.skip(process.env.MAIL_DRIVER !== 'discard', 'needs the API started with MAIL_DRIVER=discard')
+      await allowClerkOn(page)
+      await seedChild(page)
+      await page.goto('/familia')
+      const main = page.getByRole('main')
+      const email = uniqueEmail('correo')
+      await main.getByLabel('Correo', { exact: true }).fill(email)
+      await main.getByRole('button', { name: 'Crear liga' }).click()
+
+      // «enviándose» may pass too fast to be seen: the final state is what is asserted, with no reload.
+      await expect(main.getByText(`Enviamos la invitación a ${email} · enviada ✓`)).toBeVisible({ timeout: 15_000 })
+      await expect(main.getByRole('button', { name: 'Copiar liga' })).toBeVisible()
+      await expect(main.getByLabel('Liga de invitación')).toHaveValue(/\/familia\/invitacion#/)
+      await expectNoHorizontalScroll(page)
+
+      await main.getByRole('button', { name: 'Listo' }).click()
+      await expect(main.getByTestId('invitation-email-state')).toHaveText('Correo enviado')
+      await expectNoHorizontalScroll(page)
+    })
+
     test('an invitation is for one e-mail only: another account is told so and cannot accept it', async ({ page, browser }) => {
       await allowClerkOn(page)
       const owner = await seedChild(page)
