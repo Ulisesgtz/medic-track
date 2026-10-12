@@ -291,3 +291,46 @@ func TestStampAndDelta(t *testing.T) {
 	require.Equal(t, "1 grupo", plural(1, "grupo", "grupos"))
 	require.Equal(t, "0 grupos", plural(0, "grupo", "grupos"))
 }
+
+func TestBuild_GroupsThatCleaningMakesIdenticalAreMergedBeforeTheTopTen(t *testing.T) {
+	first := cdmx(2026, time.October, 6, 9, 0)
+	last := cdmx(2026, time.October, 11, 9, 0)
+	src := newFake()
+	src.all = errorlog.Stats{Entries: 9, Groups: 4, Accounts: 2}
+	src.requests = src.all
+	// Three rows that differ only in an identifier, plus one genuinely different error that is less frequent than their sum.
+	src.requestRows = []errorlog.SummaryRow{
+		row("/children/{childId}", statusPtr(404), "child 11111111-2222-4333-8444-555555555555 not found", 3, first.Add(time.Hour), last.Add(-time.Hour)),
+		row("/children/{childId}", statusPtr(404), "child 66666666-7777-4888-9999-000000000000 not found", 2, first, last.Add(-2*time.Hour)),
+		row("/children/{childId}", statusPtr(404), "child aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee not found", 1, first.Add(2*time.Hour), last),
+		row("/accounts/me", statusPtr(404), "Account not found", 3, first, last),
+	}
+
+	d, err := Build(context.Background(), src, now, 90)
+
+	require.NoError(t, err)
+	require.Len(t, d.Requests.Groups, 2, "the three that read the same are one group")
+	merged := d.Requests.Groups[0]
+	require.Equal(t, "child [id] not found", merged.Message)
+	require.Equal(t, 6, merged.Count)
+	require.True(t, merged.FirstSeen.Equal(first), "the earliest of the three")
+	require.True(t, merged.LastSeen.Equal(last), "the latest of the three")
+	require.Equal(t, "Account not found", d.Requests.Groups[1].Message)
+	require.Zero(t, d.Requests.MoreGroups)
+}
+
+func TestBuild_GroupsBeyondTheSummaryLimitAreCountedAsNotFitting(t *testing.T) {
+	src := newFake()
+	src.all = errorlog.Stats{Entries: 500, Groups: 150, Accounts: 3}
+	src.requests = src.all
+	for i := 0; i < 100; i++ { // the summary stops at 100 groups although there are 150
+		src.requestRows = append(src.requestRows, row(fmt.Sprintf("/e%03d", i), statusPtr(500), "m", 100-i, now, now))
+	}
+
+	d, err := Build(context.Background(), src, now, 90)
+
+	require.NoError(t, err)
+	require.Len(t, d.Requests.Groups, 10)
+	require.Equal(t, 140, d.Requests.MoreGroups, "90 of the ones returned plus 50 never returned")
+	require.Equal(t, 150, d.Groups)
+}

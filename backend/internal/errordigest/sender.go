@@ -109,15 +109,17 @@ func (s *ResendSender) Send(ctx context.Context, m Message) error {
 		return &SendError{Retryable: true}
 	}
 	defer resp.Body.Close()
-	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<16)) // read and forget: the body is never kept or shown
+	// The body is read to tell one thing apart (a 409 about the idempotency key) and is never kept, logged or put in an error.
+	body, _ := io.ReadAll(io.LimitReader(resp.Body, 1<<16))
 
 	switch {
 	case resp.StatusCode >= 200 && resp.StatusCode < 300:
 		return nil
-	case resp.StatusCode == http.StatusConflict:
+	case resp.StatusCode == http.StatusConflict && bytes.Contains(bytes.ToLower(body), []byte("idempotent")):
 		// Resend answers 409 when the idempotency key was already used: either that request is still being processed or it was
 		// accepted earlier with a different body (a retaken week is rebuilt a few minutes later, so its text differs). In both
 		// cases the e-mail of this week is already out or on its way, so this is not a failure and must not mark the week 'failed'.
+		// A 409 that says anything else is not this case and is refused like any other 4xx.
 		return nil
 	case resp.StatusCode == http.StatusRequestTimeout || resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500:
 		return &SendError{Retryable: true, Status: resp.StatusCode}

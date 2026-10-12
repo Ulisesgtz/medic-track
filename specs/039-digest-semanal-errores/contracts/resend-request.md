@@ -30,7 +30,7 @@ Idempotency-Key: error-digest-2026-W42
 | Resultado | Cómo se trata |
 |---|---|
 | **2xx** con `{"id": "…"}` | Éxito. El `id` se descarta (no se guarda ni se loguea). |
-| **409** (la llave de idempotencia ya se usó) | **Se trata como éxito**: o esa petición sigue en curso o ya se aceptó antes con otro cuerpo (una semana retomada se rearma unos minutos después y su texto cambia); en los dos casos el correo de la semana ya salió o va en camino, así que no se marca `failed` ni se reporta. *(La documentación leída no detalla los códigos de error; confirmar en la primera prueba real.)* |
+| **409** cuyo cuerpo habla de idempotencia (la llave ya se usó) | **Se trata como éxito** (un 409 que dice otra cosa se rechaza como cualquier 4xx): o esa petición sigue en curso o ya se aceptó antes con otro cuerpo (una semana retomada se rearma unos minutos después y su texto cambia); en los dos casos el correo de la semana ya salió o va en camino, así que no se marca `failed` ni se reporta. *(La documentación leída no detalla los códigos de error; confirmar en la primera prueba real.)* |
 | **408**, **429**, **5xx**, error de red o *timeout* | **Reintentable** (hasta 3 intentos en total, esperas de 30 s y 2 min). |
 | Otro **4xx** (p. ej. 401/403 clave inválida o dominio sin verificar, 422 dirección rechazada) | **Permanente**: no se reintenta; esa semana queda `failed` (la documentación leída no detalla los códigos de error; se tratan por su clase). |
 

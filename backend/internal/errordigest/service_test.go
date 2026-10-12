@@ -51,7 +51,7 @@ func TestSendWeek_SendsOneEmailWithTheConfiguredAddressesAndTheWeeksIdempotencyK
 	src.requestRows = []errorlog.SummaryRow{row("/accounts/me", statusPtr(404), "Account not found", 2, now, now)}
 	sender := &fakeSender{}
 
-	err := NewService(src, sender, nil, testConfig, 90).SendWeek(context.Background(), now)
+	err := sendWeek(NewService(src, sender, nil, testConfig, 90), context.Background(), now)
 
 	require.NoError(t, err)
 	got := sender.messages()
@@ -67,7 +67,7 @@ func TestSendWeek_SendsOneEmailWithTheConfiguredAddressesAndTheWeeksIdempotencyK
 func TestSendWeek_AWeekWithoutErrorsIsSentToo(t *testing.T) {
 	sender := &fakeSender{}
 
-	require.NoError(t, NewService(newFake(), sender, nil, testConfig, 90).SendWeek(context.Background(), now))
+	require.NoError(t, sendWeek(NewService(newFake(), sender, nil, testConfig, 90), context.Background(), now))
 
 	got := sender.messages()
 	require.Len(t, got, 1)
@@ -79,7 +79,7 @@ func TestSendWeek_AFailureToBuildSendsNothing(t *testing.T) {
 	src.err = errors.New("database is down")
 	sender := &fakeSender{}
 
-	err := NewService(src, sender, nil, testConfig, 90).SendWeek(context.Background(), now)
+	err := sendWeek(NewService(src, sender, nil, testConfig, 90), context.Background(), now)
 
 	require.Error(t, err)
 	require.Zero(t, sender.attempts)
@@ -88,7 +88,7 @@ func TestSendWeek_AFailureToBuildSendsNothing(t *testing.T) {
 func TestSendWeek_APropagatesTheProvidersError(t *testing.T) {
 	sender := &fakeSender{results: []error{&SendError{Retryable: false, Status: 401}}}
 
-	err := NewService(newFake(), sender, nil, testConfig, 90).SendWeek(context.Background(), now)
+	err := sendWeek(NewService(newFake(), sender, nil, testConfig, 90), context.Background(), now)
 
 	var sendErr *SendError
 	require.True(t, errors.As(err, &sendErr))
@@ -102,10 +102,19 @@ func TestSendWeek_UsesTheRetentionToDecideTheComparison(t *testing.T) {
 	src.oldest = &older
 	withRetention, short := &fakeSender{}, &fakeSender{}
 
-	require.NoError(t, NewService(src, withRetention, nil, testConfig, 90).SendWeek(context.Background(), now))
-	require.NoError(t, NewService(src, short, nil, testConfig, 7).SendWeek(context.Background(), now))
+	require.NoError(t, sendWeek(NewService(src, withRetention, nil, testConfig, 90), context.Background(), now))
+	require.NoError(t, sendWeek(NewService(src, short, nil, testConfig, 7), context.Background(), now))
 
 	require.Contains(t, withRetention.messages()[0].Subject, "vs. semana anterior")
 	require.NotContains(t, short.messages()[0].Subject, "vs. semana anterior")
 	require.Contains(t, short.messages()[0].Text, "sin comparación")
+}
+
+// sendWeek builds the e-mail of a week and hands it to the sender once, with no claim or retries: what Tick does between them.
+func sendWeek(s *Service, ctx context.Context, now time.Time) error {
+	m, err := s.message(ctx, now)
+	if err != nil {
+		return err
+	}
+	return s.sender.Send(ctx, m)
 }

@@ -16,11 +16,12 @@ import (
 // database: the record of weeks is an in-memory fake, and the waits between tries are replaced by a recorder.
 
 type memClaimer struct {
-	mu          sync.Mutex
-	status      map[string]string
-	releases    int
-	claimErr    error
-	markSentErr error
+	mu            sync.Mutex
+	status        map[string]string
+	releases      int
+	claimErr      error
+	markSentErr   error
+	markFailedErr error
 }
 
 func newMemClaimer() *memClaimer { return &memClaimer{status: map[string]string{}} }
@@ -54,6 +55,9 @@ func (m *memClaimer) MarkSent(_ context.Context, week string) error {
 func (m *memClaimer) MarkFailed(_ context.Context, week string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+	if m.markFailedErr != nil {
+		return m.markFailedErr
+	}
 	m.status[week] = "failed"
 	return nil
 }
@@ -319,4 +323,16 @@ func TestFailureMessagesAreFixedSentencesWithoutValues(t *testing.T) {
 		require.True(t, strings.HasPrefix(msg, "error digest failed: "), kind)
 		require.False(t, strings.ContainsAny(msg, "@%{}"), "%s: %s", kind, msg)
 	}
+}
+
+func TestTick_IfTheRefusalCannotBeRecordedTheWeekIsNotTreatedAsClosed(t *testing.T) {
+	r := newRig(&SendError{Retryable: false, Status: 401})
+	r.claims.markFailedErr = errors.New("database is down")
+
+	err := r.svc.Tick(context.Background(), r.due)
+
+	require.Error(t, err)
+	require.Equal(t, "sending", r.claims.get(r.week), "the row was not closed")
+	require.Len(t, r.reporter.reports, 1, "the refusal is still reported once")
+	require.False(t, r.svc.isDone(r.week), "this process does not pretend the week is finished")
 }

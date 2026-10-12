@@ -72,7 +72,7 @@ func TestResendSender_ClassifiesTheAnswers(t *testing.T) {
 		retryable bool
 		ok        bool
 	}{
-		{200, false, true}, {202, false, true}, {409, false, true},
+		{200, false, true}, {202, false, true},
 		{408, true, false}, {429, true, false}, {500, true, false}, {503, true, false},
 		{400, false, false}, {401, false, false}, {403, false, false}, {422, false, false},
 		{302, false, false},
@@ -169,4 +169,36 @@ func TestIsRetryable_AnUnexpectedErrorIsRetried(t *testing.T) {
 	require.True(t, IsRetryable(errors.New("something unexpected")))
 	require.False(t, IsRetryable(&SendError{Retryable: false, Status: 401}))
 	require.True(t, IsRetryable(&SendError{Retryable: true, Status: 503}))
+}
+
+func TestResendSender_AConflictAboutTheIdempotencyKeyMeansTheEmailIsAlreadyAccepted(t *testing.T) {
+	for _, body := range []string{
+		`{"name":"invalid_idempotent_request","message":"Same key, different payload"}`,
+		`{"name":"concurrent_idempotent_requests","message":"Another request is in progress"}`,
+		`{"message":"IDEMPOTENT key reused"}`,
+	} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusConflict)
+			_, _ = w.Write([]byte(body))
+		}))
+		err := NewResendSender("k", server.Client(), server.URL).Send(context.Background(), sampleMessage())
+		server.Close()
+		require.NoError(t, err, body)
+	}
+}
+
+func TestResendSender_AnyOtherConflictIsRefused(t *testing.T) {
+	for _, body := range []string{``, `{"message":"something else is wrong"}`} {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusConflict)
+			_, _ = w.Write([]byte(body))
+		}))
+		err := NewResendSender("k", server.Client(), server.URL).Send(context.Background(), sampleMessage())
+		server.Close()
+
+		var sendErr *SendError
+		require.True(t, errors.As(err, &sendErr), body)
+		require.Equal(t, http.StatusConflict, sendErr.Status)
+		require.False(t, sendErr.Retryable)
+	}
 }

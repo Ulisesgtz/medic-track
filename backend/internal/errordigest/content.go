@@ -3,6 +3,7 @@ package errordigest
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -120,23 +121,53 @@ func section(ctx context.Context, src Source, f errorlog.Filter) (Section, error
 	if err != nil {
 		return Section{}, fmt.Errorf("summarizing a section of the week's errors: %w", err)
 	}
-	for i, row := range rows {
-		if i == maxGroups {
-			break
-		}
-		s.Groups = append(s.Groups, Group{
-			Endpoint:  cleanMessage(row.Endpoint),
-			Status:    row.HTTPStatus,
-			Message:   cleanMessage(row.Message),
-			Count:     row.Count,
-			FirstSeen: row.FirstSeen,
-			LastSeen:  row.LastSeen,
-		})
-	}
-	if more := stats.Groups - len(s.Groups); more > 0 {
+	merged := mergeCleaned(rows)
+	shown := min(maxGroups, len(merged))
+	s.Groups = merged[:shown]
+	// The groups that did not fit: those past the tenth and those the summary did not return (it stops at 100).
+	if more := (stats.Groups - len(rows)) + (len(merged) - shown); more > 0 {
 		s.MoreGroups = more
 	}
 	return s, nil
+}
+
+// mergeCleaned cleans the text of every group and joins the ones that came out identical: the summary groups by the raw message,
+// and two that differed only in what cleaning replaces (an identifier, an address, the text past the cut) would otherwise be
+// listed twice with split counts. The result is ordered like the summary: most frequent first, the most recent breaking a tie.
+func mergeCleaned(rows []errorlog.SummaryRow) []Group {
+	type key struct {
+		endpoint, message string
+		status            int // -1 = no status
+	}
+	index := map[key]int{}
+	var groups []Group
+	for _, row := range rows {
+		status := -1
+		if row.HTTPStatus != nil {
+			status = *row.HTTPStatus
+		}
+		k := key{cleanMessage(row.Endpoint), cleanMessage(row.Message), status}
+		if i, ok := index[k]; ok {
+			g := &groups[i]
+			g.Count += row.Count
+			if row.FirstSeen.Before(g.FirstSeen) {
+				g.FirstSeen = row.FirstSeen
+			}
+			if row.LastSeen.After(g.LastSeen) {
+				g.LastSeen = row.LastSeen
+			}
+			continue
+		}
+		index[k] = len(groups)
+		groups = append(groups, Group{Endpoint: k.endpoint, Status: row.HTTPStatus, Message: k.message, Count: row.Count, FirstSeen: row.FirstSeen, LastSeen: row.LastSeen})
+	}
+	sort.SliceStable(groups, func(i, j int) bool {
+		if groups[i].Count != groups[j].Count {
+			return groups[i].Count > groups[j].Count
+		}
+		return groups[i].LastSeen.After(groups[j].LastSeen)
+	})
+	return groups
 }
 
 var (

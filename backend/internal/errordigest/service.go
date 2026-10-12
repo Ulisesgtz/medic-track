@@ -111,16 +111,6 @@ func (s *Service) message(ctx context.Context, now time.Time) (Message, error) {
 	}, nil
 }
 
-// SendWeek builds the digest of the week that ends at `now` and hands it to the provider once: no claim, no retries (those are
-// Tick's).
-func (s *Service) SendWeek(ctx context.Context, now time.Time) error {
-	m, err := s.message(ctx, now)
-	if err != nil {
-		return err
-	}
-	return s.sender.Send(ctx, m)
-}
-
 // Tick does what is due at `now`: nothing before the scheduled time of the week; from then on, claim the week and send it, once.
 // A week finished by this process, by another copy or before a restart is never sent again; a week whose scheduled time passed
 // while the service was off is sent as soon as it is back, as long as it is still the same week.
@@ -162,10 +152,13 @@ func (s *Service) Tick(ctx context.Context, now time.Time) error {
 			s.release(ctx, week)
 			return ctx.Err()
 		}
-		if markErr := s.claims.MarkFailed(ctx, week); markErr != nil {
-			log.Printf("errordigest: could not record that the week was given up on")
-		}
 		s.report(ctx, failureSend)
+		if markErr := s.claims.MarkFailed(ctx, week); markErr != nil {
+			// The refusal could not be recorded: the row stays 'sending', so this process keeps the week as its own until the
+			// lease runs out instead of pretending it is closed.
+			log.Printf("errordigest: could not record that the week was given up on")
+			return err
+		}
 		s.markDone(week) // a given-up week is never claimed again: stop asking about it
 		return err
 	}
@@ -175,6 +168,7 @@ func (s *Service) Tick(ctx context.Context, now time.Time) error {
 	}
 	s.markDone(week)
 	s.recovered()
+	log.Printf("errordigest: the weekly digest of %s was sent", week)
 	return nil
 }
 
@@ -228,7 +222,7 @@ func (s *Service) recovered() {
 	if s.reporter == nil {
 		return
 	}
-	for _, kind := range []string{failureSend, failureBuild, failureClaim, failureRecord} {
+	for kind := range failureMessages {
 		s.reporter.Recovered(kind)
 	}
 }
