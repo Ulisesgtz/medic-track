@@ -1,9 +1,9 @@
 # Cabeceras de seguridad (specs/037). Cloudflare Pages las aplica a todas las rutas.
-# El CSP nombra lo unico externo que usa la app: Clerk (sesion y captcha de Cloudflare), la API propia y el OCR local
+# El CSP nombra lo unico externo que usa la app: Google Fonts (la fuente Figtree, @import de index.css), Clerk (sesion y captcha de Cloudflare), la API propia y el OCR local
 # de tesseract.js, que baja su worker, su nucleo WASM y el idioma desde jsDelivr (la foto nunca sale del telefono).
 # Si se agrega otro servicio externo, hay que sumarlo aqui o el navegador lo bloquea.
 /*
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://*.clerk.accounts.dev https://clerk.pedi-track.com https://challenges.cloudflare.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://img.clerk.com; font-src 'self' data:; connect-src 'self' blob: data: https://cdn.jsdelivr.net https://*.clerk.accounts.dev https://clerk.pedi-track.com https://*.pedi-track.com https://medic-track-production.up.railway.app; frame-src https://challenges.cloudflare.com; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://*.clerk.accounts.dev https://clerk.pedi-track.com https://challenges.cloudflare.com; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://img.clerk.com; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' blob: data: https://cdn.jsdelivr.net https://*.clerk.accounts.dev https://clerk.pedi-track.com https://*.pedi-track.com https://medic-track-production.up.railway.app; frame-src https://challenges.cloudflare.com; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=()
