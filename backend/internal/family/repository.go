@@ -10,6 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/Ulisesgtz/medic-track/backend/internal/mailer"
 )
 
 // planPaid is the value of accounts.plan that lets a family invite and accept (the table is read directly, as
@@ -92,12 +94,12 @@ func (r *Repository) ListMembers(ctx context.Context, familyID uuid.UUID) ([]Mem
 
 const invitationColumns = `i.id, i.family_account_id, i.email, i.role, i.child_id,
 	CASE WHEN i.status = 'pending' AND i.expires_at < now() THEN 'expired' ELSE i.status END, i.expires_at, i.created_at,
-	i.email_status, i.email_status_at`
+	i.email_status, i.email_status_at, i.email_sends_count`
 
 func scanInvitation(row pgx.Row) (Invitation, error) {
 	var inv Invitation
 	var role, status, emailStatus string
-	if err := row.Scan(&inv.ID, &inv.FamilyAccountID, &inv.Email, &role, &inv.ChildID, &status, &inv.ExpiresAt, &inv.CreatedAt, &emailStatus, &inv.EmailStatusAt); err != nil {
+	if err := row.Scan(&inv.ID, &inv.FamilyAccountID, &inv.Email, &role, &inv.ChildID, &status, &inv.ExpiresAt, &inv.CreatedAt, &emailStatus, &inv.EmailStatusAt, &inv.EmailSends); err != nil {
 		return Invitation{}, err
 	}
 	inv.Role, inv.Status, inv.EmailStatus = Role(role), InvitationStatus(status), EmailStatus(emailStatus)
@@ -153,10 +155,48 @@ func placesTaken(ctx context.Context, tx pgx.Tx, familyID, exceptInvitation uuid
 	return n, nil
 }
 
+// EmailRequest says whether an e-mail is asked for the invitation being created or resent, and the limits of the day (specs/040
+// research R3). The zero value asks for nothing: the invitation's e-mail state is 'none'.
+type EmailRequest struct {
+	Enabled                      bool
+	PerInvitation, PerFamily int
+}
+
+// emailPlan is what the transaction decides about the e-mail: the state, and the day and count to store.
+type emailPlan struct {
+	status EmailStatus
+	day    *time.Time
+	count  int
+}
+
+// planEmail decides, with the owner row locked: no e-mail asked → 'none'; asked but this invitation or this family is at its limit
+// today → 'failed' (the link can still be copied) and the count stays; otherwise 'sending' and the count grows. A day other than
+// the one stored starts the invitation's count again.
+func (r *Repository) planEmail(ctx context.Context, tx pgx.Tx, familyID uuid.UUID, req EmailRequest, storedDay *time.Time, storedCount int) (emailPlan, error) {
+	today := mailer.DayOf(r.now())
+	if storedDay == nil || !storedDay.Equal(today) {
+		storedDay, storedCount = nil, 0
+	}
+	keep := emailPlan{day: storedDay, count: storedCount}
+	if !req.Enabled {
+		keep.status = EmailNone
+		return keep, nil
+	}
+	var familyToday int
+	if err := tx.QueryRow(ctx, `SELECT coalesce(sum(email_sends_count), 0) FROM family_invitations WHERE family_account_id = $1 AND email_sends_day = $2`, familyID, today).Scan(&familyToday); err != nil {
+		return emailPlan{}, fmt.Errorf("counting the e-mails of the family: %w", err)
+	}
+	if storedCount >= req.PerInvitation || familyToday >= req.PerFamily {
+		keep.status = EmailFailed
+		return keep, nil
+	}
+	return emailPlan{status: EmailSending, day: &today, count: storedCount + 1}, nil
+}
+
 // CreateInvitation invites an e-mail to the family, with the token's hash already made. Inside one transaction with the
 // owner locked: the owner must be on the paid plan, the e-mail not already a person of the family (or the owner's), no
 // other invitation of that e-mail waiting, and a place free (research R9). The invitation expires in InvitationTTL.
-func (r *Repository) CreateInvitation(ctx context.Context, familyID, invitedBy uuid.UUID, email string, role Role, childID *uuid.UUID, tokenHash []byte) (*Invitation, error) {
+func (r *Repository) CreateInvitation(ctx context.Context, familyID, invitedBy uuid.UUID, email string, role Role, childID *uuid.UUID, tokenHash []byte, mail EmailRequest) (*Invitation, error) {
 	email = normalizeEmail(email)
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -207,14 +247,19 @@ func (r *Repository) CreateInvitation(ctx context.Context, familyID, invitedBy u
 		return nil, ErrFamilyFull
 	}
 
+	plan2, err := r.planEmail(ctx, tx, familyID, mail, nil, 0)
+	if err != nil {
+		return nil, err
+	}
 	inv, err := scanInvitation(tx.QueryRow(ctx, `
 		WITH i AS (
-			INSERT INTO family_invitations (family_account_id, email, role, child_id, token_hash, invited_by_account_id, expires_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			INSERT INTO family_invitations (family_account_id, email, role, child_id, token_hash, invited_by_account_id, expires_at,
+			                                email_status, email_status_at, email_sends_day, email_sends_count)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CASE WHEN $8 = 'none' THEN NULL ELSE now() END, $9, $10)
 			RETURNING *
 		)
 		SELECT `+invitationColumns+` FROM i
-	`, familyID, email, string(role), childID, tokenHash, invitedBy, r.now().Add(InvitationTTL)))
+	`, familyID, email, string(role), childID, tokenHash, invitedBy, r.now().Add(InvitationTTL), string(plan2.status), plan2.day, plan2.count))
 	if err != nil {
 		return nil, fmt.Errorf("saving the invitation: %w", err)
 	}
@@ -226,7 +271,7 @@ func (r *Repository) CreateInvitation(ctx context.Context, familyID, invitedBy u
 
 // Resend gives a pending invitation a new token (its hash) and a new date, and the old link stops working. A place has to
 // be free if it had expired. ErrInvitationNotFound if it isn't a pending invitation of that family.
-func (r *Repository) Resend(ctx context.Context, familyID, invitationID uuid.UUID, tokenHash []byte) (*Invitation, error) {
+func (r *Repository) Resend(ctx context.Context, familyID, invitationID uuid.UUID, tokenHash []byte, mail EmailRequest) (*Invitation, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("beginning the resend: %w", err)
@@ -247,14 +292,32 @@ func (r *Repository) Resend(ctx context.Context, familyID, invitationID uuid.UUI
 	if taken >= MaxPeople {
 		return nil, ErrFamilyFull
 	}
+	var storedDay *time.Time
+	var storedCount int
+	err = tx.QueryRow(ctx, `
+		SELECT email_sends_day, email_sends_count FROM family_invitations
+		WHERE id = $1 AND family_account_id = $2 AND status = 'pending' FOR UPDATE
+	`, invitationID, familyID).Scan(&storedDay, &storedCount)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrInvitationNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("reading the invitation: %w", err)
+	}
+	plan2, err := r.planEmail(ctx, tx, familyID, mail, storedDay, storedCount)
+	if err != nil {
+		return nil, err
+	}
 	inv, err := scanInvitation(tx.QueryRow(ctx, `
 		WITH i AS (
-			UPDATE family_invitations SET token_hash = $3, expires_at = $4
+			UPDATE family_invitations SET token_hash = $3, expires_at = $4,
+				email_status = $5, email_status_at = CASE WHEN $5 = 'none' THEN NULL ELSE now() END,
+				email_sends_day = $6, email_sends_count = $7
 			WHERE id = $1 AND family_account_id = $2 AND status = 'pending'
 			RETURNING *
 		)
 		SELECT `+invitationColumns+` FROM i
-	`, invitationID, familyID, tokenHash, r.now().Add(InvitationTTL)))
+	`, invitationID, familyID, tokenHash, r.now().Add(InvitationTTL), string(plan2.status), plan2.day, plan2.count))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrInvitationNotFound
 	}
@@ -529,4 +592,13 @@ func (r *Repository) SweepStaleSending(ctx context.Context, olderThan time.Durat
 		return 0, fmt.Errorf("sweeping the stale e-mail sends: %w", err)
 	}
 	return tag.RowsAffected(), nil
+}
+
+// AccountFirstName is the first name of an account: the only thing of the person who invites that goes in the e-mail.
+func (r *Repository) AccountFirstName(ctx context.Context, accountID uuid.UUID) (string, error) {
+	var name string
+	if err := r.pool.QueryRow(ctx, `SELECT first_name FROM accounts WHERE id = $1`, accountID).Scan(&name); err != nil {
+		return "", fmt.Errorf("reading the first name: %w", err)
+	}
+	return name, nil
 }

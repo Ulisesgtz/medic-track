@@ -69,6 +69,9 @@ type Invitation struct {
 	// EmailStatus and EmailStatusAt say what happened to the invitation's e-mail (nil when it was never asked).
 	EmailStatus   EmailStatus
 	EmailStatusAt *time.Time
+	// EmailSends is how many e-mails were asked for this invitation today (Mexico City day): the number of the one just asked
+	// is part of the provider's idempotency key.
+	EmailSends int
 	// Token is set only on the invitation just created or resent.
 	Token string
 }

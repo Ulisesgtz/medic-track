@@ -121,3 +121,6 @@ func (q *Quota) report(ctx context.Context, kind, message string) {
 	}
 	q.reporter.Report(kind, message, nil)
 }
+
+// MexicoCity is the zone the quota days and the e-mails dates use (fixed UTC-6 when the zone database is missing).
+func MexicoCity() *time.Location { return mexicoCity }

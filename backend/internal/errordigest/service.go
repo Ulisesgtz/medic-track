@@ -2,6 +2,7 @@ package errordigest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"sync"
@@ -60,6 +61,13 @@ type FailureReporter interface {
 	Recovered(kind string)
 }
 
+// Quota is the day's shared place for e-mails (satisfied by *mailer.Quota, specs/040): the digest uses the whole daily cap, while
+// the invitations stop earlier and leave it the last places.
+type Quota interface {
+	Reserve(ctx context.Context, class mailer.Class) (mailer.Ticket, error)
+	Refund(ctx context.Context, t mailer.Ticket)
+}
+
 // Service builds the weekly digest and sends it.
 type Service struct {
 	src           Source
@@ -68,6 +76,7 @@ type Service struct {
 	cfg           Config
 	retentionDays int
 	reporter      FailureReporter // optional
+	quota         Quota           // optional
 	// sleep waits between the tries of a send; it returns early with the context's error. A field so tests don't wait.
 	sleep func(ctx context.Context, d time.Duration) error
 
@@ -81,6 +90,10 @@ type Service struct {
 func NewService(src Source, sender mailer.Sender, claims Claimer, cfg Config, retentionDays int) *Service {
 	return &Service{src: src, sender: sender, claims: claims, cfg: cfg, retentionDays: retentionDays, sleep: mailer.SleepContext}
 }
+
+// SetQuota makes every send of the digest count in the day's quota shared with the invitations (specs/040). Without one the
+// digest is not counted, which is how it behaved before.
+func (s *Service) SetQuota(q Quota) { s.quota = q }
 
 // SetReporter makes the digest's failures also go to error_logs (as job:error-digest). Without one they only reach the console.
 func (s *Service) SetReporter(r FailureReporter) { s.reporter = r }
@@ -138,7 +151,23 @@ func (s *Service) Tick(ctx context.Context, now time.Time) error {
 		s.report(ctx, failureBuild)
 		return err
 	}
+	var ticket mailer.Ticket
+	if s.quota != nil {
+		var quotaErr error
+		ticket, quotaErr = s.quota.Reserve(ctx, mailer.ClassDigest)
+		if errors.Is(quotaErr, mailer.ErrQuotaExceeded) {
+			// Even the places kept for the digest are gone (the provider's own cap): the week is not given up on, it is tried again
+			// in a minute — tomorrow's places come with the day.
+			s.release(ctx, week)
+			s.report(ctx, failureSend)
+			return quotaErr
+		}
+		// Any other failure of the counter (reported by the quota itself) must not stop the digest: it is sent without a place.
+	}
 	if err := s.sendWithRetries(ctx, m); err != nil {
+		if s.quota != nil {
+			s.refund(ctx, ticket)
+		}
 		if ctx.Err() != nil { // shutting down: not a failure of the provider, and the week is not lost
 			s.release(ctx, week)
 			return ctx.Err()
@@ -167,6 +196,17 @@ func (s *Service) Tick(ctx context.Context, now time.Time) error {
 // refusal that asking again can't fix (an invalid key, an unverified domain, a rejected address).
 func (s *Service) sendWithRetries(ctx context.Context, m mailer.Message) error {
 	return mailer.SendWithRetries(ctx, s.sender, m, retryWaits[:], attemptTimeout, s.sleep)
+}
+
+// refund gives the day's place back, with its own short context when the service is shutting down.
+func (s *Service) refund(ctx context.Context, t mailer.Ticket) {
+	refundCtx := ctx
+	if ctx.Err() != nil {
+		var cancel context.CancelFunc
+		refundCtx, cancel = context.WithTimeout(context.WithoutCancel(ctx), releaseTimeout)
+		defer cancel()
+	}
+	s.quota.Refund(refundCtx, t)
 }
 
 // release gives the week back; with the context already cancelled it uses a fresh one with a short limit.

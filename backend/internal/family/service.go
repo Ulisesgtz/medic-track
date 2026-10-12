@@ -3,8 +3,10 @@ package family
 import (
 	"context"
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -36,6 +38,54 @@ type Service struct {
 	access   Accessor
 	emails   EmailResolver
 	newToken func() (string, []byte, error)
+	email    EmailSettings
+}
+
+// EmailSettings turns on the e-mail of the invitations (specs/040). Without a dispatcher, or without an origin to build the link
+// on, nothing is e-mailed: the invitation's e-mail state is 'none' and the link is copied by hand as before.
+type EmailSettings struct {
+	Dispatcher *EmailDispatcher
+	// From is the sender and Origin the frontend's origin (FRONTEND_ORIGIN).
+	From, Origin string
+	// PerInvitation and PerFamily are the e-mails asked for an invitation and for a family in a day at most.
+	PerInvitation, PerFamily int
+}
+
+// SetEmail turns the invitations' e-mail on.
+func (s *Service) SetEmail(settings EmailSettings) { s.email = settings }
+
+func (s *Service) emailEnabled() bool { return s.email.Dispatcher != nil && s.email.Origin != "" }
+
+func (s *Service) emailRequest() EmailRequest {
+	return EmailRequest{Enabled: s.emailEnabled(), PerInvitation: s.email.PerInvitation, PerFamily: s.email.PerFamily}
+}
+
+// sendEmail hands the e-mail of an invitation just created or resent to the dispatcher, if the transaction left it 'sending'. It
+// never fails the invitation: when the queue is full the e-mail state becomes 'failed' and the link is copied by hand.
+func (s *Service) sendEmail(ctx context.Context, actorID uuid.UUID, inv *Invitation, tokenHash []byte) {
+	if inv.EmailStatus != EmailSending {
+		return
+	}
+	name, err := s.repo.AccountFirstName(ctx, actorID)
+	if err != nil {
+		name = "" // «Alguien de tu familia»: the invitation does not depend on the name
+	}
+	job := EmailJob{
+		InvitationID: inv.ID,
+		TokenHash:    tokenHash,
+		Message: buildInviteMessage(inviteMail{
+			From: s.email.From, To: inv.Email, Origin: s.email.Origin, Token: inv.Token,
+			InviterName: name, Role: inv.Role, ExpiresAt: inv.ExpiresAt,
+			IdempotencyKey: fmt.Sprintf("family-invitation-%s-%d", inv.ID, inv.EmailSends),
+		}),
+	}
+	if s.email.Dispatcher.Enqueue(job) {
+		return
+	}
+	if changed, err := s.repo.SetEmailStatus(context.WithoutCancel(ctx), inv.ID, tokenHash, EmailSending, EmailFailed); err == nil && changed {
+		now := time.Now()
+		inv.EmailStatus, inv.EmailStatusAt = EmailFailed, &now
+	}
 }
 
 // NewService creates a Service.
@@ -160,17 +210,18 @@ func (s *Service) Invite(ctx context.Context, clerkUserID string, in InviteInput
 	if err != nil {
 		return nil, err
 	}
-	inv, err := s.repo.CreateInvitation(ctx, familyID, actorID, in.Email, in.Role, in.ChildID, hash)
+	inv, err := s.repo.CreateInvitation(ctx, familyID, actorID, in.Email, in.Role, in.ChildID, hash, s.emailRequest())
 	if err != nil {
 		return nil, err
 	}
 	inv.Token = token
+	s.sendEmail(ctx, actorID, inv, hash)
 	return inv, nil
 }
 
 // Resend gives a pending invitation a new link (the old one stops working).
 func (s *Service) Resend(ctx context.Context, clerkUserID string, invitationID uuid.UUID) (*Invitation, error) {
-	_, familyID, _, level, err := s.actorAndFamily(ctx, clerkUserID)
+	actorID, familyID, _, level, err := s.actorAndFamily(ctx, clerkUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -181,11 +232,12 @@ func (s *Service) Resend(ctx context.Context, clerkUserID string, invitationID u
 	if err != nil {
 		return nil, err
 	}
-	inv, err := s.repo.Resend(ctx, familyID, invitationID, hash)
+	inv, err := s.repo.Resend(ctx, familyID, invitationID, hash, s.emailRequest())
 	if err != nil {
 		return nil, err
 	}
 	inv.Token = token
+	s.sendEmail(ctx, actorID, inv, hash)
 	return inv, nil
 }
 
