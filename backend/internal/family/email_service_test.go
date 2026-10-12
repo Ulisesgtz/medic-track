@@ -140,16 +140,16 @@ func TestAnInvitationAsksForAtMostThreeEmailsADayAndTheNewLinkIsMadeAnyway(t *te
 	}
 	require.Equal(t, []family.EmailStatus{family.EmailSending, family.EmailSending, family.EmailSending, family.EmailFailed}, statuses)
 	require.NotEqual(t, hashes[2], hashes[3], "the link of the over-the-limit resend is a new one that can be copied")
-	current, err := m.repo.StillCurrent(context.Background(), inv.ID, hashes[3])
-	require.NoError(t, err)
-	require.True(t, current)
+	var linkWorks bool
+	require.NoError(t, m.pool.QueryRow(context.Background(), `SELECT token_hash = $2 AND status = 'pending' FROM family_invitations WHERE id = $1`, inv.ID, hashes[3]).Scan(&linkWorks))
+	require.True(t, linkWorks, "the link that was not e-mailed is the one that works")
 
 	var count int
 	require.NoError(t, m.pool.QueryRow(context.Background(), `SELECT email_sends_count FROM family_invitations WHERE id = $1`, inv.ID).Scan(&count))
 	require.Equal(t, 3, count, "a refused e-mail does not count")
 
 	// the next day it starts again
-	_, err = m.pool.Exec(context.Background(), `UPDATE family_invitations SET email_sends_day = email_sends_day - 1 WHERE id = $1`, inv.ID)
+	_, err := m.pool.Exec(context.Background(), `UPDATE family_invitations SET email_sends_day = email_sends_day - 1 WHERE id = $1`, inv.ID)
 	require.NoError(t, err)
 	next, err := m.service.Resend(context.Background(), owner.clerkID, inv.ID)
 	require.NoError(t, err)

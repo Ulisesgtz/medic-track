@@ -84,9 +84,25 @@ func TestStillCurrentFollowsResendCancelAcceptanceAndExpiry(t *testing.T) {
 	ctx := context.Background()
 
 	id, hash := e.invited(t, owner)
+	sending := func(id uuid.UUID) {
+		_, err := e.pool.Exec(ctx, `UPDATE family_invitations SET email_status = 'sending', email_status_at = now() WHERE id = $1`, id)
+		require.NoError(t, err)
+	}
 	current, err := e.repo.StillCurrent(ctx, id, hash)
 	require.NoError(t, err)
+	require.False(t, current, "no e-mail is waiting to be sent while the state is not 'sending'")
+	sending(id)
+	current, err = e.repo.StillCurrent(ctx, id, hash)
+	require.NoError(t, err)
 	require.True(t, current)
+
+	// the sweep closed it as failed while it waited in the queue: it is not sent afterwards
+	_, err = e.pool.Exec(ctx, `UPDATE family_invitations SET email_status = 'failed' WHERE id = $1`, id)
+	require.NoError(t, err)
+	current, err = e.repo.StillCurrent(ctx, id, hash)
+	require.NoError(t, err)
+	require.False(t, current)
+	sending(id)
 
 	// a resend gives a new token: the old send is obsolete
 	code, out := e.do(t, owner.clerkID, http.MethodPost, "/family/invitations/"+id.String()+"/resend", "")
@@ -95,6 +111,7 @@ func TestStillCurrentFollowsResendCancelAcceptanceAndExpiry(t *testing.T) {
 	require.NoError(t, err)
 	require.False(t, current)
 	newHash := family.HashToken(out["token"].(string))
+	sending(id)
 	current, err = e.repo.StillCurrent(ctx, id, newHash)
 	require.NoError(t, err)
 	require.True(t, current)
@@ -108,6 +125,7 @@ func TestStillCurrentFollowsResendCancelAcceptanceAndExpiry(t *testing.T) {
 
 	// canceled
 	id2, hash2 := e.invited(t, owner)
+	sending(id2)
 	code, out = e.do(t, owner.clerkID, http.MethodPost, "/family/invitations/"+id2.String()+"/cancel", "")
 	require.Equal(t, http.StatusNoContent, code, out)
 	current, err = e.repo.StillCurrent(ctx, id2, hash2)

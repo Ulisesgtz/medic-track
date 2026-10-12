@@ -17,7 +17,10 @@ export default defineConfig({
   // Room for the waits of retryWhileRateLimited (e2e/clerkApi.ts) when Clerk rate limits the instance.
   timeout: process.env.CI ? 60_000 : 30_000,
   retries: process.env.CI ? 1 : 0,
-  reporter: 'html',
+  // In CI the log also gets one line per test with its duration (the 'list' reporter) and the slowest files are named at the end, so
+  // when the suite gets slower the log says where the time goes (the 'html' report alone is only uploaded when something fails).
+  reporter: process.env.CI ? [['list'], ['html']] : 'html',
+  reportSlowTests: { max: 15, threshold: 90_000 },
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',

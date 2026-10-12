@@ -107,8 +107,10 @@ func main() {
 	// (or MAIL_DRIVER=discard) or without FRONTEND_ORIGIN nothing is e-mailed and the link is copied by hand, as before; the
 	// console says which variable is missing and never a value.
 	mailConfig := mailer.ConfigFromEnv()
-	var mailStopped chan struct{} // closed when the invitations' e-mail queue has been closed after a shutdown
-	mailReporter := jobreport.New(errorLogRepo, "mailer") // one, so its failures are grouped together
+	// mailStopped is closed when the invitations' e-mail queue has been closed after a shutdown.
+	var mailStopped chan struct{}
+	// One reporter for the quota and the dispatcher, so the failures of the mailer are grouped together.
+	mailReporter := jobreport.New(errorLogRepo, "mailer")
 	mailQuota := mailer.NewQuota(mailer.NewRepository(pool), mailConfig, mailReporter)
 	if mailOrigin := os.Getenv("FRONTEND_ORIGIN"); mailConfig.Available() && mailOrigin != "" {
 		dispatcher := family.NewEmailDispatcher(family.NewRepository(pool), mailer.NewSender(mailConfig, nil), mailQuota, mailReporter)

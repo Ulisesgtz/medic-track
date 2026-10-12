@@ -158,7 +158,7 @@ func placesTaken(ctx context.Context, tx pgx.Tx, familyID, exceptInvitation uuid
 // EmailRequest says whether an e-mail is asked for the invitation being created or resent, and the limits of the day (specs/040
 // research R3). The zero value asks for nothing: the invitation's e-mail state is 'none'.
 type EmailRequest struct {
-	Enabled                      bool
+	Enabled                  bool
 	PerInvitation, PerFamily int
 }
 
@@ -569,11 +569,13 @@ func (r *Repository) SetEmailStatus(ctx context.Context, invitationID uuid.UUID,
 	return tag.RowsAffected() == 1, nil
 }
 
-// StillCurrent says whether the invitation is still pending, not expired and has that token: only then is its e-mail worth sending.
+// StillCurrent says whether the e-mail of the invitation is still worth sending: the invitation is pending, not expired, has that
+// token and its e-mail is still 'sending'. The last one matters: the sweep closes as failed what waited too long in the queue
+// (a provider outage), and a send that goes out after that would leave the screen saying «no enviado» for an e-mail that arrived.
 func (r *Repository) StillCurrent(ctx context.Context, invitationID uuid.UUID, tokenHash []byte) (bool, error) {
 	var current bool
 	err := r.pool.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM family_invitations WHERE id = $1 AND token_hash = $2 AND status = 'pending' AND expires_at > now())
+		SELECT EXISTS (SELECT 1 FROM family_invitations WHERE id = $1 AND token_hash = $2 AND status = 'pending' AND expires_at > now() AND email_status = 'sending')
 	`, invitationID, tokenHash).Scan(&current)
 	if err != nil {
 		return false, fmt.Errorf("checking the invitation: %w", err)

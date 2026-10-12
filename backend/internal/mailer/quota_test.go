@@ -233,7 +233,9 @@ func TestQuotaReportsAFailingCounterWithAFixedMessage(t *testing.T) {
 // warnFailStore reserves fine but fails marking the warning.
 type warnFailStore struct{ Store }
 
-func (warnFailStore) Reserve(context.Context, time.Time, int) (int, bool, error) { return 99, true, nil }
+func (warnFailStore) Reserve(context.Context, time.Time, int) (int, bool, error) {
+	return 99, true, nil
+}
 func (warnFailStore) MarkWarned(context.Context, time.Time, int) (bool, error) {
 	return false, errSecret
 }
