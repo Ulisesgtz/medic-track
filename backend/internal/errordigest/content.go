@@ -9,7 +9,11 @@ import (
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/jobreport"
+	"github.com/Ulisesgtz/medic-track/backend/internal/mailer"
 )
+
+// maxMessageRunes is the longest a message is shown in the e-mail (specs/039 contracts/email.md).
+const maxMessageRunes = 160
 
 const (
 	// maxGroups is how many groups each section of the e-mail lists: the most frequent ones.
@@ -27,7 +31,7 @@ type Source interface {
 }
 
 // Group is one kind of error of the week: the same endpoint, status and message, how many times and when. The message is
-// already clean (cleanMessage).
+// already clean (mailer.Clean).
 type Group struct {
 	Endpoint  string
 	Status    *int
@@ -146,7 +150,7 @@ func mergeCleaned(rows []errorlog.SummaryRow) []Group {
 		if row.HTTPStatus != nil {
 			status = *row.HTTPStatus
 		}
-		k := key{cleanMessage(row.Endpoint), cleanMessage(row.Message), status}
+		k := key{mailer.Clean(row.Endpoint, maxMessageRunes), mailer.Clean(row.Message, maxMessageRunes), status}
 		if i, ok := index[k]; ok {
 			g := &groups[i]
 			g.Count += row.Count

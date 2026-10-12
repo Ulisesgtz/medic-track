@@ -1,4 +1,6 @@
-package errordigest
+// Package mailer is how the API sends e-mail: the provider's adapter (Resend), the retry loop, the text cleaning and the daily
+// quota shared by everything that sends — the weekly error digest (specs/039) and the family invitations (specs/040).
+package mailer
 
 import (
 	"bytes"
@@ -17,19 +19,21 @@ const DefaultBaseURL = "https://api.resend.com"
 // sendTimeout bounds one request: a provider that never answers must not hold the digest — or the shutdown — for long.
 const sendTimeout = 15 * time.Second
 
-// Message is one e-mail: plain text only (specs/039 research R5).
+// Message is one e-mail: plain text, plus an optional minimal HTML version (specs/040 research R5). Neither carries tracking.
 type Message struct {
 	From    string
 	To      string
 	Subject string
 	Text    string
+	// HTML is the same content with a link, for clients that show it as a button. Empty means a plain-text e-mail.
+	HTML string
 	// IdempotencyKey makes a retry of the same digest not send a second e-mail: the provider answers the same thing for the
 	// same key within 24 hours. It is "error-digest-<week>".
 	IdempotencyKey string
 }
 
-// Sender hands an e-mail to the provider. It is an interface so the service can be tested with a fake one, and so another
-// provider — or the family invitations by e-mail, a later task — can reuse the rest.
+// Sender hands an e-mail to the provider. It is an interface so the services can be tested with a fake one, and so another
+// provider can replace Resend without touching them.
 type Sender interface {
 	Send(ctx context.Context, m Message) error
 }
@@ -80,12 +84,16 @@ func NewResendSender(apiKey string, client *http.Client, baseURL string) *Resend
 // Send posts the e-mail. A 2xx is success, and so is a 409 (the idempotency key was already used: see below); a network error, a timeout, 408, 429 and any 5xx are retryable; any other answer is
 // not (an invalid key, an unverified domain or a rejected address won't get better by asking again).
 func (s *ResendSender) Send(ctx context.Context, m Message) error {
-	payload, err := json.Marshal(map[string]any{
+	fields := map[string]any{
 		"from":    m.From,
 		"to":      []string{m.To},
 		"subject": m.Subject,
 		"text":    m.Text,
-	})
+	}
+	if m.HTML != "" {
+		fields["html"] = m.HTML
+	}
+	payload, err := json.Marshal(fields)
 	if err != nil {
 		return &SendError{Retryable: false}
 	}

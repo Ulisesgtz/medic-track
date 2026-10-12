@@ -1,4 +1,5 @@
 import { formatDayMonth } from '../../shared/date'
+import { emailShort } from './emailStatus'
 import { RoleChip } from './RoleChip'
 import type { FamilyInvitation } from './types'
 
@@ -53,6 +54,11 @@ export function InvitationsList({ invitations, variant, busyId, onResend, onCanc
                   )}
                   <span className="text-[13px] font-semibold text-slate-600">{date}</span>
                 </div>
+                {!expired && emailShort(inv.emailStatus) && (
+                  <p className="text-[13px] font-semibold text-slate-600" data-testid="invitation-email-state">
+                    {emailShort(inv.emailStatus)}
+                  </p>
+                )}
               </div>
               <div className={`flex flex-wrap ${desktop ? 'shrink-0 gap-2' : 'mt-1 gap-2.5'}`}>
                 <button type="button" aria-label={`Enviar de nuevo a ${inv.email}`} disabled={busyId === inv.id} onClick={() => onResend(inv)} className={outline}>

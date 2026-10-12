@@ -49,6 +49,11 @@ type invitationResponse struct {
 	Status    string  `json:"status" enums:"pending,expired" example:"pending"`
 	ExpiresAt string  `json:"expiresAt" example:"2026-10-13T14:00:00Z"`
 	ChildID   *string `json:"childId"`
+	// EmailStatus is what happened to the invitation's e-mail (specs/040): none = none was asked, sending, sent, failed. A failed
+	// or missing e-mail never affects the invitation: its link can be copied.
+	EmailStatus string `json:"emailStatus" enums:"none,sending,sent,failed" example:"sent"`
+	// EmailStatusAt is when the state changed; null if an e-mail was never asked.
+	EmailStatusAt *string `json:"emailStatusAt" example:"2026-10-12T14:00:00Z"`
 } // @name FamilyInvitationResponse
 
 type createdInvitationResponse struct {
@@ -59,6 +64,11 @@ type createdInvitationResponse struct {
 	ExpiresAt string `json:"expiresAt" example:"2026-10-13T14:00:00Z"`
 	// Token is the secret of the link; it is returned only here (and when resent) and goes in the fragment of the link.
 	Token string `json:"token" example:"3hF9…"`
+	// EmailStatus is the initial state of the invitation's e-mail: sending (it is queued; the answer does not wait for it), failed
+	// (a limit of the day or a full queue left it out) or none (no e-mail is configured). It is never sent here: ask GET /family.
+	EmailStatus string `json:"emailStatus" enums:"none,sending,failed" example:"sending"`
+	// EmailStatusAt is when the state was set; null for none.
+	EmailStatusAt *string `json:"emailStatusAt" example:"2026-10-12T14:00:00Z"`
 } // @name CreatedFamilyInvitationResponse
 
 type ownerResponse struct {
@@ -147,12 +157,22 @@ func idText(id *uuid.UUID) *string {
 	return &s
 }
 
+func instantText(t *time.Time) *string {
+	if t == nil {
+		return nil
+	}
+	s := timeText(*t)
+	return &s
+}
+
 func toInvitationResponse(inv Invitation) invitationResponse {
-	return invitationResponse{ID: inv.ID.String(), Email: inv.Email, Role: string(inv.Role), Status: string(inv.Status), ExpiresAt: timeText(inv.ExpiresAt), ChildID: idText(inv.ChildID)}
+	return invitationResponse{ID: inv.ID.String(), Email: inv.Email, Role: string(inv.Role), Status: string(inv.Status), ExpiresAt: timeText(inv.ExpiresAt), ChildID: idText(inv.ChildID),
+		EmailStatus: string(inv.EmailStatus), EmailStatusAt: instantText(inv.EmailStatusAt)}
 }
 
 func toCreatedResponse(inv *Invitation) createdInvitationResponse {
-	return createdInvitationResponse{ID: inv.ID.String(), Email: inv.Email, Role: string(inv.Role), Status: string(inv.Status), ExpiresAt: timeText(inv.ExpiresAt), Token: inv.Token}
+	return createdInvitationResponse{ID: inv.ID.String(), Email: inv.Email, Role: string(inv.Role), Status: string(inv.Status), ExpiresAt: timeText(inv.ExpiresAt), Token: inv.Token,
+		EmailStatus: string(inv.EmailStatus), EmailStatusAt: instantText(inv.EmailStatusAt)}
 }
 
 func toFamilyResponse(v *View) familyResponse {
@@ -269,7 +289,9 @@ func (h *Handler) GetFamily(w http.ResponseWriter, r *http.Request) {
 //	@Summary		Invite someone to the family
 //	@Description	Invites an e-mail as a Tutor or a Caregiver. Only who can do everything (the owner or a Tutor) and only when the
 //	@Description	owner is on the paid plan. The invitation expires in 7 days; the token of its link is returned here, once.
-//	@Description	Only the account whose verified e-mail is the invited one can accept it.
+//	@Description	Only the account whose verified e-mail is the invited one can accept it. When e-mail is configured the link is also
+//	@Description	e-mailed to the invited person in the background: the answer does not wait for it, `emailStatus` is its initial state.
+//	@Description	Nothing about the e-mail (a provider failure, the daily quota, a limit) ever makes this request fail.
 //	@Tags			family
 //	@Accept			json
 //	@Produce		json

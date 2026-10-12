@@ -10,6 +10,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Ulisesgtz/medic-track/backend/internal/mailer"
 )
 
 // specs/039 Historia 3: what happens when the provider, the database or the shutdown get in the way. None of these touch the real
@@ -98,11 +100,11 @@ func (f *fakeReporter) Recovered(kind string) {
 	f.recovered = append(f.recovered, kind)
 }
 
-type funcSender func(ctx context.Context, m Message) error
+type funcSender func(ctx context.Context, m mailer.Message) error
 
-func (f funcSender) Send(ctx context.Context, m Message) error { return f(ctx, m) }
+func (f funcSender) Send(ctx context.Context, m mailer.Message) error { return f(ctx, m) }
 
-var retryable = &SendError{Retryable: true, Status: 503}
+var retryable = &mailer.SendError{Retryable: true, Status: 503}
 
 // failureRig is a service wired with fakes, due at `due`.
 type failureRig struct {
@@ -167,7 +169,7 @@ func TestTick_ThreeFailuresGiveUpTheWeekAndReportOnce(t *testing.T) {
 }
 
 func TestTick_APermanentRefusalIsNotRetried(t *testing.T) {
-	r := newRig(&SendError{Retryable: false, Status: 401})
+	r := newRig(&mailer.SendError{Retryable: false, Status: 401})
 
 	err := r.svc.Tick(context.Background(), r.due)
 
@@ -179,8 +181,8 @@ func TestTick_APermanentRefusalIsNotRetried(t *testing.T) {
 }
 
 func TestTick_TheReportsNeverCarryTheKeyTheAddressesOrTheProvidersText(t *testing.T) {
-	r := newRig(&SendError{Retryable: false, Status: 422})
-	r.svc.sender = funcSender(func(context.Context, Message) error {
+	r := newRig(&mailer.SendError{Retryable: false, Status: 422})
+	r.svc.sender = funcSender(func(context.Context, mailer.Message) error {
 		return errors.New("provider says: address soporte@pedi-track.com invalid for key re_key")
 	})
 
@@ -248,7 +250,7 @@ func TestTick_AnAttemptHasItsOwnTimeLimit(t *testing.T) {
 	r := newRig()
 	var deadline time.Time
 	var hasDeadline bool
-	r.svc.sender = funcSender(func(ctx context.Context, _ Message) error {
+	r.svc.sender = funcSender(func(ctx context.Context, _ mailer.Message) error {
 		deadline, hasDeadline = ctx.Deadline()
 		return nil
 	})
@@ -288,7 +290,7 @@ func TestTick_ShuttingDownDuringASendLeavesTheWeekForTheNextProcess(t *testing.T
 	r := newRig()
 	ctx, cancel := context.WithCancel(context.Background())
 	started := make(chan struct{})
-	r.svc.sender = funcSender(func(ctx context.Context, _ Message) error {
+	r.svc.sender = funcSender(func(ctx context.Context, _ mailer.Message) error {
 		close(started)
 		<-ctx.Done() // the provider never answers
 		return ctx.Err()
@@ -310,11 +312,11 @@ func TestTick_ShuttingDownDuringASendLeavesTheWeekForTheNextProcess(t *testing.T
 }
 
 func TestSleepContext(t *testing.T) {
-	require.NoError(t, sleepContext(context.Background(), time.Millisecond))
+	require.NoError(t, mailer.SleepContext(context.Background(), time.Millisecond))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	require.ErrorIs(t, sleepContext(ctx, time.Hour), context.Canceled)
+	require.ErrorIs(t, mailer.SleepContext(ctx, time.Hour), context.Canceled)
 }
 
 func TestFailureMessagesAreFixedSentencesWithoutValues(t *testing.T) {
@@ -326,7 +328,7 @@ func TestFailureMessagesAreFixedSentencesWithoutValues(t *testing.T) {
 }
 
 func TestTick_IfTheRefusalCannotBeRecordedTheWeekIsNotTreatedAsClosed(t *testing.T) {
-	r := newRig(&SendError{Retryable: false, Status: 401})
+	r := newRig(&mailer.SendError{Retryable: false, Status: 401})
 	r.claims.markFailedErr = errors.New("database is down")
 
 	err := r.svc.Tick(context.Background(), r.due)

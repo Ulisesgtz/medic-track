@@ -10,18 +10,19 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
+	"github.com/Ulisesgtz/medic-track/backend/internal/mailer"
 )
 
 // fakeSender records what it is asked to send and fails as told.
 type fakeSender struct {
 	mu       sync.Mutex
-	sent     []Message
+	sent     []mailer.Message
 	attempts int
 	// results are the answers to the first calls, in order; after them it succeeds.
 	results []error
 }
 
-func (f *fakeSender) Send(_ context.Context, m Message) error {
+func (f *fakeSender) Send(_ context.Context, m mailer.Message) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.attempts++
@@ -36,10 +37,10 @@ func (f *fakeSender) Send(_ context.Context, m Message) error {
 	return nil
 }
 
-func (f *fakeSender) messages() []Message {
+func (f *fakeSender) messages() []mailer.Message {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	return append([]Message(nil), f.sent...)
+	return append([]mailer.Message(nil), f.sent...)
 }
 
 var testConfig = Config{APIKey: "re_key", To: "soporte@pedi-track.com", From: "PediTrack <alertas@pedi-track.com>", Weekday: 1, Hour: 8, EnvLabel: "DEV"}
@@ -86,11 +87,11 @@ func TestSendWeek_AFailureToBuildSendsNothing(t *testing.T) {
 }
 
 func TestSendWeek_APropagatesTheProvidersError(t *testing.T) {
-	sender := &fakeSender{results: []error{&SendError{Retryable: false, Status: 401}}}
+	sender := &fakeSender{results: []error{&mailer.SendError{Retryable: false, Status: 401}}}
 
 	err := sendWeek(NewService(newFake(), sender, nil, testConfig, 90), context.Background(), now)
 
-	var sendErr *SendError
+	var sendErr *mailer.SendError
 	require.True(t, errors.As(err, &sendErr))
 	require.Equal(t, 401, sendErr.Status)
 }

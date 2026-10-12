@@ -1,18 +1,34 @@
 import { useState } from 'react'
 import { formatDayMonth } from '../../shared/date'
 import { invitationLink } from './api'
+import { emailLine } from './emailStatus'
 import { ROLE_LABEL } from './roles'
-import type { CreatedInvitation } from './types'
+import type { CreatedInvitation, EmailStatus } from './types'
 
 /**
  * «Liga lista» (mock «Familia»): the link of an invitation just created or sent again — the only moment the server gives its
  * token (it keeps only a hash). It takes the place of the form until «Listo», so «Copiar liga» is the screen's one solid
- * button. Nothing is e-mailed: the tutor copies the link and sends it themself. The token lives in the `#` part of the link,
+ * button. The link is also e-mailed to the invited person when the service can (specs/040); the card says how that went, and the
+ * tutor can always copy the link and send it themself. The token lives in the `#` part of the link,
  * which a browser never sends to a server. After copying, the button says «Liga copiada ✓».
  */
-export function InviteLink({ invitation, onDone, variant }: { invitation: CreatedInvitation; onDone: () => void; variant: 'phone' | 'desktop' }) {
+export function InviteLink({
+  invitation,
+  emailStatus,
+  onDone,
+  variant,
+}: {
+  invitation: CreatedInvitation
+  /** The live state of the e-mail (from the family list); the answer's own is the first. */
+  emailStatus?: EmailStatus
+  onDone: () => void
+  variant: 'phone' | 'desktop'
+}) {
   const [copied, setCopied] = useState<'yes' | 'no' | null>(null)
   const link = invitationLink(window.location.origin, invitation.token)
+  const status = emailStatus ?? invitation.emailStatus
+  const line = emailLine(status, invitation.email)
+  const emailed = status === 'sending' || status === 'sent'
 
   async function copy() {
     try {
@@ -29,7 +45,12 @@ export function InviteLink({ invitation, onDone, variant }: { invitation: Create
       className={`flex flex-col gap-4 rounded-[22px] border-2 border-bright bg-surface shadow-[0_8px_20px_rgba(4,37,43,0.07)] ${variant === 'desktop' ? 'p-6' : 'p-[22px]'}`}
     >
       <p className="text-xs font-extrabold tracking-[0.1em] text-action uppercase">Liga lista</p>
-      <h2 className="-mt-2 text-xl font-black tracking-[-0.02em] text-ink">Envíale esta liga por mensaje</h2>
+      <h2 className="-mt-2 text-xl font-black tracking-[-0.02em] text-ink">{emailed ? 'Enviamos la invitación por correo' : 'Envíale esta liga por mensaje'}</h2>
+      {line && (
+        <p role="status" aria-live="polite" className={`-mt-2 text-[15px] leading-normal font-bold [overflow-wrap:anywhere] ${status === 'failed' ? 'text-body' : 'text-confirmed-strong'}`}>
+          {line}
+        </p>
+      )}
       <p className="text-[15px] leading-normal text-body [overflow-wrap:anywhere]">
         Para <strong className="text-ink">{invitation.email}</strong> · {ROLE_LABEL[invitation.role]} · vence el {formatDayMonth(invitation.expiresAt)}
       </p>
@@ -45,7 +66,7 @@ export function InviteLink({ invitation, onDone, variant }: { invitation: Create
           className="min-h-12 w-full min-w-0 rounded-[14px] border-[1.5px] border-hint-border bg-hint px-4 py-3 text-[15px] font-semibold text-ink focus:border-2 focus:border-ink focus:outline-none"
         />
       </div>
-      <p className="text-sm leading-relaxed text-slate-600">Esta liga solo se muestra ahora. Si la pierdes, usa «Enviar de nuevo» para crear otra.</p>
+      <p className="text-sm leading-relaxed text-slate-600">{emailed ? 'También puedes copiar la liga y mandarla tú. ' : ''}Esta liga solo se muestra ahora. Si la pierdes, usa «Enviar de nuevo» para crear otra.</p>
       <div className="flex flex-wrap gap-2.5">
         <button
           type="button"

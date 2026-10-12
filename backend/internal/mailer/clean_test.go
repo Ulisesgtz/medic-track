@@ -1,4 +1,4 @@
-package errordigest
+package mailer
 
 import (
 	"strings"
@@ -62,3 +62,6 @@ func TestCleanMessage_ATokenHasDigitsALongWordDoesNot(t *testing.T) {
 	// 32 hexadecimal characters (a hash without dashes) do have digits.
 	require.Equal(t, "hash [token]", cleanMessage("hash 9f86d081884c7d659a2feaa0c55ad015"))
 }
+
+// cleanMessage is Clean at the length the digest uses for the messages of error_logs.
+func cleanMessage(s string) string { return Clean(s, 160) }

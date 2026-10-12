@@ -42,6 +42,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/family"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/jobreport"
+	"github.com/Ulisesgtz/medic-track/backend/internal/mailer"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ops"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
 	"github.com/Ulisesgtz/medic-track/backend/internal/platform"
@@ -102,6 +103,27 @@ func main() {
 	}))
 	familyHandler := family.NewHandler(familyService, responder)
 
+	// The e-mail of the invitations (specs/040) and the daily quota it shares with the weekly digest. Without the provider's key
+	// (or MAIL_DRIVER=discard) or without FRONTEND_ORIGIN nothing is e-mailed and the link is copied by hand, as before; the
+	// console says which variable is missing and never a value.
+	mailConfig := mailer.ConfigFromEnv()
+	// mailStopped is closed when the invitations' e-mail queue has been closed after a shutdown.
+	var mailStopped chan struct{}
+	// One reporter for the quota and the dispatcher, so the failures of the mailer are grouped together.
+	mailReporter := jobreport.New(errorLogRepo, "mailer")
+	mailQuota := mailer.NewQuota(mailer.NewRepository(pool), mailConfig, mailReporter)
+	if mailOrigin := os.Getenv("FRONTEND_ORIGIN"); mailConfig.Available() && mailOrigin != "" {
+		dispatcher := family.NewEmailDispatcher(family.NewRepository(pool), mailer.NewSender(mailConfig, nil), mailQuota, mailReporter)
+		mailStopped = make(chan struct{})
+		go func() { dispatcher.Start(ctx); close(mailStopped) }()
+		familyService.SetEmail(family.EmailSettings{
+			Dispatcher: dispatcher, From: mailConfig.From, Origin: mailOrigin,
+			PerInvitation: mailConfig.PerInvitationPerDay, PerFamily: mailConfig.PerFamilyPerDay,
+		})
+	} else {
+		log.Print("invitation e-mails unavailable: RESEND_API_KEY (or MAIL_DRIVER=discard) and FRONTEND_ORIGIN must be set")
+	}
+
 	// Dose reminders (specs/011): without VAPID keys the API still runs, reminders are just unavailable.
 	reminderConfig := reminder.ConfigFromEnv()
 	reminderService := reminder.NewService(reminder.NewRepository(pool), reminder.NewWebPushSender(reminderConfig, nil), reminderConfig)
@@ -124,8 +146,9 @@ func main() {
 	// job:error-digest.
 	digestConfig := errordigest.ConfigFromEnv()
 	if digestConfig.Available() {
-		digest := errordigest.NewService(errorLogRepo, errordigest.NewResendSender(digestConfig.APIKey, nil, ""), errordigest.NewRepository(pool), digestConfig, retentionConfig.Days)
+		digest := errordigest.NewService(errorLogRepo, mailer.NewResendSender(digestConfig.APIKey, nil, ""), errordigest.NewRepository(pool), digestConfig, retentionConfig.Days)
 		digest.SetReporter(jobreport.New(errorLogRepo, "error-digest"))
+		digest.SetQuota(mailQuota) // the same daily quota the invitations use: the digest keeps the places they leave
 		go digest.Run(ctx)
 	} else {
 		log.Print(digestConfig.UnavailableReason())
@@ -209,6 +232,13 @@ func main() {
 	log.Printf("PediTrack API listening on :%s", port)
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("server error: %v", err)
+	}
+	// The e-mails still queued are closed as failed (so no invitation waits "sending" forever); a few seconds are enough for it.
+	if mailStopped != nil {
+		select {
+		case <-mailStopped:
+		case <-time.After(5 * time.Second):
+		}
 	}
 }
 

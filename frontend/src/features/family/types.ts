@@ -18,6 +18,9 @@ export interface FamilyMember {
   you: boolean
 }
 
+/** What happened to the invitation's e-mail (specs/040). `none`: none was asked (no provider configured). */
+export type EmailStatus = 'none' | 'sending' | 'sent' | 'failed'
+
 export interface FamilyInvitation {
   id: string
   email: string
@@ -26,6 +29,9 @@ export interface FamilyInvitation {
   /** ISO instant the invitation stops working. */
   expiresAt: string
   childId: string | null
+  emailStatus: EmailStatus
+  /** ISO instant the e-mail state changed; null if an e-mail was never asked. */
+  emailStatusAt: string | null
 }
 
 export interface FamilyView {
@@ -47,6 +53,9 @@ export interface CreatedInvitation {
   status: string
   expiresAt: string
   token: string
+  /** The e-mail's initial state; the live one comes from the family list (`GET /family`). */
+  emailStatus: EmailStatus
+  emailStatusAt: string | null
 }
 
 export interface InvitationPreview {
