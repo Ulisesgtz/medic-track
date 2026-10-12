@@ -17,13 +17,13 @@
 package main
 
 import (
-	"strconv"
-	"strings"
 	"context"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -37,6 +37,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	_ "github.com/Ulisesgtz/medic-track/backend/internal/docs"
+	"github.com/Ulisesgtz/medic-track/backend/internal/errordigest"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/family"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
@@ -115,7 +116,20 @@ func main() {
 
 	// The log doesn't grow forever (specs/021): once a day what is older than the retention is deleted, by batches; a failure
 	// of that job is itself reported to error_logs like any background process's (specs/018).
-	go retention.Run(ctx, errorLogRepo, jobreport.New(errorLogRepo, "error-logs-retention"), retention.ConfigFromEnv())
+	retentionConfig := retention.ConfigFromEnv()
+	go retention.Run(ctx, errorLogRepo, jobreport.New(errorLogRepo, "error-logs-retention"), retentionConfig)
+
+	// The weekly digest of those errors by e-mail (specs/039): without the provider's key the API still runs, the digest just
+	// doesn't (the console says so once, naming the variable and never a value). What fails in it goes to error_logs as
+	// job:error-digest.
+	digestConfig := errordigest.ConfigFromEnv()
+	if digestConfig.Available() {
+		digest := errordigest.NewService(errorLogRepo, errordigest.NewResendSender(digestConfig.APIKey, nil, ""), errordigest.NewRepository(pool), digestConfig, retentionConfig.Days)
+		digest.SetReporter(jobreport.New(errorLogRepo, "error-digest"))
+		go digest.Run(ctx)
+	} else {
+		log.Print(digestConfig.UnavailableReason())
+	}
 
 	// Operation queries over error_logs (specs/021): they exist only with a key; without one there is no such route.
 	var opsHandler *ops.Handler
@@ -146,20 +160,20 @@ func main() {
 	r := server.NewRouter(server.Deps{
 		RateLimit:       generalMW,
 		StrictRateLimit: strictMW,
-		Responder:      responder,
-		Catalog:        catalogHandler,
-		Account:        accountHandler,
-		Consultation:   consultationHandler,
-		Reminder:       reminderHandler,
-		Family:         familyHandler,
-		Supplement:     supplementHandler,
-		Appointment:    appointmentHandler,
-		Ops:            opsHandler,
-		OpsKey:         opsKey,
-		Ownership:      ownership.NewRepository(pool),
-		Access:         access.NewRepository(pool),
-		FrontendOrigin: frontendOrigin,
-		RequireSession: authmw.RequireSession(responder, authmw.PartyOptions(os.Getenv("CLERK_AUTHORIZED_PARTIES"))...),
+		Responder:       responder,
+		Catalog:         catalogHandler,
+		Account:         accountHandler,
+		Consultation:    consultationHandler,
+		Reminder:        reminderHandler,
+		Family:          familyHandler,
+		Supplement:      supplementHandler,
+		Appointment:     appointmentHandler,
+		Ops:             opsHandler,
+		OpsKey:          opsKey,
+		Ownership:       ownership.NewRepository(pool),
+		Access:          access.NewRepository(pool),
+		FrontendOrigin:  frontendOrigin,
+		RequireSession:  authmw.RequireSession(responder, authmw.PartyOptions(os.Getenv("CLERK_AUTHORIZED_PARTIES"))...),
 	})
 
 	// Swagger UI, generated from the @swag annotations on the handlers below

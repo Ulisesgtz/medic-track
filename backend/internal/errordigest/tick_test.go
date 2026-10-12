@@ -221,6 +221,7 @@ func (failingClaimer) Claim(context.Context, string, time.Duration) (ClaimResult
 }
 func (failingClaimer) MarkSent(context.Context, string) error   { return context.DeadlineExceeded }
 func (failingClaimer) MarkFailed(context.Context, string) error { return context.DeadlineExceeded }
+func (failingClaimer) Release(context.Context, string) error    { return context.DeadlineExceeded }
 
 func TestTick_AFailureToRecordTheSentWeekIsReturned(t *testing.T) {
 	svc := NewService(newFake(), &fakeSender{}, markFailingClaimer{}, testConfig, 90)

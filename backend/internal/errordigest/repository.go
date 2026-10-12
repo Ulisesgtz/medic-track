@@ -79,6 +79,18 @@ func (r *Repository) MarkSent(ctx context.Context, weekKey string) error {
 	return nil
 }
 
+// Release gives a week back without finishing it: its lease ends now, so the next Claim — in this process or another — takes it
+// at once instead of waiting for the lease to run out. Only a week still 'sending' changes. Used when building the summary fails
+// (the database) and when the service shuts down in the middle of a send.
+func (r *Repository) Release(ctx context.Context, weekKey string) error {
+	if _, err := r.pool.Exec(ctx, `
+		UPDATE error_digest_runs SET lease_until = now() WHERE week_key = $1 AND status = 'sending'
+	`, weekKey); err != nil {
+		return fmt.Errorf("releasing the digest week: %w", err)
+	}
+	return nil
+}
+
 // MarkFailed records that the week could not be sent and is given up on: it is not claimed again, and the next digest, which
 // covers the last 7 days, takes over.
 func (r *Repository) MarkFailed(ctx context.Context, weekKey string) error {
