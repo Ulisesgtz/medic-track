@@ -91,15 +91,16 @@ func (r *Repository) ListMembers(ctx context.Context, familyID uuid.UUID) ([]Mem
 }
 
 const invitationColumns = `i.id, i.family_account_id, i.email, i.role, i.child_id,
-	CASE WHEN i.status = 'pending' AND i.expires_at < now() THEN 'expired' ELSE i.status END, i.expires_at, i.created_at`
+	CASE WHEN i.status = 'pending' AND i.expires_at < now() THEN 'expired' ELSE i.status END, i.expires_at, i.created_at,
+	i.email_status, i.email_status_at`
 
 func scanInvitation(row pgx.Row) (Invitation, error) {
 	var inv Invitation
-	var role, status string
-	if err := row.Scan(&inv.ID, &inv.FamilyAccountID, &inv.Email, &role, &inv.ChildID, &status, &inv.ExpiresAt, &inv.CreatedAt); err != nil {
+	var role, status, emailStatus string
+	if err := row.Scan(&inv.ID, &inv.FamilyAccountID, &inv.Email, &role, &inv.ChildID, &status, &inv.ExpiresAt, &inv.CreatedAt, &emailStatus, &inv.EmailStatusAt); err != nil {
 		return Invitation{}, err
 	}
-	inv.Role, inv.Status = Role(role), InvitationStatus(status)
+	inv.Role, inv.Status, inv.EmailStatus = Role(role), InvitationStatus(status), EmailStatus(emailStatus)
 	return inv, nil
 }
 
@@ -490,4 +491,42 @@ func (r *Repository) RemoveMember(ctx context.Context, familyID, memberID, actor
 		return fmt.Errorf("removing the member: %w", err)
 	}
 	return tx.Commit(ctx)
+}
+
+// SetEmailStatus moves the e-mail of an invitation from one state to another, but only while the invitation still has that
+// token (a resend gives it another, and an old send must not touch the state of the new one). It says whether it changed.
+func (r *Repository) SetEmailStatus(ctx context.Context, invitationID uuid.UUID, tokenHash []byte, from, to EmailStatus) (bool, error) {
+	tag, err := r.pool.Exec(ctx, `
+		UPDATE family_invitations SET email_status = $4, email_status_at = now()
+		WHERE id = $1 AND token_hash = $2 AND email_status = $3
+	`, invitationID, tokenHash, string(from), string(to))
+	if err != nil {
+		return false, fmt.Errorf("saving the state of the invitation e-mail: %w", err)
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
+// StillCurrent says whether the invitation is still pending, not expired and has that token: only then is its e-mail worth sending.
+func (r *Repository) StillCurrent(ctx context.Context, invitationID uuid.UUID, tokenHash []byte) (bool, error) {
+	var current bool
+	err := r.pool.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM family_invitations WHERE id = $1 AND token_hash = $2 AND status = 'pending' AND expires_at > now())
+	`, invitationID, tokenHash).Scan(&current)
+	if err != nil {
+		return false, fmt.Errorf("checking the invitation: %w", err)
+	}
+	return current, nil
+}
+
+// SweepStaleSending closes as failed every e-mail left 'sending' for longer than olderThan (the process that had it died or the
+// send never ended), so the screen never waits forever. It says how many.
+func (r *Repository) SweepStaleSending(ctx context.Context, olderThan time.Duration) (int64, error) {
+	tag, err := r.pool.Exec(ctx, `
+		UPDATE family_invitations SET email_status = 'failed', email_status_at = now()
+		WHERE email_status = 'sending' AND email_status_at < now() - make_interval(secs => $1)
+	`, olderThan.Seconds())
+	if err != nil {
+		return 0, fmt.Errorf("sweeping the stale e-mail sends: %w", err)
+	}
+	return tag.RowsAffected(), nil
 }

@@ -40,6 +40,21 @@ const (
 	StatusExpired  InvitationStatus = "expired"
 )
 
+// EmailStatus is where the e-mail of an invitation is (specs/040): the link can also be copied, so a failure here never
+// affects the invitation.
+type EmailStatus string
+
+const (
+	// EmailNone: no e-mail was asked (no provider configured).
+	EmailNone EmailStatus = "none"
+	// EmailSending: queued or being sent.
+	EmailSending EmailStatus = "sending"
+	// EmailSent: the provider accepted it.
+	EmailSent EmailStatus = "sent"
+	// EmailFailed: it could not be sent (provider, daily quota or limits); the link can still be copied.
+	EmailFailed EmailStatus = "failed"
+)
+
 // Invitation is one invitation to a family. The token itself is never stored (only its hash); it is returned once, when the
 // invitation is created or sent again.
 type Invitation struct {
@@ -51,6 +66,9 @@ type Invitation struct {
 	Status          InvitationStatus
 	ExpiresAt       time.Time
 	CreatedAt       time.Time
+	// EmailStatus and EmailStatusAt say what happened to the invitation's e-mail (nil when it was never asked).
+	EmailStatus   EmailStatus
+	EmailStatusAt *time.Time
 	// Token is set only on the invitation just created or resent.
 	Token string
 }
