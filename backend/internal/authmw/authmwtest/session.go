@@ -36,7 +36,7 @@ type Verifier struct {
 }
 
 // NewVerifier generates a key pair and builds the middleware around it.
-func NewVerifier(t *testing.T, responder *httpx.Responder) *Verifier {
+func NewVerifier(t *testing.T, responder *httpx.Responder, opts ...clerkhttp.AuthorizationOption) *Verifier {
 	t.Helper()
 
 	privKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -48,25 +48,35 @@ func NewVerifier(t *testing.T, responder *httpx.Responder) *Verifier {
 
 	return &Verifier{
 		privKey:    privKey,
-		Middleware: authmw.RequireSession(responder, clerkhttp.JSONWebKey(string(pemKey))),
+		Middleware: authmw.RequireSession(responder, append([]clerkhttp.AuthorizationOption{clerkhttp.JSONWebKey(string(pemKey))}, opts...)...),
 	}
 }
 
 // Token mints a session token for clerkUserID, verifiable by v.Middleware.
 func (v *Verifier) Token(t *testing.T, clerkUserID string) string {
 	t.Helper()
+	return v.TokenForParty(t, clerkUserID, "")
+}
+
+// TokenForParty is Token with the "azp" claim (the origin Clerk issued the session to) set to party; empty leaves it out.
+func (v *Verifier) TokenForParty(t *testing.T, clerkUserID, party string) string {
+	t.Helper()
 
 	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.RS256, Key: v.privKey}, nil)
 	require.NoError(t, err)
 
 	now := time.Now()
-	token, err := josejwt.Signed(signer).Claims(map[string]any{
+	claims := map[string]any{
 		"sub": clerkUserID,
 		// isValidIssuer (clerk-sdk-go/v2/jwt) requires this exact shape.
 		"iss": "https://test.clerk.accounts.dev",
 		"iat": now.Unix(),
 		"exp": now.Add(time.Hour).Unix(),
-	}).CompactSerialize()
+	}
+	if party != "" {
+		claims["azp"] = party
+	}
+	token, err := josejwt.Signed(signer).Claims(claims).CompactSerialize()
 	require.NoError(t, err)
 	return token
 }

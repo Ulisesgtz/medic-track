@@ -231,3 +231,23 @@ func TestResponder_WriteJSONError_CapturesDistinctCallSites(t *testing.T) {
 	require.Equal(t, first.File, second.File) // same test file
 	require.NotEqual(t, first.Line, second.Line, "each call site must capture its own line")
 }
+
+func TestResponder_WriteJSONErrorUnlogged_WritesBodyAndRecordsNothing(t *testing.T) {
+	recorder := newFakeRecorder()
+	responder := httpx.NewResponder(recorder)
+	rec := httptest.NewRecorder()
+
+	responder.WriteJSONErrorUnlogged(rec, 401, "unauthorized", "A valid session is required")
+
+	require.Equal(t, 401, rec.Code)
+	require.Equal(t, "application/json", rec.Header().Get("Content-Type"))
+	var body map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, map[string]string{"error": "unauthorized", "message": "A valid session is required"}, body)
+
+	select {
+	case <-recorder.done:
+		t.Fatal("an unlogged error must not reach error_logs")
+	case <-time.After(100 * time.Millisecond):
+	}
+}

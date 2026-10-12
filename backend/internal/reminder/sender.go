@@ -45,7 +45,11 @@ const sendTimeout = 10 * time.Second
 // default has no timeout at all).
 func NewWebPushSender(config Config, client webpush.HTTPClient) *WebPushSender {
 	if client == nil {
-		client = &http.Client{Timeout: sendTimeout}
+		// A push service answers the push itself: it never needs to send the request somewhere else, so a redirect is not followed.
+		client = &http.Client{
+			Timeout:       sendTimeout,
+			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+		}
 	}
 	return &WebPushSender{config: config, client: client}
 }

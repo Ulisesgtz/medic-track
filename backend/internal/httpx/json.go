@@ -64,6 +64,16 @@ func (r *Responder) WriteJSONError(ctx context.Context, w http.ResponseWriter, s
 	r.record(ctx, status, message, accountID)
 }
 
+// WriteJSONErrorUnlogged writes the same body as WriteJSONError but does NOT record an error_logs entry. It exists for
+// the answers anyone on the internet can provoke without a session or a valid token (a missing session's 401, a bad
+// reminder token's 403): they carry no account and no information, and logging each one would let a script fill the
+// table and bury the real errors. Every other error response keeps going through WriteJSONError.
+func (r *Responder) WriteJSONErrorUnlogged(w http.ResponseWriter, status int, code, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": code, "message": message})
+}
+
 // record captures the call site of whichever public method invoked it
 // (skip=2: 0=record's own frame, 1=WriteJSON/WriteJSONError's frame,
 // 2=their caller) and persists the entry in a detached background

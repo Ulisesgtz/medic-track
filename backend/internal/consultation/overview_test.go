@@ -206,7 +206,7 @@ func TestHandler_GetChildOverview_Success(t *testing.T) {
 	rec := doPostPath(t, router, "/children/"+childID.String()+"/consultations", map[string]any{
 		"doctorName":       "Dra. López",
 		"consultDate":      today().Format("2006-01-02"),
-		"photoBase64":      base64.StdEncoding.EncodeToString([]byte("fake-jpeg")),
+		"photoBase64":      base64.StdEncoding.EncodeToString(testJPEG),
 		"notes":            "Tos",
 		"utcOffsetMinutes": 0,
 		"medications":      []map[string]any{validMedicationPayload()},

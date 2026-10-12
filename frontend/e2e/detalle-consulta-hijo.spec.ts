@@ -1,7 +1,7 @@
 import path from 'node:path'
 import fs from 'node:fs'
 import os from 'node:os'
-import { test, expect, designs, signUp } from './helpers'
+import { test, expect, designs, signUp, PNG_BASE64 } from './helpers'
 
 // Covers specs/004-detalle-consulta-hijo in both designs — the critical flow
 // named in the constitution: registrar consulta (foto → confirmación manual) →
@@ -10,9 +10,8 @@ import { test, expect, designs, signUp } from './helpers'
 
 function writeTempImage(): string {
   const filePath = path.join(os.tmpdir(), `receta-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.jpg`)
-  // A tiny valid JPEG isn't required — the backend only stores bytes, and
-  // OCR failing on a non-photo is an explicitly covered case (FR-007).
-  fs.writeFileSync(filePath, Buffer.from('fake-prescription-photo'))
+  // A real (tiny) PNG: the server checks the file's signature (specs/037). OCR finding no text in it is covered (FR-007).
+  fs.writeFileSync(filePath, Buffer.from(PNG_BASE64, 'base64'))
   return filePath
 }
 

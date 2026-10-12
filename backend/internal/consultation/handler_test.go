@@ -85,7 +85,7 @@ func TestHandler_CreateConsultation_Success(t *testing.T) {
 	childID := createTestChild(t, pool)
 	router, _ := routerWithPool(t)
 
-	photo := base64.StdEncoding.EncodeToString([]byte("fake-jpeg"))
+	photo := base64.StdEncoding.EncodeToString(testJPEG)
 	rec := doPostPath(t, router, "/children/"+childID.String()+"/consultations", map[string]any{
 		"doctorName":  "Dra. López",
 		"consultDate": "2026-01-15",
@@ -115,7 +115,7 @@ func TestHandler_CreateConsultation_NoMedications(t *testing.T) {
 	rec := doPostPath(t, router, "/children/"+childID.String()+"/consultations", map[string]any{
 		"doctorName":  "Dra. López",
 		"consultDate": "2026-01-15",
-		"photoBase64": base64.StdEncoding.EncodeToString([]byte("x")),
+		"photoBase64": base64.StdEncoding.EncodeToString(testJPEG),
 	})
 
 	require.Equal(t, http.StatusBadRequest, rec.Code)
@@ -133,7 +133,7 @@ func TestHandler_CreateConsultation_MissingStartTime(t *testing.T) {
 	rec := doPostPath(t, router, "/children/"+childID.String()+"/consultations", map[string]any{
 		"doctorName":  "Dra. López",
 		"consultDate": "2026-01-15",
-		"photoBase64": base64.StdEncoding.EncodeToString([]byte("x")),
+		"photoBase64": base64.StdEncoding.EncodeToString(testJPEG),
 		"medications": []map[string]any{{"name": "Amoxicilina", "frequencyHours": 8, "durationDays": 3}},
 	})
 
@@ -152,7 +152,7 @@ func TestHandler_CreateConsultation_ChildNotFound(t *testing.T) {
 	rec := doPostPath(t, router, "/children/11111111-1111-1111-1111-111111111111/consultations", map[string]any{
 		"doctorName":  "Dra. López",
 		"consultDate": "2026-01-15",
-		"photoBase64": base64.StdEncoding.EncodeToString([]byte("x")),
+		"photoBase64": base64.StdEncoding.EncodeToString(testJPEG),
 		"medications": []map[string]any{validMedicationPayload()},
 	})
 
@@ -180,7 +180,7 @@ func TestHandler_CreateConsultation_InvalidConsultDateFormat(t *testing.T) {
 	rec := doPostPath(t, router, "/children/"+childID.String()+"/consultations", map[string]any{
 		"doctorName":  "Dra. López",
 		"consultDate": "15-01-2026",
-		"photoBase64": base64.StdEncoding.EncodeToString([]byte("x")),
+		"photoBase64": base64.StdEncoding.EncodeToString(testJPEG),
 		"medications": []map[string]any{validMedicationPayload()},
 	})
 
@@ -210,7 +210,7 @@ func TestHandler_GetConsultation_Success(t *testing.T) {
 	created := doPostPath(t, router, "/children/"+childID.String()+"/consultations", map[string]any{
 		"doctorName":  "Dra. López",
 		"consultDate": "2026-01-15",
-		"photoBase64": base64.StdEncoding.EncodeToString([]byte("x")),
+		"photoBase64": base64.StdEncoding.EncodeToString(testJPEG),
 		"medications": []map[string]any{validMedicationPayload()},
 	})
 	var createdResp map[string]any
@@ -242,7 +242,7 @@ func TestHandler_UpdateDose_Success(t *testing.T) {
 	created := doPostPath(t, router, "/children/"+childID.String()+"/consultations", map[string]any{
 		"doctorName":  "Dra. López",
 		"consultDate": "2026-01-15",
-		"photoBase64": base64.StdEncoding.EncodeToString([]byte("x")),
+		"photoBase64": base64.StdEncoding.EncodeToString(testJPEG),
 		"medications": []map[string]any{validMedicationPayload()},
 	})
 	var createdResp map[string]any
@@ -281,7 +281,7 @@ func TestHandler_UpdateDose_WrongConsultation(t *testing.T) {
 	created := doPostPath(t, router, "/children/"+childID.String()+"/consultations", map[string]any{
 		"doctorName":  "Dra. López",
 		"consultDate": "2026-01-15",
-		"photoBase64": base64.StdEncoding.EncodeToString([]byte("x")),
+		"photoBase64": base64.StdEncoding.EncodeToString(testJPEG),
 		"medications": []map[string]any{validMedicationPayload()},
 	})
 	var createdResp map[string]any
@@ -408,7 +408,7 @@ func TestHandler_CreateConsultation_InternalError(t *testing.T) {
 	rec := doPostPath(t, router, "/children/11111111-1111-1111-1111-111111111111/consultations", map[string]any{
 		"doctorName":  "Dra. López",
 		"consultDate": "2026-01-15",
-		"photoBase64": base64.StdEncoding.EncodeToString([]byte("x")),
+		"photoBase64": base64.StdEncoding.EncodeToString(testJPEG),
 		"medications": []map[string]any{validMedicationPayload()},
 	})
 
@@ -440,4 +440,19 @@ func TestHandler_UpdateDose_InternalError(t *testing.T) {
 	rec := doPatchPath(t, router, "/consultations/11111111-1111-1111-1111-111111111111/doses/22222222-2222-2222-2222-222222222222", map[string]any{"taken": true})
 
 	require.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
+func TestHandler_CreateConsultation_PhotoThatIsNotAnImage(t *testing.T) {
+	pool := testPool(t)
+	childID := createTestChild(t, pool)
+	router, _ := routerWithPool(t)
+
+	rec := doPostPath(t, router, "/children/"+childID.String()+"/consultations", map[string]any{
+		"doctorName":  "Dra. López",
+		"consultDate": "2026-01-15",
+		"photoBase64": base64.StdEncoding.EncodeToString([]byte("<html><script>alert(1)</script>")),
+		"medications": []map[string]any{validMedicationPayload()},
+	})
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	require.Contains(t, rec.Body.String(), "photoBase64")
 }

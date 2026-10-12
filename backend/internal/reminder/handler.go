@@ -213,7 +213,8 @@ func (h *Handler) MarkTaken(w http.ResponseWriter, r *http.Request) {
 	}
 	switch {
 	case errors.Is(err, ErrInvalidActionToken):
-		h.responder.WriteJSONError(r.Context(), w, http.StatusForbidden, "invalid_action_token", "This reminder can no longer mark the dose", nil)
+		// Public endpoint: not logged (specs/037), a bad token is something anyone can send.
+		h.responder.WriteJSONErrorUnlogged(w, http.StatusForbidden, "invalid_action_token", "This reminder can no longer mark the dose")
 		return
 	case err != nil:
 		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not mark the dose", nil)

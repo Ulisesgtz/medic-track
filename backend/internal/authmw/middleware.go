@@ -9,6 +9,7 @@ package authmw
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	clerk "github.com/clerk/clerk-sdk-go/v2"
 	clerkhttp "github.com/clerk/clerk-sdk-go/v2/http"
@@ -21,9 +22,10 @@ import (
 
 // RequireSession returns chi-compatible middleware that verifies a Clerk
 // session token from the Authorization header. A missing or invalid token
-// is rejected with 401 through responder, so it is captured in error_logs
-// like any other 4xx/5xx response (specs/002-registro-log-errores) instead
-// of clerkhttp's default empty-body response. Extra opts are appended after
+// is rejected with 401 through responder (a JSON body instead of
+// clerkhttp's default empty one). That 401 is deliberately NOT written to
+// error_logs (specs/037): anyone without a session can provoke it, and it
+// says nothing about the service. Extra opts are appended after
 // the failure handler below — production code passes none (verification
 // fetches Clerk's real JWKS over the network); tests pass
 // clerkhttp.JSONWebKey(...) to verify locally instead (see authmwtest).
@@ -35,7 +37,7 @@ import (
 // entirely. Checking the claims here too makes both cases behave the same.
 func RequireSession(responder *httpx.Responder, opts ...clerkhttp.AuthorizationOption) func(http.Handler) http.Handler {
 	unauthorized := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		responder.WriteJSONError(r.Context(), w, http.StatusUnauthorized, "unauthorized", "A valid session is required", nil)
+		responder.WriteJSONErrorUnlogged(w, http.StatusUnauthorized, "unauthorized", "A valid session is required")
 	})
 	allOpts := append([]clerkhttp.AuthorizationOption{
 		clerkhttp.AuthorizationFailureHandler(unauthorized),
@@ -51,6 +53,22 @@ func RequireSession(responder *httpx.Responder, opts ...clerkhttp.AuthorizationO
 			next.ServeHTTP(w, r)
 		}))
 	}
+}
+
+// PartyOptions turns a comma-separated list of origins (the CLERK_AUTHORIZED_PARTIES variable) into the option that makes
+// RequireSession refuse a session Clerk issued to any other origin (its "azp" claim). An empty list adds nothing: every
+// origin of the Clerk instance is accepted, as before (specs/037).
+func PartyOptions(list string) []clerkhttp.AuthorizationOption {
+	var parties []string
+	for _, p := range strings.Split(list, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			parties = append(parties, p)
+		}
+	}
+	if len(parties) == 0 {
+		return nil
+	}
+	return []clerkhttp.AuthorizationOption{clerkhttp.AuthorizedPartyMatches(parties...)}
 }
 
 // ClerkUserIDFromContext returns the verified Clerk user id (the session
@@ -83,7 +101,7 @@ func RequireOwner(responder *httpx.Responder, param string, check OwnerCheck) fu
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			clerkUserID, ok := ClerkUserIDFromContext(r.Context())
 			if !ok {
-				responder.WriteJSONError(r.Context(), w, http.StatusUnauthorized, "unauthorized", "A valid session is required", nil)
+				responder.WriteJSONErrorUnlogged(w, http.StatusUnauthorized, "unauthorized", "A valid session is required")
 				return
 			}
 			id, err := uuid.Parse(chi.URLParam(r, param))
@@ -119,7 +137,7 @@ func RequireAccess(responder *httpx.Responder, param string, min access.Level, c
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			clerkUserID, ok := ClerkUserIDFromContext(r.Context())
 			if !ok {
-				responder.WriteJSONError(r.Context(), w, http.StatusUnauthorized, "unauthorized", "A valid session is required", nil)
+				responder.WriteJSONErrorUnlogged(w, http.StatusUnauthorized, "unauthorized", "A valid session is required")
 				return
 			}
 			id, err := uuid.Parse(chi.URLParam(r, param))

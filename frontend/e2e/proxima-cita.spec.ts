@@ -8,6 +8,7 @@ import {
   expect,
   inviteViaApi,
   localDayAfter,
+  PNG_BASE64,
   queryDb,
   secondPerson,
   seedChild,
@@ -115,7 +116,7 @@ for (const design of designs) {
       await page.getByLabel('Doctor').fill('Dra. Laura Cázares')
       const d = new Date()
       await page.getByLabel('Fecha', { exact: true }).fill(localDayAfter(0, d))
-      await page.getByLabel('Foto de la receta').setInputFiles({ name: 'receta.jpg', mimeType: 'image/jpeg', buffer: Buffer.from('fake-prescription-photo') })
+      await page.getByLabel('Foto de la receta').setInputFiles({ name: 'receta.jpg', mimeType: 'image/jpeg', buffer: Buffer.from(PNG_BASE64, 'base64') })
       await page.locator('#medications\\.0\\.name').fill('Amoxicilina')
       await page.locator('#medications\\.0\\.frequencyHours').fill('c/8 h')
       await page.locator('#medications\\.0\\.durationDays').fill('7 días')

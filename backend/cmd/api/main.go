@@ -17,6 +17,8 @@
 package main
 
 import (
+	"strconv"
+	"strings"
 	"context"
 	"log"
 	"net/http"
@@ -42,6 +44,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/ops"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
 	"github.com/Ulisesgtz/medic-track/backend/internal/platform"
+	"github.com/Ulisesgtz/medic-track/backend/internal/ratelimit"
 	"github.com/Ulisesgtz/medic-track/backend/internal/reminder"
 	"github.com/Ulisesgtz/medic-track/backend/internal/retention"
 	"github.com/Ulisesgtz/medic-track/backend/internal/server"
@@ -128,7 +131,21 @@ func main() {
 		frontendOrigin = "http://localhost:5173"
 	}
 
+	// Requests per minute per client address (specs/037). RATE_LIMIT_PER_MINUTE=0 turns the limit off. TRUSTED_PROXY_HOPS is
+	// how many proxies stand in front of the API (Railway = 1; with Cloudflare in front of Railway = 2).
+	rateLimit, strictLimit := envInt("RATE_LIMIT_PER_MINUTE", 240), envInt("RATE_LIMIT_STRICT_PER_MINUTE", 20)
+	proxyHops := envInt("TRUSTED_PROXY_HOPS", 1)
+	var generalMW, strictMW func(http.Handler) http.Handler
+	if rateLimit > 0 {
+		generalMW = ratelimit.Middleware(ratelimit.New(rateLimit, time.Minute), responder, proxyHops)
+	}
+	if strictLimit > 0 {
+		strictMW = ratelimit.Middleware(ratelimit.New(strictLimit, time.Minute), responder, proxyHops)
+	}
+
 	r := server.NewRouter(server.Deps{
+		RateLimit:       generalMW,
+		StrictRateLimit: strictMW,
 		Responder:      responder,
 		Catalog:        catalogHandler,
 		Account:        accountHandler,
@@ -142,20 +159,32 @@ func main() {
 		Ownership:      ownership.NewRepository(pool),
 		Access:         access.NewRepository(pool),
 		FrontendOrigin: frontendOrigin,
-		RequireSession: authmw.RequireSession(responder),
+		RequireSession: authmw.RequireSession(responder, authmw.PartyOptions(os.Getenv("CLERK_AUTHORIZED_PARTIES"))...),
 	})
 
 	// Swagger UI, generated from the @swag annotations on the handlers below
 	// (run `swag init` from backend/ after changing any of them — see
 	// backend/CLAUDE.md).
-	r.Get("/swagger/*", httpSwagger.WrapHandler)
+	// Only on a developer's machine, or when SWAGGER_ENABLED=true: a deployed API does not describe itself (specs/037).
+	if server.SwaggerEnabled(os.Getenv("SWAGGER_ENABLED"), os.Getenv("FRONTEND_ORIGIN")) {
+		r.Get("/swagger/*", httpSwagger.WrapHandler)
+	}
 
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
-	srv := &http.Server{Addr: ":" + port, Handler: r, ReadHeaderTimeout: 10 * time.Second}
+	// The timeouts keep a slow or idle connection from holding the server (the largest body is the 11 MiB consultation with
+	// its photo: two minutes are enough even on a poor mobile connection).
+	srv := &http.Server{
+		Addr:              ":" + port,
+		Handler:           r,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       2 * time.Minute,
+		WriteTimeout:      2 * time.Minute,
+		IdleTimeout:       2 * time.Minute,
+	}
 	go func() {
 		<-ctx.Done()
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -167,4 +196,12 @@ func main() {
 	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("server error: %v", err)
 	}
+}
+
+// envInt reads an integer environment variable; unset or invalid gives def.
+func envInt(name string, def int) int {
+	if v, err := strconv.Atoi(strings.TrimSpace(os.Getenv(name))); err == nil && v >= 0 {
+		return v
+	}
+	return def
 }

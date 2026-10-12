@@ -49,6 +49,12 @@ jobs:
         working-directory: backend
         run: go vet ./...
 
+      - name: Known vulnerabilities (govulncheck)
+        working-directory: backend
+        # Fails only for vulnerabilities in code the API actually calls (standard library, x/text, go-jose...). If it fails,
+        # raise the Go version in go.mod or the module it names (specs/037).
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
+
       - name: Verify Swagger docs are up to date
         working-directory: backend
         run: |

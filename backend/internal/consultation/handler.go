@@ -438,6 +438,13 @@ func (h *Handler) CreateConsultation(w http.ResponseWriter, r *http.Request) {
 			}}, "One or more fields are invalid"), nil)
 			return
 		}
+		if !looksLikeImage(decoded) {
+			h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody([]ValidationError{{
+				Field:   "photoBase64",
+				Message: "photo must be a JPEG, PNG, GIF, WebP or HEIC image",
+			}}, "One or more fields are invalid"), nil)
+			return
+		}
 		photo = decoded
 	}
 
