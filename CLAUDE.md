@@ -14,7 +14,7 @@ Pediatric health-record app for parents in Mexico. Built with Spec-Kit (Spec-Dri
 | CI (coverage + E2E gates) | `.github/workflows/ci.yml` |
 | API docs (Swagger UI, generated from Go doc comments) | `http://localhost:8080/swagger/index.html` when the backend is running — see `backend/CLAUDE.md` |
 | Backlog (future work decided but not yet spec'd) | `BACKLOG.md` |
-| DEV environment guide (deployed: `https://dev.pedi-track.com` + `https://api-dev.pedi-track.com` — Railway backend + Postgres, Cloudflare Pages frontend, DNS at HostGator, branch `develop`) | `DEPLOY.md`; backend image: `backend/Dockerfile` + `backend/railway.json` |
+| DEV environment guide (deployed: `https://dev.pedi-track.com` + `https://api-dev.pedi-track.com` — Railway backend + Postgres, Cloudflare Pages frontend, DNS at **Cloudflare** since 2026-10-11 —the domain is still registered and renewed at HostGator—, domain mail by Cloudflare Email Routing, branch `develop`) | `DEPLOY.md`; backend image: `backend/Dockerfile` + `backend/railway.json` |
 | Guide for the people who test the DEV environment (install on iPhone/Android, what to try, a message to send) | `PROBAR.md` |
 
 ## Current features

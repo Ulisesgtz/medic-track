@@ -52,7 +52,7 @@ base de datos de pruebas y sale de la rama `develop` (la constitución reserva `
 | Frontend PWA (`frontend/`) | Cloudflare Pages, proyecto `medic-track` | `https://dev.pedi-track.com` (también `https://medic-track.pages.dev`) |
 | Backend Go (`backend/`) | Railway, servicio `medic-track` (`backend/Dockerfile` + `backend/railway.json`) | `https://api-dev.pedi-track.com` (también `https://medic-track-production.up.railway.app`) |
 | Base de datos | Railway, servicio PostgreSQL del mismo proyecto | red interna de Railway |
-| DNS | HostGator (el dominio se queda ahí), tres registros | `dev`, `api-dev` y `_railway-verify.api-dev` |
+| DNS | **Cloudflare** (desde el 2026-10-11; el **registro y la renovación del dominio siguen en HostGator**, solo cambiaron los nameservers a `clint.ns.cloudflare.com` y `tricia.ns.cloudflare.com`) | `dev`, `api-dev` (**DNS only**), `_railway-verify.api-dev`, el correo (Email Routing) y la raíz/`www` |
 | Autenticación | instancia de **desarrollo** de Clerk (`pk_test_…` / `sk_test_…`) | — |
 
 - **Despliegue automático:** cada push o merge a `develop` redespliega el backend (Railway, *Auto deploys*) y el frontend
@@ -150,7 +150,9 @@ Guárdalas **solo en Railway**. No las pegues en el repo, en un chat ni en una c
 app instalada sabe que hay una versión nueva y muestra «Hay una versión nueva · Actualizar» (spec 017). Sin un
 `404.html`, Pages sirve `index.html` para cualquier ruta (SPA) y el service worker queda en `/sw.js`.
 
-### 5. HostGator: DNS
+### 5. DNS
+> **Desde el 2026-10-11 el DNS está en Cloudflare**, no en HostGator: los registros de abajo se administran en Cloudflare (*Domains → `pedi-track.com` → DNS*). En HostGator solo quedan el registro del dominio, su renovación y los nameservers apuntando a Cloudflare (*Configurar dominio → Cambiar plataforma → Otra plataforma*). `api-dev` va en **DNS only** (nube gris), `dev` en *Proxied*. Lo que sigue es el procedimiento original en HostGator, que sirve como referencia de los valores.
+
 En `cliente.hostgator.mx` → **Dominios** → `pedi-track.com` → **Configurar dominio** → elige **«Sin alojamiento (apenas Zona
 de DNS)»** → **«Editar Zona avanzada de DNS»**. **No uses «Cambiar plataforma» ni las plataformas de correo** de esa pantalla:
 reescriben el DNS y los registros MX. Solo **agrega** (no borres ni edites los que ya existen: `A`, `MX`, `ftp`, `www`,
@@ -240,3 +242,10 @@ desarrollo; es normal). En el teléfono sigue `PROBAR.md` (instalar, **Activar r
 - **Swagger**: el API desplegado ya no sirve `/swagger/*`. Para verlo en DEV, poner `SWAGGER_ENABLED=true` en Railway.
 - **`CLERK_AUTHORIZED_PARTIES`** (Railway, opcional): los orígenes del frontend a los que Clerk emite sesiones, separados por coma (`https://dev.pedi-track.com`). Con ella el API rechaza un token emitido para otro origen. No se pone en local ni en túneles.
 - **Límite de peticiones**: lo hace el propio API (`internal/ratelimit`), por dirección de cliente y por minuto: 240 en general y 20 en las rutas públicas (`Tomada` y las invitaciones). Se ajusta con `RATE_LIMIT_PER_MINUTE`, `RATE_LIMIT_STRICT_PER_MINUTE` (`0` lo apaga) y `TRUSTED_PROXY_HOPS` (1 con Railway; **2 si algún día se pone Cloudflare delante de Railway**, o todos compartirán la dirección de Cloudflare). Al excederlo responde 429 con `Retry-After`. Cloudflare delante (WAF, DDoS) sigue siendo una mejora opcional: requiere agregar `pedi-track.com` a Cloudflare y copiar todos los registros DNS de HostGator, incluidos los del correo.
+
+## Correo del dominio (2026-10-11)
+
+- **Recibir**: Cloudflare **Email Routing** (gratis) reenvía `contacto@pedi-track.com` y `soporte@pedi-track.com` a un Gmail; es solo un reenviador, no hay buzón ni webmail propios. La regla *catch-all* está desactivada (*Drop*). Los registros MX, SPF y DKIM los pone y bloquea Email Routing.
+- **Contestar**: en Gmail, *Ajustes → Cuentas e importación → Enviar el correo como*, con `smtp.gmail.com`, puerto 587, TLS, el Gmail como usuario y una **contraseña de aplicación** de Google (requiere la verificación en dos pasos). Esa contraseña no se guarda en el repositorio.
+- **Cambiar de proveedor de correo** más adelante es cambiar los registros MX y SPF en Cloudflare; dos servicios de correo no pueden convivir en el mismo dominio.
+- **Pendiente**: el «a través de gmail.com» (ver `BACKLOG.md`).
