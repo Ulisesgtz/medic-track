@@ -13,6 +13,8 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Ulisesgtz/medic-track/backend/internal/mailer"
 )
 
 // Tick against the real record of weeks (specs/039 Historia 2): one e-mail per week, whatever restarts and copies there are.
@@ -30,7 +32,7 @@ func farWeek(t *testing.T, pool *pgxpool.Pool) (due time.Time, week string) {
 	return due, week
 }
 
-func newTickService(pool *pgxpool.Pool, sender Sender) *Service {
+func newTickService(pool *pgxpool.Pool, sender mailer.Sender) *Service {
 	return NewService(newFake(), sender, NewRepository(pool), testConfig, 90)
 }
 

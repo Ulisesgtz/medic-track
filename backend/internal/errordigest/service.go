@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/Ulisesgtz/medic-track/backend/internal/mailer"
 )
 
 const (
@@ -61,7 +63,7 @@ type FailureReporter interface {
 // Service builds the weekly digest and sends it.
 type Service struct {
 	src           Source
-	sender        Sender
+	sender        mailer.Sender
 	claims        Claimer
 	cfg           Config
 	retentionDays int
@@ -76,33 +78,22 @@ type Service struct {
 
 // NewService creates the digest service. `retentionDays` is how long error_logs keeps its entries (it decides whether the
 // comparison with the previous week can be offered).
-func NewService(src Source, sender Sender, claims Claimer, cfg Config, retentionDays int) *Service {
-	return &Service{src: src, sender: sender, claims: claims, cfg: cfg, retentionDays: retentionDays, sleep: sleepContext}
+func NewService(src Source, sender mailer.Sender, claims Claimer, cfg Config, retentionDays int) *Service {
+	return &Service{src: src, sender: sender, claims: claims, cfg: cfg, retentionDays: retentionDays, sleep: mailer.SleepContext}
 }
 
 // SetReporter makes the digest's failures also go to error_logs (as job:error-digest). Without one they only reach the console.
 func (s *Service) SetReporter(r FailureReporter) { s.reporter = r }
 
-func sleepContext(ctx context.Context, d time.Duration) error {
-	timer := time.NewTimer(d)
-	defer timer.Stop()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case <-timer.C:
-		return nil
-	}
-}
-
 // message builds the digest of the week that ends at `now` as the e-mail to send. Its idempotency key is the week's, so asking
 // the provider twice for the same week sends one e-mail.
-func (s *Service) message(ctx context.Context, now time.Time) (Message, error) {
+func (s *Service) message(ctx context.Context, now time.Time) (mailer.Message, error) {
 	d, err := Build(ctx, s.src, now, s.retentionDays)
 	if err != nil {
-		return Message{}, fmt.Errorf("building the digest: %w", err)
+		return mailer.Message{}, fmt.Errorf("building the digest: %w", err)
 	}
 	subject, text := Render(d, s.cfg.EnvLabel)
-	return Message{
+	return mailer.Message{
 		From:           s.cfg.From,
 		To:             s.cfg.To,
 		Subject:        subject,
@@ -172,28 +163,10 @@ func (s *Service) Tick(ctx context.Context, now time.Time) error {
 	return nil
 }
 
-// sendWithRetries tries the send up to maxAttempts times with growing waits, and gives up at once on a refusal that asking again
-// can't fix (an invalid key, an unverified domain, a rejected address).
-func (s *Service) sendWithRetries(ctx context.Context, m Message) error {
-	var err error
-	for attempt := 1; attempt <= maxAttempts; attempt++ {
-		attemptCtx, cancel := context.WithTimeout(ctx, attemptTimeout)
-		err = s.sender.Send(attemptCtx, m)
-		cancel()
-		if err == nil {
-			return nil
-		}
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
-		if !IsRetryable(err) || attempt == maxAttempts {
-			return err
-		}
-		if waitErr := s.sleep(ctx, retryWaits[attempt-1]); waitErr != nil {
-			return waitErr
-		}
-	}
-	return err
+// sendWithRetries tries the send up to maxAttempts times with growing waits (mailer.SendWithRetries), and gives up at once on a
+// refusal that asking again can't fix (an invalid key, an unverified domain, a rejected address).
+func (s *Service) sendWithRetries(ctx context.Context, m mailer.Message) error {
+	return mailer.SendWithRetries(ctx, s.sender, m, retryWaits[:], attemptTimeout, s.sleep)
 }
 
 // release gives the week back; with the context already cancelled it uses a fresh one with a short limit.

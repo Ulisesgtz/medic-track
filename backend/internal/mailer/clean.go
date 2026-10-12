@@ -1,13 +1,10 @@
-package errordigest
+package mailer
 
 import (
 	"regexp"
 	"strings"
 	"unicode"
 )
-
-// maxMessageRunes is the longest a message is shown in the e-mail (specs/039 contracts/email.md).
-const maxMessageRunes = 160
 
 // The messages of error_logs are fixed sentences (specs/002 and 018) and carry no e-mail, identifier or token. These three
 // expressions are a second lock: if a future message ever did, it would reach the provider as «[correo]», «[id]» or «[token]»
@@ -19,10 +16,10 @@ var (
 	tokenPattern = regexp.MustCompile(`[A-Za-z0-9_\-]{32,}`)
 )
 
-// cleanMessage makes a text from error_logs safe to put in a plain-text e-mail: control characters and line breaks become spaces
+// Clean makes a text that comes from outside (a message of error_logs, a person's first name) safe to put in an e-mail: control characters and line breaks become spaces
 // (so it can't break the layout or add a header), anything that looks like an e-mail address, a UUID or a token is replaced,
-// and it is cut at 160 characters ending in «…». The replacements go before the cut so an address is never left half-written.
-func cleanMessage(s string) string {
+// and it is cut at maxRunes characters ending in «…». The replacements go before the cut so an address is never left half-written.
+func Clean(s string, maxRunes int) string {
 	s = strings.Map(func(r rune) rune {
 		if unicode.IsControl(r) {
 			return ' '
@@ -35,8 +32,8 @@ func cleanMessage(s string) string {
 	s = redactTokens(s)
 
 	runes := []rune(s)
-	if len(runes) > maxMessageRunes {
-		return string(runes[:maxMessageRunes-1]) + "…"
+	if len(runes) > maxRunes {
+		return string(runes[:maxRunes-1]) + "…"
 	}
 	return s
 }

@@ -1,4 +1,4 @@
-package errordigest
+package mailer
 
 import (
 	"context"

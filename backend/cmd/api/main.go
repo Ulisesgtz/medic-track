@@ -42,6 +42,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/family"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/jobreport"
+	"github.com/Ulisesgtz/medic-track/backend/internal/mailer"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ops"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
 	"github.com/Ulisesgtz/medic-track/backend/internal/platform"
@@ -124,7 +125,7 @@ func main() {
 	// job:error-digest.
 	digestConfig := errordigest.ConfigFromEnv()
 	if digestConfig.Available() {
-		digest := errordigest.NewService(errorLogRepo, errordigest.NewResendSender(digestConfig.APIKey, nil, ""), errordigest.NewRepository(pool), digestConfig, retentionConfig.Days)
+		digest := errordigest.NewService(errorLogRepo, mailer.NewResendSender(digestConfig.APIKey, nil, ""), errordigest.NewRepository(pool), digestConfig, retentionConfig.Days)
 		digest.SetReporter(jobreport.New(errorLogRepo, "error-digest"))
 		go digest.Run(ctx)
 	} else {
