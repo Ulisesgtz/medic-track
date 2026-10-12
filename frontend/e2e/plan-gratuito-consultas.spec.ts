@@ -8,7 +8,7 @@ import { test, expect, designs, seedChild, apiPost, PNG_BASE64 } from './helpers
 
 function writeTempImage(): string {
   const filePath = path.join(os.tmpdir(), `receta-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.jpg`)
-  fs.writeFileSync(filePath, Buffer.from('fake-prescription-photo'))
+  fs.writeFileSync(filePath, Buffer.from(PNG_BASE64, 'base64'))
   return filePath
 }
 
