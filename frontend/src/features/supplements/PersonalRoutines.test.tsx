@@ -319,7 +319,7 @@ describe('PersonalRoutinesPage', () => {
     renderIn(<PersonalRoutinesPage kind="supplement" />)
     expect(await screen.findByRole('heading', { name: 'Mis suplementos', level: 1 })).toBeInTheDocument()
     expect(screen.getByText('Personal')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '← Tus hijos' })).toHaveAttribute('href', '/home')
+    expect(screen.getByRole('link', { name: '← Inicio' })).toHaveAttribute('href', '/home')
     expect(screen.queryByRole('heading', { name: 'Tus tomas de hoy' })).not.toBeInTheDocument()
   })
 

@@ -219,7 +219,7 @@ export function ChildDetailPage() {
             to="/home"
             className="-my-3 inline-flex min-h-11 items-center text-sm font-bold text-bright-soft hover:text-white"
           >
-            ← Tus hijos
+            ← Inicio
           </Link>
           {child ? (
             <div className="mt-5 flex items-center gap-4">

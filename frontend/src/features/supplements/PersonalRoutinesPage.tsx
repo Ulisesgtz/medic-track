@@ -25,7 +25,7 @@ export function PersonalRoutinesPage({ kind }: { kind: RoutineKind }) {
     <RoutinePageFrame
       isDesktop={isDesktop}
       childId={undefined}
-      backLabel="← Tus hijos"
+      backLabel="← Inicio"
       backTo="/home"
       eyebrow="Personal"
       title={SECTION_COPY[kind].personalTitle}

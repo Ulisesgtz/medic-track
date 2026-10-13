@@ -396,7 +396,7 @@ export function FamilyPage() {
 function BackLink({ className }: { className: string }): ReactNode {
   return (
     <Link to="/home" className={className}>
-      ← Tus hijos
+      ← Inicio
     </Link>
   )
 }
