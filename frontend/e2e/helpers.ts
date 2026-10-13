@@ -422,6 +422,6 @@ export async function pickTime(page: Page, name: string, time: string) {
   await page.getByRole('button', { name, exact: true }).click()
   const dialog = page.getByRole('dialog', { name: 'Elegir hora' })
   await dialog.getByRole('group', { name: 'Hora', exact: true }).getByRole('button', { name: h, exact: true }).click()
-  await dialog.getByRole('group', { name: 'Minutos', exact: true }).getByRole('button', { name: `:${m}`, exact: true }).click()
+  await dialog.getByRole('group', { name: 'Minutos', exact: true }).getByRole('button', { name: m, exact: true }).click()
   await expect(dialog).toHaveCount(0)
 }

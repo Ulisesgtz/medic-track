@@ -344,7 +344,10 @@ func (r *Repository) fill(ctx context.Context, items []scanned, from, to time.Ti
 			// for a total its screens never show (they count the day).
 			v.Progress.Total += len(Generate(v.Routine, items[i].generatedUntil, farFuture(items[i].generatedUntil)))
 		}
-		if v.Status == StatusActive && len(v.Doses) == 0 {
+		// «Hoy no le toca» for any routine with nothing in the window; and an activity at fixed hours always says when its next one
+		// is, because its card and detail show «Próxima: mar 13 oct, 17:00» even when today's dose is already marked (spec 042).
+		fixedActivity := v.Kind == KindActivity && v.Period != PeriodWindow
+		if v.Status == StatusActive && (len(v.Doses) == 0 || fixedActivity) {
 			if v.NextDose, err = r.nextDose(ctx, v.ID, to, now); err != nil {
 				return err
 			}

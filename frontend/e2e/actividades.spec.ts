@@ -146,13 +146,15 @@ for (const design of designs) {
       await page.getByRole('main').getByRole('link', { name: '+ Agregar actividad' }).click()
 
       await page.getByLabel('Nombre').fill('Práctica de fut')
-      await page.getByRole('radio', { name: 'A una hora fija' }).click()
+      await page.locator('label', { hasText: 'A una hora fija' }).click()
       await expect(page.getByLabel('Desde las')).toHaveCount(0)
       // The hour is picked on the grid: the field never shows the browser's own time popup, and it fits its card.
       await pickTime(page, 'Hora', '17:00')
       await expect(page.getByRole('button', { name: 'Hora', exact: true })).toContainText('17:00')
-      await page.getByRole('radio', { name: 'Ciertos días' }).click()
+      await page.getByRole('radio', { name: 'Ciertos días de la semana' }).click()
       for (const day of ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']) await page.getByRole('button', { name: day, exact: true }).click()
+      // The form repeats what was chosen (spec 042).
+      await expect(page.getByText('Todos los días a las 17:00.')).toBeVisible()
       await expectNoHorizontalScroll(page)
       await page.getByRole('button', { name: 'Guardar actividad' }).click()
 
@@ -160,10 +162,12 @@ for (const design of designs) {
       await expect(page.getByRole('heading', { name: 'Práctica de fut', level: 1 })).toBeVisible()
       await expect(page.locator('dd').filter({ hasText: 'Todos los días' })).toBeVisible()
       await expect(page.locator('dd').filter({ hasText: '17:00' })).toBeVisible()
-      await expect(page.getByText('0 de 1')).toBeVisible()
+      // At fixed hours the detail has no count and no bar (spec 042): «Próxima» and «Última marcada».
+      await expect(page.getByText('Próxima', { exact: true })).toBeVisible()
+      await expect(page.getByRole('progressbar')).toHaveCount(0)
       await page.getByRole('button', { name: 'Realizado: Práctica de fut' }).click()
-      await expect(page.getByText('1 de 1')).toBeVisible()
       await expect(page.getByText('No quedan avisos hoy.')).toBeVisible()
+      await expect(page.getByText('Última marcada', { exact: true }).locator('..')).toContainText('hoy')
     })
 
     test('a Caregiver taps «Realizado» too, two people at once mark two different ones, and nobody else manages it', async ({ page, browser }) => {

@@ -9,10 +9,14 @@ import {
   dayPct,
   daysText,
   detailRows,
+  doseWhen,
   endedCardText,
   endedNote,
   everyText,
+  fixedNext,
+  fixedPreview,
   instantDayMonth,
+  isFixedActivity,
   joinTimes,
   lastMarked,
   lastMarkedDose,
@@ -65,6 +69,45 @@ const dose = (hour: number, over: Partial<RoutineDose> = {}): RoutineDose => ({
   status: 'pending',
   takenBy: null,
   ...over,
+})
+
+describe('fixedPreview', () => {
+  it('repeats the days and the hours chosen, with a capital letter, and says nothing until there is an hour', () => {
+    expect(fixedPreview([], ['07:00'])).toBe('Todos los días a las 07:00.')
+    expect(fixedPreview([0, 1, 2, 3, 4, 5, 6], ['07:00'])).toBe('Todos los días a las 07:00.')
+    expect(fixedPreview([1, 3], ['17:00'])).toBe('Martes y jueves a las 17:00.')
+    expect(fixedPreview([0, 2, 4], ['08:00', '', '20:30'])).toBe('Lunes, miércoles y viernes a las 08:00 y 20:30.')
+    expect(fixedPreview([1], [''])).toBeNull()
+  })
+})
+
+describe('doseWhen and fixedNext', () => {
+  const today = '2026-10-06'
+  const dose = (at: Date, taken = false) => ({ id: 'd', scheduledAt: at.toISOString(), taken, status: taken ? 'taken' : 'pending', takenBy: null }) as never
+
+  it('says today, tomorrow or the day', () => {
+    expect(doseWhen(new Date(2026, 9, 6, 17, 0).toISOString(), today)).toEqual({ time: '17:00', sub: 'hoy', text: 'hoy, 17:00' })
+    expect(doseWhen(new Date(2026, 9, 7, 7, 0).toISOString(), today).text).toBe('mañana, 07:00')
+    expect(doseWhen(new Date(2026, 9, 13, 17, 0).toISOString(), today)).toEqual({ time: '17:00', sub: 'mar 13 oct', text: 'mar 13 oct, 17:00' })
+  })
+
+  it('takes the first unmarked dose of today still to come, else the one of the next day, else nothing', () => {
+    const now = new Date(2026, 9, 6, 15, 0)
+    const early = dose(new Date(2026, 9, 6, 9, 0))
+    const later = dose(new Date(2026, 9, 6, 17, 0))
+    const next = dose(new Date(2026, 9, 8, 17, 0))
+    expect(fixedNext({ doses: [early, later], nextDose: next }, today, now)?.text).toBe('hoy, 17:00')
+    expect(fixedNext({ doses: [dose(new Date(2026, 9, 6, 17, 0), true)], nextDose: next }, today, now)?.text).toBe('jue 8 oct, 17:00')
+    expect(fixedNext({ doses: [early], nextDose: next }, today, now)?.text).toBe('jue 8 oct, 17:00')
+    expect(fixedNext({ doses: [], nextDose: null }, today, now)).toBeNull()
+  })
+
+  it('knows an activity at fixed hours', () => {
+    expect(isFixedActivity({ kind: 'activity', period: 'weekdays' })).toBe(true)
+    expect(isFixedActivity({ kind: 'activity', period: 'daily' })).toBe(true)
+    expect(isFixedActivity({ kind: 'activity', period: 'window' })).toBe(false)
+    expect(isFixedActivity({ kind: 'supplement', period: 'daily' })).toBe(false)
+  })
 })
 
 describe('joinTimes', () => {

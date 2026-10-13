@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RegistroSeccion } from './RegistroSeccion'
-import { TODAY, account, activity, at, byKind, callsOf, dose, routine, stubApi } from './supplements.test-utils'
+import { TODAY, account, activity, at, byKind, callsOf, dose, fixedActivity, routine, stubApi } from './supplements.test-utils'
 import type { RoutineKind } from './types'
 
 function renderSection(kind: RoutineKind = 'supplement') {
@@ -238,6 +238,35 @@ describe('RegistroSeccion · actividades', () => {
     api([], [activity({ doses: [], nextDose: dose('x', 9, { scheduledAt: at(9, 0, 8) }) })])
     renderSection('activity')
     expect(await screen.findByText('Hoy no le toca. La siguiente es el jue 8 oct, a las 09:00.')).toBeInTheDocument()
+  })
+
+  it('an activity at fixed hours has no count and no bar: «Próxima: hoy, 17:00» and «✓ Realizado» (spec 042)', async () => {
+    api([], [fixedActivity()])
+    renderSection('activity')
+    expect(await screen.findByText('Mar, Jue · a las 17:00')).toBeInTheDocument()
+    expect(screen.getByText('Próxima: hoy, 17:00')).toBeInTheDocument()
+    expect(screen.queryByText(/hechas hoy/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+    expect(screen.queryByText(/^Última/)).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Realizado: Práctica de fut' })).toBeInTheDocument()
+  })
+
+  it('once the dose of today is marked it says «✓ Hecha hoy», who and when, and the day of the next one', async () => {
+    api([], [fixedActivity({ doses: [dose('f17', 17, { taken: true, takenBy: { name: 'Ana', at: at(17, 10), mine: false } })] })])
+    renderSection('activity')
+    expect(await screen.findByText('Próxima: jue 8 oct, 17:00')).toBeInTheDocument()
+    expect(screen.getByText('Última: por Ana, hoy, 17:10')).toBeInTheDocument()
+    expect(screen.getByText('✓ Hecha hoy')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Realizado/ })).not.toBeInTheDocument()
+  })
+
+  it('on a day it does not go off, an activity at fixed hours still says when the next one is, with no «Hoy no le toca» box', async () => {
+    api([], [fixedActivity({ doses: [], nextDose: dose('n', 17, { scheduledAt: at(17, 0, 7) }) })])
+    renderSection('activity')
+    expect(await screen.findByText('Próxima: mañana, 17:00')).toBeInTheDocument()
+    expect(screen.queryByText(/Hoy no le toca/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Realizado/ })).not.toBeInTheDocument()
+    expect(screen.queryByText('✓ Hecha hoy')).not.toBeInTheDocument()
   })
 
   it('invites a Tutor with no activities and explains the cap apart from the supplements', async () => {

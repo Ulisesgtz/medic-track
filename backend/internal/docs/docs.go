@@ -5006,7 +5006,7 @@ const docTemplate = `{
                     "example": "Vitamina D"
                 },
                 "nextDose": {
-                    "description": "NextDose: the next dose ahead of the window, only for an active routine with no dose in it.",
+                    "description": "NextDose: the next dose ahead of the window, for an active routine with no dose in it and always for an active activity at fixed hours.",
                     "allOf": [
                         {
                             "$ref": "#/definitions/SupplementDoseResponse"

@@ -55,6 +55,14 @@ function namesText(weekdays: number[]): string {
   return joinTimes(names)
 }
 
+/** «Martes y jueves a las 17:00.» / «Todos los días a las 07:00.»: the form's preview of an activity at fixed hours (null until it has hours). */
+export function fixedPreview(weekdays: number[], times: string[]): string | null {
+  const hours = times.filter((t) => t !== '')
+  if (hours.length === 0) return null
+  const days = everyDay(weekdays) ? 'Todos los días' : namesText(weekdays)
+  return `${days.charAt(0).toUpperCase()}${days.slice(1)} a las ${joinTimes(hours)}.`
+}
+
 const tomas = (n: number) => `${n} ${n === 1 ? 'toma' : 'tomas'}`
 
 /** A supplement's line: "Todos los días · 6 tomas", "Lun, Mié, Vie · 2 tomas" (the hours are the chips'). */
@@ -161,6 +169,31 @@ export function lastMarkedDose(doses: RoutineDose[]): RoutineDose | null {
   const marked = doses.filter((d) => d.taken && d.takenBy)
   if (marked.length === 0) return null
   return marked.reduce((a, b) => (new Date(a.takenBy!.at).getTime() >= new Date(b.takenBy!.at).getTime() ? a : b))
+}
+
+/** True for an activity at fixed hours (no window, no «cada»): its card and detail have no count and no bar (spec 042). */
+export const isFixedActivity = (r: Pick<Routine, 'kind' | 'period'>) => r.kind === 'activity' && r.period !== 'window'
+
+/**
+ * When a dose is, as an activity at fixed hours says it: «hoy, 17:00», «mañana, 07:00», «mar 13 oct, 17:00». `sub` is the day alone
+ * («hoy», «mañana», «mar 13 oct») for the detail's box, `time` the hour.
+ */
+export function doseWhen(at: string, today: string): { time: string; sub: string; text: string } {
+  const date = new Date(at)
+  const key = dayKey(date)
+  const time = formatTime(at)
+  const gap = dayNumber(key) - dayNumber(today)
+  const sub = gap === 0 ? 'hoy' : gap === 1 ? 'mañana' : `${WEEKDAYS_LOWER[date.getDay()]} ${dayMonth(key)}`
+  return { time, sub, text: `${sub}, ${time}` }
+}
+
+/** The next dose of an activity at fixed hours: the first unmarked one of today still to come, else the next day's (null if none). */
+export function fixedNext(routine: Pick<Routine, 'doses' | 'nextDose'>, today: string, now: Date = new Date()): { time: string; sub: string; text: string } | null {
+  const upcoming = [...routine.doses]
+    .filter((d) => !d.taken && new Date(d.scheduledAt).getTime() > now.getTime())
+    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())[0]
+  const at = upcoming?.scheduledAt ?? routine.nextDose?.scheduledAt
+  return at ? doseWhen(at, today) : null
 }
 
 /** "Hoy no le toca. La siguiente es mañana, mié 7 oct, a las 09:00." (the person's own: "Hoy no toca…"). */
