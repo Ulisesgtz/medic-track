@@ -146,7 +146,7 @@ for (const design of designs) {
       await page.getByRole('main').getByRole('link', { name: '+ Agregar actividad' }).click()
 
       await page.getByLabel('Nombre').fill('Práctica de fut')
-      await page.getByRole('radio', { name: /^A una hora fija/ }).click()
+      await page.locator('label', { hasText: 'A una hora fija' }).click()
       await expect(page.getByLabel('Desde las')).toHaveCount(0)
       // The hour is picked on the grid: the field never shows the browser's own time popup, and it fits its card.
       await pickTime(page, 'Hora', '17:00')
