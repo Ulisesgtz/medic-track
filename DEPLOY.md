@@ -250,7 +250,7 @@ desarrollo; es normal). En el teléfono sigue `PROBAR.md` (instalar, **Activar r
 - **Recibir**: Cloudflare **Email Routing** (gratis) reenvía `contacto@pedi-track.com` y `soporte@pedi-track.com` a un Gmail; es solo un reenviador, no hay buzón ni webmail propios. La regla *catch-all* está desactivada (*Drop*). Los registros MX, SPF y DKIM los pone y bloquea Email Routing.
 - **Contestar**: en Gmail, *Ajustes → Cuentas e importación → Enviar el correo como*, con `smtp.gmail.com`, puerto 587, TLS, el Gmail como usuario y una **contraseña de aplicación** de Google (requiere la verificación en dos pasos). Esa contraseña no se guarda en el repositorio.
 - **Cambiar de proveedor de correo** más adelante es cambiar los registros MX y SPF en Cloudflare; dos servicios de correo no pueden convivir en el mismo dominio.
-- **Pendiente**: el «a través de gmail.com» (ver `BACKLOG.md`).
+- **Resuelto el 2026-10-12**: el «a través de gmail.com» (ver `BACKLOG.md`).
 
 ## Digest semanal de errores por correo (spec 039)
 
