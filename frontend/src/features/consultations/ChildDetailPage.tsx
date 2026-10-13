@@ -243,9 +243,7 @@ export function ChildDetailPage() {
           )}
         </header>
 
-        <TodayDosesBlock doses={todayDoses} status={overviewStatus} />
-
-        {/* The consultations come first: «+ Nueva» must not hide under the supplements and activities (mock 02 order). */}
+        {/* The consultations come right under the header: «+ Nueva» must not hide under the supplementsand activities */}
         <section className="px-6 pt-7">
           <div className="flex items-baseline justify-between">
             <h2 className="text-xl font-black tracking-tight text-ink">Consultas</h2>
@@ -268,6 +266,8 @@ export function ChildDetailPage() {
           </HistoryEntry>
           <div className="mt-4 flex flex-col gap-3.5">{consultationList('phone')}</div>
         </section>
+
+        <TodayDosesBlock doses={todayDoses} status={overviewStatus} />
 
         {childId && (
           <div className="px-6 pt-7">
