@@ -80,7 +80,7 @@ describe('FamilyPage', () => {
     expect(people.getByText('Tutor')).toBeInTheDocument()
     expect(people.getByText(/desde el/)).toBeInTheDocument()
     expect(screen.getByText('2 de 4')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '← Tus hijos' })).toHaveAttribute('href', '/home')
+    expect(screen.getByRole('link', { name: '← Inicio' })).toHaveAttribute('href', '/home')
   })
 
   it('says the places include pending invitations when some are waiting', async () => {

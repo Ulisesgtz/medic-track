@@ -198,7 +198,7 @@ export function RoutineDetailPage() {
     <RoutinePageFrame
       isDesktop={isDesktop}
       childId={childId}
-      backLabel={personal ? (activity ? '← Mis actividades' : '← Mis suplementos') : child ? `← ${child.firstName}` : '← Tus hijos'}
+      backLabel={personal ? (activity ? '← Mis actividades' : '← Mis suplementos') : child ? `← ${child.firstName}` : '← Inicio'}
       backTo={backTo}
       eyebrow={personal ? (activity ? 'Mis actividades' : 'Mis suplementos') : child ? `${noun} · ${child.firstName} ${child.lastName}` : noun}
       title={title}

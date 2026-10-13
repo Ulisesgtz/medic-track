@@ -130,7 +130,7 @@ describe('PlansPage', () => {
     expect(within(full).queryByText('Tu plan actual')).not.toBeInTheDocument()
     expect(within(full).getByText('MX$499')).toBeInTheDocument()
     expect(within(full).getByRole('button', { name: /Contratar plan completo/ })).toHaveAttribute('aria-disabled', 'true')
-    expect(screen.getByRole('link', { name: '← Tus hijos' })).toHaveAttribute('href', '/home')
+    expect(screen.getByRole('link', { name: '← Inicio' })).toHaveAttribute('href', '/home')
   })
 
   it('shows what is kept, the privacy sentence and «Próximamente» apart, in every state', async () => {
