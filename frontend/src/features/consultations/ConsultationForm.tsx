@@ -463,7 +463,6 @@ export function ConsultationForm({
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         className="hidden"
         aria-labelledby="photo-label"
         onChange={handlePhotoChange}
