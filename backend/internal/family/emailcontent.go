@@ -1,6 +1,7 @@
 package family
 
 import (
+	_ "embed"
 	"fmt"
 	"html"
 	"strings"
@@ -12,7 +13,18 @@ import (
 // The e-mail of an invitation (specs/040 contracts/email.md). It carries only what the invitation needs and Principio II allows:
 // the first name of who invites, the role offered and what it lets the person do, when the link expires and the link itself —
 // never anything of the children (names, ages, health, how many), nor the inviter's last name or e-mail. Neutral Spanish with no
-// medical imperatives (Principio I). No images, no external styles, no tracking pixel; the only link is the invitation's.
+// medical imperatives (Principio I). The HTML is the design of Claude Design (invitation_email.html, specs/040 contracts/email.md):
+// tables and inline styles for the mail clients, a dark-mode variant, no scripts, no external styles, no tracking pixel. Its only
+// image is the app's icon (the one the frontend already serves), and the only links are the invitation's.
+
+// inviteHTMLTemplate is the e-mail's HTML with the markers {{NOMBRE}}, {{ROL}}, {{LO_QUE_PUEDE_HACER}}, {{LIGA}}, {{FECHA}} and
+// {{LOGO_URL}}. buildInviteMessage fills them with escaped values in one pass, so a value is never read as a marker.
+//
+//go:embed invitation_email.html
+var inviteHTMLTemplate string
+
+// logoPath is the app's icon, served by the frontend (frontend/public/icon-192.png) at its own origin.
+const logoPath = "/icon-192.png"
 
 const (
 	maxInviterNameRunes = 40
@@ -89,15 +101,14 @@ func buildInviteMessage(m inviteMail) mailer.Message {
 	}, "\n")
 
 	esc := html.EscapeString
-	page := fmt.Sprintf(`<p>%s te invita a PediTrack como %s.</p>
-<p>Como %s podrás %s</p>
-<p>Para aceptar, abre la liga con la cuenta que usa este correo:</p>
-<p><a href="%s">Aceptar invitación</a></p>
-<p>Si el botón no se ve, copia esta liga en tu navegador:<br>%s</p>
-<p>La liga vence el %s.</p>
-<p>Si no esperabas esta invitación, puedes ignorar este mensaje: no pasa nada y nadie tendrá acceso.</p>
-<p>PediTrack</p>`,
-		esc(name), esc(role), esc(role), esc(can), esc(link), esc(link), esc(expires))
+	page := strings.NewReplacer(
+		"{{NOMBRE}}", esc(name),
+		"{{ROL}}", esc(role),
+		"{{LO_QUE_PUEDE_HACER}}", esc(can),
+		"{{LIGA}}", esc(link),
+		"{{FECHA}}", esc(expires),
+		"{{LOGO_URL}}", esc(strings.TrimRight(m.Origin, "/")+logoPath),
+	).Replace(inviteHTMLTemplate)
 
 	return mailer.Message{
 		From:           m.From,

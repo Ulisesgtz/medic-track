@@ -26,12 +26,23 @@ func TestInviteMessageSaysWhatItShould(t *testing.T) {
 	require.Equal(t, "Ana te invitó a PediTrack", m.Subject)
 	require.Equal(t, "invitada@example.com", m.To)
 	require.Equal(t, "family-invitation-1-1", m.IdempotencyKey)
-	for _, body := range []string{m.Text, m.HTML} {
-		require.Contains(t, body, "Ana te invita a PediTrack como Cuidador.")
-		require.Contains(t, body, "Como Cuidador podrás ver consultas, medicamentos y tomas, y marcar tomas.")
-		require.Contains(t, body, "La liga vence el 13 de octubre de 2026.")
-		require.Contains(t, body, "Si no esperabas esta invitación, puedes ignorar este mensaje")
-	}
+
+	require.Contains(t, m.Text, "Ana te invita a PediTrack como Cuidador.")
+	require.Contains(t, m.Text, "Como Cuidador podrás ver consultas, medicamentos y tomas, y marcar tomas.")
+	require.Contains(t, m.Text, "La liga vence el 13 de octubre de 2026.")
+	require.Contains(t, m.Text, "Si no esperabas esta invitación, puedes ignorar este mensaje")
+
+	// The HTML is the design's: the name and the role are highlighted apart, so the sentences are not in one piece.
+	require.Contains(t, m.HTML, ">Ana</span> te invita a PediTrack como <span")
+	require.Contains(t, m.HTML, ">Cuidador</span>.</h1>")
+	require.Contains(t, m.HTML, "Como <strong")
+	require.Contains(t, m.HTML, ">Cuidador</strong> podrás ver consultas, medicamentos y tomas, y marcar tomas.</p>")
+	require.Contains(t, m.HTML, ">13 de octubre de 2026</strong>.")
+	require.Contains(t, m.HTML, "Si no esperabas esta invitación, puedes ignorar este mensaje: no pasa nada y nadie tendrá acceso.")
+	require.Contains(t, m.HTML, "Te invitaron a ver y marcar las tomas de la familia en PediTrack.", "the preheader")
+	require.Contains(t, m.HTML, "<title>Ana te invitó a PediTrack</title>")
+	require.Contains(t, m.HTML, "@media (prefers-color-scheme: dark)", "the dark-mode variant")
+	require.NotContains(t, m.HTML, "{{", "every marker of the template was filled")
 }
 
 func TestInviteMessageForATutor(t *testing.T) {
@@ -42,22 +53,32 @@ func TestInviteMessageForATutor(t *testing.T) {
 	require.Contains(t, m.Text, "agregar consultas e invitar a otras personas.")
 }
 
-func TestTheOnlyLinkIsTheInvitationsOwnAndIsNotShortenedNorTracked(t *testing.T) {
+func TestTheOnlyLinksAreTheInvitationsOwnAndThereIsOneImage(t *testing.T) {
 	in := sampleMail()
 	link := "https://dev.pedi-track.com/familia/invitacion#tok_ABC-123_xyz"
+	logo := "https://dev.pedi-track.com/icon-192.png"
+	// xmlns attributes are namespaces, not addresses anybody visits.
+	namespaces := regexp.MustCompile(`xmlns(:\w+)?="[^"]*"`)
+	urls := regexp.MustCompile(`https?://[^\s"<]+`)
 	for _, origin := range []string{"https://dev.pedi-track.com", "https://dev.pedi-track.com/"} {
 		in.Origin = origin
 		m := buildInviteMessage(in)
 		require.Contains(t, m.Text, link+"\n")
-		require.Contains(t, m.HTML, `<a href="`+link+`">Aceptar invitación</a>`)
-		urls := regexp.MustCompile(`https?://[^\s"<]+`)
-		for _, found := range append(urls.FindAllString(m.Text, -1), urls.FindAllString(m.HTML, -1)...) {
-			require.Equal(t, link, found, "no URL but the invitation's link")
+		require.Contains(t, m.HTML, `href="`+link+`"`)
+		require.Contains(t, m.HTML, ">Aceptar invitación</a>")
+
+		for _, found := range urls.FindAllString(m.Text, -1) {
+			require.Equal(t, link, found, "no URL but the invitation's link in the text")
 		}
-		require.NotContains(t, m.HTML, "<img")
-		require.NotContains(t, m.HTML, "<script")
-		require.NotContains(t, m.HTML, "<link")
-		require.NotContains(t, strings.ToLower(m.HTML), "pixel")
+		for _, found := range urls.FindAllString(namespaces.ReplaceAllString(m.HTML, ""), -1) {
+			require.Contains(t, []string{link, logo}, found, "no URL but the link and the app's icon in the HTML")
+		}
+		require.Equal(t, 1, strings.Count(m.HTML, "<img "), "the icon is the only image")
+		require.Contains(t, m.HTML, `<img src="`+logo+`"`)
+		require.Equal(t, 2, strings.Count(m.HTML, `href="`), "the button and the copyable link, nothing else")
+		for _, forbidden := range []string{"<script", "<link", "<iframe", "@import", "<form"} {
+			require.NotContains(t, strings.ToLower(m.HTML), forbidden)
+		}
 	}
 }
 
@@ -87,6 +108,7 @@ func TestTheInvitersNameIsCleanedCutAndEscaped(t *testing.T) {
 		require.NotContains(t, m.Subject, "\n")
 		require.NotContains(t, m.Subject, "\r")
 		require.NotContains(t, m.HTML, "<script>")
+		require.NotContains(t, m.HTML, "{{")
 		if c.notIn != "" {
 			require.NotContains(t, m.Subject, c.notIn)
 		}

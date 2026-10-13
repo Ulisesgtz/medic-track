@@ -1,6 +1,6 @@
 # Contrato del correo de invitación
 
-Un correo por invitación creada y por reenvío (dentro de los límites). Español de México, tono neutro, sin imperativos médicos (Principio I). Texto plano **y** HTML mínimo en el mismo mensaje.
+Un correo por invitación creada y por reenvío (dentro de los límites). Español de México, tono neutro, sin imperativos médicos (Principio I). Texto plano **y** HTML en el mismo mensaje. **El HTML es el diseño de Claude Design** (2026-10-12, proyecto «Logo PWA para aplicación», `correo/invitacion.html`), guardado como `backend/internal/family/invitation_email.html` con los marcadores `{{NOMBRE}}`, `{{ROL}}`, `{{LO_QUE_PUEDE_HACER}}`, `{{LIGA}}`, `{{FECHA}}` y `{{LOGO_URL}}`.
 
 ## Datos que el proveedor recibe (Principio II)
 
@@ -40,13 +40,17 @@ PediTrack
 - Tutor: «ver consultas, medicamentos y tomas, marcar tomas, agregar consultas e invitar a otras personas.»
 - Cuidador: «ver consultas, medicamentos y tomas, y marcar tomas.»
 
-## HTML
+## HTML (diseño de Claude Design)
+
+Tablas, estilos en línea, franja de tinta con el ícono y «PediTrack», tarjeta blanca, botón «Aceptar invitación», la fecha de vencimiento, la liga de respaldo, el aviso en un bloque suave, texto de vista previa oculto (*preheader*) y una variante de modo oscuro (`prefers-color-scheme`). Se llena con **un solo reemplazo** de marcadores (un valor nunca se lee como marcador) y todo valor va escapado con `html.EscapeString`. **Excepción a «sin imágenes» decidida por el dueño**: el correo lleva **una sola imagen**, el ícono de la app (`/icon-192.png` del frontend, el mismo de la PWA, a 32 px; el diseño traía un PNG propio de 128 px, no hace falta subirlo). Es una petición a tu propio dominio al abrir el correo, sin seguimiento. Si el cliente bloquea imágenes se ve el cuadrito cian y «PediTrack» sigue visible.
+
+_Versión anterior (HTML mínimo, ya reemplazada):_
 
 Mismo contenido en `<p>`; el único enlace es `<a href="<liga>">Aceptar invitación</a>` (y la liga en texto debajo por si el cliente no muestra enlaces). Sin imágenes, hojas de estilo externas, píxeles ni `<script>`. El nombre va escapado (`html.EscapeString`).
 
 ## Reglas comprobables
 
-1. El `href` es **exactamente** la liga; ninguna otra URL aparece en el mensaje.
+1. Los `href` son **exactamente** la liga (el botón y la liga de respaldo, nada más); en el HTML solo aparecen la liga y la del ícono, y en el texto solo la liga.
 2. La petición al proveedor no lleva campos de seguimiento (el seguimiento es del dominio y está apagado, [research R6](../research.md)).
 3. Una prueba de privacidad recorre el texto y el HTML buscando nombres de hijos sembrados, el apellido y el correo de quien invita: ninguno aparece.
 4. Un nombre con saltos de línea, `<script>`, o forma de correo/ficha sale limpio.
