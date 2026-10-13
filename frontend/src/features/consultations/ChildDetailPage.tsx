@@ -181,13 +181,6 @@ export function ChildDetailPage() {
 
             <div className="grid grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] items-start gap-[22px]">
               <div className="flex min-w-0 flex-col gap-[30px]">
-                {childId && <ChildAppointmentSection childId={childId} historyPath={`/children/${childId}/citas`} />}
-                {childId && <RegistroSeccion kind="supplement" childId={childId} childName={child?.firstName ?? 'tu hijo'} />}
-                {childId && (
-                  <div className="border-t-2 border-hint-border pt-[30px]">
-                    <RegistroSeccion kind="activity" childId={childId} childName={child?.firstName ?? 'tu hijo'} />
-                  </div>
-                )}
                 <section className="flex min-w-0 flex-col gap-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <h2 className="text-xl font-black tracking-[-0.02em] text-ink">Consultas</h2>
@@ -201,6 +194,13 @@ export function ChildDetailPage() {
                   </div>
                   {consultationList('desktop')}
                 </section>
+                {childId && <ChildAppointmentSection childId={childId} historyPath={`/children/${childId}/citas`} />}
+                {childId && <RegistroSeccion kind="supplement" childId={childId} childName={child?.firstName ?? 'tu hijo'} />}
+                {childId && (
+                  <div className="border-t-2 border-hint-border pt-[30px]">
+                    <RegistroSeccion kind="activity" childId={childId} childName={child?.firstName ?? 'tu hijo'} />
+                  </div>
+                )}
               </div>
               <TodayDosesPanel doses={todayDoses} status={overviewStatus} canManage={access.canAdd} />
             </div>
@@ -243,26 +243,7 @@ export function ChildDetailPage() {
           )}
         </header>
 
-        <TodayDosesBlock doses={todayDoses} status={overviewStatus} />
-
-        {childId && (
-          <div className="px-6 pt-7">
-            <ChildAppointmentSection childId={childId} historyPath={`/children/${childId}/citas`} />
-          </div>
-        )}
-
-        {childId && (
-          <div className="px-6 pt-7">
-            <RegistroSeccion kind="supplement" childId={childId} childName={child?.firstName ?? 'tu hijo'} />
-          </div>
-        )}
-
-        {childId && (
-          <div className="mx-6 mt-7 border-t-2 border-hint-border pt-7">
-            <RegistroSeccion kind="activity" childId={childId} childName={child?.firstName ?? 'tu hijo'} />
-          </div>
-        )}
-
+        {/* The consultations come right under the header: «+ Nueva» must not hide under the supplementsand activities */}
         <section className="px-6 pt-7">
           <div className="flex items-baseline justify-between">
             <h2 className="text-xl font-black tracking-tight text-ink">Consultas</h2>
@@ -285,6 +266,27 @@ export function ChildDetailPage() {
           </HistoryEntry>
           <div className="mt-4 flex flex-col gap-3.5">{consultationList('phone')}</div>
         </section>
+
+        <TodayDosesBlock doses={todayDoses} status={overviewStatus} />
+
+        {childId && (
+          <div className="px-6 pt-7">
+            <ChildAppointmentSection childId={childId} historyPath={`/children/${childId}/citas`} />
+          </div>
+        )}
+
+        {childId && (
+          <div className="px-6 pt-7">
+            <RegistroSeccion kind="supplement" childId={childId} childName={child?.firstName ?? 'tu hijo'} />
+          </div>
+        )}
+
+        {childId && (
+          <div className="mx-6 mt-7 border-t-2 border-hint-border pt-7">
+            <RegistroSeccion kind="activity" childId={childId} childName={child?.firstName ?? 'tu hijo'} />
+          </div>
+        )}
+
       </main>
     </AppShell>
   )
