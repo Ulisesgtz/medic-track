@@ -27,6 +27,7 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
   const logout = useLogout()
   const query = useCurrentAccount()
   const account = query.data
+  const onHome = useMatch('/home') !== null
   const onFamilyPage = useMatch('/familia') !== null
   const onPlansPage = useMatch('/planes') !== null
   // Specs/033, part 3: the person's own section, apart from the children; its count comes from the same query the home uses.
@@ -43,6 +44,15 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
         <span className="text-lg font-black tracking-tight text-white">
           Pedi<span className="text-bright-soft">Track</span>
         </span>
+      </Link>
+
+      {/* The design's «Inicio» (Inicio · hijos · Personal): a fixed way back to the home, active on it. */}
+      <Link
+        to="/home"
+        aria-current={onHome ? 'page' : undefined}
+        className={`-mt-3 flex min-h-12 items-center rounded-2xl px-4 transition-colors duration-200 ${onHome ? 'bg-action' : 'hover:bg-ink-soft'}`}
+      >
+        <span className={`text-base font-extrabold ${onHome ? 'text-white' : 'text-hint-border'}`}>Inicio</span>
       </Link>
 
       <nav aria-label="Tus hijos" className="flex flex-col gap-2.5">

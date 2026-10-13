@@ -403,6 +403,16 @@ describe('RoutineDetailPage · actividad', () => {
     expect(screen.getByRole('button', { name: 'Quitar la última marca' })).toBeInTheDocument()
   })
 
+  it('an activity at fixed hours shows the last mark of another day in «Última marcada» (lastDone)', async () => {
+    const lastDone = dose('f17', 17, { taken: true, takenBy: { name: 'Ana', at: at(17, 10, 1), mine: false } })
+    api(fixedActivity({ doses: [], nextDose: dose('n', 17, { scheduledAt: at(17, 0, 7) }), lastDone }))
+    renderDetail(open)
+    const last = (await screen.findByText('Última marcada')).parentElement!
+    expect(last).toHaveTextContent('17:10')
+    expect(last).toHaveTextContent('por Ana')
+    expect(last).toHaveTextContent('jue 1 oct')
+  })
+
   it('an activity at fixed hours on a day it does not go off still shows «Próxima», with no sentence about today', async () => {
     api(fixedActivity({ doses: [], nextDose: dose('n', 17, { scheduledAt: at(17, 0, 8) }) }))
     renderDetail(open)

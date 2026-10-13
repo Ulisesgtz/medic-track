@@ -4996,6 +4996,14 @@ const docTemplate = `{
                     ],
                     "example": "supplement"
                 },
+                "lastDone": {
+                    "description": "LastDone: the dose of an activity at fixed hours marked most recently, of any day; null for the rest or while none was marked.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/SupplementDoseResponse"
+                        }
+                    ]
+                },
                 "myReminders": {
                     "description": "MyReminders: the session has not turned this routine's reminders off («Tus avisos»); each person decides for themselves.",
                     "type": "boolean",

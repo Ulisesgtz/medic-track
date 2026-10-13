@@ -352,6 +352,11 @@ func (r *Repository) fill(ctx context.Context, items []scanned, from, to time.Ti
 				return err
 			}
 		}
+		if fixedActivity {
+			if v.LastDone, err = r.lastDone(ctx, v.ID, now); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
@@ -440,6 +445,19 @@ func (r *Repository) nextDose(ctx context.Context, routineID uuid.UUID, from, no
 	}
 	if err != nil {
 		return nil, fmt.Errorf("reading the next dose: %w", err)
+	}
+	return &d, nil
+}
+
+// lastDone is the routine's most recently marked dose, of any day (nil while none is marked).
+func (r *Repository) lastDone(ctx context.Context, routineID uuid.UUID, now time.Time) (*Dose, error) {
+	d, err := r.scanDose(r.pool.QueryRow(ctx, doseSelect+`
+		WHERE d.routine_id = $1 AND d.taken ORDER BY d.taken_at DESC NULLS LAST, d.scheduled_at DESC LIMIT 1`, routineID), now)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("reading the last marked dose: %w", err)
 	}
 	return &d, nil
 }

@@ -1249,6 +1249,11 @@ definitions:
         - activity
         example: supplement
         type: string
+      lastDone:
+        allOf:
+        - $ref: '#/definitions/SupplementDoseResponse'
+        description: 'LastDone: the dose of an activity at fixed hours marked most
+          recently, of any day; null for the rest or while none was marked.'
       myReminders:
         description: 'MyReminders: the session has not turned this routine''s reminders
           off («Tus avisos»); each person decides for themselves.'

@@ -3,7 +3,7 @@ import { DayProgress } from './DayProgress'
 import { RealizadoButton } from './RealizadoButton'
 import { RoutineStatusChip } from './RoutineStatusChip'
 import { cardClass, cardLinkClass, cardNameClass } from './SuplementoTarjeta'
-import { activityRange, activityRule, dayCount, endedCardText, fixedNext, isFixedActivity, lastMarked, nextUnmarked, noTodayText, pausedCardText } from './scheduleText'
+import { activityRange, activityRule, dayCount, endedCardText, fixedLast, fixedNext, isFixedActivity, lastMarked, nextUnmarked, noTodayText, pausedCardText } from './scheduleText'
 import type { Routine } from './types'
 
 /** «Próxima: 15:00» (or «Sin más avisos hoy») and «Última: por Ana, 14:05» (the person's own: «Última: 14:02»). */
@@ -20,19 +20,19 @@ export function ActivityLines({ routine, own, now }: { routine: Routine; own: bo
 
 /**
  * The «Hora fija» block of an activity's card (mock ActividadTarjeta, `fixed`): no count and no bar — a practice has one dose a day —
- * but «Próxima: hoy, 17:00» (or the day it comes), «Última: hoy, 07:05» when today's was marked, and «✓ Realizado» (outline) while a
+ * but «Próxima: hoy, 17:00» (or the day it comes), «Última: hoy, 07:05» (or the day of the last one marked), and «✓ Realizado» (outline) while a
  * dose of today is still unmarked, or «✓ Hecha hoy» once all of today's are.
  */
 function FixedLines({ routine, own, today }: { routine: Routine; own: boolean; today: string }) {
   const next = fixedNext(routine, today)
-  const last = lastMarked(routine.doses)
+  const last = fixedLast(routine, today)
   const pendingToday = routine.doses.some((d) => !d.taken)
   const doneToday = routine.doses.length > 0 && !pendingToday
   return (
     <div className="flex flex-col gap-2.5 border-t border-hint-edge pt-3">
       <div className="flex flex-col gap-0.5 text-[15px] font-semibold text-body">
         <span className="font-extrabold text-ink">{next ? `Próxima: ${next.text}` : 'Sin más avisos'}</span>
-        {last && <span>{own ? `Última: hoy, ${last.at}` : `Última: por ${last.by}, hoy, ${last.at}`}</span>}
+        {last && <span>{own ? `Última: ${last.text}` : `Última: por ${last.by}, ${last.text}`}</span>}
       </div>
       {pendingToday && <RealizadoButton routineId={routine.id} name={routine.name} className="mt-0.5 self-start" />}
       {doneToday && <p className="rounded-[14px] bg-hint px-3.5 py-2.5 text-sm font-bold text-ink">✓ Hecha hoy</p>}

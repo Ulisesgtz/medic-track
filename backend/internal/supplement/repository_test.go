@@ -398,3 +398,47 @@ func TestListByChild_AnActivityAtFixedHoursAlwaysKnowsItsNextDose(t *testing.T) 
 	require.NotEmpty(t, byID[window].Doses)
 	require.Nil(t, byID[window].NextDose, "an activity with a window keeps the old rule: only when nothing is left today")
 }
+
+// An activity at fixed hours says which dose was marked last, whatever the day: on a day without doses it is still there.
+func TestListByChild_AnActivityAtFixedHoursKnowsItsLastMarkedDoseOfAnyDay(t *testing.T) {
+	pool := testPool(t)
+	repo := newRepo(pool)
+	f := newFamily(t, pool, account.PlanPaid)
+	ctx := context.Background()
+	id, err := repo.Create(ctx, f.childID, supplement.Routine{Kind: supplement.KindActivity, Name: "Practica", Period: supplement.PeriodDaily, Times: []string{"17:00"}, FirstDate: "2026-10-05"}, f.accountID)
+	require.NoError(t, err)
+	window, err := repo.Create(ctx, f.childID, supplement.Routine{Kind: supplement.KindActivity, Name: "Agua", Period: supplement.PeriodWindow, WindowStart: "08:00", WindowEnd: "20:00", IntervalMinutes: 120, FirstDate: "2026-10-05"}, f.accountID)
+	require.NoError(t, err)
+
+	day1 := time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC)
+	list, err := repo.ListByChild(ctx, f.childID, supplement.KindActivity, day1, day1.Add(24*time.Hour))
+	require.NoError(t, err)
+	for _, r := range list.Routines {
+		require.Nil(t, r.LastDone, "nothing is marked yet")
+	}
+
+	var today supplement.Dose
+	for _, r := range list.Routines {
+		if r.ID == id {
+			today = r.Doses[0]
+		}
+	}
+	_, err = repo.UpdateDoseStatus(ctx, id, today.ID, true, supplement.Actor{AccountID: f.accountID, Full: true})
+	require.NoError(t, err)
+
+	// Two days later today's window holds another dose, and the one marked on the 5th is still the last one.
+	day3 := day1.Add(48 * time.Hour)
+	list, err = repo.ListByChild(ctx, f.childID, supplement.KindActivity, day3, day3.Add(24*time.Hour))
+	require.NoError(t, err)
+	for _, r := range list.Routines {
+		switch r.ID {
+		case id:
+			require.NotNil(t, r.LastDone)
+			require.Equal(t, today.ID, r.LastDone.ID)
+			require.True(t, r.LastDone.Taken)
+			require.NotNil(t, r.LastDone.TakenBy)
+		case window:
+			require.Nil(t, r.LastDone, "only an activity at fixed hours carries it")
+		}
+	}
+}
