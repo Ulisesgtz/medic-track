@@ -3,7 +3,7 @@ import { DayProgress } from './DayProgress'
 import { RealizadoButton } from './RealizadoButton'
 import { RoutineStatusChip } from './RoutineStatusChip'
 import { cardClass, cardLinkClass, cardNameClass } from './SuplementoTarjeta'
-import { activityRange, activityRule, dayCount, endedCardText, lastMarked, nextUnmarked, noTodayText, pausedCardText } from './scheduleText'
+import { activityRange, activityRule, dayCount, endedCardText, fixedNext, isFixedActivity, lastMarked, nextUnmarked, noTodayText, pausedCardText } from './scheduleText'
 import type { Routine } from './types'
 
 /** «Próxima: 15:00» (or «Sin más avisos hoy») and «Última: por Ana, 14:05» (the person's own: «Última: 14:02»). */
@@ -19,6 +19,28 @@ export function ActivityLines({ routine, own, now }: { routine: Routine; own: bo
 }
 
 /**
+ * The «Hora fija» block of an activity's card (mock ActividadTarjeta, `fixed`): no count and no bar — a practice has one dose a day —
+ * but «Próxima: hoy, 17:00» (or the day it comes), «Última: hoy, 07:05» when today's was marked, and «✓ Realizado» (outline) while a
+ * dose of today is still unmarked, or «✓ Hecha hoy» once all of today's are.
+ */
+function FixedLines({ routine, own, today }: { routine: Routine; own: boolean; today: string }) {
+  const next = fixedNext(routine, today)
+  const last = lastMarked(routine.doses)
+  const pendingToday = routine.doses.some((d) => !d.taken)
+  const doneToday = routine.doses.length > 0 && !pendingToday
+  return (
+    <div className="flex flex-col gap-2.5 border-t border-hint-edge pt-3">
+      <div className="flex flex-col gap-0.5 text-[15px] font-semibold text-body">
+        <span className="font-extrabold text-ink">{next ? `Próxima: ${next.text}` : 'Sin más avisos'}</span>
+        {last && <span>{own ? `Última: hoy, ${last.at}` : `Última: por ${last.by}, hoy, ${last.at}`}</span>}
+      </div>
+      {pendingToday && <RealizadoButton routineId={routine.id} name={routine.name} className="mt-0.5 self-start" />}
+      {doneToday && <p className="rounded-[14px] bg-hint px-3.5 py-2.5 text-sm font-bold text-ink">✓ Hecha hoy</p>}
+    </div>
+  )
+}
+
+/**
  * One activity in the «Actividades» section (mock ActividadTarjeta): name and status, «Cada hora, de 08:00 a 20:00», the days and
  * dates, and — under a thin line — «6 de 13 hechas hoy» with the bar, the next and the last, and «✓ Realizado». There are NO chips,
  * hours or calendar: an activity can go off dozens of times a day and the card measures the same with 4 or with 24.
@@ -27,8 +49,9 @@ export function ActividadTarjeta({ routine, today }: { routine: Routine; today: 
   const own = routine.childId === null
   const path = `/actividades/${routine.id}`
   const count = dayCount(routine.doses)
-  const showToday = routine.status === 'active' && routine.doses.length > 0
-  const noToday = routine.status === 'active' && routine.doses.length === 0 && routine.nextDose
+  const fixed = isFixedActivity(routine)
+  const showToday = routine.status === 'active' && routine.doses.length > 0 && !fixed
+  const noToday = routine.status === 'active' && routine.doses.length === 0 && routine.nextDose && !fixed
 
   return (
     <article className={cardClass}>
@@ -42,6 +65,7 @@ export function ActividadTarjeta({ routine, today }: { routine: Routine; today: 
         <p className="text-base font-bold text-ink">{activityRule(routine)}</p>
         <p className="text-sm font-medium text-slate-600">{activityRange(routine)}</p>
       </div>
+      {fixed && routine.status === 'active' && <FixedLines routine={routine} own={own} today={today} />}
       {showToday && (
         <div className="flex flex-col gap-2.5 border-t border-hint-edge pt-3">
           <p className="flex items-baseline gap-1.5">

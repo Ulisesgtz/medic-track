@@ -64,6 +64,24 @@ export function activity(over: Partial<Routine> = {}): Routine {
   })
 }
 
+/** «Práctica de fut»: an activity at fixed hours (Tuesdays and Thursdays at 17:00), with the dose of today (Tue 6 Oct) unless told otherwise. */
+export function fixedActivity(over: Partial<Routine> = {}): Routine {
+  return activity({
+    id: 'a1',
+    name: 'Práctica de fut',
+    period: 'weekdays',
+    weekdays: [1, 3],
+    times: ['17:00'],
+    windowStart: null,
+    windowEnd: null,
+    intervalMinutes: null,
+    progress: { taken: 0, elapsed: 0, total: 0 },
+    doses: [dose('f17', 17, { status: 'pending' })],
+    nextDose: dose('n8', 17, { scheduledAt: at(17, 0, 8) }),
+    ...over,
+  })
+}
+
 export const account = (over: Record<string, unknown> = {}, child: Record<string, unknown> = {}) => ({
   id: 'a1',
   firstName: 'Ana',

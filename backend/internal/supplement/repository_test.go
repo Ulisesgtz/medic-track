@@ -372,3 +372,29 @@ func dosesOf(t *testing.T, repo *supplement.Repository, routineID uuid.UUID) []s
 	require.NotEmpty(t, got.Doses)
 	return got.Doses
 }
+
+func TestListByChild_AnActivityAtFixedHoursAlwaysKnowsItsNextDose(t *testing.T) {
+	pool := testPool(t)
+	repo := newRepo(pool)
+	f := newFamily(t, pool, account.PlanPaid)
+	ctx := context.Background()
+
+	// Practice every day at 17:00 (fixed hours) and a drinking-water activity from 08:00 to 20:00 every two hours (window).
+	fixed, err := repo.Create(ctx, f.childID, supplement.Routine{Kind: supplement.KindActivity, Name: "Practica", Period: supplement.PeriodDaily, Times: []string{"17:00"}, FirstDate: "2026-10-05"}, f.accountID)
+	require.NoError(t, err)
+	window, err := repo.Create(ctx, f.childID, supplement.Routine{Kind: supplement.KindActivity, Name: "Agua", Period: supplement.PeriodWindow, WindowStart: "08:00", WindowEnd: "20:00", IntervalMinutes: 120, FirstDate: "2026-10-05"}, f.accountID)
+	require.NoError(t, err)
+
+	from := time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC)
+	list, err := repo.ListByChild(ctx, f.childID, supplement.KindActivity, from, from.Add(24*time.Hour))
+	require.NoError(t, err)
+	byID := map[uuid.UUID]supplement.RoutineView{}
+	for _, r := range list.Routines {
+		byID[r.ID] = r
+	}
+	require.Len(t, byID[fixed].Doses, 1, "today's dose is in the window")
+	require.NotNil(t, byID[fixed].NextDose, "and the next one, tomorrow's, is known too")
+	require.True(t, time.Date(2026, 10, 6, 17, 0, 0, 0, time.UTC).Equal(byID[fixed].NextDose.ScheduledAt))
+	require.NotEmpty(t, byID[window].Doses)
+	require.Nil(t, byID[window].NextDose, "an activity with a window keeps the old rule: only when nothing is left today")
+}

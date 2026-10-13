@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RoutineDetailPage } from './RoutineDetailPage'
-import { TODAY, account, activity, at, callsOf, dose, routine, stubApi, stubWeb } from './supplements.test-utils'
+import { TODAY, account, activity, at, callsOf, dose, fixedActivity, routine, stubApi, stubWeb } from './supplements.test-utils'
 
 function renderDetail(path = '/suplementos/r1') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -374,6 +374,43 @@ describe('RoutineDetailPage · actividad', () => {
     api(activity({ doses: [] }))
     renderDetail(open)
     expect(await screen.findByText('Hoy no hay avisos.')).toBeInTheDocument()
+  })
+
+  it('an activity at fixed hours: no count and no bar, «Próxima» with its day, «Última marcada» and the solid «✓ Realizado» (spec 042)', async () => {
+    api(fixedActivity())
+    renderDetail(open)
+    expect(await screen.findByRole('heading', { name: 'Práctica de fut', level: 1 })).toBeInTheDocument()
+    expect(screen.queryByText(/hechas hoy/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+    const next = screen.getByText('Próxima').parentElement!
+    expect(next).toHaveTextContent('17:00')
+    expect(next).toHaveTextContent('hoy')
+    expect(screen.getByText('Última marcada').parentElement).toHaveTextContent('—')
+    expect(screen.getByRole('button', { name: 'Realizado: Práctica de fut' })).toBeInTheDocument()
+  })
+
+  it('an activity at fixed hours with the dose of today marked says when the next one is and takes the mark back', async () => {
+    api(fixedActivity({ doses: [dose('f17', 17, { taken: true, takenBy: { name: 'Ana', at: at(17, 10), mine: true } })] }))
+    renderDetail(open)
+    const next = (await screen.findByText('Próxima')).parentElement!
+    expect(next).toHaveTextContent('17:00')
+    expect(next).toHaveTextContent('jue 8 oct')
+    const last = screen.getByText('Última marcada').parentElement!
+    expect(last).toHaveTextContent('17:10')
+    expect(last).toHaveTextContent('hoy')
+    expect(screen.getByText('No quedan avisos hoy.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Realizado/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Quitar la última marca' })).toBeInTheDocument()
+  })
+
+  it('an activity at fixed hours on a day it does not go off still shows «Próxima», with no sentence about today', async () => {
+    api(fixedActivity({ doses: [], nextDose: dose('n', 17, { scheduledAt: at(17, 0, 8) }) }))
+    renderDetail(open)
+    const next = (await screen.findByText('Próxima')).parentElement!
+    expect(next).toHaveTextContent('17:00')
+    expect(next).toHaveTextContent('jue 8 oct')
+    expect(screen.queryByText(/Hoy no le toca/)).not.toBeInTheDocument()
+    expect(screen.queryByText('No quedan avisos hoy.')).not.toBeInTheDocument()
   })
 
   it('finishes with its own words, which keep every «Realizado»', async () => {

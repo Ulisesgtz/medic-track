@@ -78,7 +78,7 @@ type routineResponse struct {
 	CanEdit  bool             `json:"canEdit" example:"true"`
 	Progress progressResponse `json:"progress"`
 	Doses    []doseResponse   `json:"doses"`
-	// NextDose: the next dose ahead of the window, only for an active routine with no dose in it.
+	// NextDose: the next dose ahead of the window, for an active routine with no dose in it and always for an active activity at fixed hours.
 	NextDose *doseResponse `json:"nextDose"`
 } // @name SupplementRoutineResponse
 

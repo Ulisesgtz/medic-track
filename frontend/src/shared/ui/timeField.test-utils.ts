@@ -10,5 +10,5 @@ export async function pickTime(user: UserEvent, fieldName: string | RegExp, time
   await user.click(screen.getByRole('button', { name: fieldName }))
   const dialog = screen.getByRole('dialog', { name: 'Elegir hora' })
   await user.click(within(within(dialog).getByRole('group', { name: 'Hora' })).getByRole('button', { name: h }))
-  await user.click(within(within(dialog).getByRole('group', { name: 'Minutos' })).getByRole('button', { name: `:${m}` }))
+  await user.click(within(within(dialog).getByRole('group', { name: 'Minutos' })).getByRole('button', { name: m }))
 }

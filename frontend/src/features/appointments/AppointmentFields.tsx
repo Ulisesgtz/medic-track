@@ -1,4 +1,5 @@
 import { TimeField } from '../../shared/ui/TimeField'
+import { useIsDesktop } from '../../shared/ui/useIsDesktop'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { errorClass, fieldBorder, fieldRoutine, labelClass } from '../../shared/ui/formStyles'
@@ -40,6 +41,7 @@ const rowField = `${fieldRoutine} flex-1`
  * already passed is dashed with a note, never in an alarm color. The words are the parent's: nothing is suggested (Principio I).
  */
 export function AppointmentFields({ value, onChange, errors, optional, help, disabled, now = new Date() }: AppointmentFieldsProps) {
+  const isDesktop = useIsDesktop()
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<number | null>(null)
   const start = startsAtOf(value.date, value.time)
@@ -127,6 +129,7 @@ export function AppointmentFields({ value, onChange, errors, optional, help, dis
             invalid={!!errors.time}
             describedBy={errors.time ? 'appointment-time-error' : undefined}
             align="end"
+            panelWidth={isDesktop ? 372 : 306}
           />
         </div>
       </div>
@@ -259,6 +262,7 @@ function unitOf(minutes: number): { amount: string; unit: NoticeUnit } {
 
 /** «Nuevo aviso» (mock E2): time before, or a fixed hour some days before; the examples only fill the fields. */
 function NoticePanel({ initial, start, existing, onSave, onDiscard }: NoticePanelProps) {
+  const isDesktop = useIsDesktop()
   const initialLead = initial?.kind === 'before' && initial.leadMinutes ? unitOf(initial.leadMinutes) : { amount: '3', unit: 'horas' as NoticeUnit }
   const [kind, setKind] = useState<NoticeInput['kind']>(initial?.kind ?? 'before')
   const [amount, setAmount] = useState(initialLead.amount)
@@ -365,7 +369,14 @@ function NoticePanel({ initial, start, existing, onSave, onDiscard }: NoticePane
             className="min-h-12 w-20 rounded-[14px] border-2 border-ink bg-surface px-3.5 text-base font-medium text-ink focus:outline-none"
           />
           <span className="text-base font-bold text-ink">días antes, a las</span>
-          <TimeField ariaLabel="Hora del aviso" value={atTime} onChange={setAtTime} align="end" />
+          <TimeField
+            ariaLabel="Hora del aviso"
+            value={atTime}
+            onChange={setAtTime}
+            align="end"
+            panelWidth={isDesktop ? 372 : 270}
+            cols={isDesktop ? 6 : 4}
+          />
         </div>
       )}
       {fire && <p className="text-sm font-semibold text-body">Llegaría el {whenText(fire).replace(', ', ' a las ')}.</p>}

@@ -15,7 +15,7 @@ import { RealizadoButton } from './RealizadoButton'
 import { RoutineDoseChip } from './RoutineDoseChip'
 import { RoutinePageFrame } from './RoutineFormPage'
 import { RoutineStatusChip } from './RoutineStatusChip'
-import { dayCount, detailRows, endedNote, lastMarked, lastMarkedDose, nextUnmarked, noTodayText, pausedNote, todayLabel } from './scheduleText'
+import { dayCount, detailRows, endedNote, fixedNext, isFixedActivity, lastMarked, lastMarkedDose, nextUnmarked, noTodayText, pausedNote, todayLabel } from './scheduleText'
 import type { Routine } from './types'
 
 const card = 'rounded-[22px] bg-surface shadow-[0_8px_20px_rgba(4,37,43,0.07)]'
@@ -67,11 +67,43 @@ function SupplementToday({ routine, canManage, own, today }: { routine: Routine;
   )
 }
 
+/**
+ * The day card of an activity at fixed hours (mock ActividadDetalle, `fixed`): NO count and NO bar — «Próxima» (with the day under
+ * the hour when it is not today) and «Última marcada» (today's, with who), the solid «✓ Realizado» while a dose of today is
+ * unmarked, «No quedan avisos hoy.» when all of today's are, and «Quitar la última marca».
+ */
+function FixedToday({ routine, canManage, own, today }: { routine: Routine; canManage: boolean; own: boolean; today: string }) {
+  const next = fixedNext(routine, today)
+  const last = lastMarked(routine.doses)
+  const pendingToday = routine.doses.some((d) => !d.taken)
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="flex flex-col gap-0.5 rounded-[14px] bg-hint px-3.5 py-3">
+          <span className="text-[13px] font-bold text-body">Próxima</span>
+          <span className="text-xl font-black text-ink tabular-nums">{next?.time ?? '—'}</span>
+          {next && <span className="text-[13px] font-bold text-body">{next.sub}</span>}
+        </div>
+        <div className="flex flex-col gap-0.5 rounded-[14px] bg-hint px-3.5 py-3">
+          <span className="text-[13px] font-bold text-body">Última marcada</span>
+          <span className="text-xl font-black text-ink tabular-nums">{last?.at ?? '—'}</span>
+          {last && !own && <span className="text-[13px] font-bold text-body">por {last.by}</span>}
+          {last && <span className="text-[13px] font-bold text-body">hoy</span>}
+        </div>
+      </div>
+      {pendingToday && <RealizadoButton routineId={routine.id} name={routine.name} variant="solid" />}
+      {!pendingToday && routine.doses.length > 0 && <p className="text-[15px] leading-normal text-body">No quedan avisos hoy.</p>}
+      <UndoLastMark routine={routine} canManage={canManage} />
+    </>
+  )
+}
+
 /** The detail's day card of an activity (mock ActividadDetalle): the count, the bar, «Próxima» and «Última marcada», «✓ Realizado». */
 function ActivityToday({ routine, canManage, own, today }: { routine: Routine; canManage: boolean; own: boolean; today: string }) {
   const count = dayCount(routine.doses)
+  const fixed = isFixedActivity(routine)
   if (routine.status === 'paused' || routine.status === 'ended') {
-    return routine.status === 'ended' && count.total > 0 ? (
+    return routine.status === 'ended' && count.total > 0 && !fixed ? (
       <>
         <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
           <span className="text-[34px] font-black tracking-[-0.03em] text-ink tabular-nums">
@@ -83,6 +115,7 @@ function ActivityToday({ routine, canManage, own, today }: { routine: Routine; c
       </>
     ) : null
   }
+  if (fixed) return <FixedToday routine={routine} canManage={canManage} own={own} today={today} />
   if (count.total === 0) {
     return (
       <p className="text-[15px] leading-normal text-body">{routine.nextDose ? noTodayText(routine.nextDose.scheduledAt, today, own) : 'Hoy no hay avisos.'}</p>
