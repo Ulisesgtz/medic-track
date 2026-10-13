@@ -32,10 +32,12 @@ sin marcar, «✓ Hecha hoy» al terminar; el detalle trae las cajas «Próxima�
 «Quitar la última marca». El servidor ahora manda `nextDose` **siempre** para una actividad a hora fija activa (antes solo sin tomas hoy), para poder
 decir cuándo es la siguiente aunque la de hoy ya esté marcada.
 
-## Desviaciones (pendientes de aprobar)
+## Desviaciones (cerradas el 2026-10-13, spec 043)
+
+El dueño pidió cerrarlas todas en la spec 043: la 1 y la 6 se hicieron; la 2, 3, 4 y 5 se aceptan como están.
 
 1. **«Última» de otro día.** El diseño del detalle dice «Última marcada 17:10 · mar 6 oct» (la de la vez anterior). El servidor solo manda las tomas de
-   hoy, así que la caja muestra la de hoy o «—». Para mostrar la de otro día hace falta un dato nuevo (`lastDone`). Queda en `BACKLOG.md`.
+   hoy, así que la caja muestra la de hoy o «—». **Hecho (spec 043)**: el servidor manda `lastDone` (la toma marcada más reciente, de cualquier día) para una actividad a hora fija y la tarjeta y el detalle dicen «Última: por Ana, jue 1 oct, 17:10».
 2. **«Última» en la familia.** El diseño de la tarjeta dice «Última: hoy, 07:05»; con otra persona se escribe «Última: por Ana, hoy, 07:05» (la regla
    «por Ana» de la spec 032).
 3. **Fechas.** El diseño dibuja «8 oct 2026» como texto; se mantiene el selector nativo de fecha (desviación ya aprobada de la spec 035).
@@ -43,4 +45,4 @@ decir cuándo es la siguiente aunque la de hoy ya esté marcada.
    relleno, el panel no la sigue solo.
 5. **El error del campo** (`TimeField` con `invalid`): el mensaje de error lo escribe cada formulario bajo el campo, no el campo.
 6. **La barra lateral del diseño dice «Inicio»** (Inicio · hijo · Personal), que aún no existe (el inicio sigue titulándose «Tus hijos» y la barra no lo
-   lleva). Solo el enlace «← Inicio» se adoptó (2026-10-12).
+   lleva). El enlace «← Inicio» se adoptó el 2026-10-12 y **la barra lateral web ganó «Inicio» el 2026-10-13** (spec 043); el título del inicio sigue siendo «Tus hijos».
