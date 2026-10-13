@@ -27,7 +27,7 @@ Sin tokens nuevos: `ink`, `ink-soft`, `ink-muted`, `ink-edge`, `action`, `bright
 13. **«Tus avisos» en todos los detalles**, también los personales (subtítulo de actividad: «A cada hora programada, en este dispositivo.»).
 14. **Aviso push con botón de acción** (`n.actions`).
 15. **Vacío del hijo con su nombre** («Mateo aún no tiene suplementos / actividades»); personal «Aún no tienes …»; botón «+ Agregar suplemento / actividad», de contorno en el hijo y sólido en lo personal.
-16. **«← Tus hijos» → «← Inicio»** (propuesta pendiente de rutinas personales B2). *No se adopta en esta entrega* (ver BACKLOG).
+16. **«← Tus hijos» → «← Inicio»** (propuesta pendiente de rutinas personales B2). *No se adoptó en esta entrega; el dueño lo aprobó el 2026-10-12 y el enlace de regreso al inicio dice «← Inicio» en todas las pantallas* (el título del inicio sigue siendo «Tus hijos»; ver BACKLOG).
 17. **Plan caducado**: bloque `hint` «Tu cuenta está en el plan gratuito» por sección, sin ámbar; todo se ve y se marca, incluido «Realizado»; en el detalle solo queda «Finalizar …».
 18. **Actividad de 24 avisos**: misma altura que una de 4 («Cada hora, de 00:00 a 23:00», «9 de 24 hechas hoy», «Avisos al día: 24»).
 

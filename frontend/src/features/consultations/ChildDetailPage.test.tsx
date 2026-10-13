@@ -112,7 +112,7 @@ describe('ChildDetailPage', () => {
       expect(await screen.findByRole('heading', { level: 1, name: 'Mateo Morales' })).toBeInTheDocument()
       expect(screen.getByText('5 años 6 meses · 14 mar 2021')).toBeInTheDocument()
       expect(screen.getByText('M')).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: '← Tus hijos' })).toHaveAttribute('href', '/home')
+      expect(screen.getByRole('link', { name: '← Inicio' })).toHaveAttribute('href', '/home')
     })
 
     it('is a centered column of at most 430px, as the mock', async () => {
@@ -277,7 +277,7 @@ describe('ChildDetailPage', () => {
       expect(await screen.findByRole('heading', { level: 1, name: '5 años 6 meses' })).toBeInTheDocument()
       expect(screen.getByText('Mateo Morales · 14 mar 2021')).toBeInTheDocument()
       expect(screen.getByRole('link', { name: 'Nueva consulta' })).toHaveAttribute('href', '/children/child-1/consultations/new')
-      expect(screen.queryByRole('link', { name: '← Tus hijos' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('link', { name: '← Inicio' })).not.toBeInTheDocument()
       expect(screen.getByRole('navigation', { name: 'Tus hijos' })).toBeInTheDocument()
     })
 

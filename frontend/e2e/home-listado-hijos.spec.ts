@@ -132,7 +132,7 @@ for (const design of designs) {
         await expect(page.getByText('Mateo Ruiz · 01 jun 2019')).toBeVisible()
       } else {
         await expect(page.getByRole('heading', { level: 1, name: 'Mateo Ruiz' })).toBeVisible()
-        await expect(page.getByRole('link', { name: '← Tus hijos' })).toBeVisible()
+        await expect(page.getByRole('link', { name: '← Inicio' })).toBeVisible()
       }
     })
   })

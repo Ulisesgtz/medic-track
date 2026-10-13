@@ -11,7 +11,7 @@ test.describe('Detalle del hijo — diseño móvil (mock 02)', () => {
     const { childId } = await seedChild(page, { frequencyHours: 24 })
     await page.goto(`/children/${childId}`)
 
-    await expect(page.getByRole('link', { name: '← Tus hijos' })).toBeVisible()
+    await expect(page.getByRole('link', { name: '← Inicio' })).toBeVisible()
     await expect(page.getByRole('heading', { level: 1, name: 'Mateo Morales' })).toBeVisible()
     await expect(page.getByText(/· 14 mar 2021$/)).toBeVisible()
 
@@ -55,7 +55,7 @@ test.describe('Detalle del hijo — diseño móvil (mock 02)', () => {
     await expect(page).toHaveURL(new RegExp(`/consultations/${consultationId}$`))
 
     await page.goto(`/children/${childId}`)
-    await page.getByRole('link', { name: '← Tus hijos' }).click()
+    await page.getByRole('link', { name: '← Inicio' }).click()
     await expect(page).toHaveURL(/\/home$/)
   })
 
