@@ -129,6 +129,9 @@ type RoutineView struct {
 	// NextDose is the next dose ahead of the window, for an active routine with no dose in it ("hoy no le toca") and always for an
 	// active activity at fixed hours (its card says when the next one is even when today's is done).
 	NextDose *Dose
+	// LastDone is the dose of an activity at fixed hours that was marked most recently, of any day (its card and detail say
+	// «Última: mar 6 oct, 17:10»); nil for the other routines and while none was marked.
+	LastDone *Dose
 	// PaidPlan is the owner account's plan: whether creating, editing and resuming are open (the plan is the server's).
 	PaidPlan bool
 	// MyReminders: the session has not turned this routine's reminders off («Tus avisos»); filled by the service.

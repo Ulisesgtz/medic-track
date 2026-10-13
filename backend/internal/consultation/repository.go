@@ -143,6 +143,12 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, c *Consultat
 	if err := checkPlan(ctx, tx, childID, c, now); err != nil {
 		return err
 	}
+	if err := checkPhotoCap(ctx, tx, childID, c); err != nil {
+		return err
+	}
+	if c.Photo == nil {
+		c.Photo = []byte{} // the column is NOT NULL: "no photo" is an empty one
+	}
 	err = tx.QueryRow(ctx, `
 		INSERT INTO consultations (child_id, doctor_name, consult_date, photo, notes, record_only)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -275,6 +281,32 @@ func checkPlan(ctx context.Context, tx pgx.Tx, childID uuid.UUID, c *Consultatio
 	}
 	if active {
 		return &PlanLimitError{Reason: PlanLimitActiveTreatment}
+	}
+	return nil
+}
+
+// checkPhotoCap enforces the photo rule on every plan: a consultation needs its prescription photo, unless the account
+// already keeps MaxPhotosPerAccount of them — then a photo is refused (ErrPhotoLimit) and one without it is saved. The
+// account row is locked, so two requests can't both take the last place.
+func checkPhotoCap(ctx context.Context, tx pgx.Tx, childID uuid.UUID, c *Consultation) error {
+	accountID, _, err := accountPlanOf(ctx, tx, childID, true)
+	if err != nil {
+		return err
+	}
+	var kept int
+	err = tx.QueryRow(ctx, `
+		SELECT count(*)
+		FROM consultations co JOIN children ch ON ch.id = co.child_id
+		WHERE ch.account_id = $1 AND octet_length(co.photo) > 0
+	`, accountID).Scan(&kept)
+	if err != nil {
+		return fmt.Errorf("counting the account's photos: %w", err)
+	}
+	switch {
+	case len(c.Photo) > 0 && kept >= MaxPhotosPerAccount:
+		return ErrPhotoLimit
+	case len(c.Photo) == 0 && kept < MaxPhotosPerAccount:
+		return ValidationErrors{{Field: "photoBase64", Message: "prescription photo is required"}}
 	}
 	return nil
 }

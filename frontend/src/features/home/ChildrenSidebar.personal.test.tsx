@@ -92,3 +92,19 @@ describe('ChildrenSidebar — Personal', () => {
     expect(screen.queryByRole('navigation', { name: 'Personal' })).not.toBeInTheDocument()
   })
 })
+
+describe('ChildrenSidebar — Inicio', () => {
+  it('has «Inicio» before the children, a link to the home that is current only there', async () => {
+    stub(0, 0)
+    const first = renderAt('/home')
+    const home = await screen.findByRole('link', { name: 'Inicio' })
+    expect(home).toHaveAttribute('href', '/home')
+    expect(home).toHaveAttribute('aria-current', 'page')
+    expect(home.compareDocumentPosition(screen.getByRole('navigation', { name: 'Tus hijos' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    first.unmount()
+
+    stub(0, 0)
+    renderAt('/familia')
+    expect(await screen.findByRole('link', { name: 'Inicio' })).not.toHaveAttribute('aria-current')
+  })
+})

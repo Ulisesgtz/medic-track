@@ -1215,7 +1215,7 @@
                         "ClerkSession": []
                     }
                 ],
-                "description": "Registers a consultation with its prescription photo, medications, notes and marked symptoms\n(FR-003, FR-004). At least one medication is required (FR-015), and each one needs\nits startTime (\"HH:MM\"): all of its doses are generated at once from it (research.md).\nEvery symptomCodes entry must be an active catalog symptom, or 400 with details[].message \"symptom_not_available\" (specs/012).\nOn the free plan, a consultation is refused with 422 \"freemium_consultation_limit_exceeded\" while any child of the account\nstill has an active treatment (reason \"active_treatment\") and when recordOnly is true (reason \"record_only\"); paid accounts have neither limit (specs/030).",
+                "description": "Registers a consultation with its prescription photo, medications, notes and marked symptoms\n(FR-003, FR-004). At least one medication is required (FR-015), and each one needs\nits startTime (\"HH:MM\"): all of its doses are generated at once from it (research.md).\nEvery symptomCodes entry must be an active catalog symptom, or 400 with details[].message \"symptom_not_available\" (specs/012).\nOn the free plan, a consultation is refused with 422 \"freemium_consultation_limit_exceeded\" while any child of the account\nstill has an active treatment (reason \"active_treatment\") and when recordOnly is true (reason \"record_only\"); paid accounts have neither limit (specs/030).\nThe photo is required until the account keeps 100 consultations with one; from then on a photo is refused with\n422 \"photo_limit_exceeded\" and a consultation without photoBase64 is saved (its detail returns an empty photoBase64).",
                 "consumes": [
                     "application/json"
                 ],
@@ -4987,6 +4987,14 @@
                         "activity"
                     ],
                     "example": "supplement"
+                },
+                "lastDone": {
+                    "description": "LastDone: the dose of an activity at fixed hours marked most recently, of any day; null for the rest or while none was marked.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/SupplementDoseResponse"
+                        }
+                    ]
                 },
                 "myReminders": {
                     "description": "MyReminders: the session has not turned this routine's reminders off («Tus avisos»); each person decides for themselves.",

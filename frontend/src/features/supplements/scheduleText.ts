@@ -187,6 +187,17 @@ export function doseWhen(at: string, today: string): { time: string; sub: string
   return { time, sub, text: `${sub}, ${time}` }
 }
 
+/**
+ * The last mark of an activity at fixed hours, of any day: the server's `lastDone` (the dose marked most recently, so «Última: mar 6 oct,
+ * 17:10» survives a day without doses), else the last one marked among today's. `sub` is the day («hoy», «mar 6 oct») and `by` who marked it.
+ */
+export function fixedLast(routine: Pick<Routine, 'doses' | 'lastDone'>, today: string): { time: string; sub: string; text: string; by: string } | null {
+  const dose = routine.lastDone ?? lastMarkedDose(routine.doses)
+  if (!dose?.takenBy) return null
+  const when = doseWhen(dose.takenBy.at, today)
+  return { ...when, by: dose.takenBy.name }
+}
+
 /** The next dose of an activity at fixed hours: the first unmarked one of today still to come, else the next day's (null if none). */
 export function fixedNext(routine: Pick<Routine, 'doses' | 'nextDose'>, today: string, now: Date = new Date()): { time: string; sub: string; text: string } | null {
   const upcoming = [...routine.doses]

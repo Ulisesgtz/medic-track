@@ -15,7 +15,7 @@ import { RealizadoButton } from './RealizadoButton'
 import { RoutineDoseChip } from './RoutineDoseChip'
 import { RoutinePageFrame } from './RoutineFormPage'
 import { RoutineStatusChip } from './RoutineStatusChip'
-import { dayCount, detailRows, endedNote, fixedNext, isFixedActivity, lastMarked, lastMarkedDose, nextUnmarked, noTodayText, pausedNote, todayLabel } from './scheduleText'
+import { dayCount, detailRows, endedNote, fixedLast, fixedNext, isFixedActivity, lastMarked, lastMarkedDose, nextUnmarked, noTodayText, pausedNote, todayLabel } from './scheduleText'
 import type { Routine } from './types'
 
 const card = 'rounded-[22px] bg-surface shadow-[0_8px_20px_rgba(4,37,43,0.07)]'
@@ -69,12 +69,12 @@ function SupplementToday({ routine, canManage, own, today }: { routine: Routine;
 
 /**
  * The day card of an activity at fixed hours (mock ActividadDetalle, `fixed`): NO count and NO bar — «Próxima» (with the day under
- * the hour when it is not today) and «Última marcada» (today's, with who), the solid «✓ Realizado» while a dose of today is
+ * the hour when it is not today) and «Última marcada» (the last one, of any day, with who), the solid «✓ Realizado» while a dose of today is
  * unmarked, «No quedan avisos hoy.» when all of today's are, and «Quitar la última marca».
  */
 function FixedToday({ routine, canManage, own, today }: { routine: Routine; canManage: boolean; own: boolean; today: string }) {
   const next = fixedNext(routine, today)
-  const last = lastMarked(routine.doses)
+  const last = fixedLast(routine, today)
   const pendingToday = routine.doses.some((d) => !d.taken)
   return (
     <>
@@ -86,9 +86,9 @@ function FixedToday({ routine, canManage, own, today }: { routine: Routine; canM
         </div>
         <div className="flex flex-col gap-0.5 rounded-[14px] bg-hint px-3.5 py-3">
           <span className="text-[13px] font-bold text-body">Última marcada</span>
-          <span className="text-xl font-black text-ink tabular-nums">{last?.at ?? '—'}</span>
+          <span className="text-xl font-black text-ink tabular-nums">{last?.time ?? '—'}</span>
           {last && !own && <span className="text-[13px] font-bold text-body">por {last.by}</span>}
-          {last && <span className="text-[13px] font-bold text-body">hoy</span>}
+          {last && <span className="text-[13px] font-bold text-body">{last.sub}</span>}
         </div>
       </div>
       {pendingToday && <RealizadoButton routineId={routine.id} name={routine.name} variant="solid" />}

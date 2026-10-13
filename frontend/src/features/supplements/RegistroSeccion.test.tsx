@@ -251,6 +251,13 @@ describe('RegistroSeccion · actividades', () => {
     expect(screen.getByRole('button', { name: 'Realizado: Práctica de fut' })).toBeInTheDocument()
   })
 
+  it('on a day without doses it still says which dose was marked last, with its day (lastDone)', async () => {
+    const lastDone = dose('f17', 17, { taken: true, takenBy: { name: 'Ana', at: at(17, 10, 1), mine: false } })
+    api([], [fixedActivity({ doses: [], nextDose: dose('n', 17, { scheduledAt: at(17, 0, 7) }), lastDone })])
+    renderSection('activity')
+    expect(await screen.findByText('Última: por Ana, jue 1 oct, 17:10')).toBeInTheDocument()
+  })
+
   it('once the dose of today is marked it says «✓ Hecha hoy», who and when, and the day of the next one', async () => {
     api([], [fixedActivity({ doses: [dose('f17', 17, { taken: true, takenBy: { name: 'Ana', at: at(17, 10), mine: false } })] })])
     renderSection('activity')

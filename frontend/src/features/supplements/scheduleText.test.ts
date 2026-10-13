@@ -13,6 +13,7 @@ import {
   endedCardText,
   endedNote,
   everyText,
+  fixedLast,
   fixedNext,
   fixedPreview,
   instantDayMonth,
@@ -78,6 +79,21 @@ describe('fixedPreview', () => {
     expect(fixedPreview([1, 3], ['17:00'])).toBe('Martes y jueves a las 17:00.')
     expect(fixedPreview([0, 2, 4], ['08:00', '', '20:30'])).toBe('Lunes, miércoles y viernes a las 08:00 y 20:30.')
     expect(fixedPreview([1], [''])).toBeNull()
+  })
+})
+
+describe('fixedLast', () => {
+  const today = '2026-10-06'
+  const marked = (at: Date, name = 'Ana') => ({ id: 'd', scheduledAt: at.toISOString(), taken: true, status: 'taken', takenBy: { name, at: at.toISOString(), mine: false } }) as never
+
+  it('prefers the last marked dose the server sends, dose of any day and says which day', () => {
+    const last = fixedLast({ doses: [], lastDone: marked(new Date(2026, 9, 1, 17, 10)) }, today)
+    expect(last).toEqual({ time: '17:10', sub: 'jue 1 oct', text: 'jue 1 oct, 17:10', by: 'Ana' })
+  })
+
+  it('falls back to the marks of today, and is null when nothing was marked', () => {
+    expect(fixedLast({ doses: [marked(new Date(2026, 9, 6, 7, 5), 'Luis')] }, today)).toMatchObject({ sub: 'hoy', text: 'hoy, 07:05', by: 'Luis' })
+    expect(fixedLast({ doses: [], lastDone: null }, today)).toBeNull()
   })
 })
 

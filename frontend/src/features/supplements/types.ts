@@ -56,6 +56,8 @@ export interface Routine {
   doses: RoutineDose[]
   /** The next dose ahead of the window, only for an active routine with none in it. */
   nextDose: RoutineDose | null
+  /** The dose of an activity at fixed hours marked most recently, of any day (null for the rest and while none was marked). */
+  lastDone?: RoutineDose | null
 }
 
 export interface RoutineList {

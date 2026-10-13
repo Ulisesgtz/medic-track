@@ -930,3 +930,71 @@ describe('ConsultationForm, free plan (specs/030)', () => {
     expect(screen.getByText('PLANES')).toBeInTheDocument()
   })
 })
+
+describe('ConsultationForm, photo limit (specs/043)', () => {
+  beforeEach(() => recognizeAs(''))
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.clearAllMocks()
+  })
+
+  const created = { id: 'c1', childId: 'child-1', medications: [] }
+
+  it('on the 422 it says so, neutrally, keeps what was typed and saves the next time without a photo', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 422, json: async () => ({ error: 'photo_limit_exceeded', message: 'limit', limit: '100' }) })
+      .mockResolvedValueOnce({ ok: true, status: 201, json: async () => created })
+    vi.stubGlobal('fetch', fetchMock)
+    const { onSuccess } = renderForm('phone')
+
+    await fillValid(user)
+    await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
+
+    expect(await screen.findByText(/Tu cuenta ya guarda 100 recetas con foto/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Doctor')).toHaveValue('Dra. López')
+    expect(screen.queryByText('La foto de la receta es obligatoria')).not.toBeInTheDocument()
+    // The refusal is not shown as a red error line under the button.
+    expect(screen.queryByText('limit')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledWith('c1', false))
+    const body = JSON.parse(fetchMock.mock.calls[1][1].body as string)
+    expect(body.photoBase64).toBeUndefined()
+    expect(body.doctorName).toBe('Dra. López')
+  })
+
+  it('once the limit is known, a form with no photo at all can be saved', async () => {
+    const user = userEvent.setup()
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 422, json: async () => ({ error: 'photo_limit_exceeded', message: 'limit' }) })
+      .mockResolvedValueOnce({ ok: true, status: 201, json: async () => created })
+    vi.stubGlobal('fetch', fetchMock)
+    const { onSuccess } = renderForm('desktop')
+
+    await fillValid(user)
+    await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
+    await screen.findByText(/Tu cuenta ya guarda 100 recetas con foto/)
+    await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled())
+  })
+
+  it('sends the scaled-down copy of the photo, not the original', async () => {
+    const user = userEvent.setup()
+    const shrunk = new Blob(['small'], { type: 'image/jpeg' })
+    vi.spyOn(await import('./shrinkPhoto'), 'shrinkPhoto').mockResolvedValue(shrunk)
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 201, json: async () => created })
+    vi.stubGlobal('fetch', fetchMock)
+    renderForm('phone')
+
+    await fillValid(user)
+    await user.click(screen.getByRole('button', { name: 'Guardar consulta' }))
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled())
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body as string)
+    expect(atob(body.photoBase64)).toBe('small')
+  })
+})

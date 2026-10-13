@@ -80,6 +80,8 @@ type routineResponse struct {
 	Doses    []doseResponse   `json:"doses"`
 	// NextDose: the next dose ahead of the window, for an active routine with no dose in it and always for an active activity at fixed hours.
 	NextDose *doseResponse `json:"nextDose"`
+	// LastDone: the dose of an activity at fixed hours marked most recently, of any day; null for the rest or while none was marked.
+	LastDone *doseResponse `json:"lastDone"`
 } // @name SupplementRoutineResponse
 
 type routineListResponse struct {
@@ -200,6 +202,10 @@ func toRoutineResponse(v RoutineView, level access.Level, actor uuid.UUID) routi
 	if v.NextDose != nil {
 		n := toDoseResponse(*v.NextDose, actor)
 		out.NextDose = &n
+	}
+	if v.LastDone != nil {
+		l := toDoseResponse(*v.LastDone, actor)
+		out.LastDone = &l
 	}
 	return out
 }

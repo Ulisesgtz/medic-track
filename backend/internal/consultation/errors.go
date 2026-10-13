@@ -38,7 +38,15 @@ var (
 	// ErrPlanLimit is what a *PlanLimitError matches with errors.Is: the account's plan doesn't include what the
 	// parent asked for (specs/030-reglas-plan-gratis).
 	ErrPlanLimit = errors.New("the free plan does not include this")
+
+	// ErrPhotoLimit is returned when the account already keeps MaxPhotosPerAccount prescription photos: the consultation can
+	// still be saved, without a photo.
+	ErrPhotoLimit = errors.New("the account reached its limit of prescription photos")
 )
+
+// MaxPhotosPerAccount is how many consultations with a prescription photo one account can keep (every plan). Past it a
+// consultation is saved without a photo, and everything already saved stays as it is.
+const MaxPhotosPerAccount = 100
 
 // What the free plan leaves out. Specs/030: a second consultation while one treatment is still active, and saving a
 // consultation only as a record. Specs/031: searching and filtering the history. Their names are the `reason` the API sends.

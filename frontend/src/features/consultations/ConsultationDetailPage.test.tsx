@@ -120,6 +120,25 @@ describe('ConsultationDetailPage', () => {
       expect(await screen.findByRole('link', { name: '← Volver al reporte de consultas' })).toBeInTheDocument()
     })
 
+    it('a consultation saved without a photo says so instead of showing an empty picture (specs/043)', async () => {
+      stubApi(consultation({ photoBase64: '' }))
+      renderPage()
+
+      await screen.findByRole('heading', { level: 1, name: 'Dra. López' })
+      expect(screen.getByText('Esta consulta se guardó sin foto.')).toBeInTheDocument()
+      expect(screen.queryByRole('img', { name: 'Foto de la receta médica' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Abrir la foto de la receta en tamaño completo' })).not.toBeInTheDocument()
+    })
+
+    it('the same on the web design', async () => {
+      useDesktop()
+      stubApi(consultation({ photoBase64: '' }))
+      renderPage()
+
+      expect(await screen.findByText('Esta consulta se guardó sin foto.')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Ver completa' })).not.toBeInTheDocument()
+    })
+
     it('omits the symptoms and notes sections when there are none (notes of only spaces count as none)', async () => {
       stubApi(consultation({ symptoms: [], notes: '  \n ' }))
       renderPage()

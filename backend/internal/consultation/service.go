@@ -175,9 +175,8 @@ func validateCreateConsultationInput(input CreateConsultationInput) ValidationEr
 	} else if input.ConsultDate.After(time.Now()) {
 		errs = append(errs, ValidationError{Field: "consultDate", Message: "consult date cannot be in the future"})
 	}
-	if len(input.Photo) == 0 {
-		errs = append(errs, ValidationError{Field: "photoBase64", Message: "prescription photo is required"})
-	} else if len(input.Photo) > maxPhotoBytes {
+	// An empty photo is checked by the repository: it is only accepted once the account has reached MaxPhotosPerAccount.
+	if len(input.Photo) > maxPhotoBytes {
 		errs = append(errs, ValidationError{Field: "photoBase64", Message: "photo exceeds the 8MB size limit"})
 	}
 	if input.UTCOffsetMinutes < minUTCOffsetMinutes || input.UTCOffsetMinutes > maxUTCOffsetMinutes {

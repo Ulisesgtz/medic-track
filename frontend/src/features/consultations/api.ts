@@ -9,7 +9,7 @@ export type { ValidationErrorDetail }
 
 /** Discriminated error thrown by this feature's api functions. */
 export class ConsultationApiError extends ApiError<
-  'child_not_found' | 'consultation_not_found' | 'dose_not_found' | 'medication_not_found' | 'nothing_to_extend' | 'validation_error' | 'symptom_not_available' | 'plan_limit_active_treatment' | 'plan_limit_record_only' | 'plan_limit_history_search' | 'unknown'
+  'child_not_found' | 'consultation_not_found' | 'dose_not_found' | 'medication_not_found' | 'nothing_to_extend' | 'validation_error' | 'symptom_not_available' | 'plan_limit_active_treatment' | 'plan_limit_record_only' | 'plan_limit_history_search' | 'photo_limit_exceeded' | 'unknown'
 > {}
 
 // contracts/get-consultations.md
@@ -53,7 +53,8 @@ export interface CreateMedicationPayload {
 export interface CreateConsultationPayload {
   doctorName: string
   consultDate: string
-  photoBase64: string
+  /** Left out when the account already keeps its most photos (specs/043): the consultation is saved without one. */
+  photoBase64?: string
   notes?: string
   /** Catalog codes of the marked symptoms (specs/012). */
   symptomCodes?: string[]
@@ -89,6 +90,10 @@ export async function createConsultation(
   }
   if (res.status === 400) {
     throw new ConsultationApiError('validation_error', body.message ?? 'Validation error', body.details)
+  }
+  if (res.status === 422 && body.error === 'photo_limit_exceeded') {
+    // The account keeps as many prescription photos as it can (specs/043): save without one.
+    throw new ConsultationApiError('photo_limit_exceeded', body.message ?? 'The account reached its limit of photos')
   }
   if (res.status === 422 && body.error === 'freemium_consultation_limit_exceeded') {
     // The free plan: another treatment is still active, or "solo registro" (specs/030).
