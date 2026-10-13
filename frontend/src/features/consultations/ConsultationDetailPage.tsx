@@ -22,6 +22,9 @@ import { TreatmentCalendar } from './TreatmentCalendar'
 import { dayKey, firstDoseDay, initialDay, numbered } from './treatmentDays'
 import { DOSE_REFETCH_MS } from './doseStatus'
 
+/** Said where the photo would be when the consultation was saved after the account reached its photo limit (specs/043). */
+const NO_PHOTO_TEXT = 'Esta consulta se guardó sin foto.'
+
 const overline = 'text-xs font-extrabold uppercase tracking-[0.1em] text-ink-soft'
 
 /**
@@ -91,6 +94,8 @@ export function ConsultationDetailPage() {
   }
 
   const consultation = query.data!
+  // A consultation saved after the account reached its photo limit (specs/043) has none.
+  const hasPhoto = consultation.photoBase64 !== ''
   const photoSrc = `data:${sniffImageMimeType(consultation.photoBase64)};base64,${consultation.photoBase64}`
   const childPath = `/children/${consultation.childId}`
   const backLabel = child ? `← ${child.firstName} ${child.lastName}` : '← Volver al reporte de consultas'
@@ -222,11 +227,17 @@ export function ConsultationDetailPage() {
                 <ConsultationAppointmentSection consultationId={consultation.id} childId={consultation.childId} />
                 <div className="min-w-0 rounded-3xl bg-surface p-6 shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
                   <h2 className={overline}>Foto de la receta</h2>
-                  {photoImage('mt-4 h-[200px] w-full rounded-2xl')}
-                  <p className="mt-4 text-[13px] leading-relaxed text-slate-500">
-                    El texto se leyó en tu equipo; la foto se guarda solo en tu cuenta.
-                  </p>
-                  {seeFull('-mb-[11px] block w-fit')}
+                  {hasPhoto ? (
+                    <>
+                      {photoImage('mt-4 h-[200px] w-full rounded-2xl')}
+                      <p className="mt-4 text-[13px] leading-relaxed text-slate-500">
+                        El texto se leyó en tu equipo; la foto se guarda solo en tu cuenta.
+                      </p>
+                      {seeFull('-mb-[11px] block w-fit')}
+                    </>
+                  ) : (
+                    <p className="mt-4 text-[13px] leading-relaxed text-slate-500">{NO_PHOTO_TEXT}</p>
+                  )}
                 </div>
 
                 {/* A record-only consultation has no treatment to show (specs/024). */}
@@ -275,12 +286,21 @@ export function ConsultationDetailPage() {
 
         <section className="px-6 pt-6">
           <div className="flex items-center gap-4 rounded-3xl bg-surface p-4 shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
-            {photoImage('h-[78px] w-16 shrink-0 rounded-xl')}
-            <div>
-              <p className="text-[15px] font-extrabold text-ink">Foto de la receta</p>
-              <p className="mt-1 text-[13px] text-slate-500">Leída en tu equipo</p>
-              {seeFull('-mt-1.5 -mb-3 inline-block')}
-            </div>
+            {hasPhoto ? (
+              <>
+                {photoImage('h-[78px] w-16 shrink-0 rounded-xl')}
+                <div>
+                  <p className="text-[15px] font-extrabold text-ink">Foto de la receta</p>
+                  <p className="mt-1 text-[13px] text-slate-500">Leída en tu equipo</p>
+                  {seeFull('-mt-1.5 -mb-3 inline-block')}
+                </div>
+              </>
+            ) : (
+              <div>
+                <p className="text-[15px] font-extrabold text-ink">Foto de la receta</p>
+                <p className="mt-1 text-[13px] text-slate-500">{NO_PHOTO_TEXT}</p>
+              </div>
+            )}
           </div>
         </section>
 

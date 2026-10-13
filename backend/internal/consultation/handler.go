@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -387,6 +388,8 @@ type createConsultationRequest struct {
 //	@Description	Every symptomCodes entry must be an active catalog symptom, or 400 with details[].message "symptom_not_available" (specs/012).
 //	@Description	On the free plan, a consultation is refused with 422 "freemium_consultation_limit_exceeded" while any child of the account
 //	@Description	still has an active treatment (reason "active_treatment") and when recordOnly is true (reason "record_only"); paid accounts have neither limit (specs/030).
+//	@Description	The photo is required until the account keeps 100 consultations with one; from then on a photo is refused with
+//	@Description	422 "photo_limit_exceeded" and a consultation without photoBase64 is saved (its detail returns an empty photoBase64).
 //	@Tags			consultations
 //	@Accept			json
 //	@Produce		json
@@ -502,6 +505,12 @@ func (h *Handler) writeCreateConsultationError(ctx context.Context, w http.Respo
 		}}, "One or more fields are invalid"), nil)
 	case errors.As(err, &planErr):
 		h.responder.WriteJSON(ctx, w, http.StatusUnprocessableEntity, planLimitBody(planErr.Reason), nil)
+	case errors.Is(err, ErrPhotoLimit):
+		h.responder.WriteJSON(ctx, w, http.StatusUnprocessableEntity, map[string]string{
+			"error":   "photo_limit_exceeded",
+			"message": "The account keeps the most prescription photos it can; save the consultation without one",
+			"limit":   strconv.Itoa(MaxPhotosPerAccount),
+		}, nil)
 	case errors.Is(err, ErrChildNotFound):
 		h.responder.WriteJSON(ctx, w, http.StatusNotFound, childNotFoundBody(), nil)
 	default:

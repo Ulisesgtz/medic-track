@@ -18,6 +18,8 @@ import {
   validateAppointment,
   type AppointmentErrors,
 } from '../appointments/appointmentValues'
+import { shrinkPhoto } from './shrinkPhoto'
+import { Notice } from '../../shared/ui/Notice'
 import { createConsultation, ConsultationApiError, type CreateConsultationPayload } from './api'
 import { missingFieldsText } from './missingFields'
 import { SymptomPicker } from './SymptomPicker'
@@ -149,7 +151,7 @@ function extractMedications(ocrText: string): MedicationHint[] {
   return extractUnlistedMedications(ocrText)
 }
 
-function fileToBase64(file: File): Promise<string> {
+function fileToBase64(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => {
@@ -218,6 +220,9 @@ export function ConsultationForm({
   const [planLimit, setPlanLimit] = useState<'active_treatment' | 'record_only' | null>(null)
   const closePlanLimit = useCallback(() => setPlanLimit(null), [])
   const [photoFile, setPhotoFile] = useState<File | null>(null)
+  // Set when the server says the account keeps as many prescription photos as it can (specs/043): from then on the
+  // photo is optional and saving sends none.
+  const [photoLimit, setPhotoLimit] = useState(false)
   // Set when the parent tries to save without a photo; it shows with the other missing-field errors.
   const [photoMissing, setPhotoMissing] = useState(false)
   const { suggestion, isRunning, progress, runOcr } = useOcrSuggestion()
@@ -259,8 +264,9 @@ export function ConsultationForm({
   const { getToken } = useAuth()
   const queryClient = useQueryClient()
   const mutation = useMutation({
-    mutationFn: async ({ values, photo }: { values: ConsultationFormValues; photo: File }) => {
-      const photoBase64 = await fileToBase64(photo)
+    mutationFn: async ({ values, photo }: { values: ConsultationFormValues; photo: File | null }) => {
+      // The OCR already read the original; what is saved is the scaled-down copy (specs/043).
+      const photoBase64 = photo ? await fileToBase64(await shrinkPhoto(photo)) : undefined
       const payload: CreateConsultationPayload = {
         doctorName: values.doctorName,
         consultDate: values.consultDate,
@@ -292,6 +298,7 @@ export function ConsultationForm({
     },
     onSuccess: ({ consultation, appointmentFailed }) => onSuccess(consultation.id, appointmentFailed),
     onError: async (error) => {
+      if (error instanceof ConsultationApiError && error.kind === 'photo_limit_exceeded') setPhotoLimit(true)
       if (error instanceof ConsultationApiError && error.kind === 'plan_limit_active_treatment') setPlanLimit('active_treatment')
       if (error instanceof ConsultationApiError && error.kind === 'plan_limit_record_only') setPlanLimit('record_only')
       if (!(error instanceof ConsultationApiError) || error.kind !== 'symptom_not_available') return
@@ -399,14 +406,14 @@ export function ConsultationForm({
     (values) => {
       const apptFound = appointmentAvailable && hasAppointment(appt) ? validateAppointment(appt, values.consultDate) : {}
       setApptErrors(apptFound)
-      if (!photoFile) {
+      if (!photoFile && !photoLimit) {
         setPhotoMissing(true)
         return
       }
       if (Object.keys(apptFound).length > 0) return
-      mutation.mutate({ values, photo: photoFile })
+      mutation.mutate({ values, photo: photoLimit ? null : photoFile })
     },
-    () => setPhotoMissing(!photoFile),
+    () => setPhotoMissing(!photoFile && !photoLimit),
   )
 
   // ---- "Leyendo receta" panel: chooser -> progress -> "Listo".
@@ -483,7 +490,7 @@ export function ConsultationForm({
           </button>
         </div>
       )}
-      {photoMissing && !photoFile && (
+      {photoMissing && !photoFile && !photoLimit && (
         <p className="mt-3 text-[13px] font-semibold text-red-200">La foto de la receta es obligatoria</p>
       )}
     </div>
@@ -519,15 +526,15 @@ export function ConsultationForm({
     </Link>
   )
 
-  const missing = submitCount > 0 && (Object.keys(errors).length > 0 || (photoMissing && !photoFile))
-  const statusText = mutation.isError
+  const missing = submitCount > 0 && (Object.keys(errors).length > 0 || (photoMissing && !photoFile && !photoLimit))
+  const statusText = mutation.isError && !(mutation.error instanceof ConsultationApiError && mutation.error.kind === 'photo_limit_exceeded')
     ? mutation.error instanceof ConsultationApiError && mutation.error.kind === 'symptom_not_available'
       ? 'Uno de los síntomas que elegiste ya no está disponible. Revisa la lista e intenta de nuevo.'
       : mutation.error instanceof ConsultationApiError
       ? mutation.error.message
       : 'Ocurrió un error al guardar la consulta. Intenta de nuevo.'
     : missing
-      ? missingFieldsText(errors, photoMissing && !photoFile, fields.length, recordOnly)
+      ? missingFieldsText(errors, photoMissing && !photoFile && !photoLimit, fields.length, recordOnly)
       : ''
 
   // specs/012: what the parent observed, in its own section after the prescription group in both designs —
@@ -681,6 +688,11 @@ export function ConsultationForm({
       {mutation.isPending ? 'Guardando…' : 'Guardar consulta'}
     </button>
   )
+  const photoLimitNotice = photoLimit && (
+    <Notice tone="info">
+      Tu cuenta ya guarda 100 recetas con foto, el máximo. Puedes guardar esta consulta sin foto; todo lo ya guardado se queda como está.
+    </Notice>
+  )
   const status = (
     <p
       role="status"
@@ -716,6 +728,7 @@ export function ConsultationForm({
           {medications}
           <div className="flex flex-wrap items-center gap-4">{addButton}</div>
           {appointmentSection}
+          {photoLimitNotice}
           <div className="flex flex-wrap items-center justify-end gap-4">{saveButton}</div>
           {status}
         </form>
@@ -741,6 +754,7 @@ export function ConsultationForm({
         {medications}
         {addButton}
         {appointmentSection}
+        {photoLimitNotice}
         {saveButton}
         {status}
       </form>
