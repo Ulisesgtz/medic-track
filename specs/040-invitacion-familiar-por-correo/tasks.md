@@ -166,10 +166,10 @@ description: "Lista de tareas de la spec 040: invitación a la familia por corre
 
 ## Tareas del dueño del producto (no son código)
 
-- [ ] T050 [DUEÑO] Aplicar la migración `0025` en la base de DEV (Railway) **antes** de desplegar el backend de esta rama (misma forma que la `0024`).
-- [ ] T051 [DUEÑO] En Resend → Domains → `pedi-track.com` → Configuration: confirmar que *Open tracking* y *Click tracking* estén **apagados** (FR-003).
-- [ ] T052 [DUEÑO] (Opcional) Fijar `MAIL_FROM` en Railway si se quiere un remitente distinto de `alertas@pedi-track.com`.
-- [ ] T053 [DUEÑO] Prueba real (`quickstart.md` §3): invitar a un buzón propio, comprobar que el enlace apunta a `dev.pedi-track.com/familia/invitacion#…` y no a un dominio de seguimiento, y que aceptar con otro correo no deja entrar.
+- [x] T050 [DUEÑO] Aplicar la migración `0025` en la base de DEV (Railway) **antes** de desplegar el backend de esta rama (misma forma que la `0024`).
+- [x] T051 [DUEÑO] En Resend → Domains → `pedi-track.com` → Configuration: confirmar que *Open tracking* y *Click tracking* estén **apagados** (FR-003).
+- [x] T052 [DUEÑO] (Opcional) Fijar `MAIL_FROM` en Railway (no hizo falta: se dejó el remitente por omisión) si se quiere un remitente distinto de `alertas@pedi-track.com`.
+- [x] T053 [DUEÑO] Prueba real (`quickstart.md` §3): invitar a un buzón propio, comprobar que el enlace apunta a `dev.pedi-track.com/familia/invitacion#…` y no a un dominio de seguimiento, y que aceptar con otro correo no deja entrar.
 
 ---
 
