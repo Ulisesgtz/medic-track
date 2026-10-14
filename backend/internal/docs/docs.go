@@ -1164,6 +1164,80 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "For an appointment the parent already has and no consultation to hang it from: it keeps its own doctor, place\n(` + "`" + `location` + "`" + `, and an optional https ` + "`" + `locationUrl` + "`" + `, e.g. a Google Maps link), note and notices. Same rules as the one of\na consultation, except there is no «one scheduled per consultation» limit. Paid plan only (422 reason \"appointments\").",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "appointments"
+                ],
+                "summary": "Add an appointment to a child, with no consultation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The appointment",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "An invalid field",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't add appointments here",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Free plan",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentPlanLimitResponse"
+                        }
+                    }
+                }
             }
         },
         "/children/{childId}/consultations": {
@@ -3451,6 +3525,19 @@ const docTemplate = `{
         "AppointmentRequest": {
             "type": "object",
             "properties": {
+                "doctor": {
+                    "description": "Doctor: the appointment's own; on one of a consultation, empty means the consultation's doctor.",
+                    "type": "string",
+                    "example": "Dra. Laura López"
+                },
+                "location": {
+                    "type": "string",
+                    "example": "Consultorio 302, Av. Vallarta 1234"
+                },
+                "locationUrl": {
+                    "type": "string",
+                    "example": "https://maps.app.goo.gl/abc"
+                },
                 "note": {
                     "type": "string",
                     "example": ""
@@ -3493,6 +3580,7 @@ const docTemplate = `{
                     "example": "2026-09-28"
                 },
                 "consultationId": {
+                    "description": "ConsultationID is null for an appointment added without a consultation.",
                     "type": "string",
                     "example": "a1b2c3d4-0000-0000-0000-000000000000"
                 },
@@ -3507,6 +3595,15 @@ const docTemplate = `{
                 "id": {
                     "type": "string",
                     "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "location": {
+                    "description": "Location is the place as the parent wrote it, LocationURL an optional https link (Google Maps).",
+                    "type": "string",
+                    "example": "Consultorio 302, Av. Vallarta 1234"
+                },
+                "locationUrl": {
+                    "type": "string",
+                    "example": "https://maps.app.goo.gl/abc"
                 },
                 "myReminders": {
                     "type": "boolean",

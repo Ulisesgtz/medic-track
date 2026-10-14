@@ -19,11 +19,12 @@ import (
 func (r *Repository) ClaimDueAppointmentNotices(ctx context.Context, now time.Time, window time.Duration) ([]DueDose, error) {
 	rows, err := r.pool.Query(ctx, `
 		WITH cand AS (
-			SELECT n.id AS notice_id, n.fire_at, ap.id AS appointment_id, ap.consultation_id, ap.starts_at, co.doctor_name, ap.note,
+			SELECT n.id AS notice_id, n.fire_at, ap.id AS appointment_id, COALESCE(ap.consultation_id, '00000000-0000-0000-0000-000000000000'::uuid) AS consultation_id, ap.starts_at,
+			       COALESCE(NULLIF(ap.doctor_name, ''), co.doctor_name, '') AS doctor_name, ap.note,
 			       ch.id AS child_id, ch.first_name, ch.account_id AS owner_id
 			FROM appointment_notices n
 			JOIN consultation_appointments ap ON ap.id = n.appointment_id AND ap.status = 'scheduled'
-			JOIN consultations co ON co.id = ap.consultation_id
+			LEFT JOIN consultations co ON co.id = ap.consultation_id
 			JOIN children ch ON ch.id = ap.child_id
 			WHERE n.fire_at <= $1
 			  AND n.fire_at > $1 - make_interval(secs => $2)

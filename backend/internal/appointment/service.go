@@ -68,6 +68,20 @@ func (s *Service) Create(ctx context.Context, consultationID uuid.UUID, in Input
 	return s.get(ctx, id, createdBy)
 }
 
+// CreateForChild saves an appointment of a child with no consultation (specs/043): there is no consultation date to check
+// against, and the doctor is the appointment's own.
+func (s *Service) CreateForChild(ctx context.Context, childID uuid.UUID, in Input, createdBy uuid.UUID) (*Appointment, error) {
+	norm, errs := ValidateInput(in, "")
+	if errs.HasErrors() {
+		return nil, errs
+	}
+	id, err := s.repo.CreateForChild(ctx, childID, norm, createdBy)
+	if err != nil {
+		return nil, err
+	}
+	return s.get(ctx, id, createdBy)
+}
+
 // Update replaces the appointment's date, note and notices.
 func (s *Service) Update(ctx context.Context, id uuid.UUID, in Input, actor uuid.UUID) (*Appointment, error) {
 	current, err := s.repo.Get(ctx, id)

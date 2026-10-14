@@ -42,13 +42,17 @@ type noticeResponse struct {
 
 type appointmentResponse struct {
 	ID               string           `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
-	ConsultationID   string           `json:"consultationId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	// ConsultationID is null for an appointment added without a consultation.
+	ConsultationID   *string          `json:"consultationId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
 	ChildID          string           `json:"childId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
 	DoctorName       string           `json:"doctorName" example:"Dra. Laura López"`
 	ConsultDate      string           `json:"consultDate" example:"2026-09-28"`
 	StartsAt         string           `json:"startsAt" example:"2026-10-09T16:30:00Z"`
 	UtcOffsetMinutes int              `json:"utcOffsetMinutes" example:"-360"`
 	Note             string           `json:"note" example:""`
+	// Location is the place as the parent wrote it, LocationURL an optional https link (Google Maps).
+	Location    string `json:"location" example:"Consultorio 302, Av. Vallarta 1234"`
+	LocationURL string `json:"locationUrl" example:"https://maps.app.goo.gl/abc"`
 	Status           string           `json:"status" enums:"scheduled,done,canceled,unmarked" example:"scheduled"`
 	StatusBy         *string          `json:"statusBy" example:"Ana"`
 	StatusAt         *string          `json:"statusAt"`
@@ -77,6 +81,10 @@ type inputRequest struct {
 	UtcOffsetMinutes int            `json:"utcOffsetMinutes" example:"-360"`
 	Note             string         `json:"note" example:""`
 	Notices          *[]NoticeInput `json:"notices"`
+	// Doctor: the appointment's own; on one of a consultation, empty means the consultation's doctor.
+	Doctor      string `json:"doctor" example:"Dra. Laura López"`
+	Location    string `json:"location" example:"Consultorio 302, Av. Vallarta 1234"`
+	LocationURL string `json:"locationUrl" example:"https://maps.app.goo.gl/abc"`
 } // @name AppointmentRequest
 
 type statusRequest struct {
@@ -145,11 +153,16 @@ func actorPtr(id uuid.UUID) *uuid.UUID {
 
 func toResponse(a Appointment, level access.Level, now time.Time) appointmentResponse {
 	out := appointmentResponse{
-		ID: a.ID.String(), ConsultationID: a.ConsultationID.String(), ChildID: a.ChildID.String(), DoctorName: a.DoctorName,
+		ID: a.ID.String(), ChildID: a.ChildID.String(), DoctorName: a.DoctorName,
 		ConsultDate: a.ConsultDate, StartsAt: formatTime(a.StartsAt), UtcOffsetMinutes: a.UtcOffsetMinutes, Note: a.Note,
+		Location: a.Location, LocationURL: a.LocationURL,
 		Status: string(a.Derived), StatusAt: optTime(a.StatusAt), CreatedBy: a.CreatedBy, MyReminders: a.MyReminders,
 		CanEdit: level == access.Full && a.PaidPlan, CanMark: level == access.Full,
 		Notices: make([]noticeResponse, 0, len(a.Notices)),
+	}
+	if a.ConsultationID != uuid.Nil {
+		id := a.ConsultationID.String()
+		out.ConsultationID = &id
 	}
 	if a.StatusBy != "" {
 		by := a.StatusBy
@@ -355,6 +368,50 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a, err := h.service.Create(ctx, consultationID, Input(req), actor)
+	if err != nil {
+		h.writeError(ctx, w, err, actor, "Could not create the appointment")
+		return
+	}
+	h.writeOne(w, r, http.StatusCreated, a)
+}
+
+// CreateForChild handles POST /children/{childId}/appointments.
+//
+//	@Summary		Add an appointment to a child, with no consultation
+//	@Description	For an appointment the parent already has and no consultation to hang it from: it keeps its own doctor, place
+//	@Description	(`location`, and an optional https `locationUrl`, e.g. a Google Maps link), note and notices. Same rules as the one of
+//	@Description	a consultation, except there is no «one scheduled per consultation» limit. Paid plan only (422 reason "appointments").
+//	@Tags			appointments
+//	@Accept			json
+//	@Produce		json
+//	@Param			childId	path		string			true	"Child UUID"
+//	@Param			payload	body		inputRequest	true	"The appointment"
+//	@Success		201		{object}	appointmentResponse
+//	@Failure		400		{object}	validationDoc	"An invalid field"
+//	@Failure		404		{object}	errorDoc		"No child exists for this id"
+//	@Failure		422		{object}	planLimitDoc	"Free plan"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	errorDoc	"No valid Clerk session"
+//	@Failure		403		{object}	errorDoc	"The session can't add appointments here"
+//	@Router			/children/{childId}/appointments [post]
+func (h *Handler) CreateForChild(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
+	childID, ok := h.idParam(w, r, "childId")
+	if !ok {
+		return
+	}
+	var req inputRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.responder.WriteJSONError(ctx, w, http.StatusBadRequest, "validation_error", "Malformed JSON body", nil)
+		return
+	}
+	actor := actorOf(ctx)
+	if actor == uuid.Nil {
+		h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", "Could not create the appointment", nil)
+		return
+	}
+	a, err := h.service.CreateForChild(ctx, childID, Input(req), actor)
 	if err != nil {
 		h.writeError(ctx, w, err, actor, "Could not create the appointment")
 		return

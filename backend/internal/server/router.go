@@ -171,6 +171,7 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(seesChild).Get("/children/{childId}/appointments", d.Appointment.ForChild)
 		r.With(seesConsultation).Get("/consultations/{consultationId}/appointment", d.Appointment.ForConsultation)
 		r.With(fullConsultation).Post("/consultations/{consultationId}/appointments", d.Appointment.Create)
+		r.With(fullChild).Post("/children/{childId}/appointments", d.Appointment.CreateForChild)
 		r.With(seesAppointment).Get("/appointments/{appointmentId}", d.Appointment.Get)
 		r.With(fullAppointment).Patch("/appointments/{appointmentId}", d.Appointment.Update)
 		r.With(fullAppointment).Post("/appointments/{appointmentId}/status", d.Appointment.SetStatus)

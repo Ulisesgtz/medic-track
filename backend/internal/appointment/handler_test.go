@@ -86,11 +86,13 @@ func newEnv(t *testing.T, plan account.Plan) *env {
 	seesChild := authmw.RequireAccess(responder, "childId", access.Mark, acc.OnChild)
 	seesConsultation := authmw.RequireAccess(responder, "consultationId", access.Mark, acc.OnConsultation)
 	fullConsultation := authmw.RequireAccess(responder, "consultationId", access.Full, acc.OnConsultation)
+	fullChild := authmw.RequireAccess(responder, "childId", access.Full, acc.OnChild)
 	seesAppointment := authmw.RequireAccess(responder, "appointmentId", access.Mark, acc.OnAppointment)
 	fullAppointment := authmw.RequireAccess(responder, "appointmentId", access.Full, acc.OnAppointment)
 	r.With(seesChild).Get("/children/{childId}/appointments", h.ForChild)
 	r.With(seesConsultation).Get("/consultations/{consultationId}/appointment", h.ForConsultation)
 	r.With(fullConsultation).Post("/consultations/{consultationId}/appointments", h.Create)
+	r.With(fullChild).Post("/children/{childId}/appointments", h.CreateForChild)
 	r.With(seesAppointment).Get("/appointments/{appointmentId}", h.Get)
 	r.With(fullAppointment).Patch("/appointments/{appointmentId}", h.Update)
 	r.With(fullAppointment).Post("/appointments/{appointmentId}/status", h.SetStatus)
@@ -190,6 +192,38 @@ func TestCreate_ErrorsAreTheContractsOwn(t *testing.T) {
 	code, got = e.do(t, e.owner, http.MethodPost, path, apptBody("otra"))
 	require.Equal(t, http.StatusConflict, code)
 	require.Equal(t, "appointment_exists", got["error"])
+}
+
+func TestCreateForChild_AnswersWithNoConsultationItsDoctorAndItsPlace(t *testing.T) {
+	e := newEnv(t, account.PlanPaid)
+	body := fmt.Sprintf(`{"startsAt":%q,"utcOffsetMinutes":-360,"doctor":"Dra. Pérez","location":"Consultorio 302","locationUrl":"https://maps.app.goo.gl/abc"}`, friday.Format(time.RFC3339))
+	code, got := e.do(t, e.owner, http.MethodPost, "/children/"+e.childID.String()+"/appointments", body)
+	require.Equal(t, http.StatusCreated, code, got)
+	require.Nil(t, got["consultationId"])
+	require.Equal(t, e.childID.String(), got["childId"])
+	require.Equal(t, "Dra. Pérez", got["doctorName"])
+	require.Equal(t, "Consultorio 302", got["location"])
+	require.Equal(t, "https://maps.app.goo.gl/abc", got["locationUrl"])
+	require.Equal(t, "", got["consultDate"])
+
+	// A caregiver can't add one (the child needs «Full»), and a bad link or body is refused.
+	code, _ = e.do(t, e.caregiver, http.MethodPost, "/children/"+e.childID.String()+"/appointments", body)
+	require.Equal(t, http.StatusForbidden, code)
+	bad := fmt.Sprintf(`{"startsAt":%q,"utcOffsetMinutes":-360,"locationUrl":"javascript:alert(1)"}`, friday.Format(time.RFC3339))
+	code, got = e.do(t, e.owner, http.MethodPost, "/children/"+e.childID.String()+"/appointments", bad)
+	require.Equal(t, http.StatusBadRequest, code)
+	require.Equal(t, "validation_error", got["error"])
+	code, _ = e.do(t, e.owner, http.MethodPost, "/children/"+e.childID.String()+"/appointments", `{`)
+	require.Equal(t, http.StatusBadRequest, code)
+	code, _ = e.do(t, e.owner, http.MethodPost, "/children/not-a-uuid/appointments", body)
+	require.Equal(t, http.StatusNotFound, code)
+}
+
+func TestCreateForChild_AFreeOwnerGets422(t *testing.T) {
+	e := newEnv(t, account.PlanFree)
+	code, got := e.do(t, e.owner, http.MethodPost, "/children/"+e.childID.String()+"/appointments", apptBody(""))
+	require.Equal(t, http.StatusUnprocessableEntity, code)
+	require.Equal(t, "appointments", got["reason"])
 }
 
 func TestCreate_AFreeOwnerGets422WithTheAppointmentsReason(t *testing.T) {

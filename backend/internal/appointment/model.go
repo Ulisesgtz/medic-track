@@ -36,6 +36,10 @@ const (
 	// MaxDaysBefore is the most days before for a fixed hour.
 	MaxDaysBefore = 30
 	MaxNoteLength = 500
+	// MaxDoctorLength, MaxLocationLength and MaxLocationURLLength bound the doctor and the place of an appointment.
+	MaxDoctorLength      = 200
+	MaxLocationLength    = 300
+	MaxLocationURLLength = 500
 )
 
 // DefaultNotices are the notices a new appointment gets when the request doesn't say: one day before and two hours before.
@@ -59,6 +63,11 @@ type Input struct {
 	UtcOffsetMinutes int            `json:"utcOffsetMinutes"`
 	Note             string         `json:"note"`
 	Notices          *[]NoticeInput `json:"notices"`
+	// Doctor is the appointment's own doctor; empty on an appointment of a consultation means «the consultation's».
+	Doctor string `json:"doctor"`
+	// Location is the place as the parent wrote it; LocationURL an optional https link to it (a Google Maps link).
+	Location    string `json:"location"`
+	LocationURL string `json:"locationUrl"`
 }
 
 // Notice is a stored notice with the instant it fires.
@@ -75,6 +84,7 @@ type Notice struct {
 // Appointment is a stored appointment with its consultation's doctor and date, for showing.
 type Appointment struct {
 	ID               uuid.UUID
+	// ConsultationID is uuid.Nil for an appointment added without a consultation (specs/043).
 	ConsultationID   uuid.UUID
 	ChildID          uuid.UUID
 	AccountID        uuid.UUID
@@ -83,6 +93,8 @@ type Appointment struct {
 	StartsAt         time.Time
 	UtcOffsetMinutes int
 	Note             string
+	Location         string
+	LocationURL      string
 	Status           Status // the stored status
 	// Derived is the status the parent sees: Status, or «unmarked» when a scheduled one's day already ended; filled by the service.
 	Derived   Status

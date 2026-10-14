@@ -209,6 +209,7 @@ func (w *world) routes() []struct {
 		// Specs/033, part 2: the next appointment. Reading, one's own reminders and marking never need the plan; creating and editing do (an empty form is a 400 first).
 		{"child appointments", http.MethodGet, "/children/" + w.childA.String() + "/appointments", "", http.StatusOK},
 		{"consultation appointment", http.MethodGet, "/consultations/" + w.consultationA.String() + "/appointment", "", http.StatusOK},
+		{"create appointment of a child", http.MethodPost, "/children/" + w.childA.String() + "/appointments", `{}`, http.StatusBadRequest},
 		{"create appointment", http.MethodPost, "/consultations/" + w.consultationA.String() + "/appointments", `{}`, http.StatusBadRequest},
 		{"get appointment", http.MethodGet, "/appointments/" + w.appointmentA.String(), "", http.StatusOK},
 		{"my appointment reminders", http.MethodPut, "/appointments/" + w.appointmentA.String() + "/my-reminders", `{"enabled":false}`, http.StatusOK},
