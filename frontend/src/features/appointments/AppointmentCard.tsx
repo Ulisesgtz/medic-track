@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ConfirmDialog } from '../family/ConfirmDialog'
-import { bigDateText, countdown, shortDayText, timeText, whenText } from './appointmentText'
+import { bigDateText, countdown, placeLink, shortDayText, timeText, whenText } from './appointmentText'
 import { useMyAppointmentReminders, useSetAppointmentStatus } from './hooks'
 import type { Appointment } from './types'
 
@@ -36,6 +36,7 @@ export function AppointmentCard({ appointment, now = new Date(), consultationLin
   const start = new Date(appointment.startsAt)
   const unmarked = appointment.status === 'unmarked'
   const consultDay = new Date(`${appointment.consultDate}T00:00:00`)
+  const mapLink = placeLink(appointment)
 
   const mark = () => {
     setFailed(null)
@@ -66,7 +67,7 @@ export function AppointmentCard({ appointment, now = new Date(), consultationLin
       </div>
       <div className="flex flex-col gap-0.5">
         <p className="text-[17px] font-extrabold text-ink [overflow-wrap:anywhere]">{appointment.doctorName}</p>
-        {consultationLink && (
+        {consultationLink && appointment.consultationId && (
           <Link
             to={`/consultations/${appointment.consultationId}`}
             className="inline-flex min-h-11 items-center self-start text-sm font-bold text-action hover:underline"
@@ -75,6 +76,22 @@ export function AppointmentCard({ appointment, now = new Date(), consultationLin
           </Link>
         )}
       </div>
+      {(appointment.location || mapLink) && (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-[13px] font-bold text-ink">Lugar</span>
+          {appointment.location && <span className="text-[15px] leading-normal text-body [overflow-wrap:anywhere]">{appointment.location}</span>}
+          {mapLink && (
+            <a
+              href={mapLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center self-start text-[15px] font-extrabold text-action underline focus:outline-none focus-visible:ring-2 focus-visible:ring-action"
+            >
+              Abrir en Maps
+            </a>
+          )}
+        </div>
+      )}
       {appointment.note && (
         <div className="flex flex-col gap-0.5">
           <span className="text-[13px] font-bold text-ink">Nota</span>

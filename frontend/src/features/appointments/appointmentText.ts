@@ -84,6 +84,17 @@ export function pastNoticesNote(items: { label: string; fire: Date }[], now: Dat
   return `Estos avisos ya pasaron, así que no se enviarán: ${items.map((i) => `«${i.label}»`).join(', ')}. Los demás siguen igual.`
 }
 
+/** A Google Maps search for a place the parent wrote: opens the map app or the site so they can find it and copy its link. */
+export const mapsSearchUrl = (place: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(place.trim())}`
+
+/** Where «Abrir en Maps» goes: the link the parent saved, else a search of the place they wrote; null when there is neither. */
+export function placeLink(a: { location?: string; locationUrl?: string }): string | null {
+  // The fields may be missing in an answer from before they existed.
+  const url = (a.locationUrl ?? '').trim()
+  if (url !== '') return url
+  return (a.location ?? '').trim() !== '' ? mapsSearchUrl(a.location!) : null
+}
+
 /** The neutral count-down chip of the card: «en 3 días», «mañana», «hoy, en 2 horas», «hoy». Never a warning. */
 export function countdown(start: Date, now: Date): string {
   const days = dayNumber(start) - dayNumber(now)

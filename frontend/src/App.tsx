@@ -184,6 +184,14 @@ function App() {
             }
           />
           <Route
+            path="/children/:childId/citas/nueva"
+            element={
+              <RequireSession>
+                <AppointmentFormPage />
+              </RequireSession>
+            }
+          />
+          <Route
             path="/children/:childId/citas"
             element={
               <RequireSession>

@@ -22,20 +22,22 @@ import {
   type AppointmentErrors,
   type AppointmentValues,
 } from './appointmentValues'
-import { useAppointment, useConsultationAppointment, useCreateAppointment, useUpdateAppointment } from './hooks'
+import { useAppointment, useConsultationAppointment, useCreateAppointment, useCreateChildAppointment, useUpdateAppointment } from './hooks'
 import type { AppointmentInput } from './types'
 
 const card = 'rounded-[22px] bg-surface p-5 shadow-[0_8px_20px_rgba(4,37,43,0.07)]'
 
 /**
- * `/citas/:appointmentId/editar` (mock E1–E4) and `/consultations/:consultationId/cita/nueva` (mock A2): the appointment's fields
- * as a page. Editing changes the date, the note and the notices — what was sent is not sent again, and what moved is made again;
+ * `/citas/:appointmentId/editar` (mock E1–E4), `/consultations/:consultationId/cita/nueva` (mock A2) and, since spec 043,
+ * `/children/:childId/citas/nueva` (an appointment with no consultation, with its own doctor): the appointment's fields as a page. Editing changes the date, the note and the notices — what was sent is not sent again, and what moved is made again;
  * adding writes only the appointment, the consultation (shown as a read-only reference) does not change. Leaving with data asks
  * first; the server's 422 opens the plan notice and keeps what was typed.
  */
 export function AppointmentFormPage() {
-  const params = useParams<{ appointmentId: string; consultationId: string }>()
+  const params = useParams<{ appointmentId: string; consultationId: string; childId: string }>()
   const editing = params.appointmentId !== undefined
+  // Added from the child's page: no consultation to hang from, so it asks for the doctor.
+  const standalone = !editing && params.consultationId === undefined
   const navigate = useNavigate()
   const { getToken } = useAuth()
   const { isDesktop } = useSidebarSession()
@@ -52,13 +54,16 @@ export function AppointmentFormPage() {
 
   const appointment = appointmentQuery.data
   const consultation = consultationQuery.data
-  const childId = appointment?.childId ?? consultation?.childId
-  const consultationId = params.consultationId ?? appointment?.consultationId
+  const childId = params.childId ?? appointment?.childId ?? consultation?.childId
+  const consultationId = params.consultationId ?? appointment?.consultationId ?? undefined
+  // An appointment already saved without a consultation keeps asking for its doctor when edited.
+  const needsDoctor = standalone || (editing && appointment?.consultationId === null)
   const child = accountQuery.data?.children.find((c) => c.id === childId)
   const access = useChildAccess(accountQuery.data, childId)
 
   const update = useUpdateAppointment(params.appointmentId ?? '')
   const create = useCreateAppointment(params.consultationId ?? '')
+  const createForChild = useCreateChildAppointment(params.childId ?? '')
 
   const [values, setValues] = useState<AppointmentValues | null>(null)
   const [errors, setErrors] = useState<AppointmentErrors>({})
@@ -78,9 +83,9 @@ export function AppointmentFormPage() {
     setDirty(isDirty)
   }
 
-  const backTo = editing ? `/children/${childId}` : `/consultations/${consultationId}`
-  const backLabel = editing ? `← ${child?.firstName ?? 'Volver'}` : consultation ? `← Consulta del ${formatDateLong(consultation.consultDate)}` : '← Volver'
-  const eyebrow = editing
+  const backTo = editing || standalone ? `/children/${childId}` : `/consultations/${consultationId}`
+  const backLabel = editing || standalone ? `← ${child?.firstName ?? 'Volver'}` : consultation ? `← Consulta del ${formatDateLong(consultation.consultDate)}` : '← Volver'
+  const eyebrow = editing || standalone
     ? `Próxima cita · ${child ? `${child.firstName} ${child.lastName}` : ''}`.trim()
     : consultation
       ? `Consulta del ${formatDateLong(consultation.consultDate)} · ${child ? `${child.firstName} ${child.lastName}` : ''}`.trim()
@@ -102,8 +107,9 @@ export function AppointmentFormPage() {
 
   if (editing && appointmentQuery.isPending) return frame(<p className="text-base font-semibold text-action">Cargando…</p>)
   if (editing && (appointmentQuery.isError || !appointment)) return frame(message('No se encontró esta cita.'))
-  if (!editing && consultationQuery.isPending) return frame(<p className="text-base font-semibold text-action">Cargando…</p>)
-  if (!editing && (consultationQuery.isError || !consultation)) return frame(message('No se encontró esta consulta.'))
+  if (!editing && !standalone && consultationQuery.isPending) return frame(<p className="text-base font-semibold text-action">Cargando…</p>)
+  if (!editing && !standalone && (consultationQuery.isError || !consultation)) return frame(message('No se encontró esta consulta.'))
+  if (standalone && accountQuery.data && !child) return frame(message('No se encontró este hijo.'))
   if (accountQuery.data && !access.canAdd) return frame(message('Solo un Tutor puede anotar o editar citas.'))
   if (editing && appointment && appointment.status !== 'scheduled' && appointment.status !== 'unmarked') {
     return frame(message('Esta cita ya está cerrada y no se puede editar. Para otra fecha, anota una cita nueva desde la consulta.'))
@@ -111,7 +117,8 @@ export function AppointmentFormPage() {
   if (!editing && existingQuery.data?.appointment) {
     return frame(message('Esta consulta ya tiene una próxima cita. Para cambiarla, edítala desde su tarjeta.'))
   }
-  const paid = editing ? appointment?.canEdit !== false : existingQuery.data?.paidPlan !== false
+  // A child's own appointment has no query for the plan: it is the child's family's (`access.isFree`, false until the account loads).
+  const paid = editing ? appointment?.canEdit !== false : standalone ? !access.isFree : existingQuery.data?.paidPlan !== false
   const consultDate = editing ? appointment?.consultDate : consultation?.consultDate
   const form = current ?? emptyAppointmentValues()
 
@@ -123,7 +130,7 @@ export function AppointmentFormPage() {
   async function submit(event: FormEvent) {
     event.preventDefault()
     setNotice(null)
-    const found = validateAppointment(form, consultDate)
+    const found = validateAppointment(form, consultDate, needsDoctor)
     if (!hasAppointment(form) && !found.date) found.date = 'Elige la fecha de la cita.'
     if (!hasAppointment(form) && !found.time) found.time = 'Escribe la hora de la cita.'
     setErrors(found)
@@ -131,23 +138,26 @@ export function AppointmentFormPage() {
     const input: AppointmentInput = toAppointmentInput(form)
     try {
       if (editing) await update.mutateAsync(input)
+      else if (standalone) await createForChild.mutateAsync(input)
       else await create.mutateAsync(input)
       dirtyRef.current = false
       // replace: "back" from the result lands on where the parent came from, not on an already-sent form.
-      navigate(editing ? `/children/${childId}` : `/consultations/${consultationId}`, { replace: true })
+      navigate(editing || standalone ? `/children/${childId}` : `/consultations/${consultationId}`, { replace: true })
     } catch (error) {
       if (error instanceof AppointmentApiError && error.kind === 'plan_required') setPlanOpen(true)
       else if (error instanceof AppointmentApiError && error.kind === 'exists') setNotice('Esta consulta ya tiene una próxima cita.')
       else if (error instanceof AppointmentApiError && error.kind === 'closed') setNotice('Esta cita ya está cerrada y no se puede editar.')
       else if (error instanceof AppointmentApiError && error.kind === 'validation_error') {
         const field = error.details?.find((d) => d.field === 'startsAt')
+        const link = error.details?.find((d) => d.field === 'locationUrl')
         if (field) setErrors({ date: 'La próxima cita no puede ser antes de la consulta.' })
+        else if (link) setErrors({ locationUrl: 'La liga debe empezar con https://' })
         else setNotice('No se pudo guardar la cita. Revisa los datos e inténtalo de nuevo.')
       } else setNotice('No se pudo guardar la cita. Inténtalo de nuevo.')
     }
   }
 
-  const pending = update.isPending || create.isPending
+  const pending = update.isPending || create.isPending || createForChild.isPending
   return (
     <>
       {frame(
@@ -164,7 +174,7 @@ export function AppointmentFormPage() {
               </p>
             )
           )}
-          <AppointmentFields value={form} onChange={change} errors={errors} disabled={!paid} />
+          <AppointmentFields value={form} onChange={change} errors={errors} disabled={!paid} withDoctor={needsDoctor} />
           {notice && <Notice tone="error">{notice}</Notice>}
           <div className="flex flex-wrap justify-end gap-2.5">
             <button

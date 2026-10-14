@@ -146,7 +146,7 @@ describe('ChildAppointmentSection', () => {
     api({ 'GET /children/child-1/appointments': forChild(null, [appointment({ status: 'unmarked' })]) })
     renderChild()
     // No next one: the empty block says where appointments are written, and the history is one tap away.
-    expect(await screen.findByText(/Las citas se anotan al registrar una consulta/)).toBeInTheDocument()
+    expect(await screen.findByText(/Si ya hay una fecha con el pediatra/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Historial de citas →' })).toHaveAttribute('href', '/children/child-1/citas')
   })
 
@@ -176,8 +176,59 @@ describe('ChildAppointmentSection', () => {
   it('shows the empty block to a paid account and no history link without history', async () => {
     api({ 'GET /children/child-1/appointments': forChild(null) })
     renderChild()
-    expect(await screen.findByText(/Las citas se anotan al registrar una consulta/)).toBeInTheDocument()
+    expect(await screen.findByText(/Si ya hay una fecha con el pediatra/)).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Historial de citas →' })).not.toBeInTheDocument()
+  })
+
+  // specs/044: an appointment is added from the child page with no consultation.
+  it('offers «+ Agregar cita» in the empty block to a Tutor with the paid plan, and it goes to the new appointment of the child', async () => {
+    api({ 'GET /children/child-1/appointments': forChild(null) })
+    renderChild()
+    const add = await screen.findByRole('link', { name: '+ Agregar cita' })
+    expect(add).toHaveAttribute('href', '/children/child-1/citas/nueva')
+  })
+
+  it('offers «+ Agregar otra cita» under the next one, and nothing to a Caregiver or on a lapsed plan', async () => {
+    api({ 'GET /children/child-1/appointments': forChild(appointment()) })
+    const first = renderChild()
+    expect(await screen.findByRole('link', { name: '+ Agregar otra cita' })).toHaveAttribute('href', '/children/child-1/citas/nueva')
+    first.unmount()
+
+    api({ 'GET /children/child-1/appointments': forChild(appointment({ canEdit: false, canMark: false })) }, caregiver)
+    const second = renderChild()
+    await screen.findByText('Un Tutor puede editar, marcar o cancelar esta cita.')
+    expect(screen.queryByRole('link', { name: /Agregar/ })).not.toBeInTheDocument()
+    second.unmount()
+
+    api({ 'GET /children/child-1/appointments': forChild(appointment(), [], false) })
+    renderChild()
+    await screen.findByText('Avisos programados')
+    expect(screen.queryByRole('link', { name: /Agregar/ })).not.toBeInTheDocument()
+  })
+
+  it('shows the place and «Abrir en Maps» with the saved link, or with a search of the place, and no consultation link without one', async () => {
+    api({ 'GET /children/child-1/appointments': forChild(appointment({ consultationId: null, doctorName: 'Dra. Pérez', location: 'Consultorio 302', locationUrl: 'https://maps.app.goo.gl/abc' })) })
+    const first = renderChild()
+    expect(await screen.findByText('Consultorio 302')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Abrir en Maps' })).toHaveAttribute('href', 'https://maps.app.goo.gl/abc')
+    expect(screen.getByText('Dra. Pérez')).toBeInTheDocument()
+    expect(screen.queryByText(/De la consulta del/)).not.toBeInTheDocument()
+    first.unmount()
+
+    api({ 'GET /children/child-1/appointments': forChild(appointment({ location: 'Hospital Ángeles' })) })
+    renderChild()
+    const link = await screen.findByRole('link', { name: 'Abrir en Maps' })
+    expect(link).toHaveAttribute('href', 'https://www.google.com/maps/search/?api=1&query=Hospital%20%C3%81ngeles')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+    expect(screen.getByText(/De la consulta del/)).toBeInTheDocument()
+  })
+
+  it('has no «Lugar» block when there is neither a place nor a link', async () => {
+    api({ 'GET /children/child-1/appointments': forChild(appointment()) })
+    renderChild()
+    await screen.findByText('Avisos programados')
+    expect(screen.queryByText('Lugar')).not.toBeInTheDocument()
   })
 })
 

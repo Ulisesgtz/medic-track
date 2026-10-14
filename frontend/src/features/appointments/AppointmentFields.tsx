@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { errorClass, fieldBorder, fieldRoutine, labelClass } from '../../shared/ui/formStyles'
 import {
   MAX_NOTICES,
+  mapsSearchUrl,
   NOTICE_EXAMPLES,
   leadMinutesOf,
   noticeFireAt,
@@ -28,11 +29,11 @@ interface AppointmentFieldsProps {
   help?: string
   /** The free plan: the fields are shown but can't be used, with a link to the plan (mock C4). */
   disabled?: boolean
+  /** Asks «¿Con quién?»: an appointment added without a consultation has no doctor to take from it. */
+  withDoctor?: boolean
   /** The clock, for «era hoy» and the notices that already passed (injected by tests). */
   now?: Date
 }
-
-const rowField = `${fieldRoutine} flex-1`
 
 /**
  * The «Próxima cita» fields (mock CitaCampos), shared by «Nueva consulta», «Editar cita» and «Agregar próxima cita»: date,
@@ -40,7 +41,7 @@ const rowField = `${fieldRoutine} flex-1`
  * small panel (time before, or a fixed hour some days before) with examples that only fill the field. At most 5; a notice that
  * already passed is dashed with a note, never in an alarm color. The words are the parent's: nothing is suggested (Principio I).
  */
-export function AppointmentFields({ value, onChange, errors, optional, help, disabled, now = new Date() }: AppointmentFieldsProps) {
+export function AppointmentFields({ value, onChange, errors, optional, help, disabled, withDoctor, now = new Date() }: AppointmentFieldsProps) {
   const isDesktop = useIsDesktop()
   const [adding, setAdding] = useState(false)
   const [editing, setEditing] = useState<number | null>(null)
@@ -103,8 +104,10 @@ export function AppointmentFields({ value, onChange, errors, optional, help, dis
     <div className="flex flex-col gap-[18px]">
       {heading}
 
-      <div className="flex flex-wrap gap-2.5">
-        <div className="flex min-w-0 flex-[1_1_170px] flex-col gap-1.5">
+      {/* On the phone the date and the hour are one under the other: side by side the native date field of iOS is wider than its
+          half and the hour field ends up on top of it. */}
+      <div className={`flex gap-2.5 ${isDesktop ? 'flex-row' : 'flex-col'}`}>
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
           <label htmlFor="appointment-date" className={labelClass}>
             Fecha de la cita
           </label>
@@ -115,10 +118,10 @@ export function AppointmentFields({ value, onChange, errors, optional, help, dis
             onChange={(e) => set({ date: e.target.value })}
             aria-invalid={errors.date ? true : undefined}
             aria-describedby={errors.date ? 'appointment-date-error' : undefined}
-            className={`${rowField} ${fieldBorder(!!errors.date)}`}
+            className={`${fieldRoutine} appearance-none ${fieldBorder(!!errors.date)}`}
           />
         </div>
-        <div className="flex min-w-0 flex-[1_1_120px] flex-col gap-1.5">
+        <div className={`flex min-w-0 flex-col gap-1.5 ${isDesktop ? 'flex-1' : ''}`}>
           <label htmlFor="appointment-time" className={labelClass}>
             Hora de la cita
           </label>
@@ -128,7 +131,7 @@ export function AppointmentFields({ value, onChange, errors, optional, help, dis
             onChange={(time) => set({ time })}
             invalid={!!errors.time}
             describedBy={errors.time ? 'appointment-time-error' : undefined}
-            align="end"
+            align={isDesktop ? 'end' : 'start'}
             panelWidth={isDesktop ? 372 : 306}
           />
         </div>
@@ -143,6 +146,82 @@ export function AppointmentFields({ value, onChange, errors, optional, help, dis
           {errors.time}
         </span>
       )}
+
+      {withDoctor && (
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="appointment-doctor" className={labelClass}>
+            ¿Con quién es la cita?
+          </label>
+          <input
+            id="appointment-doctor"
+            type="text"
+            value={value.doctor}
+            onChange={(e) => set({ doctor: e.target.value })}
+            aria-invalid={errors.doctor ? true : undefined}
+            aria-describedby={errors.doctor ? 'appointment-doctor-error' : undefined}
+            autoComplete="off"
+            maxLength={200}
+            className={`${fieldRoutine} ${fieldBorder(!!errors.doctor)}`}
+          />
+          {errors.doctor && (
+            <span id="appointment-doctor-error" className={errorClass}>
+              {errors.doctor}
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="appointment-location" className={labelClass}>
+          Lugar <span className="font-medium text-slate-600">(opcional)</span>
+        </label>
+        <input
+          id="appointment-location"
+          type="text"
+          value={value.location}
+          onChange={(e) => set({ location: e.target.value })}
+          autoComplete="off"
+          maxLength={300}
+          className={`${fieldRoutine} border-slate-300`}
+        />
+        <span className="text-[13px] leading-snug font-medium text-slate-600">Consultorio, hospital o dirección, como lo quieras ver después.</span>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="appointment-location-url" className={labelClass}>
+          Liga de Google Maps <span className="font-medium text-slate-600">(opcional)</span>
+        </label>
+        <input
+          id="appointment-location-url"
+          type="url"
+          inputMode="url"
+          value={value.locationUrl}
+          onChange={(e) => set({ locationUrl: e.target.value })}
+          aria-invalid={errors.locationUrl ? true : undefined}
+          aria-describedby={errors.locationUrl ? 'appointment-location-url-error' : 'appointment-location-url-help'}
+          autoComplete="off"
+          maxLength={500}
+          className={`${fieldRoutine} ${fieldBorder(!!errors.locationUrl)}`}
+        />
+        {errors.locationUrl && (
+          <span id="appointment-location-url-error" className={errorClass}>
+            {errors.locationUrl}
+          </span>
+        )}
+        <span id="appointment-location-url-help" className="text-[13px] leading-snug font-medium text-slate-600">
+          Busca el lugar en Google Maps, toca «Compartir», copia la liga y pégala aquí.
+        </span>
+        {value.location.trim() !== '' && (
+          <a
+            href={mapsSearchUrl(value.location)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-11 items-center self-start text-[15px] font-extrabold text-action underline focus:outline-none focus-visible:ring-2 focus-visible:ring-action"
+          >
+            Buscar «{value.location.trim()}» en Google Maps
+          </a>
+        )}
+      </div>
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="appointment-note" className={labelClass}>

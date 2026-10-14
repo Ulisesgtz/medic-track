@@ -68,6 +68,10 @@ export const fetchAppointment = (appointmentId: string, token: string | null) =>
 export const createAppointment = (consultationId: string, input: AppointmentInput, token: string | null) =>
   call<Appointment>('POST', `/consultations/${consultationId}/appointments`, token, input, 'Unexpected error creating the appointment')
 
+/** POST /children/{id}/appointments: an appointment with no consultation (specs/043). */
+export const createChildAppointment = (childId: string, input: AppointmentInput, token: string | null) =>
+  call<Appointment>('POST', `/children/${childId}/appointments`, token, input, 'Unexpected error creating the appointment')
+
 export const updateAppointment = (appointmentId: string, input: AppointmentInput, token: string | null) =>
   call<Appointment>('PATCH', `/appointments/${appointmentId}`, token, input, 'Unexpected error updating the appointment')
 
