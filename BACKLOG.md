@@ -77,6 +77,8 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
 
 ## Prioridad alta
 
+- **Móvil: «Fecha de la cita» y «Hora de la cita» se encimaban en «Próxima cita»** (anotado 2026-10-13, visto por el dueño en un iPhone en DEV, formulario «Nueva consulta», sección «Próxima cita»): en el diseño móvil la fecha (ya con «13 oct 2026») y el campo «Elegir hora» van en una fila y el campo de la fecha se mete debajo del de la hora, tapándolo en parte. Probable causa: la fecha es un `<input type="date">` nativo que en iOS mide más que su mitad de la fila (el mismo problema que la spec 036 arregló en el formulario de suplementos con la fecha) y el `TimeField` de 148 px se queda encima. Arreglo: que cada campo de esa fila lleve `min-w-0` y la fecha `w-full`/`appearance-none` (o que apilar fecha y hora en una columna si la fila no cabe), y una prueba a 390 px que verifique que no se tocan (`expectNoHorizontalScroll` y cajas sin traslape). Archivos: `frontend/src/features/appointments/AppointmentFields.tsx`.
+
 - **Homologar todas las pantallas a los mocks** — hecho en `specs/007-homologar-pantallas-a-mocks/`
   (rama `feature/007-homologar-pantallas-a-mocks`); las desviaciones que quedan están listadas en su spec.
   Pendiente de esa spec: las pantallas que aún no tienen mock (planes `/planes`, estados vacíos y de error).
