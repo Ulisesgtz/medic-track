@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { emptyAppointmentValues, hasAppointment, toAppointmentInput, validateAppointment, valuesOfAppointment } from './appointmentValues'
+import { emptyAppointmentValues, hasAppointment, isHttpsLink, toAppointmentInput, validateAppointment, valuesOfAppointment } from './appointmentValues'
 import { appointment } from './appointments.test-utils'
 
 describe('appointment values', () => {
@@ -41,5 +41,31 @@ describe('appointment values', () => {
     expect(v).toMatchObject({ date: '2026-10-09', time: '10:30', note: 'Revisión de oído; pidió la cartilla de vacunas.' })
     expect(v.notices).toHaveLength(2)
     expect(Object.keys(v.notices[0]).sort()).toEqual(['atTime', 'daysBefore', 'kind', 'leadMinutes'])
+  })
+})
+
+describe('doctor, place and link (specs/044)', () => {
+  const typed = { ...emptyAppointmentValues(), date: '2026-10-09', time: '10:30' }
+
+  it('only accepts https links with a host', () => {
+    expect(isHttpsLink('https://maps.app.goo.gl/abc')).toBe(true)
+    expect(isHttpsLink('  https://www.google.com/maps/place/x  ')).toBe(true)
+    for (const bad of ['javascript:alert(1)', 'http://maps.google.com', 'maps.google.com', 'https://', 'ftp://x.com', '']) expect(isHttpsLink(bad)).toBe(false)
+  })
+
+  it('refuses a link that is not https, lets it be empty, and asks for the doctor only when told to', () => {
+    expect(validateAppointment({ ...typed, locationUrl: 'http://x.com' }, undefined).locationUrl).toBe('La liga debe empezar con https://')
+    expect(validateAppointment({ ...typed, locationUrl: '' }, undefined).locationUrl).toBeUndefined()
+    expect(validateAppointment(typed, undefined).doctor).toBeUndefined()
+    expect(validateAppointment({ ...typed, doctor: '  ' }, undefined, true).doctor).toBe('Escribe con quién es la cita.')
+    expect(validateAppointment({ ...typed, doctor: 'Dra. Pérez' }, undefined, true).doctor).toBeUndefined()
+  })
+
+  it('sends the doctor, the place and the link trimmed, and fills them back from an appointment (the doctor only without consultation)', () => {
+    const input = toAppointmentInput({ ...typed, doctor: ' Dra. Pérez ', location: ' Consultorio 302 ', locationUrl: ' https://maps.app.goo.gl/abc ' })
+    expect(input).toMatchObject({ doctor: 'Dra. Pérez', location: 'Consultorio 302', locationUrl: 'https://maps.app.goo.gl/abc' })
+    const own = valuesOfAppointment(appointment({ consultationId: null, doctorName: 'Dra. Pérez', location: 'Clínica', locationUrl: 'https://x.com/y' }))
+    expect(own).toMatchObject({ doctor: 'Dra. Pérez', location: 'Clínica', locationUrl: 'https://x.com/y' })
+    expect(valuesOfAppointment(appointment({ doctorName: 'Dra. López' })).doctor).toBe('')
   })
 })

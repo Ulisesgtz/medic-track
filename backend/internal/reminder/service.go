@@ -322,8 +322,11 @@ func buildPayload(dose DueDose, actionToken string) Payload {
 		p.ScheduledAt = dose.StartsAt.UTC().Format(time.RFC3339)
 		p.Source = string(SourceAppointment)
 		p.AppointmentID = dose.AppointmentID.String()
-		// Where tapping it goes: the consultation the appointment belongs to (its detail shows the card).
-		p.ConsultationID = dose.ConsultationID.String()
+		// Where tapping it goes: the consultation the appointment belongs to (its detail shows the card); none for an
+		// appointment added without a consultation.
+		if dose.ConsultationID != uuid.Nil {
+			p.ConsultationID = dose.ConsultationID.String()
+		}
 		p.LeadMinutes = &lead
 		if dose.Detail != nil && *dose.Detail == DetailDetailed {
 			p.Kind = DetailDetailed

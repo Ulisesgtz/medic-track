@@ -27,7 +27,8 @@ export interface AppointmentNotice extends NoticeInput {
 
 export interface Appointment {
   id: string
-  consultationId: string
+  /** Null for an appointment added from the child's page, with no consultation. */
+  consultationId: string | null
   childId: string
   doctorName: string
   /** The consultation's date, "YYYY-MM-DD". */
@@ -35,6 +36,9 @@ export interface Appointment {
   startsAt: string
   utcOffsetMinutes: number
   note: string
+  /** The place as the parent wrote it («Consultorio 302, Av. Vallarta 1234»), and an optional https link to it. */
+  location: string
+  locationUrl: string
   status: AppointmentStatus
   /** First name of who marked or canceled it. */
   statusBy: string | null
@@ -65,5 +69,9 @@ export interface AppointmentInput {
   startsAt: string
   utcOffsetMinutes: number
   note: string
+  /** The appointment's own doctor: needed when it has no consultation; empty on one that has → the consultation's. */
+  doctor: string
+  location: string
+  locationUrl: string
   notices: NoticeInput[]
 }

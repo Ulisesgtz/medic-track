@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   AppointmentApiError,
   createAppointment,
+  createChildAppointment,
   fetchAppointment,
   fetchChildAppointments,
   fetchConsultationAppointment,
@@ -11,7 +12,7 @@ import {
 } from './api'
 import type { AppointmentInput } from './types'
 
-const input: AppointmentInput = { startsAt: '2026-10-09T16:30:00.000Z', utcOffsetMinutes: -360, note: 'Nota secreta', notices: [] }
+const input: AppointmentInput = { startsAt: '2026-10-09T16:30:00.000Z', utcOffsetMinutes: -360, note: 'Nota secreta', doctor: '', location: '', locationUrl: '', notices: [] }
 
 function stub(status: number, body: unknown) {
   const mock = vi.fn().mockResolvedValue({ ok: status >= 200 && status < 300, status, json: async () => body })
@@ -46,6 +47,16 @@ describe('requests', () => {
     }
     expect(mock.mock.calls[0][1].method).toBe('POST')
     expect(mock.mock.calls[1][1].method).toBe('PATCH')
+  })
+
+  it('creates an appointment of a child with no consultation, the place and the doctor only in the body (specs/044)', async () => {
+    const mock = stub(201, { id: 'a1' })
+    await createChildAppointment('child-1', { ...input, doctor: 'Dra. Pérez', location: 'Consultorio 302', locationUrl: 'https://maps.app.goo.gl/abc' }, 'tok')
+    const [url, init] = mock.mock.calls[0]
+    expect(String(url)).toMatch(/\/children\/child-1\/appointments$/)
+    expect(init.method).toBe('POST')
+    expect(String(url)).not.toContain('Consultorio')
+    expect(JSON.parse(init.body)).toMatchObject({ doctor: 'Dra. Pérez', location: 'Consultorio 302', locationUrl: 'https://maps.app.goo.gl/abc' })
   })
 
   it('marks the status and chooses the reminders', async () => {

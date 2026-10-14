@@ -33,6 +33,7 @@ function HistoryRow({ appointment, canMark }: { appointment: Appointment; canMar
           {shortDayText(start)} {start.getFullYear()} · {timeText(start)}
         </span>
         <span className="text-[15px] text-body [overflow-wrap:anywhere]">{appointment.doctorName}</span>
+        {appointment.location && <span className="text-[13px] text-body [overflow-wrap:anywhere]">{appointment.location}</span>}
         <span className="text-[13px] font-semibold text-slate-600">{metaOf(appointment)}</span>
       </div>
       <div className="flex shrink-0 flex-col items-start gap-2">

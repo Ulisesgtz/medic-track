@@ -77,6 +77,8 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
 
 ## Prioridad alta
 
+- **Selector de lugar integrado en la cita (Google Places)** (anotado 2026-10-13, spec 044): hoy la cita lleva un campo «Lugar», un enlace «Buscar en Google Maps» (sin llave, solo manda el texto si el padre lo toca) y un campo para pegar la liga de «Compartir». Elegir el lugar dentro de la app con autocompletado y mapa requiere la API de Google Places (llave de Google Cloud con cobro por uso, scripts de Google en la PWA, ajustar la CSP de `frontend/public/_headers` y avisar en el aviso de privacidad que lo que se teclea va a Google). Spec aparte si el dueño lo quiere. (El traslape de fecha y hora de «Próxima cita» en el móvil quedó **resuelto en la spec 044**: apilados.)
+
 - **Homologar todas las pantallas a los mocks** — hecho en `specs/007-homologar-pantallas-a-mocks/`
   (rama `feature/007-homologar-pantallas-a-mocks`); las desviaciones que quedan están listadas en su spec.
   Pendiente de esa spec: las pantallas que aún no tienen mock (planes `/planes`, estados vacíos y de error).

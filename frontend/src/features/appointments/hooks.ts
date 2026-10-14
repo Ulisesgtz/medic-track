@@ -5,6 +5,7 @@ import type { Account } from '../home/types'
 import { useChildAccess } from '../family/useChildAccess'
 import {
   createAppointment,
+  createChildAppointment,
   fetchAppointment,
   fetchChildAppointments,
   fetchConsultationAppointment,
@@ -59,6 +60,15 @@ export function useCreateAppointment(consultationId: string) {
   const refresh = useRefreshAfterChange()
   return useMutation({
     mutationFn: async (input: AppointmentInput) => createAppointment(consultationId, input, await getToken()),
+    onSuccess: refresh,
+  })
+}
+
+export function useCreateChildAppointment(childId: string) {
+  const { getToken } = useAuth()
+  const refresh = useRefreshAfterChange()
+  return useMutation({
+    mutationFn: async (input: AppointmentInput) => createChildAppointment(childId, input, await getToken()),
     onSuccess: refresh,
   })
 }

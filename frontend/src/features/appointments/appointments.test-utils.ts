@@ -32,6 +32,8 @@ export function appointment(over: Partial<Appointment> = {}): Appointment {
     startsAt: FRIDAY.toISOString(),
     utcOffsetMinutes: -360,
     note: 'Revisión de oído; pidió la cartilla de vacunas.',
+    location: '',
+    locationUrl: '',
     status: 'scheduled',
     statusBy: null,
     statusAt: null,

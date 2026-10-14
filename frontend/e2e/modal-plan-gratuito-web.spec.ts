@@ -71,7 +71,7 @@ test.describe('Home web y pop-up del plan gratuito (mock 15)', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Tus hijos' })).toBeVisible()
     await expect(pageButton(page)).toBeVisible()
     const card = page.getByRole('main').getByRole('link', { name: /Mateo Morales/ })
-    await expect(card).toContainText('5 años 6 meses')
+    await expect(card).toContainText(/\d+ años( \d+ meses?)?/) // the age moves with the calendar
     await expect(page.getByText('Tu plan incluye un hijo')).toBeVisible()
     // The web card is plain (the phone one carries status chips), and the plan note is the tile, not the phone's line.
     await expect(page.getByText('0 consultas')).toHaveCount(0)

@@ -2,6 +2,7 @@ package appointment
 
 import (
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -78,6 +79,9 @@ type Normalized struct {
 	StartsAt         time.Time
 	UtcOffsetMinutes int
 	Note             string
+	Doctor           string
+	Location         string
+	LocationURL      string
 	Notices          []NoticeInput
 	FireAts          []time.Time
 }
@@ -89,7 +93,19 @@ func ValidateInput(in Input, consultDate string) (Normalized, ValidationErrors) 
 	var errs ValidationErrors
 	add := func(field, msg string) { errs = append(errs, ValidationError{Field: field, Message: msg}) }
 
-	out := Normalized{StartsAt: in.StartsAt, UtcOffsetMinutes: in.UtcOffsetMinutes, Note: strings.TrimSpace(in.Note)}
+	out := Normalized{
+		StartsAt: in.StartsAt, UtcOffsetMinutes: in.UtcOffsetMinutes, Note: strings.TrimSpace(in.Note),
+		Doctor: strings.TrimSpace(in.Doctor), Location: strings.TrimSpace(in.Location), LocationURL: strings.TrimSpace(in.LocationURL),
+	}
+	if utf8.RuneCountInString(out.Doctor) > MaxDoctorLength {
+		add("doctor", fmt.Sprintf("doctor must be at most %d characters", MaxDoctorLength))
+	}
+	if utf8.RuneCountInString(out.Location) > MaxLocationLength {
+		add("location", fmt.Sprintf("location must be at most %d characters", MaxLocationLength))
+	}
+	if msg := validateLocationURL(out.LocationURL); msg != "" {
+		add("locationUrl", msg)
+	}
 	if in.UtcOffsetMinutes < -840 || in.UtcOffsetMinutes > 840 {
 		add("utcOffsetMinutes", "must be between -840 and 840")
 	}
@@ -174,6 +190,22 @@ func normalizeNotice(n NoticeInput) (NoticeInput, string) {
 		return NoticeInput{Kind: KindAtTime, DaysBefore: n.DaysBefore, AtTime: &clock}, ""
 	}
 	return n, "the kind must be before or at_time"
+}
+
+// validateLocationURL accepts nothing or an https link with a host: the app puts it behind a link, so no other scheme
+// (javascript:, data:, http:) may be stored.
+func validateLocationURL(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	if utf8.RuneCountInString(raw) > MaxLocationURLLength {
+		return fmt.Sprintf("the link must be at most %d characters", MaxLocationURLLength)
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.Scheme != "https" || u.Host == "" || u.User != nil {
+		return "the link must be an https address"
+	}
+	return ""
 }
 
 // DerivedStatus is the status as the parent sees it: a scheduled appointment whose local day ended is «Pasó sin marcar».

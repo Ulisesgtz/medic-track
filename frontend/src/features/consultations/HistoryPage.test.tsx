@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { formatAgeLong } from '../../shared/age'
 import { HistoryPage } from './HistoryPage'
 import { HistoryEntry } from './HistoryEntry'
 
@@ -121,7 +122,8 @@ describe.each([
     expect(searches[0]).toEqual({})
     // The criteria travel in the body: no address of this screen carries them.
     expect(urls.filter((u) => u.includes('/search')).every((u) => !u.includes('?'))).toBe(true)
-    expect(screen.getByText('Mateo Morales · 5 años 6 meses', { exact: false })).toBeInTheDocument()
+    // The age moves with the calendar: it is computed, never typed.
+    expect(screen.getByText(`Mateo Morales · ${formatAgeLong('2021-03-14')}`, { exact: false })).toBeInTheDocument()
   })
 
   it('says "1 consulta" in the singular', async () => {

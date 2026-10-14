@@ -139,7 +139,8 @@ export function buildNotification(p: ReminderPayload, now: Date = new Date()): R
 /** Where tapping a reminder goes: the consultation of that dose. */
 export function targetUrl(p: ReminderPayload): string {
   if (p.routineId) return `${p.source === 'activity' ? '/actividades' : '/suplementos'}/${p.routineId}`
-  return `/consultations/${p.consultationId}` // an appointment's carries its consultation
+  // An appointment's carries its consultation; one added without a consultation (specs/043) goes to the home.
+  return p.consultationId ? `/consultations/${p.consultationId}` : '/home'
 }
 
 interface WindowClientLike {

@@ -209,6 +209,7 @@ func (w *world) routes() []struct {
 		// Specs/033, part 2: the next appointment. Reading, one's own reminders and marking never need the plan; creating and editing do (an empty form is a 400 first).
 		{"child appointments", http.MethodGet, "/children/" + w.childA.String() + "/appointments", "", http.StatusOK},
 		{"consultation appointment", http.MethodGet, "/consultations/" + w.consultationA.String() + "/appointment", "", http.StatusOK},
+		{"create appointment of a child", http.MethodPost, "/children/" + w.childA.String() + "/appointments", `{}`, http.StatusBadRequest},
 		{"create appointment", http.MethodPost, "/consultations/" + w.consultationA.String() + "/appointments", `{}`, http.StatusBadRequest},
 		{"get appointment", http.MethodGet, "/appointments/" + w.appointmentA.String(), "", http.StatusOK},
 		{"my appointment reminders", http.MethodPut, "/appointments/" + w.appointmentA.String() + "/my-reminders", `{"enabled":false}`, http.StatusOK},
@@ -307,7 +308,7 @@ func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 // fullRoutes need the full level (the owner or a Tutor); every other protected route needs only Mark (see and mark).
 var (
 	ownRoutes  = map[string]bool{"get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true}
-	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "edit appointment": true, "mark appointment": true}
+	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "edit appointment": true, "mark appointment": true}
 )
 
 func (w *world) setOwnerPlan(t *testing.T, plan string) {

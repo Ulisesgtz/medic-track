@@ -33,10 +33,12 @@ type querier interface {
 }
 
 const appointmentSelect = `
-	SELECT ap.id, ap.consultation_id, ap.child_id, ap.account_id, co.doctor_name, co.consult_date::text, ap.starts_at,
-	       ap.utc_offset_minutes, ap.note, ap.status, COALESCE(sb.first_name, ''), ap.status_at, cb.first_name, owner.plan::text
+	SELECT ap.id, COALESCE(ap.consultation_id, '00000000-0000-0000-0000-000000000000'::uuid), ap.child_id, ap.account_id,
+	       COALESCE(NULLIF(ap.doctor_name, ''), co.doctor_name, ''), COALESCE(co.consult_date::text, ''), ap.starts_at,
+	       ap.utc_offset_minutes, ap.note, ap.location, ap.location_url, ap.status, COALESCE(sb.first_name, ''), ap.status_at,
+	       cb.first_name, owner.plan::text
 	FROM consultation_appointments ap
-	JOIN consultations co ON co.id = ap.consultation_id
+	LEFT JOIN consultations co ON co.id = ap.consultation_id
 	JOIN accounts cb ON cb.id = ap.created_by_account_id
 	JOIN accounts owner ON owner.id = ap.account_id
 	LEFT JOIN accounts sb ON sb.id = ap.status_by_account_id`
@@ -46,7 +48,7 @@ func scanAppointment(row pgx.Row) (Appointment, error) {
 	var offset int16
 	var status, plan string
 	err := row.Scan(&a.ID, &a.ConsultationID, &a.ChildID, &a.AccountID, &a.DoctorName, &a.ConsultDate, &a.StartsAt, &offset,
-		&a.Note, &status, &a.StatusBy, &a.StatusAt, &a.CreatedBy, &plan)
+		&a.Note, &a.Location, &a.LocationURL, &status, &a.StatusBy, &a.StatusAt, &a.CreatedBy, &plan)
 	a.UtcOffsetMinutes, a.Status, a.PaidPlan = int(offset), Status(status), plan == planPaid
 	return a, err
 }
@@ -100,13 +102,46 @@ func (r *Repository) Create(ctx context.Context, consultationID uuid.UUID, n Nor
 		return uuid.Nil, ErrExists
 	}
 
+	return r.insertAndCommit(ctx, tx, &consultationID, childID, accountID, n, createdBy)
+}
+
+// CreateForChild saves an appointment of a child that has no consultation (specs/043): the same paid-plan rule under the same
+// lock, and no «one scheduled per consultation» rule (there is no consultation). ErrChildNotFound if the child doesn't exist.
+func (r *Repository) CreateForChild(ctx context.Context, childID uuid.UUID, n Normalized, createdBy uuid.UUID) (uuid.UUID, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("starting transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var accountID uuid.UUID
+	var plan string
+	err = tx.QueryRow(ctx, `
+		SELECT a.id, a.plan::text FROM children ch JOIN accounts a ON a.id = ch.account_id
+		WHERE ch.id = $1
+		FOR UPDATE OF a`, childID).Scan(&accountID, &plan)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, ErrChildNotFound
+	}
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("reading the account's plan: %w", err)
+	}
+	if plan != planPaid {
+		return uuid.Nil, &PlanLimitError{Reason: PlanLimitAppointments}
+	}
+	return r.insertAndCommit(ctx, tx, nil, childID, accountID, n, createdBy)
+}
+
+// insertAndCommit writes the appointment and its notices and commits; `consultationID` is nil for one with no consultation.
+func (r *Repository) insertAndCommit(ctx context.Context, tx pgx.Tx, consultationID *uuid.UUID, childID, accountID uuid.UUID, n Normalized, createdBy uuid.UUID) (uuid.UUID, error) {
 	now := r.now()
 	var id uuid.UUID
-	err = tx.QueryRow(ctx, `
+	err := tx.QueryRow(ctx, `
 		INSERT INTO consultation_appointments
-			(consultation_id, child_id, account_id, starts_at, utc_offset_minutes, note, created_by_account_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)
-		RETURNING id`, consultationID, childID, accountID, n.StartsAt, n.UtcOffsetMinutes, n.Note, createdBy, now).Scan(&id)
+			(consultation_id, child_id, account_id, starts_at, utc_offset_minutes, note, doctor_name, location, location_url,
+			 created_by_account_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $11)
+		RETURNING id`, consultationID, childID, accountID, n.StartsAt, n.UtcOffsetMinutes, n.Note, n.Doctor, n.Location, n.LocationURL, createdBy, now).Scan(&id)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("inserting appointment: %w", err)
 	}
@@ -301,8 +336,11 @@ func (r *Repository) Update(ctx context.Context, id uuid.UUID, n Normalized) err
 	}
 	now := r.now()
 	moved := !a.StartsAt.Equal(n.StartsAt) || a.UtcOffsetMinutes != n.UtcOffsetMinutes
-	if _, err := tx.Exec(ctx, `UPDATE consultation_appointments SET starts_at = $2, utc_offset_minutes = $3, note = $4, updated_at = $5 WHERE id = $1`,
-		id, n.StartsAt, n.UtcOffsetMinutes, n.Note, now); err != nil {
+	if _, err := tx.Exec(ctx, `
+		UPDATE consultation_appointments
+		SET starts_at = $2, utc_offset_minutes = $3, note = $4, doctor_name = $5, location = $6, location_url = $7, updated_at = $8
+		WHERE id = $1`,
+		id, n.StartsAt, n.UtcOffsetMinutes, n.Note, n.Doctor, n.Location, n.LocationURL, now); err != nil {
 		return fmt.Errorf("updating appointment: %w", err)
 	}
 	rows, err := tx.Query(ctx, `
@@ -386,12 +424,15 @@ func (r *Repository) SetStatus(ctx context.Context, id uuid.UUID, to Status, act
 			return fmt.Errorf("marking appointment: %w", err)
 		}
 	case to == StatusScheduled && a.Status == StatusDone:
-		var other bool
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM consultation_appointments WHERE consultation_id = $1 AND status = 'scheduled')`, a.ConsultationID).Scan(&other); err != nil {
-			return fmt.Errorf("looking for a scheduled appointment: %w", err)
-		}
-		if other {
-			return ErrExists
+		// One scheduled per consultation; an appointment with no consultation has no such rule.
+		if a.ConsultationID != uuid.Nil {
+			var other bool
+			if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM consultation_appointments WHERE consultation_id = $1 AND status = 'scheduled')`, a.ConsultationID).Scan(&other); err != nil {
+				return fmt.Errorf("looking for a scheduled appointment: %w", err)
+			}
+			if other {
+				return ErrExists
+			}
 		}
 		if _, err := tx.Exec(ctx, `UPDATE consultation_appointments SET status = 'scheduled', status_by_account_id = NULL, status_at = NULL, updated_at = $2 WHERE id = $1`, id, now); err != nil {
 			return fmt.Errorf("undoing the mark: %w", err)

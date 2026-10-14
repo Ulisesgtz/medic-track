@@ -196,5 +196,76 @@ for (const design of designs) {
       expect(created.status()).toBe(422)
       expect((await created.json()).reason).toBe('appointments')
     })
+
+    // specs/044-citas-sin-consulta-con-lugar
+    test('a Tutor adds an appointment from the child page with no consultation, with doctor and place, and nothing goes to Google until the link is tapped', async ({ page }) => {
+      await allowClerkOn(page)
+      const owner = await seedChild(page, { withConsultation: false })
+      const googleMaps: string[] = []
+      page.on('request', (request) => {
+        if (request.url().includes('google.com/maps')) googleMaps.push(request.url())
+      })
+      await page.goto(`/children/${owner.childId}`)
+      const section = page.getByRole('region', { name: 'Próxima cita' })
+      await section.getByRole('link', { name: '+ Agregar cita' }).click()
+      await expect(page.getByRole('heading', { name: 'Agregar próxima cita', level: 1 })).toBeVisible()
+      await expectNoHorizontalScroll(page)
+
+      // The date and the hour never sit on top of each other (the phone stacks them).
+      const dateBox = await page.getByLabel('Fecha de la cita').boundingBox()
+      const timeBox = await page.getByRole('button', { name: 'Hora de la cita' }).boundingBox()
+      expect(dateBox && timeBox).toBeTruthy()
+      const overlap = !(dateBox!.x + dateBox!.width <= timeBox!.x + 1 || timeBox!.x + timeBox!.width <= dateBox!.x + 1 || dateBox!.y + dateBox!.height <= timeBox!.y + 1 || timeBox!.y + timeBox!.height <= dateBox!.y + 1)
+      expect(overlap, 'the date and the hour overlap').toBe(false)
+
+      // The doctor is asked for (there is no consultation to take it from); a link that is not https is refused.
+      await page.getByLabel('Fecha de la cita').fill(localDayAfter(5))
+      await pickTime(page, 'Hora de la cita', '10:30')
+      await page.getByLabel(/^Lugar/).fill('Consultorio 302, Av. Vallarta 1234')
+      await page.getByLabel(/^Liga de Google Maps/).fill('http://maps.google.com/x')
+      await page.getByRole('button', { name: 'Guardar cita' }).click()
+      await expect(page.getByText('Escribe con quién es la cita.')).toBeVisible()
+      await expect(page.getByText('La liga debe empezar con https://')).toBeVisible()
+
+      // Typing the place sent nothing to Google: only the link, once tapped, does.
+      expect(googleMaps).toEqual([])
+      await expect(page.getByRole('link', { name: /en Google Maps/ })).toHaveAttribute('href', /google\.com\/maps\/search\/\?api=1&query=/)
+
+      await page.getByLabel('¿Con quién es la cita?').fill('Dra. Pérez')
+      await page.getByLabel(/^Liga de Google Maps/).fill('https://maps.app.goo.gl/abc123')
+      await page.getByRole('button', { name: 'Guardar cita' }).click()
+
+      await expect(page).toHaveURL(new RegExp(`/children/${owner.childId}$`))
+      const card = page.getByRole('region', { name: 'Próxima cita' })
+      await expect(card.getByText('Dra. Pérez')).toBeVisible()
+      await expect(card.getByText('Consultorio 302, Av. Vallarta 1234')).toBeVisible()
+      await expect(card.getByRole('link', { name: 'Abrir en Maps' })).toHaveAttribute('href', 'https://maps.app.goo.gl/abc123')
+      await expect(card.getByText(/De la consulta del/)).toHaveCount(0)
+      await expect(card.getByRole('link', { name: '+ Agregar otra cita' })).toBeVisible()
+
+      const rows = await queryDb<{ consultation_id: string | null; doctor_name: string; location_url: string }>(
+        'SELECT consultation_id, doctor_name, location_url FROM consultation_appointments WHERE child_id = $1',
+        [owner.childId],
+      )
+      expect(rows).toEqual([{ consultation_id: null, doctor_name: 'Dra. Pérez', location_url: 'https://maps.app.goo.gl/abc123' }])
+    })
+
+    test('a Caregiver is not offered «Agregar cita», and the API refuses it anyway', async ({ page, browser }) => {
+      await allowClerkOn(page)
+      const owner = await seedChild(page, { withConsultation: false })
+      const guest = await secondPerson(browser, design)
+      await acceptViaApi(guest.context.request, guest.token, await inviteViaApi(page.context().request, owner.token, guest.email, 'caregiver'))
+
+      await guest.page.goto(`/children/${owner.childId}`)
+      await expect(guest.page.getByRole('heading', { name: 'Consultas', level: 2 })).toBeVisible()
+      await expect(guest.page.getByRole('link', { name: /Agregar cita|Agregar otra cita/ })).toHaveCount(0)
+
+      const refused = await guest.context.request.post(`${API}/children/${owner.childId}/appointments`, {
+        headers: { Authorization: `Bearer ${guest.token}` },
+        data: { startsAt: new Date(Date.now() + 5 * 86_400_000).toISOString(), utcOffsetMinutes: 0, doctor: 'X', note: '', notices: [] },
+      })
+      expect(refused.status()).toBe(403)
+      await guest.context.close()
+    })
   })
 }

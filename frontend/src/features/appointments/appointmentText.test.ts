@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   bigDateText,
+  mapsSearchUrl,
+  placeLink,
   countdown,
   dayMonthText,
   defaultNotices,
@@ -122,5 +124,18 @@ describe('leadMinutesOf', () => {
     expect(leadMinutesOf('0', 'horas')).toBeNull()
     expect(leadMinutesOf('', 'horas')).toBeNull()
     expect(leadMinutesOf('1.5', 'horas')).toBeNull()
+  })
+})
+
+describe('Google Maps links (specs/044)', () => {
+  it('builds a search of the place, with the text encoded', () => {
+    expect(mapsSearchUrl(' Hospital Ángeles, Av. Vallarta 1234 ')).toBe('https://www.google.com/maps/search/?api=1&query=Hospital%20%C3%81ngeles%2C%20Av.%20Vallarta%201234')
+  })
+
+  it('prefers the saved link, then a search of the place, and gives nothing without either (or with an older answer)', () => {
+    expect(placeLink({ location: 'Clínica', locationUrl: ' https://maps.app.goo.gl/abc ' })).toBe('https://maps.app.goo.gl/abc')
+    expect(placeLink({ location: 'Clínica', locationUrl: '' })).toBe('https://www.google.com/maps/search/?api=1&query=Cl%C3%ADnica')
+    expect(placeLink({ location: '  ', locationUrl: '' })).toBeNull()
+    expect(placeLink({})).toBeNull()
   })
 })

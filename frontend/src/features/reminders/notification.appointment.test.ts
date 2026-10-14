@@ -27,6 +27,8 @@ describe('an appointment reminder', () => {
 
   it('opens its consultation', () => {
     expect(targetUrl(appointment())).toBe('/consultations/c1')
+    // An appointment added without a consultation has none to open (specs/044): the home.
+    expect(targetUrl({ ...appointment(), consultationId: undefined })).toBe('/home')
   })
 
   it('with detail says the child, the doctor, the hour and the note, and how soon on the same day', () => {

@@ -17,6 +17,7 @@ function renderAt(path: string) {
         <Routes>
           <Route path="/citas/:appointmentId/editar" element={<AppointmentFormPage />} />
           <Route path="/consultations/:consultationId/cita/nueva" element={<AppointmentFormPage />} />
+          <Route path="/children/:childId/citas/nueva" element={<AppointmentFormPage />} />
           <Route path="/children/:childId/citas" element={<AppointmentHistoryPage />} />
           <Route path="/children/:childId" element={<div>HIJO</div>} />
           <Route path="/consultations/:consultationId" element={<div>CONSULTA</div>} />
@@ -249,6 +250,97 @@ describe('AppointmentFormPage — add to a saved consultation', () => {
     api({ 'GET /consultations/c1': { status: 404, body: {} } })
     renderAt('/consultations/c1/cita/nueva')
     expect(await screen.findByText('No se encontró esta consulta.')).toBeInTheDocument()
+  })
+})
+
+describe('AppointmentFormPage — add to a child, with no consultation (specs/044)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 6, 15, 10))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+  const setup = () => userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+
+  it('asks who the appointment is with, the place and a link, and saves with POST /children/…/appointments', async () => {
+    const mock = api({ 'POST /children/child-1/appointments': { status: 201, body: appointment({ consultationId: null }) } })
+    renderAt('/children/child-1/citas/nueva')
+    expect(await screen.findByRole('heading', { name: 'Agregar próxima cita', level: 1 })).toBeInTheDocument()
+    const user = setup()
+    await user.type(await screen.findByLabelText('¿Con quién es la cita?'), 'Dra. Pérez')
+    await user.type(screen.getByLabelText('Fecha de la cita'), '2026-10-09')
+    await pickTime(user, 'Hora de la cita', '10:30')
+    await user.type(screen.getByLabelText(/^Lugar/), 'Consultorio 302')
+    await user.type(screen.getByLabelText(/^Liga de Google Maps/), 'https://maps.app.goo.gl/abc')
+    await user.click(screen.getByRole('button', { name: 'Guardar cita' }))
+
+    await waitFor(() => expect(screen.getByText('HIJO')).toBeInTheDocument())
+    expect(sentBody(mock, 'POST')).toMatchObject({ doctor: 'Dra. Pérez', location: 'Consultorio 302', locationUrl: 'https://maps.app.goo.gl/abc' })
+    expect(callsOf(mock).filter((c) => c === 'POST /children/child-1/appointments')).toHaveLength(1)
+  })
+
+  it('asks for the doctor and refuses a link that is not https before asking the server', async () => {
+    const mock = api()
+    renderAt('/children/child-1/citas/nueva')
+    const user = setup()
+    await user.type(await screen.findByLabelText('Fecha de la cita'), '2026-10-09')
+    await pickTime(user, 'Hora de la cita', '10:30')
+    await user.type(screen.getByLabelText(/^Liga de Google Maps/), 'javascript:alert(1)')
+    await user.click(screen.getByRole('button', { name: 'Guardar cita' }))
+
+    expect(await screen.findByText('Escribe con quién es la cita.')).toBeInTheDocument()
+    expect(screen.getByText('La liga debe empezar con https://')).toBeInTheDocument()
+    expect(mock.mock.calls.some(([, i]) => i?.method === 'POST')).toBe(false)
+  })
+
+  it('shows a «Buscar … en Google Maps» link that opens in another tab, and only once there is a place', async () => {
+    api()
+    renderAt('/children/child-1/citas/nueva')
+    const user = setup()
+    await screen.findByLabelText(/^Lugar/)
+    expect(screen.queryByRole('link', { name: /en Google Maps/ })).not.toBeInTheDocument()
+    await user.type(screen.getByLabelText(/^Lugar/), 'Hospital Ángeles')
+    const link = screen.getByRole('link', { name: 'Buscar «Hospital Ángeles» en Google Maps' })
+    expect(link).toHaveAttribute('href', 'https://www.google.com/maps/search/?api=1&query=Hospital%20%C3%81ngeles')
+    expect(link).toHaveAttribute('target', '_blank')
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer')
+  })
+
+  it('opens the plan notice on the 422 keeping what was typed, and says the child was not found', async () => {
+    api({ 'POST /children/child-1/appointments': { status: 422, body: { error: 'freemium_consultation_limit_exceeded', reason: 'appointments', message: 'plan' } } })
+    const first = renderAt('/children/child-1/citas/nueva')
+    const user = setup()
+    await user.type(await screen.findByLabelText('¿Con quién es la cita?'), 'Dra. Pérez')
+    await user.type(screen.getByLabelText('Fecha de la cita'), '2026-10-09')
+    await pickTime(user, 'Hora de la cita', '10:30')
+    await user.click(screen.getByRole('button', { name: 'Guardar cita' }))
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByLabelText('¿Con quién es la cita?')).toHaveValue('Dra. Pérez')
+    first.unmount()
+
+    api()
+    renderAt('/children/otro/citas/nueva')
+    expect(await screen.findByText('No se encontró este hijo.')).toBeInTheDocument()
+  })
+
+  it('a free account sees the fields disabled with no save button', async () => {
+    api({}, account({ plan: 'free' }))
+    renderAt('/children/child-1/citas/nueva')
+    expect(await screen.findByText('Disponible en el plan completo')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Guardar cita' })).not.toBeInTheDocument()
+  })
+
+  it('editing an appointment that has no consultation keeps asking for its doctor and fills the place', async () => {
+    const mock = api({ 'GET /appointments/ap1': { body: appointment({ consultationId: null, doctorName: 'Dra. Pérez', location: 'Clínica Norte' }) } })
+    renderAt('/citas/ap1/editar')
+    expect(await screen.findByLabelText('¿Con quién es la cita?')).toHaveValue('Dra. Pérez')
+    expect(screen.getByLabelText(/^Lugar/)).toHaveValue('Clínica Norte')
+    const user = setup()
+    await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+    await waitFor(() => expect(sentBody(mock, 'PATCH')).toMatchObject({ doctor: 'Dra. Pérez', location: 'Clínica Norte' }))
   })
 })
 
