@@ -1,4 +1,4 @@
--- Citas sin consulta previa, con doctor y lugar (spec 043, bugfix/044).
+-- Citas sin consulta previa, con doctor y lugar (spec 044).
 -- Una cita se puede agregar desde la pagina del hijo sin haber registrado una consulta: consultation_id pasa a ser opcional
 -- (la llave compuesta con consultations solo se revisa cuando trae consulta) y la cita guarda su propio doctor y lugar.
 -- Una cita de una consulta sigue leyendo el doctor de su consulta mientras no tenga uno propio.
