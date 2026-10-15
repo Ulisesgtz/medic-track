@@ -31,6 +31,7 @@
 
 ## Notas
 
+- **Regla de invitadas (2026-10-15)**: una persona invitada a la familia de otra cuenta con plan vigente no puede suscribirse; cuando esa familia deja de tener plan vigente, puede (FR-003, FR-003b).
 - **Decisiones del dueño que condicionan el plan** (para `/speckit-plan`): la tarjeta nunca toca el servidor; el plan se deriva de una suscripción; las cuentas con plan dado a mano no se tocan; los reembolsos se hacen a mano.
 - **Pasos del dueño antes del primer cobro real** (no son código): contador (RFC, facturación, nombre legal), términos y aviso de privacidad, credenciales reales en Railway.
 - **A verificar en la documentación del proveedor durante `/speckit-plan`**: cómo se captura la tarjeta sin que pase por el servidor, qué firma trae el aviso, cómo se cancela y cómo se actualiza la tarjeta de una suscripción, la comisión de las suscripciones y la liberación del dinero.
