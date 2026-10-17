@@ -1,3 +1,5 @@
+import type { ReactNode } from 'react'
+
 interface PlanTarjetaProps {
   id: string
   name: string
@@ -12,13 +14,15 @@ interface PlanTarjetaProps {
   sub?: string
   /** The «Contratar plan completo · PRONTO» button of the full plan while there is no way to pay (specs/034). */
   pronto?: boolean
+  /** What the plan's subscription says and offers (the payment button, «Vigente hasta…», cancel): specs/045. */
+  actions?: ReactNode
 }
 
 /**
  * One plan (mock PlanTarjeta): name, price, the button when it applies and the list of what it includes with ✓. The «Pronto»
  * button is `aria-disabled` and does nothing; its explanation is its description.
  */
-export function PlanTarjeta({ id, name, price, period, lead, items, current = false, sub, pronto = false }: PlanTarjetaProps) {
+export function PlanTarjeta({ id, name, price, period, lead, items, current = false, sub, pronto = false, actions }: PlanTarjetaProps) {
   return (
     <article
       aria-labelledby={id}
@@ -41,6 +45,8 @@ export function PlanTarjeta({ id, name, price, period, lead, items, current = fa
         </p>
         {sub && <p className="text-[15px] leading-normal font-semibold text-body">{sub}</p>}
       </div>
+
+      {actions}
 
       {pronto && (
         <div className="flex flex-col gap-2">
