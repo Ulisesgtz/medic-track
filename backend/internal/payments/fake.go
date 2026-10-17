@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 // Fake is an in-memory Provider for the tests and for development (PAYMENTS_DRIVER=fake): it never talks to anyone and its
@@ -46,7 +48,7 @@ func (f *Fake) CreateSubscription(_ context.Context, req CreateRequest) (Created
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.seq++
-	id := fmt.Sprintf("fake_%d", f.seq)
+	id := fmt.Sprintf("fake_%d_%s", f.seq, uuid.NewString()[:8]) // unique across runs: the table keeps them
 	f.subs[id] = &fakeSub{ref: req.ExternalReference, status: "pending", modified: f.now()}
 	return Created{ID: id, CheckoutURL: f.origin + "/planes/pago-de-prueba?sub=" + id}, nil
 }
@@ -142,4 +144,11 @@ func (f *Fake) Pause(id string) error {
 	}
 	s.status, s.modified = "paused", f.now()
 	return nil
+}
+
+// Count is how many subscriptions were created (tests check the provider was called once).
+func (f *Fake) Count() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return len(f.subs)
 }

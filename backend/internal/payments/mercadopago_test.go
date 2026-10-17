@@ -230,3 +230,24 @@ func TestParseTime(t *testing.T) {
 	require.NotNil(t, parseTime("2026-10-15T08:00:00"))
 	require.True(t, derefTime(nil).IsZero())
 }
+
+func TestMercadoPago_ReadingAPaymentThatDoesNotExist(t *testing.T) {
+	mp, _ := newFakeMP(t, func(*http.Request, string) (int, string) { return 404, `{}` })
+
+	_, err := mp.GetAuthorizedPayment(context.Background(), "1")
+	require.ErrorIs(t, err, ErrRemoteNotFound)
+	_, err = mp.GetPayment(context.Background(), "1")
+	require.ErrorIs(t, err, ErrRemoteNotFound)
+	_, err = mp.GetSubscription(context.Background(), "1")
+	require.ErrorIs(t, err, ErrRemoteNotFound)
+	require.ErrorIs(t, mp.CancelSubscription(context.Background(), "1"), ErrRemoteNotFound)
+}
+
+func TestMercadoPago_APathWithSpecialCharactersIsEscaped(t *testing.T) {
+	mp, f := newFakeMP(t, func(*http.Request, string) (int, string) { return 200, `{"id":"x"}` })
+
+	_, err := mp.GetSubscription(context.Background(), "a/b?c")
+
+	require.NoError(t, err)
+	require.Equal(t, "/preapproval/a/b?c", f.requests[0].path, "the server decodes the escaped path; the slash cannot leave the resource")
+}

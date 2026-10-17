@@ -22,6 +22,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ops"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
+	"github.com/Ulisesgtz/medic-track/backend/internal/payments"
 	"github.com/Ulisesgtz/medic-track/backend/internal/reminder"
 	"github.com/Ulisesgtz/medic-track/backend/internal/supplement"
 )
@@ -38,6 +39,9 @@ type Deps struct {
 	Supplement *supplement.Handler
 	// Appointment: the next appointment of a consultation (specs/033, part 2).
 	Appointment *appointment.Handler
+	// Payments: the subscription of the full plan (specs/045). Nil = the charge is not available in this environment: none of its routes
+	// (including the provider's public notice) is registered.
+	Payments *payments.Handler
 	// Ops and OpsKey: the read-only queries over error_logs for the team that runs the service (specs/021). Without
 	// both the routes are not registered at all: there is no open door by default.
 	Ops    *ops.Handler
@@ -95,6 +99,15 @@ func NewRouter(d Deps) *chi.Mux {
 	// signed action token is the only thing it accepts, and it names a single dose (specs/011).
 	r.With(strict).Post("/reminders/actions/taken", d.Reminder.MarkTaken)
 
+	// The payment provider's notice (specs/045): public like the "Tomada" button, verified by the provider's signature and limited
+	// strictly; only registered when the charge is configured. The fake provider's helpers exist only with PAYMENTS_DRIVER=fake.
+	if d.Payments != nil {
+		r.With(strict).Post("/payments/webhooks/mercadopago", d.Payments.Webhook)
+		if d.Payments.Fake() {
+			r.With(strict).Post("/payments/fake/{subscriptionId}/{action}", d.Payments.FakeAction)
+		}
+	}
+
 	// The person's own account: their notice, reminder settings and devices stay theirs, never a family's.
 	ownsAccount := authmw.RequireOwner(d.Responder, "accountId", d.Ownership.OwnsAccount)
 	// Children, consultations and doses are reached through a level of access: Mark = see everything and mark doses (a
@@ -124,6 +137,13 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(ownsAccount).Patch("/accounts/{accountId}/reminder-settings", d.Account.UpdateReminderSettings)
 		r.With(ownsAccount).Post("/accounts/{accountId}/reminder-devices", d.Reminder.RegisterDevice)
 		r.With(ownsAccount).Post("/accounts/{accountId}/reminder-devices/remove", d.Reminder.RemoveDevice)
+		// The subscription of the full plan (specs/045): each person subscribes for their own account; whether an invited person
+		// may is decided by the service (payments.CanSubscribe), not by the guard.
+		if d.Payments != nil {
+			r.With(ownsAccount).Get("/accounts/{accountId}/subscription", d.Payments.GetSubscription)
+			r.With(ownsAccount).Post("/accounts/{accountId}/subscription", d.Payments.Subscribe)
+			r.With(ownsAccount).Post("/accounts/{accountId}/subscription/cancel", d.Payments.Cancel)
+		}
 
 		// Sharing with the family (specs/032): no id in the route names a resource; the family's rules (who can invite, whose
 		// e-mail can accept) are enforced by the service from the session itself.

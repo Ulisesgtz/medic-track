@@ -734,6 +734,172 @@ const docTemplate = `{
                 }
             }
         },
+        "/accounts/{accountId}/subscription": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "What /planes needs: whether the charge is available in this environment, the price, whether the account can subscribe and, if\nnot, why (` + "`" + `already_paid` + "`" + `, ` + "`" + `covered_by_family` + "`" + ` with the owner's first name, ` + "`" + `pending` + "`" + `, ` + "`" + `unavailable` + "`" + `), and the subscription's\npublic state (no provider id, no card). Reading never depends on the plan.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "The state of the account's subscription and whether it can subscribe",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/SubscriptionStateResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/PaymentsErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The account is not the session's own",
+                        "schema": {
+                            "$ref": "#/definitions/PaymentsErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/PaymentsErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Creates a pending subscription at the payment provider and returns the provider's page, where the person leaves their card\n(PediTrack never sees it). Reuses a pending one of the last 24 hours (200). 409 ` + "`" + `subscription_not_allowed` + "`" + ` when the account\nalready has the full plan or is covered by another account's family (` + "`" + `covered_by_family` + "`" + ` with the owner's first name).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Start paying the full plan",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "A pending subscription was reused",
+                        "schema": {
+                            "$ref": "#/definitions/SubscribeResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/SubscribeResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/PaymentsErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The account is not the session's own",
+                        "schema": {
+                            "$ref": "#/definitions/PaymentsErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "The account cannot subscribe",
+                        "schema": {
+                            "$ref": "#/definitions/PaymentsErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Payments are not available",
+                        "schema": {
+                            "$ref": "#/definitions/PaymentsErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}/subscription/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "An active or grace subscription is canceled at the provider and the plan lasts until the end of what was paid; one that never\npaid ends. Idempotent. If the provider fails nothing changes (502).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Cancel the renewal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/SubscriptionStateResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/PaymentsErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The account is not the session's own",
+                        "schema": {
+                            "$ref": "#/definitions/PaymentsErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "The provider did not cancel it",
+                        "schema": {
+                            "$ref": "#/definitions/PaymentsErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/appointments/{appointmentId}": {
             "get": {
                 "security": [
@@ -2744,6 +2910,97 @@ const docTemplate = `{
                 }
             }
         },
+        "/payments/fake/{subscriptionId}/{action}": {
+            "post": {
+                "description": "Only exists with PAYMENTS_DRIVER=fake. ` + "`" + `approve` + "`" + `, ` + "`" + `renew` + "`" + `, ` + "`" + `reject` + "`" + `, ` + "`" + `pause` + "`" + ` or ` + "`" + `cancel` + "`" + `.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Move the fake provider's state (testing only)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Fake subscription id",
+                        "name": "subscriptionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "approve, renew, reject, pause or cancel",
+                        "name": "action",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Unknown subscription or action",
+                        "schema": {
+                            "$ref": "#/definitions/PaymentsErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/webhooks/mercadopago": {
+            "post": {
+                "description": "Mercado Pago tells us a subscription or a charge changed. The signature (` + "`" + `x-signature` + "`" + `) is verified, the resource is read from\nthe provider and the result applied idempotently. Always answers 200 for a verified notice (an unknown subscription is ignored);\n500 if the provider could not be asked, so it retries.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Notice of the payment provider",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Topic of the notice",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Id of the resource",
+                        "name": "data.id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "boolean"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid signature",
+                        "schema": {
+                            "$ref": "#/definitions/PaymentsErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/reminders/actions/taken": {
             "post": {
                 "description": "Public (no session). The token names one dose and the device that received it; it\nonly works while that device is on and belongs to the dose's account, and for 24 h.",
@@ -4725,6 +4982,26 @@ const docTemplate = `{
                 }
             }
         },
+        "PaymentsErrorResponse": {
+            "type": "object",
+            "properties": {
+                "coveredBy": {
+                    "type": "string",
+                    "example": "Ana"
+                },
+                "error": {
+                    "type": "string",
+                    "example": "subscription_not_allowed"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string",
+                    "example": "covered_by_family"
+                }
+            }
+        },
         "PlanLimitResponse": {
             "type": "object",
             "properties": {
@@ -4790,6 +5067,108 @@ const docTemplate = `{
                 "to": {
                     "type": "string",
                     "example": "2026-06-30"
+                }
+            }
+        },
+        "SubscribeResponse": {
+            "type": "object",
+            "properties": {
+                "checkoutUrl": {
+                    "type": "string",
+                    "example": "https://www.mercadopago.com.mx/subscriptions/checkout?preapproval_id=2c93808"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "pending"
+                }
+            }
+        },
+        "SubscriptionInfo": {
+            "type": "object",
+            "properties": {
+                "checkoutUrl": {
+                    "description": "CheckoutUrl: the provider's page where the person pays, only while the subscription is pending.",
+                    "type": "string"
+                },
+                "endedAt": {
+                    "type": "string",
+                    "example": "2026-10-22T18:00:00Z"
+                },
+                "graceUntil": {
+                    "type": "string",
+                    "example": "2026-10-22T18:00:00Z"
+                },
+                "nextRenewalAt": {
+                    "type": "string",
+                    "example": "2027-10-15T18:00:00Z"
+                },
+                "paidThrough": {
+                    "type": "string",
+                    "example": "2027-10-15T18:00:00Z"
+                },
+                "renews": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "pending",
+                        "active",
+                        "grace",
+                        "canceled",
+                        "ended"
+                    ],
+                    "example": "active"
+                }
+            }
+        },
+        "SubscriptionPrice": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "integer",
+                    "example": 499
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "MXN"
+                },
+                "period": {
+                    "type": "string",
+                    "example": "year"
+                }
+            }
+        },
+        "SubscriptionStateResponse": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "blockedReason": {
+                    "type": "string",
+                    "enum": [
+                        "already_paid",
+                        "covered_by_family",
+                        "pending",
+                        "unavailable"
+                    ]
+                },
+                "canSubscribe": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "coveredBy": {
+                    "type": "string",
+                    "example": "Ana"
+                },
+                "price": {
+                    "$ref": "#/definitions/SubscriptionPrice"
+                },
+                "subscription": {
+                    "$ref": "#/definitions/SubscriptionInfo"
                 }
             }
         },

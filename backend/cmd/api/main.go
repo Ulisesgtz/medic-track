@@ -45,6 +45,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/mailer"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ops"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
+	"github.com/Ulisesgtz/medic-track/backend/internal/payments"
 	"github.com/Ulisesgtz/medic-track/backend/internal/platform"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ratelimit"
 	"github.com/Ulisesgtz/medic-track/backend/internal/reminder"
@@ -154,6 +155,33 @@ func main() {
 		log.Print(digestConfig.UnavailableReason())
 	}
 
+	// The subscription of the full plan with Mercado Pago (specs/045). Without its configuration the charge is "not available": none of
+	// its routes exist, /planes keeps the «Pronto» button and a plan is given by hand, as before. The console names what is missing,
+	// never a value. PAYMENTS_DRIVER=fake runs everything against an in-memory provider (tests and development only).
+	var paymentsHandler *payments.Handler
+	paymentsConfig := payments.ConfigFromEnv()
+	if paymentsConfig.Available() {
+		var provider payments.Provider
+		var fakeProvider *payments.Fake
+		if paymentsConfig.Fake() {
+			fakeProvider = payments.NewFake(paymentsConfig.FrontendOrigin)
+			provider = fakeProvider
+			log.Print("PAYMENTS_DRIVER=fake: the payment provider is simulated and its helper routes are enabled (testing only)")
+		} else {
+			provider = payments.NewMercadoPago(paymentsConfig.AccessToken, "")
+		}
+		paymentsService := payments.NewService(payments.NewRepository(pool, family.NewRepository(pool)), provider, paymentsConfig)
+		paymentsService.SetReporter(jobreport.New(errorLogRepo, "payments"))
+		paymentsHandler = payments.NewHandler(paymentsService, responder, paymentsConfig)
+		// Grace periods, paid periods and pending subscriptions that run out, and the healing of a lost notice (job:payments).
+		go payments.RunSweeper(ctx, paymentsService, payments.SweepInterval)
+		if fakeProvider != nil {
+			paymentsHandler = paymentsHandler.WithFake(fakeProvider)
+		}
+	} else {
+		log.Printf("payments not available: missing %v", paymentsConfig.Missing())
+	}
+
 	// Operation queries over error_logs (specs/021): they exist only with a key; without one there is no such route.
 	var opsHandler *ops.Handler
 	opsKey := os.Getenv("OPS_API_KEY")
@@ -191,6 +219,7 @@ func main() {
 		Family:          familyHandler,
 		Supplement:      supplementHandler,
 		Appointment:     appointmentHandler,
+		Payments:        paymentsHandler,
 		Ops:             opsHandler,
 		OpsKey:          opsKey,
 		Ownership:       ownership.NewRepository(pool),

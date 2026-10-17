@@ -987,6 +987,20 @@ definitions:
         - $ref: '#/definitions/TakenByResponse'
         description: TakenBy as in DoseResponse (specs/032).
     type: object
+  PaymentsErrorResponse:
+    properties:
+      coveredBy:
+        example: Ana
+        type: string
+      error:
+        example: subscription_not_allowed
+        type: string
+      message:
+        type: string
+      reason:
+        example: covered_by_family
+        type: string
+    type: object
   PlanLimitResponse:
     properties:
       error:
@@ -1044,6 +1058,81 @@ definitions:
       to:
         example: "2026-06-30"
         type: string
+    type: object
+  SubscribeResponse:
+    properties:
+      checkoutUrl:
+        example: https://www.mercadopago.com.mx/subscriptions/checkout?preapproval_id=2c93808
+        type: string
+      status:
+        example: pending
+        type: string
+    type: object
+  SubscriptionInfo:
+    properties:
+      checkoutUrl:
+        description: 'CheckoutUrl: the provider''s page where the person pays, only
+          while the subscription is pending.'
+        type: string
+      endedAt:
+        example: "2026-10-22T18:00:00Z"
+        type: string
+      graceUntil:
+        example: "2026-10-22T18:00:00Z"
+        type: string
+      nextRenewalAt:
+        example: "2027-10-15T18:00:00Z"
+        type: string
+      paidThrough:
+        example: "2027-10-15T18:00:00Z"
+        type: string
+      renews:
+        example: true
+        type: boolean
+      status:
+        enum:
+        - pending
+        - active
+        - grace
+        - canceled
+        - ended
+        example: active
+        type: string
+    type: object
+  SubscriptionPrice:
+    properties:
+      amount:
+        example: 499
+        type: integer
+      currency:
+        example: MXN
+        type: string
+      period:
+        example: year
+        type: string
+    type: object
+  SubscriptionStateResponse:
+    properties:
+      available:
+        example: true
+        type: boolean
+      blockedReason:
+        enum:
+        - already_paid
+        - covered_by_family
+        - pending
+        - unavailable
+        type: string
+      canSubscribe:
+        example: true
+        type: boolean
+      coveredBy:
+        example: Ana
+        type: string
+      price:
+        $ref: '#/definitions/SubscriptionPrice'
+      subscription:
+        $ref: '#/definitions/SubscriptionInfo'
     type: object
   SupplementDoneRequest:
     properties:
@@ -2223,6 +2312,120 @@ paths:
       summary: «Entendido» on the first-time notice of the personal section
       tags:
       - supplements
+  /accounts/{accountId}/subscription:
+    get:
+      description: |-
+        What /planes needs: whether the charge is available in this environment, the price, whether the account can subscribe and, if
+        not, why (`already_paid`, `covered_by_family` with the owner's first name, `pending`, `unavailable`), and the subscription's
+        public state (no provider id, no card). Reading never depends on the plan.
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/SubscriptionStateResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/PaymentsErrorResponse'
+        "403":
+          description: The account is not the session's own
+          schema:
+            $ref: '#/definitions/PaymentsErrorResponse'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/PaymentsErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: The state of the account's subscription and whether it can subscribe
+      tags:
+      - payments
+    post:
+      description: |-
+        Creates a pending subscription at the payment provider and returns the provider's page, where the person leaves their card
+        (PediTrack never sees it). Reuses a pending one of the last 24 hours (200). 409 `subscription_not_allowed` when the account
+        already has the full plan or is covered by another account's family (`covered_by_family` with the owner's first name).
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: A pending subscription was reused
+          schema:
+            $ref: '#/definitions/SubscribeResponse'
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/SubscribeResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/PaymentsErrorResponse'
+        "403":
+          description: The account is not the session's own
+          schema:
+            $ref: '#/definitions/PaymentsErrorResponse'
+        "409":
+          description: The account cannot subscribe
+          schema:
+            $ref: '#/definitions/PaymentsErrorResponse'
+        "503":
+          description: Payments are not available
+          schema:
+            $ref: '#/definitions/PaymentsErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Start paying the full plan
+      tags:
+      - payments
+  /accounts/{accountId}/subscription/cancel:
+    post:
+      description: |-
+        An active or grace subscription is canceled at the provider and the plan lasts until the end of what was paid; one that never
+        paid ends. Idempotent. If the provider fails nothing changes (502).
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/SubscriptionStateResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/PaymentsErrorResponse'
+        "403":
+          description: The account is not the session's own
+          schema:
+            $ref: '#/definitions/PaymentsErrorResponse'
+        "502":
+          description: The provider did not cancel it
+          schema:
+            $ref: '#/definitions/PaymentsErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Cancel the renewal
+      tags:
+      - payments
   /accounts/me:
     get:
       description: |-
@@ -3623,6 +3826,70 @@ paths:
       summary: Summarize the registered errors of a period
       tags:
       - operations
+  /payments/fake/{subscriptionId}/{action}:
+    post:
+      description: Only exists with PAYMENTS_DRIVER=fake. `approve`, `renew`, `reject`,
+        `pause` or `cancel`.
+      parameters:
+      - description: Fake subscription id
+        in: path
+        name: subscriptionId
+        required: true
+        type: string
+      - description: approve, renew, reject, pause or cancel
+        in: path
+        name: action
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "404":
+          description: Unknown subscription or action
+          schema:
+            $ref: '#/definitions/PaymentsErrorResponse'
+      summary: Move the fake provider's state (testing only)
+      tags:
+      - payments
+  /payments/webhooks/mercadopago:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Mercado Pago tells us a subscription or a charge changed. The signature (`x-signature`) is verified, the resource is read from
+        the provider and the result applied idempotently. Always answers 200 for a verified notice (an unknown subscription is ignored);
+        500 if the provider could not be asked, so it retries.
+      parameters:
+      - description: Topic of the notice
+        in: query
+        name: type
+        type: string
+      - description: Id of the resource
+        in: query
+        name: data.id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: boolean
+            type: object
+        "401":
+          description: Invalid signature
+          schema:
+            $ref: '#/definitions/PaymentsErrorResponse'
+      summary: Notice of the payment provider
+      tags:
+      - payments
   /reminders/actions/taken:
     post:
       consumes:

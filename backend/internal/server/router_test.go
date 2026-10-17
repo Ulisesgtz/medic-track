@@ -3,6 +3,9 @@ package server_test
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -24,6 +27,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/family"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
+	"github.com/Ulisesgtz/medic-track/backend/internal/payments"
 	"github.com/Ulisesgtz/medic-track/backend/internal/reminder"
 	"github.com/Ulisesgtz/medic-track/backend/internal/server"
 	"github.com/Ulisesgtz/medic-track/backend/internal/supplement"
@@ -143,6 +147,7 @@ func newWorld(t *testing.T) *world {
 				}
 				return "", family.ErrEmailNotVerified
 			})), responder),
+		Payments:       paymentsHandler(t, pool, responder),
 		Supplement:     supplement.NewHandler(supplement.NewService(supplement.NewRepository(pool)), responder),
 		Appointment:    appointment.NewHandler(appointment.NewService(appointment.NewRepository(pool)), responder),
 		Ownership:      ownership.NewRepository(pool),
@@ -151,6 +156,18 @@ func newWorld(t *testing.T) *world {
 		RequireSession: verifier.Middleware,
 	})
 	return w
+}
+
+// The webhook's secret of the tests (the provider signs its notices with it).
+const paymentsSecret = "whsec_router_test"
+
+// paymentsHandler is the subscription of the full plan over the real database with the fake provider (specs/045).
+func paymentsHandler(t *testing.T, pool *pgxpool.Pool, responder *httpx.Responder) *payments.Handler {
+	t.Helper()
+	cfg := payments.Config{Driver: payments.DriverFake, FrontendOrigin: "http://localhost:5173", WebhookSecret: paymentsSecret, GraceDays: 7, PriceMXN: 499}
+	fake := payments.NewFake(cfg.FrontendOrigin)
+	svc := payments.NewService(payments.NewRepository(pool, family.NewRepository(pool)), fake, cfg)
+	return payments.NewHandler(svc, responder, cfg).WithFake(fake)
 }
 
 func (w *world) do(t *testing.T, method, path, token, body string) *httptest.ResponseRecorder {
@@ -212,6 +229,9 @@ func (w *world) routes() []struct {
 		{"create appointment of a child", http.MethodPost, "/children/" + w.childA.String() + "/appointments", `{}`, http.StatusBadRequest},
 		{"create appointment", http.MethodPost, "/consultations/" + w.consultationA.String() + "/appointments", `{}`, http.StatusBadRequest},
 		{"get appointment", http.MethodGet, "/appointments/" + w.appointmentA.String(), "", http.StatusOK},
+		{"get subscription", http.MethodGet, "/accounts/" + w.accountA.String() + "/subscription", "", http.StatusOK},
+		{"subscribe", http.MethodPost, "/accounts/" + w.accountA.String() + "/subscription", "", http.StatusCreated},
+		{"cancel subscription", http.MethodPost, "/accounts/" + w.accountA.String() + "/subscription/cancel", "", http.StatusOK},
 		{"my appointment reminders", http.MethodPut, "/appointments/" + w.appointmentA.String() + "/my-reminders", `{"enabled":false}`, http.StatusOK},
 		{"edit appointment", http.MethodPatch, "/appointments/" + w.appointmentA.String(), `{}`, http.StatusBadRequest},
 		{"mark appointment", http.MethodPost, "/appointments/" + w.appointmentA.String() + "/status", `{"status":"done"}`, http.StatusOK},
@@ -307,7 +327,7 @@ func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 // ownRoutes are the person's own account (their notice, reminder settings and devices): never a family's.
 // fullRoutes need the full level (the owner or a Tutor); every other protected route needs only Mark (see and mark).
 var (
-	ownRoutes  = map[string]bool{"get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true}
+	ownRoutes  = map[string]bool{"get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true, "get subscription": true, "subscribe": true, "cancel subscription": true}
 	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "edit appointment": true, "mark appointment": true}
 )
 
@@ -395,4 +415,38 @@ func TestRouter_APersonWhoWasRemovedGets403OnEveryRoute(t *testing.T) {
 			require.Equal(t, http.StatusForbidden, w.do(t, rt.method, rt.path, token, rt.body).Code)
 		})
 	}
+}
+
+// The payment provider's notice has no session by design (specs/045): the provider's signature is the only thing it accepts.
+func TestRouter_ThePaymentNoticeIsPublicButNeedsTheProvidersSignature(t *testing.T) {
+	w := newWorld(t)
+
+	// Without a signature, or with a wrong one: 401 and nothing is processed.
+	require.Equal(t, http.StatusUnauthorized, w.do(t, http.MethodPost, "/payments/webhooks/mercadopago?type=subscription_preapproval&data.id=x", "", `{}`).Code)
+	req := httptest.NewRequest(http.MethodPost, "/payments/webhooks/mercadopago?type=subscription_preapproval&data.id=x", bytes.NewBufferString(`{}`))
+	req.Header.Set("x-signature", "ts="+fmt.Sprint(time.Now().UnixMilli())+",v1=deadbeef")
+	req.Header.Set("x-request-id", "req-1")
+	rec := httptest.NewRecorder()
+	w.router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+
+	// A properly signed notice about something unknown is accepted (and ignored).
+	ts := fmt.Sprint(time.Now().UnixMilli())
+	mac := hmac.New(sha256.New, []byte(paymentsSecret))
+	mac.Write([]byte("id:x;request-id:req-1;ts:" + ts + ";"))
+	req = httptest.NewRequest(http.MethodPost, "/payments/webhooks/mercadopago?type=subscription_preapproval&data.id=x", bytes.NewBufferString(`{}`))
+	req.Header.Set("x-signature", "ts="+ts+",v1="+hex.EncodeToString(mac.Sum(nil)))
+	req.Header.Set("x-request-id", "req-1")
+	rec = httptest.NewRecorder()
+	w.router.ServeHTTP(rec, req)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+}
+
+// The fake provider's helpers exist only with PAYMENTS_DRIVER=fake.
+func TestRouter_TheFakeProvidersHelpersAreOnlyThereWithTheFakeDriver(t *testing.T) {
+	w := newWorld(t)
+	// The test world uses the fake: an unknown subscription is a 404 of the handler, not of the router.
+	rec := w.do(t, http.MethodPost, "/payments/fake/nope/approve", "", "")
+	require.Equal(t, http.StatusNotFound, rec.Code)
+	require.Contains(t, rec.Body.String(), "subscription_not_found")
 }
