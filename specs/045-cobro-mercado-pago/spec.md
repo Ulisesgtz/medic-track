@@ -4,7 +4,7 @@
 
 **Creado**: 2026-10-15
 
-**Estado**: Borrador
+**Estado**: Implementada (pendiente del spike y de la prueba en DEV con Mercado Pago de prueba, tareas del dueño)
 
 **Entrada**: Descripción del usuario: «Cobro del plan completo con Mercado Pago (spec 045). Hoy el plan completo (MX$499 al año, una suscripción para toda la familia) no se puede pagar…» (decisiones del dueño del producto del 2026-10-15; ver «Supuestos»).
 

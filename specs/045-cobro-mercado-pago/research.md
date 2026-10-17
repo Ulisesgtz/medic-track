@@ -86,6 +86,14 @@ Cuatro, todos por `*httpx.Responder`: `POST /accounts/{id}/subscription` (inicia
 3. **La cuenta cobradora es personal** (decisión del dueño): cambiarla después obliga a recrear las suscripciones. Está en los supuestos de la spec.
 4. **Estado `paused`** de una suscripción: se trata como cobro fallido (gracia), a confirmar con el comportamiento real.
 
+## Resultado de la revisión de CSP (T051)
+
+`frontend/public/_headers` no define `form-action` ni `navigate-to`, y ir a la página de Mercado Pago es una **navegación de nivel superior** (`window.location.assign`), que la CSP no restringe; el regreso es una navegación normal a `/planes/regreso`. **No hace falta cambiar la CSP** con el modo alojado. Queda por confirmar en el navegador en DEV (T054); con el plan B del spike (SDK + `card_token_id`) habría que agregar los dominios del SDK.
+
+## Resultado del spike (T003)
+
+**Pendiente**: necesita las credenciales de prueba del dueño (T001). Hasta entonces todo se construyó y probó con el proveedor falso (`PAYMENTS_DRIVER=fake`) y con pruebas del cliente HTTP contra un servidor simulado; los puntos (a) a (g) de la tarea siguen sin comprobarse contra Mercado Pago real.
+
 ## Fuentes
 
 1. Mercado Pago, «Subscription with an associated plan»: <https://mercadopago.com.mx/developers/en/docs/subscriptions/integration-configuration/subscription-associated-plan>
