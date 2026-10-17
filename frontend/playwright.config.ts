@@ -62,6 +62,8 @@ export default defineConfig({
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     timeout: process.env.CI ? 180_000 : 60_000,
+    // The «payment page» of the fake provider exists only in a build that says so (specs/045); the API is started with PAYMENTS_DRIVER=fake.
+    env: { VITE_PAYMENTS_FAKE: 'true' },
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },

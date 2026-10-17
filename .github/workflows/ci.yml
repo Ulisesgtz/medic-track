@@ -176,6 +176,8 @@ jobs:
           FRONTEND_ORIGIN: http://localhost:5173
           # The invitations' e-mail flow runs for real but nothing is sent (specs/040); the E2E suite checks the states it shows.
           MAIL_DRIVER: discard
+          # The payment provider is the in-memory fake (specs/045): the E2E suite pays on its stand-in page, nothing reaches Mercado Pago.
+          PAYMENTS_DRIVER: fake
           # The API refuses to start without it (specs/008). Repository secret: the *test* (sk_test_) key of the Clerk development instance.
           CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
 

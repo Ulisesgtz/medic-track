@@ -14,7 +14,7 @@ for (const design of designs) {
   test.describe(`Planes, ${design.name}`, () => {
     test.use({ viewport: design.viewport })
 
-    test('a free account sees both plans, its own marked, the price and the «Pronto» button; what is kept and what is coming', async ({ page }) => {
+    test('a free account sees both plans, its own marked, the price and the button to pay; what is kept and what is coming', async ({ page }) => {
       await allowClerkOn(page)
       await seedChild(page, { withConsultation: false, plan: 'free' })
       await page.goto('/planes')
@@ -31,10 +31,10 @@ for (const design of designs) {
       await expect(full.getByText('Todo lo de Gratis, más:')).toBeVisible()
       await expect(full.getByText('Hasta 10 hijos.')).toBeVisible()
       await expect(full.getByText('Tu plan actual')).toHaveCount(0)
-      const pronto = full.getByRole('button', { name: /Contratar plan completo/ })
-      await expect(pronto).toHaveAttribute('aria-disabled', 'true')
-      await expect(pronto).toContainText('Pronto')
-      await expect(full.getByText('El pago con tarjeta todavía no está disponible. Mientras tanto, tu plan sigue igual.')).toBeVisible()
+      // The API of the E2E runs with the fake payment provider (specs/045), so the full plan offers the real button; the «Pronto»
+      // one (the charge not configured) is covered by the unit tests. The payment itself is in planes-pago.spec.ts.
+      await expect(full.getByRole('button', { name: 'Contratar plan completo' })).toBeEnabled()
+      await expect(full.getByText('Pronto')).toHaveCount(0)
 
       await expect(page.getByRole('heading', { name: 'Lo registrado se conserva' })).toBeVisible()
       await expect(page.getByText('Tus datos de salud no se venden ni se usan para anuncios.')).toBeVisible()
