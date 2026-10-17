@@ -364,6 +364,23 @@ func TestCancel_APendingOneEnds(t *testing.T) {
 	require.Zero(t, count)
 }
 
+func TestCancel_APendingOneThatCarriedDaysKeepsThem(t *testing.T) {
+	w := newWorld(t)
+	id := newAccount(t, w.pool, "Ana", account.PlanPaid)
+	_, err := w.pool.Exec(context.Background(), `UPDATE accounts SET plan_source = 'subscription' WHERE id = $1`, id)
+	require.NoError(t, err)
+	insertSub(t, w.pool, id, subOpts{status: payments.StatusCanceled, paidThrough: at(fixedNow.Add(40 * 24 * time.Hour))})
+	_, err = w.svc.Subscribe(context.Background(), id)
+	require.NoError(t, err)
+
+	require.NoError(t, w.svc.Cancel(context.Background(), id))
+
+	status, _ := w.subOf(t, id)
+	require.Equal(t, "canceled", status, "the days she had already paid are not lost")
+	plan, _ := planOf(t, w.pool, id)
+	require.Equal(t, "paid", plan)
+}
+
 func TestCancel_WithNothingToCancelIsFine(t *testing.T) {
 	w := newWorld(t)
 	id := newAccount(t, w.pool, "Ana", account.PlanFree)

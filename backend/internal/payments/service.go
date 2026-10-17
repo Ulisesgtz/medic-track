@@ -369,7 +369,9 @@ func (s *Service) Cancel(ctx context.Context, accountID uuid.UUID) error {
 	}
 	now := s.now()
 	sub.NextRenewalAt, sub.GraceUntil, sub.CheckoutURL = nil, nil, ""
-	if sub.Status == StatusPending {
+	// A pending one that carried days from a canceled subscription keeps them (canceled lasts until `paid_through`); one that never
+	// paid and carries nothing ends.
+	if sub.Status == StatusPending && (sub.PaidThrough == nil || !sub.PaidThrough.After(now)) {
 		sub.Status = StatusEnded
 	} else {
 		sub.Status = StatusCanceled
