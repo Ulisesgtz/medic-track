@@ -175,8 +175,12 @@ func (s *Service) Subscribe(ctx context.Context, accountID uuid.UUID) (Subscribe
 		}
 	}
 
+	payer := acc.email
+	if s.cfg.TestPayerEmail != "" && !s.cfg.Fake() {
+		payer = s.cfg.TestPayerEmail // the sandbox only mixes test users (see Config.TestPayerEmail)
+	}
 	created, err := s.provider.CreateSubscription(ctx, CreateRequest{
-		Reason: subscriptionReason, ExternalReference: accountID.String(), PayerEmail: acc.email,
+		Reason: subscriptionReason, ExternalReference: accountID.String(), PayerEmail: payer,
 		AmountMXN: s.cfg.PriceMXN, FrequencyMonths: 12, BackURL: s.cfg.BackURL(), NotificationURL: s.cfg.WebhookURL,
 	})
 	if err != nil {

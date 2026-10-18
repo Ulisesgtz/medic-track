@@ -169,6 +169,9 @@ func main() {
 			log.Print("PAYMENTS_DRIVER=fake: the payment provider is simulated and its helper routes are enabled (testing only)")
 		} else {
 			provider = payments.NewMercadoPago(paymentsConfig.AccessToken, "")
+			if paymentsConfig.TestPayerEmail != "" {
+				log.Print("MERCADOPAGO_TEST_PAYER_EMAIL is set: every payment is created for that test buyer. Use it only with Mercado Pago TEST credentials, never in production")
+			}
 			if paymentsConfig.WebhookSecret == "" {
 				log.Print("MERCADOPAGO_WEBHOOK_SECRET is empty: notices are accepted without a signature (the resource is always re-read from the provider); set it before charging for real")
 			}

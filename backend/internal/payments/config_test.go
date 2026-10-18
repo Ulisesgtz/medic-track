@@ -69,3 +69,10 @@ func TestConfig_MissingNeverPrintsAValue(t *testing.T) {
 		require.NotContains(t, m, "APP_USR")
 	}
 }
+
+func TestConfig_TheTestPayerEmailIsReadAndTrimmed(t *testing.T) {
+	c := configFrom(env(map[string]string{"MERCADOPAGO_TEST_PAYER_EMAIL": "  test_user_1@testuser.com "}))
+
+	require.Equal(t, "test_user_1@testuser.com", c.TestPayerEmail)
+	require.Empty(t, configFrom(env(map[string]string{})).TestPayerEmail)
+}
