@@ -27,7 +27,7 @@ for (const design of designs) {
       await expect(free.getByText('Tu plan actual')).toBeVisible()
       await expect(free.getByText('1 hijo.')).toBeVisible()
       await expect(full.getByText('MX$499')).toBeVisible()
-      await expect(full.getByText('al año')).toBeVisible()
+      await expect(full.getByText('al año', { exact: true })).toBeVisible()
       await expect(full.getByText('Todo lo de Gratis, más:')).toBeVisible()
       await expect(full.getByText('Hasta 10 hijos.')).toBeVisible()
       await expect(full.getByText('Tu plan actual')).toHaveCount(0)
