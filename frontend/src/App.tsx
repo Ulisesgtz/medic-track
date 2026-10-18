@@ -8,6 +8,8 @@ import { ConsultationDetailPage } from './features/consultations/ConsultationDet
 import { HistoryPage } from './features/consultations/HistoryPage'
 import { AppointmentFormPage } from './features/appointments/AppointmentFormPage'
 import { AppointmentHistoryPage } from './features/appointments/AppointmentHistoryPage'
+import { FakeCheckoutPage } from './features/plans/FakeCheckoutPage'
+import { PaymentReturnPage } from './features/plans/PaymentReturnPage'
 import { PlansPage } from './features/plans/PlansPage'
 import { PersonalRoutinesPage } from './features/supplements/PersonalRoutinesPage'
 import { RoutineDetailPage } from './features/supplements/RoutineDetailPage'
@@ -219,6 +221,17 @@ function App() {
               </RequireSession>
             }
           />
+          {/* Where the payment provider sends the person back (specs/045): it only asks the server what happened. */}
+          <Route
+            path="/planes/regreso"
+            element={
+              <RequireSession>
+                <PaymentReturnPage />
+              </RequireSession>
+            }
+          />
+          {/* The fake provider's payment page: only in the E2E and development builds (VITE_PAYMENTS_FAKE), never in production. */}
+          {import.meta.env.VITE_PAYMENTS_FAKE === 'true' && <Route path="/planes/pago-de-prueba" element={<FakeCheckoutPage />} />}
           <Route
             path="*"
             element={<MessagePage title="Esta página no existe" message="Revisa la dirección o vuelve a tu home." />}

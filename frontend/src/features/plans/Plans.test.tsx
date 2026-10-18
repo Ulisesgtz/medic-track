@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { PlansPage } from './PlansPage'
 import { PlanTarjeta } from './PlanTarjeta'
 import { PlanAvisoCompacto } from './PlanAvisoCompacto'
-import { FREE_ITEMS, FULL_ITEMS, LIMIT_MOTIVES, PAYMENT_AVAILABLE, PLAN_PRICE, SOON_ITEMS, planStanding } from './planCopy'
+import { FREE_ITEMS, FULL_ITEMS, LIMIT_MOTIVES, PLAN_PRICE, SOON_ITEMS, planStanding } from './planCopy'
 import { ChildrenSidebar } from '../home/ChildrenSidebar'
 
 // specs/034: the plans screen, its cards, the compact notice and who is on which plan.
@@ -16,7 +16,11 @@ const base = {
 }
 const guestOf = (plan: string) => ({ ...base, family: { role: 'caregiver', ownerAccountId: 'o1', ownerName: 'Ana Morales', plan, readOnly: plan !== 'paid' } })
 
-function stub(account: unknown, desktop = false) {
+const NO_PAYMENT = {
+  available: false, price: { amount: 499, currency: 'MXN', period: 'year' }, canSubscribe: false, blockedReason: 'unavailable', coveredBy: null, subscription: null,
+}
+
+function stub(account: unknown, desktop = false, subscription: unknown = NO_PAYMENT) {
   vi.stubGlobal(
     'matchMedia',
     vi.fn().mockImplementation((query: string) => ({
@@ -28,7 +32,7 @@ function stub(account: unknown, desktop = false) {
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (input: string) => ({
     ok: true,
     status: 200,
-    json: async () => (String(input).includes('/routines') ? { routines: [], activeCount: 0, limit: 10, paidPlan: true, noticeSeen: true } : account),
+    json: async () => (String(input).includes('/subscription') ? subscription : String(input).includes('/routines') ? { routines: [], activeCount: 0, limit: 10, paidPlan: true, noticeSeen: true } : account),
   })))
 }
 
@@ -70,10 +74,6 @@ describe('the words of the plans', () => {
   it('never advises, discounts or presses (Principio I)', () => {
     const all = [...FREE_ITEMS, ...FULL_ITEMS, ...SOON_ITEMS, ...Object.values(LIMIT_MOTIVES).flatMap((m) => [m.title, m.line, ...m.rows.flatMap((r) => [r.label, r.free, r.full])])].join(' ')
     expect(all).not.toMatch(/ahorra|descuento|oferta|últim[oa]s? (día|hora)|recomend|debes|evita/i)
-  })
-
-  it('has the payment off until Mercado Pago exists', () => {
-    expect(PAYMENT_AVAILABLE).toBe(false)
   })
 })
 
@@ -129,7 +129,7 @@ describe('PlansPage', () => {
     expect(within(free).getByText('MX$0')).toBeInTheDocument()
     expect(within(full).queryByText('Tu plan actual')).not.toBeInTheDocument()
     expect(within(full).getByText('MX$499')).toBeInTheDocument()
-    expect(within(full).getByRole('button', { name: /Contratar plan completo/ })).toHaveAttribute('aria-disabled', 'true')
+    expect(await within(full).findByRole('button', { name: /Contratar plan completo/ })).toHaveAttribute('aria-disabled', 'true')
     expect(screen.getByRole('link', { name: '← Inicio' })).toHaveAttribute('href', '/home')
   })
 

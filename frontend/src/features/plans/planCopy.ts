@@ -9,12 +9,6 @@ import type { PlanLimitReason } from '../account-signup/FreemiumLimitModal'
 export const PLAN_PRICE = 'MX$499'
 export const PLAN_PERIOD = 'al año'
 
-/**
- * Whether paying with a card exists. Until Mercado Pago is connected (BACKLOG) the button of the full plan is the design's
- * «Pronto» state; flipping this is part of that work, not a switch to try.
- */
-export const PAYMENT_AVAILABLE = false
-
 export const FREE_ITEMS = [
   '1 hijo.',
   'Una consulta con tratamiento activo a la vez (al terminar o finalizarlo, registras la siguiente).',

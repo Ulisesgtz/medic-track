@@ -334,3 +334,23 @@ func TestBuild_GroupsBeyondTheSummaryLimitAreCountedAsNotFitting(t *testing.T) {
 	require.Equal(t, 140, d.Requests.MoreGroups, "90 of the ones returned plus 50 never returned")
 	require.Equal(t, 150, d.Groups)
 }
+
+// specs/045: the payments process reports as job:payments (kinds create, cancel, webhook, verify, reconcile, sweep). The digest reads
+// any job:* group, so it lists them in the processes section with the fixed message and no personal data.
+func TestBuild_ThePaymentsProcessAppearsAmongTheBackgroundProcesses(t *testing.T) {
+	src := newFake()
+	src.all = errorlog.Stats{Entries: 2, Groups: 1, Accounts: 0}
+	src.jobs = errorlog.Stats{Entries: 2, Groups: 1}
+	src.jobRows = []errorlog.SummaryRow{row("job:payments", nil, "payment webhook could not be verified (2 occurrences)", 2, now.Add(-48*time.Hour), now.Add(-47*time.Hour))}
+
+	d, err := Build(context.Background(), src, now, 90)
+	require.NoError(t, err)
+	require.Len(t, d.Jobs.Groups, 1)
+	require.Equal(t, "job:payments", d.Jobs.Groups[0].Endpoint)
+	require.Empty(t, d.Requests.Groups)
+
+	_, body := Render(d, "DEV")
+	require.Contains(t, body, "job:payments")
+	require.Contains(t, body, "payment webhook could not be verified")
+	require.NotContains(t, body, "@")
+}

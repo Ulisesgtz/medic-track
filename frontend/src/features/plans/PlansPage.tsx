@@ -1,7 +1,10 @@
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { RoutinePageFrame } from '../supplements/RoutineFormPage'
-import { FREE_ITEMS, FULL_ITEMS, PAYMENT_AVAILABLE, PLAN_PERIOD, PLAN_PRICE, SOON_ITEMS, planStanding } from './planCopy'
+import { FREE_ITEMS, FULL_ITEMS, PLAN_PERIOD, PLAN_PRICE, SOON_ITEMS, planStanding } from './planCopy'
+import { useSubscription } from './hooks'
+import { PlanActions } from './PlanActions'
+import { stateCopy } from './subscriptionText'
 import { PlanTarjeta } from './PlanTarjeta'
 
 const block = 'flex flex-col gap-3.5 rounded-[22px] bg-surface px-[22px] py-5 shadow-[0_8px_20px_rgba(4,37,43,0.07)]'
@@ -49,8 +52,10 @@ function Soon() {
 
 /**
  * `/planes` (specs/034, mock Planes P1…P5): the two plans side by side — Gratis and Plan completo, MX$499 al año — marking the
- * person's own, in two designs (phone: the full plan first, stacked; web: Gratis at the left). The full plan's button is the
- * «Pronto» one while paying doesn't exist (`PAYMENT_AVAILABLE`); a guest of a paid family sees the plan as included and no button.
+ * person's own, in two designs (phone: the full plan first, stacked; web: Gratis at the left). Since specs/045 the full plan's card
+ * says what the subscription is (the server decides: whether paying is available, whether this account can, and the state) and
+ * offers the payment, «Vigente hasta…» and canceling; the «Pronto» button stays only where paying isn't configured. A guest of a
+ * paid family sees the plan as included and no button.
  * Nothing here says what to do about a child's health, offers a discount or presses (Principio I).
  */
 export function PlansPage() {
@@ -60,6 +65,9 @@ export function PlansPage() {
   const onFull = standing.plan === 'full'
   // Until the account is known nothing says which plan is theirs, so a paid account never sees Gratis marked (nor the «Pronto» button) for a moment.
   const known = account !== undefined
+  const subscription = useSubscription(account?.id)
+  const loaded = subscription.isSuccess || subscription.isError
+  const copy = stateCopy(subscription.data)
 
   const free = <PlanTarjeta id="plan-free" name="Gratis" price="MX$0" period="siempre" items={FREE_ITEMS} current={known && !onFull} />
   const full = (
@@ -72,7 +80,8 @@ export function PlansPage() {
       items={FULL_ITEMS}
       current={known && onFull}
       sub={standing.includedBy ? `Incluido por la familia de ${standing.includedBy}. No pagas nada: lo cubre su suscripción.` : undefined}
-      pronto={known && !onFull && !PAYMENT_AVAILABLE}
+      pronto={known && !onFull && loaded && (subscription.isError || !subscription.data?.available)}
+      actions={account && subscription.data && copy && !standing.includedBy ? <PlanActions accountId={account.id} state={subscription.data} copy={copy} /> : undefined}
     />
   )
   const intro = 'Un plan gratuito y un plan completo anual. Una suscripción cubre a toda la familia.'

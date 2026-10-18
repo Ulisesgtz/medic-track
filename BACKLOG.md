@@ -201,7 +201,7 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
     el Plan Consultorio), **curvas de crecimiento OMS** con la talla y el peso que ya se guardan (informativo),
     **cartilla de vacunas** y **recordatorio de citas** (fecha de la próxima consulta), **varios dispositivos por persona**
     y **resumen semanal** de tomas por correo (cuando haya proveedor).
-  - **Cobro con Mercado Pago (decidido)** — pendiente de construir y de **verificar en su documentación** antes de la spec:
+  - **Cobro con Mercado Pago — hecho en `specs/045-cobro-mercado-pago/`** (suscripción anual con la tarjeta en la página de Mercado Pago, aviso firmado idempotente, gracia de 7 días, cancelar, `plan_source`, proveedor falso para las E2E). **Falta**: el spike contra Mercado Pago de prueba y la prueba manual en DEV (pasos del dueño, `DEPLOY.md`), y los pasos legales antes del primer cobro real. **Futuro**: facturación (CFDI) con un contador, reembolsos desde la app (hoy por correo), Openpay / SPEI / meses sin intereses, planes mensuales, un cobro para la persona invitada que quiera su propio plan. El texto de abajo es el de la decisión original:
     (a) **Suscripciones** de Mercado Pago (cobro recurrente con tarjeta) o un **pago anual único** con aviso de renovación
     (más simple; se podría empezar así); el precio principal es **anual** (MX$399–499, ver `peditrack-monetization.md`);
     (b) un **webhook público** en el backend que Mercado Pago llama al cambiar un pago (se valida su firma, idempotente,
