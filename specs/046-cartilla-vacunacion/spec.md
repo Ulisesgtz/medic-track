@@ -8,6 +8,16 @@
 
 **Entrada**: Descripción del usuario: "Cartilla de vacunación del hijo. El padre/tutor registra las vacunas de cada hijo de dos maneras: (1) llenado manual y (2) tomando o eligiendo una foto de la cartilla, con el OCR en el teléfono solo como ayuda editable. Vista de la cartilla por hijo, foto consultable, qué plan la incluye, compartida con la familia por los niveles de la spec 032. La app registra y nunca interpreta ni aconseja. Fuera de alcance: recordatorios calculados por la app, importar registros del gobierno, certificados."
 
+## Aclaraciones
+
+### Sesión 2026-10-17
+
+- Q: ¿Esta entrega incluye la «próxima dosis anotada con aviso» o la dejamos para después? → A: Fuera de esta entrega: pasa al backlog; esta entrega son el registro manual, la foto, la ayuda de lectura y el acceso familiar.
+- Q: Cuando el padre corrige una vacuna ya guardada, ¿la app conserva alguna huella de la corrección? → A: Sí, solo «Corregida el [fecha] por [nombre]» en la vacuna; no se guardan los valores anteriores ni un historial.
+- Q: ¿Cada vacuna queda enlazada a la foto de la que salió? → A: No: las fotos y las vacunas son dos listas independientes en la cartilla, sin enlace entre ellas.
+- Q: ¿Cuál es el tope de fotos de cartilla por hijo y es igual en ambos planes? → A: 10 fotos por hijo, igual en el plan gratuito y en el de pago.
+- Q: Al borrar una vacuna o una foto, ¿se borra de verdad o queda recuperable? → A: Borrado real e inmediato, con confirmación que avisa que no se puede deshacer.
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 - Registrar a mano las vacunas de mi hijo (Prioridad: P1)
@@ -23,7 +33,7 @@ Un padre abre la página de su hijo y entra a «Cartilla de vacunación». Agreg
 1. **Dado** un hijo sin vacunas registradas, **Cuando** el padre agrega «Hepatitis B» con la fecha de aplicación, **Entonces** la cartilla muestra esa vacuna con su fecha y el hijo queda con una vacuna registrada.
 2. **Dado** que la vacuna que busca no está en la lista, **Cuando** la escribe con sus propias palabras («otra»), **Entonces** se guarda tal cual la escribió y aparece en la cartilla como cualquier otra.
 3. **Dado** una vacuna con varias dosis (la misma vacuna aplicada en fechas distintas), **Cuando** el padre agrega cada aplicación, **Entonces** la cartilla agrupa por vacuna y lista cada dosis con su fecha, sin decir cuántas faltan.
-4. **Dado** una vacuna ya guardada, **Cuando** el padre corrige su fecha o la borra tras confirmar, **Entonces** la cartilla refleja el cambio y nada más se modifica.
+4. **Dado** una vacuna ya guardada, **Cuando** el padre corrige su fecha o la borra tras confirmar, **Entonces** la cartilla refleja el cambio y nada más se modifica y la vacuna muestra que fue corregida, cuándo y por quién.
 5. **Dado** que el padre escribe una fecha futura o una fecha anterior al nacimiento del hijo, **Cuando** intenta guardar, **Entonces** se le dice con claridad qué fecha no es válida y no se guarda hasta corregirla.
 
 ---
@@ -81,23 +91,6 @@ La cartilla de un hijo sigue las mismas reglas de acceso que el resto de los dat
 
 ---
 
-### Historia de Usuario 5 - Próxima dosis anotada en la cartilla (Prioridad: P3)
-
-Cuando la cartilla de papel trae escrita la fecha de la próxima dosis que el médico indicó, el padre puede anotarla junto a la vacuna y, si su plan lo incluye, recibir un aviso ese día. La app no calcula ni sugiere ninguna fecha: solo recuerda la que el padre anotó.
-
-**Por qué esta prioridad**: ayuda a no olvidar la fecha que el médico ya dio, reutiliza el mismo mecanismo de avisos de las citas, y es una función de plan de pago; pero el registro y la foto valen sin ella.
-
-**Prueba Independiente**: un padre con plan de pago anota «próxima dosis: 3 nov» en una vacuna y recibe un aviso neutral ese día; un padre del plan gratuito ve el campo explicado como disponible en el plan completo y su cartilla sigue funcionando completa.
-
-**Escenarios de Aceptación**:
-
-1. **Dado** una vacuna registrada y un plan de pago, **Cuando** el padre anota una fecha de próxima dosis indicada por su médico, **Entonces** se guarda con la vacuna y el padre puede elegir recibir un aviso.
-2. **Dado** una próxima dosis con aviso, **Cuando** llega el momento, **Entonces** el aviso dice solo qué anotó el padre y cuándo, sin palabras de urgencia ni consejos de salud.
-3. **Dado** el plan gratuito, **Cuando** el padre abre el campo de próxima dosis, **Entonces** se le explica en palabras neutrales que ese aviso es del plan completo y todo lo demás de la cartilla sigue disponible.
-4. **Dado** que la cuenta deja de pagar, **Cuando** pasa el tiempo, **Entonces** lo ya anotado se conserva y se sigue viendo, y solo deja de poderse agregar avisos nuevos.
-
----
-
 ### Casos Límite
 
 - ¿Qué pasa si el padre agrega la misma vacuna, dosis y fecha dos veces? Se le avisa de forma neutral que ya está registrada y no se duplica sin su confirmación explícita.
@@ -118,15 +111,15 @@ Cuando la cartilla de papel trae escrita la fecha de la próxima dosis que el m�
 - **FR-001**: Los usuarios con acceso completo al hijo DEBEN poder agregar una vacuna a su cartilla indicando el nombre y la fecha de aplicación; el número de dosis, el lote, el lugar o médico y una nota son opcionales.
 - **FR-002**: El nombre de la vacuna DEBE poder elegirse de una lista de nombres conocidos o escribirse libremente («otra»); lo escrito se conserva tal cual.
 - **FR-003**: La fecha de aplicación NO DEBE ser futura ni anterior al nacimiento del hijo, y el mensaje de error DEBE decir cuál es el problema.
-- **FR-004**: Los usuarios con acceso completo DEBEN poder corregir cualquier dato de una vacuna ya registrada y borrarla, previa confirmación neutral.
+- **FR-004**: Los usuarios con acceso completo DEBEN poder corregir cualquier dato de una vacuna ya registrada y borrarla; el borrado es real e inmediato (no hay papelera ni deshacer) y la confirmación previa, en palabras neutrales, DEBE decir que no se puede deshacer.
 - **FR-005**: El sistema DEBE avisar, sin bloquear de forma definitiva, cuando se intente registrar de nuevo la misma vacuna con la misma dosis y fecha.
 
 **Foto de la cartilla**
 - **FR-006**: Los usuarios con acceso completo DEBEN poder guardar una o varias fotos de la cartilla de un hijo, tomándolas con la cámara o eligiéndolas de la galería del teléfono.
 - **FR-007**: Antes de guardarla, la foto DEBE reducirse en el teléfono a un tamaño razonable; si no es posible, se guarda la original dentro de un tamaño máximo.
-- **FR-008**: Cada hijo DEBE tener un tope de fotos de cartilla; al llegar al tope, el usuario DEBE recibir una explicación neutral y poder borrar una para dejar lugar, sin perder lo que ya capturó.
-- **FR-009**: Quienes pueden ver la cartilla DEBEN poder abrir cada foto en grande y DEBE poder borrarla quien tiene acceso completo, previa confirmación.
-- **FR-010**: Las fotos DEBEN guardarse solo en la cuenta y con el acceso del hijo al que pertenecen, y nunca compartirse con terceros.
+- **FR-008**: Cada hijo DEBE tener un tope de 10 fotos de cartilla, igual en el plan gratuito y en el de pago; al llegar al tope, el usuario DEBE recibir una explicación neutral y poder borrar una para dejar lugar, sin perder lo que ya capturó.
+- **FR-009**: Quienes pueden ver la cartilla DEBEN poder abrir cada foto en grande y DEBE poder borrarla quien tiene acceso completo; el borrado es real e inmediato, con la misma confirmación que avisa que no se puede deshacer.
+- **FR-010**: Las fotos y las vacunas son listas independientes: borrar o cambiar una foto NO DEBE alterar ninguna vacuna, y viceversa. Las fotos DEBEN guardarse solo en la cuenta y con el acceso del hijo al que pertenecen, y nunca compartirse con terceros.
 
 **Lectura de la foto (ayuda)**
 - **FR-011**: Tras elegir una foto, el sistema PUEDE proponer filas de vacunas leídas de la imagen, calculadas en el teléfono del usuario; si la lectura falla o no encuentra nada, el flujo DEBE continuar sin bloqueo.
@@ -140,26 +133,23 @@ Cuando la cartilla de papel trae escrita la fecha de la próxima dosis que el m�
 - **FR-017**: La app DEBE mostrar una frase neutral de que lo registrado es lo que el padre capturó y que no sustituye la cartilla ni el criterio del médico.
 - **FR-018**: La cartilla DEBE funcionar en dos diseños (móvil y web de escritorio) como el resto de las pantallas con sesión.
 
-**Acceso y planes**
+**Acceso y plan**
 - **FR-019**: El servidor DEBE decidir los permisos: la dueña y los Tutores tienen acceso completo (ver, agregar, corregir, borrar); el Cuidador solo ve; quien no pertenece a la familia no accede.
-- **FR-020**: El registro de vacunas y las fotos de la cartilla DEBEN estar disponibles en el plan gratuito y en el de pago, sin límite por volumen de vacunas; lo registrado NUNCA DEBE ocultarse ni bloquearse al terminar un plan.
-- **FR-021**: La próxima dosis anotada con aviso DEBE ser exclusiva del plan de pago; el servidor decide el plan al crearla, y lo ya creado se conserva y sigue avisando si la cuenta deja de pagar.
-- **FR-022**: Los avisos de próxima dosis DEBEN usar texto neutral, sin imperativos ni urgencia, mencionar solo lo que el padre anotó, y respetar el mismo apagado por persona que los demás avisos.
+- **FR-020**: El registro de vacunas y las fotos de la cartilla DEBEN estar disponibles en el plan gratuito y en el de pago, sin límite por volumen de vacunas; lo registrado NUNCA DEBE ocultarse ni bloquearse al terminar un plan. Esta entrega no tiene ninguna función exclusiva del plan de pago.
 
 **Privacidad y datos de salud de menores**
-- **FR-023**: Las vacunas y sus fotos DEBEN tratarse como datos de salud de un menor: nunca anuncios, nunca venta ni cesión, y el texto del aviso de privacidad DEBE mencionarlas.
-- **FR-024**: Los textos libres (nombre «otra», lugar, médico, nota) NO DEBEN aparecer en direcciones web, registros de errores ni mensajes de error; viajan solo en el cuerpo de las peticiones.
-- **FR-025**: Cada vacuna y foto DEBE conservar quién la registró y cuándo.
+- **FR-021**: Las vacunas y sus fotos DEBEN tratarse como datos de salud de un menor: nunca anuncios, nunca venta ni cesión, y el texto del aviso de privacidad DEBE mencionarlas.
+- **FR-022**: Los textos libres (nombre «otra», lugar, médico, nota) NO DEBEN aparecer en direcciones web, registros de errores ni mensajes de error; viajan solo en el cuerpo de las peticiones.
+- **FR-023**: Cada vacuna y foto DEBE conservar quién la registró y cuándo; una vacuna corregida DEBE mostrar «Corregida el [fecha] por [nombre de pila]» (nunca el correo), sin conservar los valores anteriores ni un historial de cambios.
 
 **Calidad**
-- **FR-026**: Todo el comportamiento anterior DEBE tener pruebas automáticas, incluida una prueba de redacción que verifique que ningún texto de la función aconseja, evalúa, urge ni usa semáforos (Principio I).
+- **FR-024**: Todo el comportamiento anterior DEBE tener pruebas automáticas, incluida una prueba de redacción que verifique que ningún texto de la función aconseja, evalúa, urge ni usa semáforos (Principio I).
 
 ### Entidades Clave
 
-- **Vacuna registrada**: una aplicación de una vacuna a un hijo: nombre (de la lista o escrito por el padre), fecha de aplicación, número de dosis opcional, lote opcional, lugar o médico opcional, nota opcional, quién la registró y cuándo. Pertenece a un hijo.
+- **Vacuna registrada**: una aplicación de una vacuna a un hijo: nombre (de la lista o escrito por el padre), fecha de aplicación, número de dosis opcional, lote opcional, lugar o médico opcional, nota opcional, quién la registró y cuándo, y —si fue corregida— quién la corrigió por última vez y cuándo. Pertenece a un hijo.
 - **Catálogo de vacunas**: lista de nombres conocidos para elegir, mantenida sin publicar la app; solo nombres, sin edades, calendarios ni indicaciones.
 - **Foto de la cartilla**: imagen de una página de la cartilla física de un hijo, con quién la guardó y cuándo; pertenece a un hijo y respeta el acceso de ese hijo.
-- **Próxima dosis anotada** *(P3)*: fecha que el padre anotó junto a una vacuna, copiada de lo que indicó su médico, con sus avisos por persona.
 - **Hijo**: ya existe; la cartilla cuelga de él y hereda sus permisos de familia.
 
 ## Criterios de Éxito *(obligatorio)*
@@ -177,14 +167,14 @@ Cuando la cartilla de papel trae escrita la fecha de la próxima dosis que el m�
 
 ## Supuestos
 
-- **Plan**: el registro de vacunas y las fotos son dato del hijo y van en ambos planes (Principio IV: nunca se limita por volumen ni se bloquea acceso a datos ya capturados). Solo el aviso de próxima dosis anotada es del plan de pago, igual que las citas; el servidor lo decide.
+- **Plan**: el registro de vacunas y las fotos son dato del hijo y van en ambos planes (Principio IV: nunca se limita por volumen ni se bloquea acceso a datos ya capturados). La próxima dosis anotada con aviso queda fuera de esta entrega (pasa al backlog; sería una función del plan de pago, como las citas).
 - **Sin cálculo ni esquema**: la app no calcula qué vacuna toca, no muestra el esquema oficial con edades ni fechas objetivo y no dice si hay atrasos (Principio I). El catálogo de la lista son solo nombres; su contenido se valida con la Cartilla Nacional de Salud vigente de la Secretaría de Salud antes de publicarse, y se amplía o retira sin publicar la app, como el catálogo de síntomas.
 - **Corregible**: a diferencia de las consultas, las vacunas y las fotos pueden corregirse y borrarse, porque son una transcripción del papel que el padre puede haber capturado mal; la foto es la fuente de verdad.
-- **Topes**: un máximo de 10 fotos por hijo (cada página de la cartilla); el tope exacto se confirma al planear.
+- **Topes**: un máximo de 10 fotos por hijo (cada página de la cartilla), igual en ambos planes; es un resguardo de almacenamiento, no una función de pago.
 - **Foto**: se trata como la foto de la receta (reducida en el teléfono, almacenada solo en la cuenta, sin servicios externos); la lectura en el teléfono reutiliza la misma ayuda de lectura de la receta, sin servicios de IA en la nube (decisión ya tomada del proyecto).
 - **OCR best effort**: las cartillas suelen estar escritas a mano, así que la lectura se considera una ayuda opcional (P2) y no condiciona el valor de la función.
 - **Permisos**: se reutilizan los niveles de la spec 032 (dueña y Tutor con acceso completo; Cuidador solo lectura; ajenos sin acceso); el rol «Hijo» queda para su propia entrega.
 - **Aviso de privacidad**: el texto «Antes de empezar» y el aviso de privacidad se actualizan para mencionar vacunas y fotos de cartilla, lo que obliga a subir la versión del aviso para que cada cuenta lo vea una vez más.
 - **Idioma y formato**: todo en español de México; fechas en el formato fijo ya usado en la app.
-- **Fuera de alcance**: recordatorios de vacunas pendientes calculados por la app (spec aparte con asesoría médica y legal), importar registros oficiales o de otros sistemas, certificados o exportación oficial, vacunas de adultos o de mascotas, y la liga o PDF para el pediatra (ya en el backlog).
-- **Dependencias**: cuentas con sesión, hijos y niveles de acceso familiar existentes; mecanismo de avisos y plan de pago existentes; ayuda de lectura de imagen en el teléfono ya usada en las recetas.
+- **Fuera de alcance**: la próxima dosis anotada con aviso (backlog), recordatorios de vacunas pendientes calculados por la app (spec aparte con asesoría médica y legal), importar registros oficiales o de otros sistemas, certificados o exportación oficial, vacunas de adultos o de mascotas, y la liga o PDF para el pediatra (ya en el backlog).
+- **Dependencias**: cuentas con sesión, hijos y niveles de acceso familiar existentes; ayuda de lectura de imagen en el teléfono ya usada en las recetas.

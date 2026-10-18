@@ -31,5 +31,5 @@
 
 ## Notas
 
-- Decisiones tomadas como supuestos (se pueden cambiar en `/speckit-clarify`): el plan (registro y foto en ambos planes; solo el aviso de próxima dosis es de pago), que las vacunas son corregibles y borrables, el tope de 10 fotos por hijo, y que no se muestra el esquema oficial (Principio I).
+- Decisiones tomadas como supuestos y luego confirmadas en `/speckit-clarify` (2026-10-17, 5 preguntas): el plan (registro y foto en ambos planes; sin funciones exclusivas del plan de pago en esta entrega), que las vacunas son corregibles y borrables, el tope de 10 fotos por hijo, y que no se muestra el esquema oficial (Principio I).
 - Pendiente de validar fuera del código: la lista de nombres del catálogo con la Cartilla Nacional de Salud vigente y el texto del aviso de privacidad (LFPDPPP).
