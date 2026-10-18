@@ -429,3 +429,47 @@ func TestSubscribe_AProviderRefusalIsReportedWithItsStatusAndCodesButNothingPers
 	require.ErrorIs(t, err, payments.ErrUnavailable)
 	require.Equal(t, []string{"create: The payment provider did not create the subscription (status 400 bad_request, causes 2001)"}, w.rep.all())
 }
+
+// payerSpy remembers the payer e-mail it was asked to create a subscription for.
+type payerSpy struct {
+	payments.Provider
+	payer string
+}
+
+func (p *payerSpy) CreateSubscription(ctx context.Context, req payments.CreateRequest) (payments.Created, error) {
+	p.payer = req.PayerEmail
+	return p.Provider.CreateSubscription(ctx, req)
+}
+
+func TestSubscribe_TheTestPayerEmailReplacesTheAccountsOnlyWhenItIsConfiguredAndNotWithTheFake(t *testing.T) {
+	pool := testPool(t)
+	repo := newRepo(t, pool)
+	real := payments.Config{Driver: payments.DriverMercadoPago, AccessToken: "t", WebhookURL: "https://api.example.com/hook", FrontendOrigin: "https://dev.example.com", GraceDays: 7, PriceMXN: 499}
+
+	// Without the variable: the account's own e-mail goes to the provider.
+	id := newAccount(t, pool, "Ana", account.PlanFree)
+	var own string
+	require.NoError(t, pool.QueryRow(context.Background(), `SELECT email FROM accounts WHERE id = $1`, id).Scan(&own))
+	spy := &payerSpy{Provider: payments.NewFake("http://x")}
+	_, err := build(t, pool, repo, spy, real).svc.Subscribe(context.Background(), id)
+	require.NoError(t, err)
+	require.Equal(t, own, spy.payer)
+
+	// With the variable and the real driver: the test buyer's.
+	id2 := newAccount(t, pool, "Ana", account.PlanFree)
+	withTest := real
+	withTest.TestPayerEmail = "test_user_1@testuser.com"
+	spy2 := &payerSpy{Provider: payments.NewFake("http://x")}
+	_, err = build(t, pool, repo, spy2, withTest).svc.Subscribe(context.Background(), id2)
+	require.NoError(t, err)
+	require.Equal(t, "test_user_1@testuser.com", spy2.payer)
+
+	// With the fake driver the variable is ignored.
+	id3 := newAccount(t, pool, "Ana", account.PlanFree)
+	fakeWithTest := fakeConfig
+	fakeWithTest.TestPayerEmail = "test_user_1@testuser.com"
+	spy3 := &payerSpy{Provider: payments.NewFake("http://x")}
+	_, err = build(t, pool, repo, spy3, fakeWithTest).svc.Subscribe(context.Background(), id3)
+	require.NoError(t, err)
+	require.NotEqual(t, "test_user_1@testuser.com", spy3.payer)
+}
