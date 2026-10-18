@@ -105,11 +105,34 @@ func (r *Repository) Recompute(ctx context.Context, tx pgx.Tx, accountID uuid.UU
 	return nil
 }
 
+// familyInfo is what the plan rule needs of the account's family. It is read BEFORE a transaction is opened: reading it from inside
+// one would need a second connection while the first is held, and a few requests at once could take every connection of the pool
+// and wait for each other forever.
+type familyInfo struct {
+	covered   bool // the account is a member of another account's family whose plan is paid
+	ownerName string
+}
+
+func (r *Repository) familyOf(ctx context.Context, accountID uuid.UUID) (familyInfo, error) {
+	ownerID, _, err := r.family.FamilyOf(ctx, accountID)
+	if err != nil {
+		return familyInfo{}, err
+	}
+	if ownerID == accountID {
+		return familyInfo{}, nil
+	}
+	name, plan, err := r.family.Owner(ctx, ownerID)
+	if err != nil {
+		return familyInfo{}, err
+	}
+	return familyInfo{covered: plan == planPaid, ownerName: name}, nil
+}
+
 // Decide answers whether the account can subscribe now (FR-003, FR-003b, FR-011): `already_paid` (it has the full plan: its own,
 // by a subscription that renews, or given by hand), `covered_by_family` (it is an active member of another account's family and
 // that account's plan is paid), `pending` (a recent subscription waits for its payment) or nothing. A subscription that was
 // canceled (it will not renew) does not block a new one: the person can subscribe again and keeps the days they had.
-func (r *Repository) Decide(ctx context.Context, tx pgx.Tx, accountID uuid.UUID, acc account) (Decision, error) {
+func (r *Repository) Decide(ctx context.Context, tx pgx.Tx, accountID uuid.UUID, acc account, fam familyInfo) (Decision, error) {
 	sub, err := openSubscription(ctx, tx, accountID)
 	if err != nil {
 		return Decision{}, err
@@ -120,24 +143,18 @@ func (r *Repository) Decide(ctx context.Context, tx pgx.Tx, accountID uuid.UUID,
 	if acc.plan == planPaid && !(sub != nil && sub.Status == StatusCanceled) {
 		return Decision{Reason: ReasonAlreadyPaid}, nil
 	}
-	ownerID, _, err := r.family.FamilyOf(ctx, accountID)
-	if err != nil {
-		return Decision{}, err
-	}
-	if ownerID != accountID {
-		name, plan, err := r.family.Owner(ctx, ownerID)
-		if err != nil {
-			return Decision{}, err
-		}
-		if plan == planPaid {
-			return Decision{Reason: ReasonCoveredByFamily, CoveredBy: name}, nil
-		}
+	if fam.covered {
+		return Decision{Reason: ReasonCoveredByFamily, CoveredBy: fam.ownerName}, nil
 	}
 	return Decision{}, nil
 }
 
 // CanSubscribe is Decide for a read (no lock): what /planes needs to draw the button or the reason there is none.
 func (r *Repository) CanSubscribe(ctx context.Context, accountID uuid.UUID) (Decision, error) {
+	fam, err := r.familyOf(ctx, accountID)
+	if err != nil {
+		return Decision{}, err
+	}
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return Decision{}, fmt.Errorf("starting transaction: %w", err)
@@ -151,7 +168,7 @@ func (r *Repository) CanSubscribe(ctx context.Context, accountID uuid.UUID) (Dec
 	if err != nil {
 		return Decision{}, fmt.Errorf("reading the account: %w", err)
 	}
-	return r.Decide(ctx, tx, accountID, acc)
+	return r.Decide(ctx, tx, accountID, acc, fam)
 }
 
 // Current is the account's open subscription (nil if none), for reading.

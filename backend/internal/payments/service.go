@@ -129,6 +129,11 @@ func (s *Service) Subscribe(ctx context.Context, accountID uuid.UUID) (Subscribe
 	if !s.cfg.Available() {
 		return SubscribeResult{}, ErrUnavailable
 	}
+	// The family is read before the transaction: see familyInfo.
+	fam, err := s.repo.familyOf(ctx, accountID)
+	if err != nil {
+		return SubscribeResult{}, err
+	}
 	tx, err := s.repo.pool.Begin(ctx)
 	if err != nil {
 		return SubscribeResult{}, fmt.Errorf("starting transaction: %w", err)
@@ -139,7 +144,7 @@ func (s *Service) Subscribe(ctx context.Context, accountID uuid.UUID) (Subscribe
 	if err != nil {
 		return SubscribeResult{}, err
 	}
-	d, err := s.repo.Decide(ctx, tx, accountID, acc)
+	d, err := s.repo.Decide(ctx, tx, accountID, acc, fam)
 	if err != nil {
 		return SubscribeResult{}, err
 	}
