@@ -252,7 +252,7 @@ func TestMercadoPago_APathWithSpecialCharactersIsEscaped(t *testing.T) {
 	require.Equal(t, "/preapproval/a/b?c", f.requests[0].path, "the server decodes the escaped path; the slash cannot leave the resource")
 }
 
-func TestMercadoPago_ARefusalKeepsOnlyTheStatusTheSlugAndTheCodesNotTheDescriptions(t *testing.T) {
+func TestMercadoPago_ARefusalKeepsTheStatusTheSlugTheCodesAndACleanedMessageNotTheDescriptions(t *testing.T) {
 	mp, _ := newFakeMP(t, func(r *http.Request, body string) (int, string) {
 		return 400, `{"message":"Invalid value for payer_email ana@example.com","error":"bad_request","status":400,"cause":[{"code":"2001","description":"payer ana@example.com is not a test user"},{"code":7,"description":"x"},{"code":"has spaces and @","description":"y"}]}`
 	})
@@ -264,7 +264,7 @@ func TestMercadoPago_ARefusalKeepsOnlyTheStatusTheSlugAndTheCodesNotTheDescripti
 	require.Equal(t, 400, refused.Status)
 	require.Equal(t, "bad_request", refused.Slug)
 	require.Equal(t, []string{"2001", "7"}, refused.Codes, "a cause code with odd characters is dropped")
-	require.Equal(t, "status 400 bad_request, causes 2001,7", refused.Detail())
+	require.Equal(t, `status 400 bad_request, causes 2001,7: "Invalid value for payer_email [correo]"`, refused.Detail(), "the message is kept with the e-mail replaced")
 	require.NotContains(t, err.Error()+refused.Detail(), "ana@example.com")
 }
 
@@ -276,4 +276,21 @@ func TestMercadoPago_ARefusalWithAnUnreadableBodyStillSaysTheStatus(t *testing.T
 	var refused *RefusedError
 	require.ErrorAs(t, err, &refused)
 	require.Equal(t, "status 401", refused.Detail())
+}
+
+func TestMercadoPago_AMessageOnlyBodyAndALongMessageAreKeptCleanedAndCut(t *testing.T) {
+	long := strings.Repeat("palabra ", 40)
+	mp, _ := newFakeMP(t, func(r *http.Request, body string) (int, string) {
+		return 400, `{"message":"Cannot operate between different countries ` + long + `","status":400}`
+	})
+
+	_, err := mp.CreateSubscription(context.Background(), CreateRequest{})
+
+	var refused *RefusedError
+	require.ErrorAs(t, err, &refused)
+	require.Equal(t, "", refused.Slug)
+	require.Empty(t, refused.Codes)
+	require.True(t, strings.HasPrefix(refused.Message, "Cannot operate between different countries"))
+	require.LessOrEqual(t, len([]rune(refused.Message)), 120)
+	require.True(t, strings.HasSuffix(refused.Message, "…"))
 }

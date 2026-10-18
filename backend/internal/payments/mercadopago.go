@@ -12,6 +12,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/Ulisesgtz/medic-track/backend/internal/mailer"
 )
 
 const mercadoPagoBase = "https://api.mercadopago.com"
@@ -92,6 +94,8 @@ type RefusedError struct {
 	Status int
 	Slug   string
 	Codes  []string
+	// Message is the provider's own short explanation, cleaned (e-mails, ids and tokens replaced) and cut at 120 characters.
+	Message string
 }
 
 func (e *RefusedError) Error() string {
@@ -107,6 +111,9 @@ func (e *RefusedError) Detail() string {
 	if len(e.Codes) > 0 {
 		out += ", causes " + strings.Join(e.Codes, ",")
 	}
+	if e.Message != "" {
+		out += `: "` + e.Message + `"`
+	}
 	return out
 }
 
@@ -116,7 +123,8 @@ var safeToken = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,40}$`)
 func refusal(status int, body io.Reader) error {
 	e := &RefusedError{Status: status}
 	var parsed struct {
-		Error string `json:"error"`
+		Message string `json:"message"`
+		Error   string `json:"error"`
 		Cause []struct {
 			Code any `json:"code"`
 		} `json:"cause"`
@@ -124,6 +132,7 @@ func refusal(status int, body io.Reader) error {
 	if json.NewDecoder(io.LimitReader(body, 8<<10)).Decode(&parsed) != nil {
 		return e
 	}
+	e.Message = mailer.Clean(parsed.Message, 120)
 	if safeToken.MatchString(parsed.Error) {
 		e.Slug = parsed.Error
 	}
