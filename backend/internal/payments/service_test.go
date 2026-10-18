@@ -416,3 +416,16 @@ func TestCancel_AProviderThatDoesNotKnowItStillLetsItBeCanceledHere(t *testing.T
 	status, _ := w.subOf(t, id)
 	require.Equal(t, "canceled", status)
 }
+
+func TestSubscribe_AProviderRefusalIsReportedWithItsStatusAndCodesButNothingPersonal(t *testing.T) {
+	pool := testPool(t)
+	repo := newRepo(t, pool)
+	refusal := &payments.RefusedError{Status: 400, Slug: "bad_request", Codes: []string{"2001"}}
+	w := build(t, pool, repo, failingProvider{Provider: payments.NewFake("http://x"), create: refusal}, fakeConfig)
+	id := newAccount(t, pool, "Ana", account.PlanFree)
+
+	_, err := w.svc.Subscribe(context.Background(), id)
+
+	require.ErrorIs(t, err, payments.ErrUnavailable)
+	require.Equal(t, []string{"create: The payment provider did not create the subscription (status 400 bad_request, causes 2001)"}, w.rep.all())
+}

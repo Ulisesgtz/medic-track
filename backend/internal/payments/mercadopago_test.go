@@ -251,3 +251,29 @@ func TestMercadoPago_APathWithSpecialCharactersIsEscaped(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "/preapproval/a/b?c", f.requests[0].path, "the server decodes the escaped path; the slash cannot leave the resource")
 }
+
+func TestMercadoPago_ARefusalKeepsOnlyTheStatusTheSlugAndTheCodesNotTheDescriptions(t *testing.T) {
+	mp, _ := newFakeMP(t, func(r *http.Request, body string) (int, string) {
+		return 400, `{"message":"Invalid value for payer_email ana@example.com","error":"bad_request","status":400,"cause":[{"code":"2001","description":"payer ana@example.com is not a test user"},{"code":7,"description":"x"},{"code":"has spaces and @","description":"y"}]}`
+	})
+
+	_, err := mp.CreateSubscription(context.Background(), CreateRequest{PayerEmail: "ana@example.com", AmountMXN: 499, FrequencyMonths: 12})
+
+	var refused *RefusedError
+	require.ErrorAs(t, err, &refused)
+	require.Equal(t, 400, refused.Status)
+	require.Equal(t, "bad_request", refused.Slug)
+	require.Equal(t, []string{"2001", "7"}, refused.Codes, "a cause code with odd characters is dropped")
+	require.Equal(t, "status 400 bad_request, causes 2001,7", refused.Detail())
+	require.NotContains(t, err.Error()+refused.Detail(), "ana@example.com")
+}
+
+func TestMercadoPago_ARefusalWithAnUnreadableBodyStillSaysTheStatus(t *testing.T) {
+	mp, _ := newFakeMP(t, func(r *http.Request, body string) (int, string) { return 401, `<html>nope</html>` })
+
+	_, err := mp.CreateSubscription(context.Background(), CreateRequest{})
+
+	var refused *RefusedError
+	require.ErrorAs(t, err, &refused)
+	require.Equal(t, "status 401", refused.Detail())
+}

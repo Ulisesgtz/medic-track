@@ -9,6 +9,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
+	"strings"
 	"time"
 )
 
@@ -72,7 +74,7 @@ func (m *MercadoPago) call(ctx context.Context, method, path string, body any, o
 	case resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500:
 		return fmt.Errorf("%w: status %d", ErrTemporary, resp.StatusCode)
 	case resp.StatusCode < 200 || resp.StatusCode > 299:
-		return fmt.Errorf("the provider refused the request: status %d", resp.StatusCode)
+		return refusal(resp.StatusCode, resp.Body)
 	}
 	if out == nil {
 		return nil
@@ -81,6 +83,57 @@ func (m *MercadoPago) call(ctx context.Context, method, path string, body any, o
 		return errors.New("the provider's answer could not be read")
 	}
 	return nil
+}
+
+// RefusedError is a request the provider refused (a 4xx other than «not found»). It carries only what is safe to write in a log: the
+// status, the provider's short error slug and the numeric/alphanumeric codes of its causes. The provider's descriptions are NOT kept:
+// they can echo what was sent (an e-mail, an address).
+type RefusedError struct {
+	Status int
+	Slug   string
+	Codes  []string
+}
+
+func (e *RefusedError) Error() string {
+	return fmt.Sprintf("the provider refused the request: status %d", e.Status)
+}
+
+// Detail is the fixed-shape text added to a report so the reason of a refusal can be read in error_logs: «status 400 bad_request, causes 1,2».
+func (e *RefusedError) Detail() string {
+	out := fmt.Sprintf("status %d", e.Status)
+	if e.Slug != "" {
+		out += " " + e.Slug
+	}
+	if len(e.Codes) > 0 {
+		out += ", causes " + strings.Join(e.Codes, ",")
+	}
+	return out
+}
+
+var safeToken = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,40}$`)
+
+// refusal reads the small error body of the provider keeping only safe tokens (see RefusedError).
+func refusal(status int, body io.Reader) error {
+	e := &RefusedError{Status: status}
+	var parsed struct {
+		Error string `json:"error"`
+		Cause []struct {
+			Code any `json:"code"`
+		} `json:"cause"`
+	}
+	if json.NewDecoder(io.LimitReader(body, 8<<10)).Decode(&parsed) != nil {
+		return e
+	}
+	if safeToken.MatchString(parsed.Error) {
+		e.Slug = parsed.Error
+	}
+	for _, c := range parsed.Cause {
+		code := fmt.Sprint(c.Code)
+		if safeToken.MatchString(code) && len(e.Codes) < 5 {
+			e.Codes = append(e.Codes, code)
+		}
+	}
+	return e
 }
 
 type createBody struct {

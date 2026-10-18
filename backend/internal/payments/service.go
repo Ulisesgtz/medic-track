@@ -180,7 +180,12 @@ func (s *Service) Subscribe(ctx context.Context, accountID uuid.UUID) (Subscribe
 		AmountMXN: s.cfg.PriceMXN, FrequencyMonths: 12, BackURL: s.cfg.BackURL(), NotificationURL: s.cfg.WebhookURL,
 	})
 	if err != nil {
-		s.report("create", "The payment provider did not create the subscription")
+		message := "The payment provider did not create the subscription"
+		var refused *RefusedError
+		if errors.As(err, &refused) {
+			message += " (" + refused.Detail() + ")"
+		}
+		s.report("create", message)
 		return SubscribeResult{}, ErrUnavailable
 	}
 	_, err = tx.Exec(ctx, `
