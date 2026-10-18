@@ -71,6 +71,10 @@ func (c Config) Missing() []string {
 		missing = append(missing, "FRONTEND_ORIGIN")
 	}
 	if c.Fake() {
+		// The fake's helper routes are public and approve payments: they only run against a local frontend, never in a deploy.
+		if u, err := url.Parse(c.FrontendOrigin); c.FrontendOrigin != "" && (err != nil || u.Hostname() != "localhost" && u.Hostname() != "127.0.0.1" && u.Hostname() != "::1") {
+			missing = append(missing, "PAYMENTS_DRIVER=fake (only with a localhost FRONTEND_ORIGIN)")
+		}
 		return missing
 	}
 	if c.AccessToken == "" {

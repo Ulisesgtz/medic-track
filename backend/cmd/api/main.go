@@ -169,6 +169,9 @@ func main() {
 			log.Print("PAYMENTS_DRIVER=fake: the payment provider is simulated and its helper routes are enabled (testing only)")
 		} else {
 			provider = payments.NewMercadoPago(paymentsConfig.AccessToken, "")
+			if paymentsConfig.WebhookSecret == "" {
+				log.Print("MERCADOPAGO_WEBHOOK_SECRET is empty: notices are accepted without a signature (the resource is always re-read from the provider); set it before charging for real")
+			}
 		}
 		paymentsService := payments.NewService(payments.NewRepository(pool, family.NewRepository(pool)), provider, paymentsConfig)
 		paymentsService.SetReporter(jobreport.New(errorLogRepo, "payments"))

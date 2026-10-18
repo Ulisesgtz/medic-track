@@ -46,6 +46,10 @@ func TestConfig_AvailableNeedsWhatEachDriverNeeds(t *testing.T) {
 	fake = configFrom(env(map[string]string{"PAYMENTS_DRIVER": "fake", "FRONTEND_ORIGIN": "http://localhost:5173"}))
 	require.True(t, fake.Available())
 	require.True(t, fake.Fake())
+	// The fake's helper routes approve payments with no session: a deploy's address never runs them.
+	deployed := configFrom(env(map[string]string{"PAYMENTS_DRIVER": "fake", "FRONTEND_ORIGIN": "https://dev.pedi-track.com"}))
+	require.False(t, deployed.Available())
+	require.Contains(t, deployed.Missing()[0], "localhost")
 
 	real := configFrom(env(map[string]string{"FRONTEND_ORIGIN": "https://dev.pedi-track.com", "MERCADOPAGO_ACCESS_TOKEN": "token"}))
 	require.Equal(t, []string{"PAYMENTS_WEBHOOK_URL (https)"}, real.Missing())
