@@ -90,6 +90,14 @@ func (s *Service) State(ctx context.Context, accountID uuid.UUID) (State, error)
 	if err != nil {
 		return State{}, err
 	}
+	// A payment that waits is asked of the provider now (at most every CheckNowEvery), so the person does not depend on a notice that
+	// can be late or lost. A failure is silent here: the reconciliation will try again.
+	if cur != nil && cur.Status == StatusPending && st.Available && (cur.LastCheckedAt == nil || s.now().Sub(*cur.LastCheckedAt) >= CheckNowEvery) {
+		_ = s.CheckNow(ctx, cur.ProviderID)
+		if cur, err = s.repo.Current(ctx, accountID); err != nil {
+			return State{}, err
+		}
+	}
 	if cur == nil {
 		cur, err = s.repo.LastEnded(ctx, accountID)
 		if err != nil {
