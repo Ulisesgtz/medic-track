@@ -170,6 +170,24 @@ func (s *Service) Reconcile(ctx context.Context) (int, error) {
 	return checked, nil
 }
 
+// CheckNowEvery is the least time between two on-demand checks of the same subscription: the return page asks the server every few
+// seconds, and the provider is asked at most this often.
+const CheckNowEvery = 5 * time.Second
+
+// CheckNow asks the provider for the real state of one subscription and applies it, like a notice or the reconciliation would. It
+// is for a person who is waiting for their payment to show (the notice can be late or lost): the state is the provider's, never the
+// browser's. The check is stamped even if it fails, so the provider is not asked again for CheckNowEvery.
+func (s *Service) CheckNow(ctx context.Context, providerID string) error {
+	remote, err := s.provider.GetSubscription(ctx, providerID)
+	if err == nil {
+		err = s.apply(ctx, "checkout", providerID, remote, nil)
+	}
+	if _, stampErr := s.repo.pool.Exec(ctx, `UPDATE subscriptions SET last_checked_at = $3 WHERE provider = $1 AND provider_subscription_id = $2`, s.provider.Name(), providerID, s.now()); stampErr != nil && err == nil {
+		err = stampErr
+	}
+	return err
+}
+
 // RunSweeper runs Sweep every SweepInterval and Reconcile every ReconcileEvery in the API's process until ctx is done. What fails is
 // reported as job:payments (fixed messages, kinds `sweep` and `reconcile`); a shutdown is not a failure.
 func RunSweeper(ctx context.Context, svc *Service, interval time.Duration) {

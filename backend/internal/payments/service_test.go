@@ -473,3 +473,79 @@ func TestSubscribe_TheTestPayerEmailReplacesTheAccountsOnlyWhenItIsConfiguredAnd
 	require.NoError(t, err)
 	require.NotEqual(t, "test_user_1@testuser.com", spy3.payer)
 }
+
+// countingProvider counts the reads of a subscription.
+type countingProvider struct {
+	payments.Provider
+	reads int
+	fail  error
+}
+
+func (c *countingProvider) GetSubscription(ctx context.Context, id string) (payments.Remote, error) {
+	c.reads++
+	if c.fail != nil {
+		return payments.Remote{}, c.fail
+	}
+	return c.Provider.GetSubscription(ctx, id)
+}
+
+func TestState_APendingPaymentIsAskedOfTheProviderAndBecomesActiveWithoutANotice(t *testing.T) {
+	pool := testPool(t)
+	repo := newRepo(t, pool)
+	fake := payments.NewFake(fakeConfig.FrontendOrigin)
+	spy := &countingProvider{Provider: fake}
+	w := build(t, pool, repo, spy, fakeConfig)
+	id := newAccount(t, pool, "Ana", account.PlanFree)
+	_, err := w.svc.Subscribe(context.Background(), id)
+	require.NoError(t, err)
+	var pid string
+	require.NoError(t, pool.QueryRow(context.Background(), `SELECT provider_subscription_id FROM subscriptions WHERE account_id = $1`, id).Scan(&pid))
+	_, err = fake.Approve(pid, fixedNow.AddDate(1, 0, 0)) // the person paid; no notice reaches the server
+
+	st, err := w.svc.State(context.Background(), id)
+
+	require.NoError(t, err)
+	require.NotNil(t, st.Subscription)
+	require.Equal(t, payments.StatusActive, st.Subscription.Status, "the state comes from the provider, asked on demand")
+	plan, source := planOf(t, pool, id)
+	require.Equal(t, "paid", plan)
+	require.Equal(t, "subscription", source)
+}
+
+func TestState_TheProviderIsAskedAtMostOnceEveryFewSecondsAndAFailureIsSilent(t *testing.T) {
+	pool := testPool(t)
+	repo := newRepo(t, pool)
+	spy := &countingProvider{Provider: payments.NewFake(fakeConfig.FrontendOrigin)}
+	w := build(t, pool, repo, spy, fakeConfig)
+	id := newAccount(t, pool, "Ana", account.PlanFree)
+	_, err := w.svc.Subscribe(context.Background(), id)
+	require.NoError(t, err)
+
+	_, err = w.svc.State(context.Background(), id)
+	require.NoError(t, err)
+	_, err = w.svc.State(context.Background(), id)
+	require.NoError(t, err)
+	require.Equal(t, 1, spy.reads, "two reads inside the same instant ask the provider once")
+
+	later := fixedNow.Add(payments.CheckNowEvery + time.Second)
+	payments.SetServiceNow(w.svc, func() time.Time { return later })
+	spy.fail = payments.ErrTemporary
+	st, err := w.svc.State(context.Background(), id)
+	require.NoError(t, err, "a provider that fails does not break the screen")
+	require.Equal(t, 2, spy.reads)
+	require.Equal(t, payments.StatusPending, st.Subscription.Status)
+}
+
+func TestState_OnlyAPendingPaymentIsCheckedOnDemand(t *testing.T) {
+	pool := testPool(t)
+	repo := newRepo(t, pool)
+	spy := &countingProvider{Provider: payments.NewFake(fakeConfig.FrontendOrigin)}
+	w := build(t, pool, repo, spy, fakeConfig)
+	id := newAccount(t, pool, "Ana", account.PlanPaid)
+	insertSub(t, pool, id, subOpts{status: payments.StatusActive, paidThrough: at(fixedNow.Add(100 * 24 * time.Hour))})
+
+	_, err := w.svc.State(context.Background(), id)
+
+	require.NoError(t, err)
+	require.Zero(t, spy.reads)
+}
