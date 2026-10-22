@@ -109,6 +109,15 @@ export const LIMIT_MOTIVES: Record<PlanLimitReason, LimitMotive> = {
       row('Familia', 'Solo tú', 'Hasta 4 personas'),
     ],
   },
+  child_device: {
+    title: 'Acceso del hijo',
+    line: 'Intentaste darle acceso a un teléfono de tu hijo. Con el plan completo, cada hijo ve y marca sus tomas y actividades en su propio teléfono.',
+    rows: [
+      row('Teléfono del hijo', NO, 'Hasta 3 por hijo, sin cuenta ni contraseña'),
+      row('Familia', 'Solo tú', 'Hasta 4 personas'),
+      row('Suplementos y actividades', NO, 'Hasta 10 de cada tipo por hijo'),
+    ],
+  },
   appointments: {
     title: 'Próxima cita',
     line: 'Intentaste anotar la próxima cita. Las citas con avisos son del plan completo.',

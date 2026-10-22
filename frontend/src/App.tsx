@@ -23,6 +23,8 @@ import { RequireSession } from './features/auth/RequireSession'
 import { useClearCacheOnUserChange } from './features/auth/useClearCacheOnUserChange'
 import { SsoCallbackPage } from './features/auth/SsoCallbackPage'
 import { MessagePage } from './shared/ui/MessagePage'
+import { ChildTodayPage } from './features/childDevice/phone/ChildTodayPage'
+import { RedeemPage } from './features/childDevice/phone/RedeemPage'
 
 const queryClient = new QueryClient()
 
@@ -211,6 +213,9 @@ function App() {
           />
           {/* Public on purpose: an invitation is opened before the person has a session; the page itself asks for one. */}
           <Route path="/familia/invitacion" element={<InvitationPage />} />
+          {/* A child's own phone (specs/047): no Clerk session and no parents' shell; it carries its own credential. */}
+          <Route path="/hijo" element={<RedeemPage />} />
+          <Route path="/hijo/hoy" element={<ChildTodayPage />} />
           <Route path="/" element={<Navigate to="/signup" replace />} />
           {/* The plans (specs/034): every "Ver el plan completo" lands here. */}
           <Route

@@ -16,6 +16,7 @@ import { SummaryCard } from './SummaryCard'
 import { TodayDosesBlock } from './TodayDosesBlock'
 import { TodayDosesPanel } from './TodayDosesPanel'
 import { ChildAppointmentSection } from '../appointments/AppointmentSections'
+import { ChildAccessBlock } from '../childDevice/parent/ChildAccessBlock'
 import { RegistroSeccion } from '../supplements/RegistroSeccion'
 import { DOSE_REFETCH_MS, isUnmarked, isUnregistered, unregisteredText } from './doseStatus'
 
@@ -201,6 +202,7 @@ export function ChildDetailPage() {
                     <RegistroSeccion kind="activity" childId={childId} childName={child?.firstName ?? 'tu hijo'} />
                   </div>
                 )}
+                {childId && <ChildAccessBlock childId={childId} childName={child?.firstName ?? 'tu hijo'} />}
               </div>
               <TodayDosesPanel doses={todayDoses} status={overviewStatus} canManage={access.canAdd} />
             </div>
@@ -284,6 +286,12 @@ export function ChildDetailPage() {
         {childId && (
           <div className="mx-6 mt-7 border-t-2 border-hint-border pt-7">
             <RegistroSeccion kind="activity" childId={childId} childName={child?.firstName ?? 'tu hijo'} />
+          </div>
+        )}
+
+        {childId && (
+          <div className="px-6 pt-7">
+            <ChildAccessBlock childId={childId} childName={child?.firstName ?? 'tu hijo'} />
           </div>
         )}
 

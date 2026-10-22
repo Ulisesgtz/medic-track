@@ -7,7 +7,7 @@ import { LIMIT_MOTIVES, PLAN_PERIOD, PLAN_PRICE } from '../plans/planCopy'
  * What the free plan stopped (specs/030 adds the last two): a second child, a second consultation while one treatment is
  * still active, a consultation saved only as a record, or (specs/031) searching and filtering the history, or (specs/032) sharing with the family.
  */
-export type PlanLimitReason = 'children' | 'active_treatment' | 'record_only' | 'history_search' | 'family' | 'supplements' | 'appointments'
+export type PlanLimitReason = 'children' | 'active_treatment' | 'record_only' | 'history_search' | 'family' | 'supplements' | 'appointments' | 'child_device'
 
 interface FreemiumLimitModalProps {
   /** Why the plan stopped the parent; the child limit when omitted. */
