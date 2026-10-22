@@ -416,3 +416,136 @@ func TestCancel_AProviderThatDoesNotKnowItStillLetsItBeCanceledHere(t *testing.T
 	status, _ := w.subOf(t, id)
 	require.Equal(t, "canceled", status)
 }
+
+func TestSubscribe_AProviderRefusalIsReportedWithItsStatusAndCodesButNothingPersonal(t *testing.T) {
+	pool := testPool(t)
+	repo := newRepo(t, pool)
+	refusal := &payments.RefusedError{Status: 400, Slug: "bad_request", Codes: []string{"2001"}}
+	w := build(t, pool, repo, failingProvider{Provider: payments.NewFake("http://x"), create: refusal}, fakeConfig)
+	id := newAccount(t, pool, "Ana", account.PlanFree)
+
+	_, err := w.svc.Subscribe(context.Background(), id)
+
+	require.ErrorIs(t, err, payments.ErrUnavailable)
+	require.Equal(t, []string{"create: The payment provider did not create the subscription (status 400 bad_request, causes 2001)"}, w.rep.all())
+}
+
+// payerSpy remembers the payer e-mail it was asked to create a subscription for.
+type payerSpy struct {
+	payments.Provider
+	payer string
+}
+
+func (p *payerSpy) CreateSubscription(ctx context.Context, req payments.CreateRequest) (payments.Created, error) {
+	p.payer = req.PayerEmail
+	return p.Provider.CreateSubscription(ctx, req)
+}
+
+func TestSubscribe_TheTestPayerEmailReplacesTheAccountsOnlyWhenItIsConfiguredAndNotWithTheFake(t *testing.T) {
+	pool := testPool(t)
+	repo := newRepo(t, pool)
+	real := payments.Config{Driver: payments.DriverMercadoPago, AccessToken: "t", WebhookURL: "https://api.example.com/hook", FrontendOrigin: "https://dev.example.com", GraceDays: 7, PriceMXN: 499}
+
+	// Without the variable: the account's own e-mail goes to the provider.
+	id := newAccount(t, pool, "Ana", account.PlanFree)
+	var own string
+	require.NoError(t, pool.QueryRow(context.Background(), `SELECT email FROM accounts WHERE id = $1`, id).Scan(&own))
+	spy := &payerSpy{Provider: payments.NewFake("http://x")}
+	_, err := build(t, pool, repo, spy, real).svc.Subscribe(context.Background(), id)
+	require.NoError(t, err)
+	require.Equal(t, own, spy.payer)
+
+	// With the variable and the real driver: the test buyer's.
+	id2 := newAccount(t, pool, "Ana", account.PlanFree)
+	withTest := real
+	withTest.TestPayerEmail = "test_user_1@testuser.com"
+	spy2 := &payerSpy{Provider: payments.NewFake("http://x")}
+	_, err = build(t, pool, repo, spy2, withTest).svc.Subscribe(context.Background(), id2)
+	require.NoError(t, err)
+	require.Equal(t, "test_user_1@testuser.com", spy2.payer)
+
+	// With the fake driver the variable is ignored.
+	id3 := newAccount(t, pool, "Ana", account.PlanFree)
+	fakeWithTest := fakeConfig
+	fakeWithTest.TestPayerEmail = "test_user_1@testuser.com"
+	spy3 := &payerSpy{Provider: payments.NewFake("http://x")}
+	_, err = build(t, pool, repo, spy3, fakeWithTest).svc.Subscribe(context.Background(), id3)
+	require.NoError(t, err)
+	require.NotEqual(t, "test_user_1@testuser.com", spy3.payer)
+}
+
+// countingProvider counts the reads of a subscription.
+type countingProvider struct {
+	payments.Provider
+	reads int
+	fail  error
+}
+
+func (c *countingProvider) GetSubscription(ctx context.Context, id string) (payments.Remote, error) {
+	c.reads++
+	if c.fail != nil {
+		return payments.Remote{}, c.fail
+	}
+	return c.Provider.GetSubscription(ctx, id)
+}
+
+func TestState_APendingPaymentIsAskedOfTheProviderAndBecomesActiveWithoutANotice(t *testing.T) {
+	pool := testPool(t)
+	repo := newRepo(t, pool)
+	fake := payments.NewFake(fakeConfig.FrontendOrigin)
+	spy := &countingProvider{Provider: fake}
+	w := build(t, pool, repo, spy, fakeConfig)
+	id := newAccount(t, pool, "Ana", account.PlanFree)
+	_, err := w.svc.Subscribe(context.Background(), id)
+	require.NoError(t, err)
+	var pid string
+	require.NoError(t, pool.QueryRow(context.Background(), `SELECT provider_subscription_id FROM subscriptions WHERE account_id = $1`, id).Scan(&pid))
+	_, err = fake.Approve(pid, fixedNow.AddDate(1, 0, 0)) // the person paid; no notice reaches the server
+
+	st, err := w.svc.State(context.Background(), id)
+
+	require.NoError(t, err)
+	require.NotNil(t, st.Subscription)
+	require.Equal(t, payments.StatusActive, st.Subscription.Status, "the state comes from the provider, asked on demand")
+	plan, source := planOf(t, pool, id)
+	require.Equal(t, "paid", plan)
+	require.Equal(t, "subscription", source)
+}
+
+func TestState_TheProviderIsAskedAtMostOnceEveryFewSecondsAndAFailureIsSilent(t *testing.T) {
+	pool := testPool(t)
+	repo := newRepo(t, pool)
+	spy := &countingProvider{Provider: payments.NewFake(fakeConfig.FrontendOrigin)}
+	w := build(t, pool, repo, spy, fakeConfig)
+	id := newAccount(t, pool, "Ana", account.PlanFree)
+	_, err := w.svc.Subscribe(context.Background(), id)
+	require.NoError(t, err)
+
+	_, err = w.svc.State(context.Background(), id)
+	require.NoError(t, err)
+	_, err = w.svc.State(context.Background(), id)
+	require.NoError(t, err)
+	require.Equal(t, 1, spy.reads, "two reads inside the same instant ask the provider once")
+
+	later := fixedNow.Add(payments.CheckNowEvery + time.Second)
+	payments.SetServiceNow(w.svc, func() time.Time { return later })
+	spy.fail = payments.ErrTemporary
+	st, err := w.svc.State(context.Background(), id)
+	require.NoError(t, err, "a provider that fails does not break the screen")
+	require.Equal(t, 2, spy.reads)
+	require.Equal(t, payments.StatusPending, st.Subscription.Status)
+}
+
+func TestState_OnlyAPendingPaymentIsCheckedOnDemand(t *testing.T) {
+	pool := testPool(t)
+	repo := newRepo(t, pool)
+	spy := &countingProvider{Provider: payments.NewFake(fakeConfig.FrontendOrigin)}
+	w := build(t, pool, repo, spy, fakeConfig)
+	id := newAccount(t, pool, "Ana", account.PlanPaid)
+	insertSub(t, pool, id, subOpts{status: payments.StatusActive, paidThrough: at(fixedNow.Add(100 * 24 * time.Hour))})
+
+	_, err := w.svc.State(context.Background(), id)
+
+	require.NoError(t, err)
+	require.Zero(t, spy.reads)
+}

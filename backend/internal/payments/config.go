@@ -25,6 +25,9 @@ type Config struct {
 	AccessToken    string
 	WebhookSecret  string
 	WebhookURL     string
+	// TestPayerEmail, only with Mercado Pago's TEST credentials, is the e-mail of the test buyer sent as the payer instead of the
+	// account's: the sandbox refuses «real payer with a test collector». It is never set in production and is never logged.
+	TestPayerEmail string
 	FrontendOrigin string
 	GraceDays      int
 	PriceMXN       int
@@ -41,6 +44,7 @@ func configFrom(get func(string) string) Config {
 		AccessToken:    strings.TrimSpace(get("MERCADOPAGO_ACCESS_TOKEN")),
 		WebhookSecret:  strings.TrimSpace(get("MERCADOPAGO_WEBHOOK_SECRET")),
 		WebhookURL:     strings.TrimSpace(get("PAYMENTS_WEBHOOK_URL")),
+		TestPayerEmail: strings.TrimSpace(get("MERCADOPAGO_TEST_PAYER_EMAIL")),
 		FrontendOrigin: strings.TrimRight(strings.TrimSpace(get("FRONTEND_ORIGIN")), "/"),
 		GraceDays:      defaultGraceDays,
 		PriceMXN:       defaultPriceMXN,

@@ -90,6 +90,14 @@ func (s *Service) State(ctx context.Context, accountID uuid.UUID) (State, error)
 	if err != nil {
 		return State{}, err
 	}
+	// A payment that waits is asked of the provider now (at most every CheckNowEvery), so the person does not depend on a notice that
+	// can be late or lost. A failure is silent here: the reconciliation will try again.
+	if cur != nil && cur.Status == StatusPending && st.Available && (cur.LastCheckedAt == nil || s.now().Sub(*cur.LastCheckedAt) >= CheckNowEvery) {
+		_ = s.CheckNow(ctx, cur.ProviderID)
+		if cur, err = s.repo.Current(ctx, accountID); err != nil {
+			return State{}, err
+		}
+	}
 	if cur == nil {
 		cur, err = s.repo.LastEnded(ctx, accountID)
 		if err != nil {
@@ -175,12 +183,21 @@ func (s *Service) Subscribe(ctx context.Context, accountID uuid.UUID) (Subscribe
 		}
 	}
 
+	payer := acc.email
+	if s.cfg.TestPayerEmail != "" && !s.cfg.Fake() {
+		payer = s.cfg.TestPayerEmail // the sandbox only mixes test users (see Config.TestPayerEmail)
+	}
 	created, err := s.provider.CreateSubscription(ctx, CreateRequest{
-		Reason: subscriptionReason, ExternalReference: accountID.String(), PayerEmail: acc.email,
+		Reason: subscriptionReason, ExternalReference: accountID.String(), PayerEmail: payer,
 		AmountMXN: s.cfg.PriceMXN, FrequencyMonths: 12, BackURL: s.cfg.BackURL(), NotificationURL: s.cfg.WebhookURL,
 	})
 	if err != nil {
-		s.report("create", "The payment provider did not create the subscription")
+		message := "The payment provider did not create the subscription"
+		var refused *RefusedError
+		if errors.As(err, &refused) {
+			message += " (" + refused.Detail() + ")"
+		}
+		s.report("create", message)
 		return SubscribeResult{}, ErrUnavailable
 	}
 	_, err = tx.Exec(ctx, `
