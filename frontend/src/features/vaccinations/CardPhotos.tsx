@@ -1,4 +1,5 @@
 import { useRef, useState, type ChangeEvent } from 'react'
+import type { Vaccine } from '../../shared/catalog/api'
 import { useVaccines } from '../../shared/catalog/useCatalog'
 import { Notice } from '../../shared/ui/Notice'
 import { PhotoViewer } from '../consultations/PhotoViewer'
@@ -11,6 +12,9 @@ import { useDeletePhoto, usePhoto, usePhotos, useUploadPhoto } from './hooks'
 import { ProposedRows } from './ProposedRows'
 import { TEXT, deletePhotoRows, photoLimitText, photoLine } from './vaccineText'
 import type { VaccinePhotoMeta } from './types'
+
+/** A stable empty list: the rows are built once from the catalog, so its identity must not change on every render. */
+const NO_VACCINES: Vaccine[] = []
 
 const outline =
   'inline-flex min-h-12 cursor-pointer items-center justify-center rounded-2xl border-2 border-action px-5 text-base font-extrabold text-action hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60'
@@ -130,8 +134,9 @@ export function CardPhotos({ childId, birthDate, canEdit }: CardPhotosProps) {
         </div>
       )}
 
-      {proposing && canEdit && (
-        <ProposedRows childId={childId} birthDate={birthDate} text={text} catalog={vaccines.data ?? []} onDone={() => setProposalOf(text)} />
+      {/* The rows are built once from the reading and the catalog, so they wait for the catalog: otherwise every vaccine would come as «Otra…». */}
+      {proposing && canEdit && !vaccines.isPending && (
+        <ProposedRows childId={childId} birthDate={birthDate} text={text} catalog={vaccines.data ?? NO_VACCINES} onDone={() => setProposalOf(text)} />
       )}
 
       {photos.isPending ? null : list.length === 0 ? (

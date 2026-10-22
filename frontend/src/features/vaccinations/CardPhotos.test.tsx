@@ -181,6 +181,22 @@ describe('CardPhotos', () => {
     expect(saved[0].body).toMatchObject({ vaccineCode: 'bcg', appliedOn: '2023-01-15' })
   })
 
+  it('waits for the vaccine catalog before proposing rows, so the vaccines come from the list and not as «Otra…»', async () => {
+    const user = userEvent.setup()
+    ocr.suggestion = 'BCG 15/01/2023'
+    let open: () => void = () => {}
+    const catalogGate = new Promise<void>((resolve) => (open = resolve))
+    stubApi({ account: account(), doses: [], catalogGate })
+    const { container } = show()
+    await screen.findByText(TEXT.photos.empty)
+    await pick(user, container)
+    await waitFor(() => expect(screen.getByRole('button', { name: TEXT.photos.add })).toBeEnabled())
+    expect(screen.queryByRole('region', { name: TEXT.proposed.title })).not.toBeInTheDocument()
+    open()
+    const panel = await screen.findByRole('region', { name: TEXT.proposed.title })
+    expect(within(panel).getByLabelText(TEXT.dialog.vaccine)).toHaveValue('bcg')
+  })
+
   it('says nothing was found, and blocks nothing, when the reading is empty', async () => {
     const user = userEvent.setup()
     ocr.suggestion = null

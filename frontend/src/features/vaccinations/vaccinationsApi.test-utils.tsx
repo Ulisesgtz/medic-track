@@ -44,6 +44,8 @@ export interface ApiState {
   writes?: Record<string, Reply>
   /** Fail the list read. */
   listFails?: boolean
+  /** The vaccine catalog is not answered until this resolves. */
+  catalogGate?: Promise<void>
 }
 
 /** One stub for everything the card talks to; returns the calls it saw. */
@@ -57,11 +59,13 @@ export function stubApi(state: ApiState) {
       calls.push({ method, path, body: init?.body ? JSON.parse(String(init.body)) : undefined })
       const ok = (json: unknown, status = 200) => ({ ok: status < 300, status, json: async () => json }) as Response
       if (path === '/accounts/me') return ok(state.account)
-      if (path === '/catalog/vaccines')
+      if (path === '/catalog/vaccines') {
+        await state.catalogGate
         return ok([
           { code: 'hepatitis_b', name: 'Hepatitis B' },
           { code: 'bcg', name: 'BCG' },
         ])
+      }
       if (method === 'GET' && path === `/children/${CHILD_ID}/vaccinations`) return state.listFails ? ok({}, 500) : ok({ vaccinations: state.doses })
       if (method === 'GET' && path === `/children/${CHILD_ID}/vaccine-card-photos`) return state.writes?.[`GET ${path}`] ? ok({}, state.writes[`GET ${path}`].status) : ok({ photos: state.photos ?? [], limit: 10 })
       if (method === 'GET' && path.startsWith(`/children/${CHILD_ID}/vaccine-card-photos/`) && !state.writes?.[`GET ${path}`])
