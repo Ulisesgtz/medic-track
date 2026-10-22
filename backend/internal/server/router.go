@@ -72,7 +72,7 @@ func NewRouter(d Deps) *chi.Mux {
 	r.Use(middleware.Recoverer)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{d.FrontendOrigin},
-		AllowedMethods:   []string{"GET", "POST", "PATCH", "PUT", "OPTIONS"},
+		AllowedMethods:   []string{"GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Content-Type", "Authorization"},
 		AllowCredentials: false,
 		MaxAge:           300,

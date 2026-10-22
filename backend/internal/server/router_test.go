@@ -462,3 +462,19 @@ func TestRouter_TheFakeProvidersHelpersAreOnlyThereWithTheFakeDriver(t *testing.
 	require.Equal(t, http.StatusNotFound, rec.Code)
 	require.Contains(t, rec.Body.String(), "subscription_not_found")
 }
+
+// The browser asks first (a preflight) before every DELETE, PATCH or PUT; a method the CORS list leaves out never reaches the API
+// and the screen sees a failed request (the vaccination card's «Borrar» was the first DELETE the app made).
+func TestRouter_CORSAllowsEveryMethodTheAppUses(t *testing.T) {
+	w := newWorld(t)
+	for _, method := range []string{"GET", "POST", "PATCH", "PUT", "DELETE"} {
+		req := httptest.NewRequest(http.MethodOptions, "/children/"+w.childA.String()+"/vaccinations", nil)
+		req.Header.Set("Origin", "http://localhost:5173")
+		req.Header.Set("Access-Control-Request-Method", method)
+		req.Header.Set("Access-Control-Request-Headers", "authorization,content-type")
+		rec := httptest.NewRecorder()
+		w.router.ServeHTTP(rec, req)
+		require.Contains(t, rec.Header().Get("Access-Control-Allow-Methods"), method, method)
+		require.Equal(t, "http://localhost:5173", rec.Header().Get("Access-Control-Allow-Origin"), method)
+	}
+}
