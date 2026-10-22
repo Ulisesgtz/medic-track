@@ -47,7 +47,7 @@ En su teléfono, el hijo ve **«Tus tomas de hoy»** (medicamentos, suplementos)
 1. **Dado** el dispositivo del hijo con tomas pendientes hoy, **Cuando** marca una, **Entonces** queda marcada y el Tutor la ve «por Mateo, hora» en menos de un minuto.
 2. **Dado** una toma que marcó el Tutor, **Cuando** el hijo intenta desmarcarla, **Entonces** no puede (se respeta la regla de la spec 032: solo quien la marcó, o quien puede todo).
 3. **Dado** una actividad del hijo, **Cuando** toca «Realizado», **Entonces** se marca la toma que corresponde igual que lo haría un Cuidador.
-4. **Dado** el dispositivo del hijo, **Cuando** intenta cualquier otra cosa por la API (consultas, fotos de recetas, notas, cartilla, citas, familia, planes, otros hijos, crear o editar suplementos), **Entonces** el servidor responde 403 y no devuelve ni cambia nada.
+4. **Dado** el dispositivo del hijo, **Cuando** intenta cualquier otra cosa por la API (consultas, fotos de recetas, notas, cartilla, citas, familia, planes, otros hijos, crear o editar suplementos), **Entonces** el servidor lo rechaza (401 o 403) y no devuelve ni cambia nada.
 5. **Dado** el dispositivo del hijo, **Cuando** el Tutor de otro hijo de la misma familia agrega datos a otro hijo, **Entonces** el dispositivo no ve nada de ese otro hijo.
 
 ---
@@ -135,7 +135,7 @@ Si la familia deja de pagar, el dispositivo del hijo **sigue viendo y marcando**
 - **FR-008**: Una liga usada, vencida, cancelada o desconocida DEBE responder **igual** (sin distinguir el caso) y el canje DEBE estar limitado en peticiones por dirección.
 - **FR-009**: La credencial DEBE tener una caducidad por falta de uso (supuesto: 90 días) y renovarse al usarse; el servidor DEBE guardar solo su huella y poder reconocerla en cada petición.
 - **FR-010**: El servidor DEBE reconocer, además de la sesión de una persona, la credencial de un dispositivo de hijo **detrás del mismo control de nivel de acceso**, y esa credencial DEBE dar **solo** el nivel de ver y marcar sobre **su único hijo**, nunca más. Un dispositivo de hijo nunca puede usar una ruta que exija una cuenta o un nivel total.
-- **FR-011**: Las rutas que el dispositivo del hijo PUEDE usar DEBEN ser una lista cerrada y explícita: ver las tomas de hoy de su hijo, ver sus suplementos y actividades, marcar y desmarcar **sus propias** marcas, «Realizado», activar y desactivar sus avisos y el cierre de su propio acceso. **Todo lo demás DEBE responder 403.** La lista DEBE estar en una prueba que recorra todas las rutas protegidas.
+- **FR-011**: Las rutas que el dispositivo del hijo PUEDE usar DEBEN ser una lista cerrada y explícita: ver las tomas de hoy de su hijo, ver sus suplementos y actividades, marcar y desmarcar **sus propias** marcas, «Realizado», activar y desactivar sus avisos y el cierre de su propio acceso. **Todo lo demás DEBE rechazarse (401 o 403) sin devolver ni cambiar datos.** La lista DEBE estar en una prueba que recorra todas las rutas protegidas.
 - **FR-012**: El dispositivo del hijo NO DEBE poder ver ni cambiar: consultas, recetas y sus fotos, notas, síntomas, cartilla de vacunación, citas, la familia, los planes, otros hijos, la cuenta de nadie, ni crear, editar, pausar o finalizar suplementos o actividades.
 
 **Quitar, renovar y ver**
