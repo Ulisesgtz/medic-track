@@ -62,6 +62,33 @@ describe('VaccinationCardPage', () => {
     expect(screen.queryByRole('button', { name: /^Borrar/ })).not.toBeInTheDocument()
   })
 
+  it.each([
+    ['the owner', undefined, false, true],
+    ['a tutor of a paid family', 'tutor' as const, false, true],
+    ['a caregiver', 'caregiver' as const, false, false],
+    ['a child-role member', 'child' as const, false, false],
+    ['a tutor of a family that stopped paying', 'tutor' as const, true, false],
+  ])('writes are offered to %s only if useChildAccess says so (never by the plan)', async (_who, role, readOnly, canWrite) => {
+    stubApi({ account: account([child({ role, readOnly, plan: readOnly ? 'free' : 'paid' })]), doses: [dose()] })
+    page()
+    await screen.findByRole('list', { name: 'Vacunas registradas' })
+    for (const name of [TEXT.add, /^Corregir/, /^Borrar/, TEXT.photos.add]) {
+      const found = screen.queryByRole('button', { name })
+      if (canWrite) expect(found).toBeInTheDocument()
+      else expect(found).not.toBeInTheDocument()
+    }
+    expect(screen.queryByText(/plan completo/i)).not.toBeInTheDocument()
+  })
+
+  it('offers nothing while the account has not loaded', async () => {
+    const calls = stubApi({ account: account(), doses: [dose()] })
+    page()
+    expect(screen.queryByRole('button', { name: TEXT.add })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: TEXT.photos.add })).not.toBeInTheDocument()
+    await screen.findByRole('button', { name: TEXT.add })
+    expect(calls.length).toBeGreaterThan(0)
+  })
+
   it('only shows to a tutor whose family stopped paying (read-only)', async () => {
     stubApi({ account: account([child({ role: 'tutor', readOnly: true })]), doses: [dose()] })
     page()
