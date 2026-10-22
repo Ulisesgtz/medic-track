@@ -2185,6 +2185,235 @@ const docTemplate = `{
                 }
             }
         },
+        "/children/{childId}/vaccine-card-photos": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Only who saved each one and when, oldest first; the image itself is asked for one at a time.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vaccinations"
+                ],
+                "summary": "The photos of a child's paper card, without the images",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/VaccineCardPhotoListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session has no access to this child",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "` + "`" + `photoBase64` + "`" + ` is an image (JPEG, PNG, GIF, WebP or HEIC) of up to 5 MiB. A child keeps at most 10 photos, on every plan\n(422 ` + "`" + `photo_limit_exceeded` + "`" + `, reason ` + "`" + `vaccine_card` + "`" + `).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vaccinations"
+                ],
+                "summary": "Save a photo of the paper card",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The photo",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/VaccineCardPhotoUpload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/VaccineCardPhotoMeta"
+                        }
+                    },
+                    "400": {
+                        "description": "Not an image, or over 5 MiB",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't save photos for this child",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "The child already has 10 photos",
+                        "schema": {
+                            "$ref": "#/definitions/VaccineCardPhotoLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/children/{childId}/vaccine-card-photos/{photoId}": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vaccinations"
+                ],
+                "summary": "One photo of the paper card",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Photo UUID",
+                        "name": "photoId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/VaccineCardPhoto"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session has no access to this child",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such photo for this child",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "No trash and no undo. The doses recorded by hand are not touched.",
+                "tags": [
+                    "vaccinations"
+                ],
+                "summary": "Delete a photo of the paper card for good",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Photo UUID",
+                        "name": "photoId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't delete photos of this child",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such photo for this child",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/consultations/{consultationId}": {
             "get": {
                 "security": [
@@ -6068,6 +6297,79 @@ const docTemplate = `{
                     "example": "validation_error"
                 },
                 "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "VaccineCardPhoto": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "photoBase64": {
+                    "type": "string"
+                }
+            }
+        },
+        "VaccineCardPhotoLimitResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "photo_limit_exceeded"
+                },
+                "limit": {
+                    "type": "string",
+                    "example": "10"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string",
+                    "example": "vaccine_card"
+                }
+            }
+        },
+        "VaccineCardPhotoListResponse": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "description": "Limit is how many photos of the card a child can keep.",
+                    "type": "integer",
+                    "example": 10
+                },
+                "photos": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/VaccineCardPhotoMeta"
+                    }
+                }
+            }
+        },
+        "VaccineCardPhotoMeta": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string",
+                    "example": "2026-10-17T18:00:00Z"
+                },
+                "createdByName": {
+                    "type": "string",
+                    "example": "Ana"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                }
+            }
+        },
+        "VaccineCardPhotoUpload": {
+            "type": "object",
+            "properties": {
+                "photoBase64": {
                     "type": "string"
                 }
             }

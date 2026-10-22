@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -133,6 +134,12 @@ func (h *Handler) writeError(ctx context.Context, w http.ResponseWriter, err err
 		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, httpx.ValidationBody("Invalid vaccination", verrs), actorPtr(actor))
 	case errors.Is(err, ErrDuplicate):
 		h.responder.WriteJSON(ctx, w, http.StatusConflict, map[string]string{"error": "duplicate_vaccination", "message": "The dose is already recorded"}, actorPtr(actor))
+	case errors.Is(err, ErrPhotoLimit):
+		h.responder.WriteJSON(ctx, w, http.StatusUnprocessableEntity, map[string]string{
+			"error": "photo_limit_exceeded", "message": "The child reached its limit of vaccination card photos", "reason": "vaccine_card", "limit": strconv.Itoa(MaxPhotosPerChild),
+		}, actorPtr(actor))
+	case errors.Is(err, ErrPhotoNotFound):
+		h.responder.WriteJSON(ctx, w, http.StatusNotFound, map[string]string{"error": "photo_not_found", "message": "Photo not found"}, actorPtr(actor))
 	case errors.Is(err, ErrNotFound):
 		h.responder.WriteJSON(ctx, w, http.StatusNotFound, map[string]string{"error": "vaccination_not_found", "message": "Vaccination not found"}, actorPtr(actor))
 	case errors.Is(err, ErrChildNotFound):

@@ -6,5 +6,10 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/vaccination"
 )
 
-// registerPhotoRoutes adds the photo routes of the card to a test router (they arrive in the next phase).
-func registerPhotoRoutes(_ chi.Router, _ *vaccination.Handler) {}
+// registerPhotoRoutes adds the photo routes of the card to a test router.
+func registerPhotoRoutes(r chi.Router, h *vaccination.Handler) {
+	r.Get("/children/{childId}/vaccine-card-photos", h.ListPhotos)
+	r.Post("/children/{childId}/vaccine-card-photos", h.AddPhoto)
+	r.Get("/children/{childId}/vaccine-card-photos/{photoId}", h.GetPhoto)
+	r.Delete("/children/{childId}/vaccine-card-photos/{photoId}", h.DeletePhoto)
+}
