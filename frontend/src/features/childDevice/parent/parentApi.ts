@@ -54,6 +54,47 @@ export async function createDeviceLink(childId: string, name: string, token: str
   return json as CreatedLink
 }
 
+export interface DeviceLink {
+  id: string
+  name: string
+  status: 'pending' | 'active' | 'revoked' | 'expired'
+  createdAt: string
+  redeemedAt: string | null
+  lastSeenAt: string | null
+  expiresAt: string
+  reminderDetail: 'generic' | 'detailed'
+}
+
+export interface DeviceLinkList {
+  links: DeviceLink[]
+  limit: number
+  /** The session can make and remove phones; a caregiver only sees the list. */
+  canManage: boolean
+}
+
+async function call<T>(method: string, path: string, token: string | null, body?: unknown): Promise<T> {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers: { ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...withAuthHeader(token) },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  })
+  if (res.status === 204) return undefined as T
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw toError(res.status, json)
+  return json as T
+}
+
+/** GET /children/{id}/device-links: names, dates and states; never a secret. */
+export const fetchDeviceLinks = (childId: string, token: string | null) => call<DeviceLinkList>('GET', `/children/${childId}/device-links`, token)
+
+/** POST …/{linkId}/revoke: the phone's next request is refused. */
+export const revokeDeviceLink = (childId: string, linkId: string, token: string | null) =>
+  call<void>('POST', `/children/${childId}/device-links/${linkId}/revoke`, token)
+
+/** PATCH …/{linkId}: what the phone's reminders say. */
+export const setReminderDetail = (childId: string, linkId: string, reminderDetail: 'generic' | 'detailed', token: string | null) =>
+  call<DeviceLink>('PATCH', `/children/${childId}/device-links/${linkId}`, token, { reminderDetail })
+
 /** The link a phone opens: the secret goes in the `#`, which a browser never sends to a server. */
 export function deviceLinkUrl(origin: string, token: string): string {
   return `${origin}/hijo#${token}`

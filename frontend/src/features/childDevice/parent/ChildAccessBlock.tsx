@@ -9,7 +9,8 @@ import { useChildAccess } from '../../family/useChildAccess'
 import { PlanAvisoCompacto } from '../../plans/PlanAvisoCompacto'
 import { PARENT } from '../childText'
 import { DeviceLinkError, deviceLinkUrl, type CreatedLink } from './parentApi'
-import { useCreateDeviceLink } from './parentHooks'
+import { ChildAccessList } from './ChildAccessList'
+import { useCreateDeviceLink, useDeviceLinks } from './parentHooks'
 
 /**
  * «Acceso del hijo» (specs/047): the parent gives a child's own phone a one-use link; the phone opens it and sees and marks only that
@@ -22,6 +23,7 @@ export function ChildAccessBlock({ childId, childName }: { childId: string; chil
   const access = useChildAccess(account, childId)
   const navigate = useNavigate()
   const create = useCreateDeviceLink(childId)
+  const list = useDeviceLinks(childId)
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [link, setLink] = useState<CreatedLink | null>(null)
@@ -29,8 +31,19 @@ export function ChildAccessBlock({ childId, childName }: { childId: string; chil
   const [planOpen, setPlanOpen] = useState(false)
   const submitRef = useRef<HTMLButtonElement>(null)
 
-  if (!account || !access.canAdd) return null
-  if (access.isFree) return <PlanAvisoCompacto title={PARENT.plan.title} text={PARENT.plan.text} />
+  const links = list.data?.links ?? []
+  if (!account) return null
+  // Who can only see (a caregiver) gets the list when there is one; who can manage also gets the form, or the plan notice on the free plan.
+  if (!access.canAdd) return links.length > 0 ? <ChildAccessList childId={childId} childName={childName} links={links} canManage={false} /> : null
+  const listBlock = links.length > 0 ? <ChildAccessList childId={childId} childName={childName} links={links} canManage /> : null
+  if (access.isFree) {
+    return (
+      <section aria-label={PARENT.title} className="flex flex-col gap-3">
+        <PlanAvisoCompacto title={PARENT.plan.title} text={PARENT.plan.text} />
+        {listBlock}
+      </section>
+    )
+  }
 
   function onSubmit(event: FormEvent) {
     event.preventDefault()
@@ -136,6 +149,7 @@ export function ChildAccessBlock({ childId, childName }: { childId: string; chil
           </button>
         </form>
       )}
+      {listBlock}
       {planOpen && <FreemiumLimitModal reason="child_device" opener={submitRef} onStayFree={() => setPlanOpen(false)} onViewPlans={() => navigate('/planes')} />}
     </section>
   )

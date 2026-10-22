@@ -268,6 +268,53 @@ definitions:
           answer; the app puts it in the `#` of the link.
         type: string
     type: object
+  ChildDeviceLinkListResponse:
+    properties:
+      canManage:
+        description: 'CanManage: the session can make and remove phones; a caregiver
+          only sees the list.'
+        type: boolean
+      limit:
+        example: 3
+        type: integer
+      links:
+        items:
+          $ref: '#/definitions/ChildDeviceLinkResponse'
+        type: array
+    type: object
+  ChildDeviceLinkResponse:
+    properties:
+      createdAt:
+        example: "2026-10-22T14:00:00Z"
+        type: string
+      expiresAt:
+        example: "2026-10-23T14:00:00Z"
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      lastSeenAt:
+        type: string
+      name:
+        example: Teléfono de Mateo
+        type: string
+      redeemedAt:
+        type: string
+      reminderDetail:
+        enum:
+        - generic
+        - detailed
+        example: generic
+        type: string
+      status:
+        enum:
+        - pending
+        - active
+        - revoked
+        - expired
+        example: active
+        type: string
+    type: object
   ChildDeviceMeResponse:
     properties:
       childFirstName:
@@ -1114,6 +1161,14 @@ definitions:
         example: "2026-10-30T14:00:00Z"
         type: string
     type: object
+  RotatedChildDeviceCredentialResponse:
+    properties:
+      credential:
+        type: string
+      rotateAfter:
+        example: "2026-10-30T14:00:00Z"
+        type: string
+    type: object
   SearchConsultationsRequest:
     properties:
       doctor:
@@ -1580,6 +1635,15 @@ definitions:
         type: boolean
       name:
         example: Ana
+        type: string
+    type: object
+  UpdateChildDeviceLinkRequest:
+    properties:
+      reminderDetail:
+        enum:
+        - generic
+        - detailed
+        example: detailed
         type: string
     type: object
   ValidationErrorResponse:
@@ -2855,6 +2919,26 @@ paths:
       summary: Open a child's link
       tags:
       - child-device
+  /child-device/rotate:
+    post:
+      description: The new credential is returned once; the previous one keeps working
+        for 24 hours and then stops.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/RotatedChildDeviceCredentialResponse'
+        "401":
+          description: The credential does not work
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+      security:
+      - DeviceCredential: []
+      summary: Renew the phone's credential
+      tags:
+      - child-device
   /children/{childId}/appointments:
     get:
       description: |-
@@ -3086,6 +3170,40 @@ paths:
       tags:
       - consultations
   /children/{childId}/device-links:
+    get:
+      description: |-
+        Names, when each was linked, when it was last used and its state. Never a secret or a hash. A caregiver can see it
+        (`canManage` false) but not change it.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ChildDeviceLinkListResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "403":
+          description: The session has no access to this child
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: A child's phones
+      tags:
+      - child-device
     post:
       consumes:
       - application/json
@@ -3135,6 +3253,92 @@ paths:
       security:
       - ClerkSession: []
       summary: Make the one-use link of a child's phone
+      tags:
+      - child-device
+  /children/{childId}/device-links/{linkId}:
+    patch:
+      consumes:
+      - application/json
+      description: «generic» (no medication, no child) or «detailed». Generic by default.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: Link UUID
+        in: path
+        name: linkId
+        required: true
+        type: string
+      - description: The choice
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateChildDeviceLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ChildDeviceLinkResponse'
+        "400":
+          description: Not generic or detailed
+          schema:
+            $ref: '#/definitions/ChildDeviceValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "403":
+          description: The session can't manage this child
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "404":
+          description: No such phone for this child
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: What a phone's reminders say
+      tags:
+      - child-device
+  /children/{childId}/device-links/{linkId}/revoke:
+    post:
+      description: |-
+        At once: the phone's next request is refused. Also cancels a link nobody opened. Idempotent. What the phone already
+        marked stays, still under the child's name.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: Link UUID
+        in: path
+        name: linkId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "403":
+          description: The session can't manage this child
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "404":
+          description: No such phone for this child
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Remove a phone
       tags:
       - child-device
   /children/{childId}/history-options:

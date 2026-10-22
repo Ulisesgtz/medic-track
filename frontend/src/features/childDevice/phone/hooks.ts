@@ -1,7 +1,9 @@
+import { useEffect, useRef } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ChildOverview, OverviewDose } from '../../consultations/types'
 import type { Routine, RoutineList } from '../../supplements/types'
 import { deviceRequest, fetchMe, PhoneApiError, type Me } from './api'
+import { writeCredential } from './storage'
 
 // The queries of the child's own screen (specs/047). All of them go with the phone's credential and refresh every minute, like the
 // parents' screens, so a dose that turns «sin registrar» changes by itself. None of them knows what a Clerk session is.
@@ -71,6 +73,32 @@ export function useDone(credential: string, from: Date, to: Date) {
     // Another device marking the last dose first answers «nothing to mark»: the list is read again either way.
     onSettled: () => queryClient.invalidateQueries({ queryKey: phoneKey() }),
   })
+}
+
+/**
+ * Renews the phone's credential once its time has come (`rotateAfter` of /me): the new one is kept BEFORE the old one is forgotten, and
+ * the server lets the old one work for a day more, so two tabs or a lost answer don't leave the phone without access. Failing is silent:
+ * the next visit tries again, and if the access is gone /me says so.
+ */
+export function useRotation(credential: string, rotateAfter: string | undefined, onRotated: (credential: string) => void) {
+  const queryClient = useQueryClient()
+  const running = useRef(false)
+  // The `rotateAfter` already acted on: after a renewal the old value may still be in view for a moment, and it must not renew twice.
+  const handled = useRef<string | null>(null)
+  useEffect(() => {
+    if (!rotateAfter || running.current || handled.current === rotateAfter || new Date(rotateAfter).getTime() > Date.now()) return
+    running.current = true
+    handled.current = rotateAfter
+    deviceRequest<{ credential: string }>(credential, '/child-device/rotate', 'POST')
+      .then((got) => {
+        if (writeCredential(got.credential)) onRotated(got.credential)
+        return queryClient.invalidateQueries({ queryKey: phoneKey('me') })
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        running.current = false
+      })
+  }, [credential, rotateAfter, onRotated, queryClient])
 }
 
 export type { Me }

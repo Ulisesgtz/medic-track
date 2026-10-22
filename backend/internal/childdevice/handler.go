@@ -196,6 +196,192 @@ func (h *Handler) CreateLink(w http.ResponseWriter, r *http.Request) {
 	}, &actor)
 }
 
+type linkResponse struct {
+	ID             string  `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	Name           string  `json:"name" example:"Teléfono de Mateo"`
+	Status         string  `json:"status" enums:"pending,active,revoked,expired" example:"active"`
+	CreatedAt      string  `json:"createdAt" example:"2026-10-22T14:00:00Z"`
+	RedeemedAt     *string `json:"redeemedAt"`
+	LastSeenAt     *string `json:"lastSeenAt"`
+	ExpiresAt      string  `json:"expiresAt" example:"2026-10-23T14:00:00Z"`
+	ReminderDetail string  `json:"reminderDetail" enums:"generic,detailed" example:"generic"`
+} // @name ChildDeviceLinkResponse
+
+type linkListResponse struct {
+	Links []linkResponse `json:"links"`
+	Limit int            `json:"limit" example:"3"`
+	// CanManage: the session can make and remove phones; a caregiver only sees the list.
+	CanManage bool `json:"canManage"`
+} // @name ChildDeviceLinkListResponse
+
+type updateLinkRequest struct {
+	ReminderDetail string `json:"reminderDetail" enums:"generic,detailed" example:"detailed"`
+} // @name UpdateChildDeviceLinkRequest
+
+type rotateResponse struct {
+	Credential  string `json:"credential"`
+	RotateAfter string `json:"rotateAfter" example:"2026-10-30T14:00:00Z"`
+} // @name RotatedChildDeviceCredentialResponse
+
+func toLinkResponse(l Link, now time.Time) linkResponse {
+	out := linkResponse{ID: l.ID.String(), Name: l.Name, Status: l.StatusAt(now), CreatedAt: formatTime(l.CreatedAt), ExpiresAt: formatTime(l.ExpiresAt), ReminderDetail: "generic"}
+	if l.RedeemedAt != nil {
+		s := formatTime(*l.RedeemedAt)
+		out.RedeemedAt = &s
+	}
+	if l.LastSeenAt != nil {
+		s := formatTime(*l.LastSeenAt)
+		out.LastSeenAt = &s
+	}
+	if l.ReminderDetail != nil {
+		out.ReminderDetail = *l.ReminderDetail
+	}
+	return out
+}
+
+// List handles GET /children/{childId}/device-links.
+//
+//	@Summary		A child's phones
+//	@Description	Names, when each was linked, when it was last used and its state. Never a secret or a hash. A caregiver can see it
+//	@Description	(`canManage` false) but not change it.
+//	@Tags			child-device
+//	@Produce		json
+//	@Param			childId	path		string	true	"Child UUID"
+//	@Success		200		{object}	linkListResponse
+//	@Failure		404		{object}	errorDoc	"No child exists for this id"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	errorDoc	"No valid Clerk session"
+//	@Failure		403		{object}	errorDoc	"The session has no access to this child"
+//	@Router			/children/{childId}/device-links [get]
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	childID, err := uuid.Parse(chi.URLParam(r, "childId"))
+	if err != nil {
+		h.responder.WriteJSONError(ctx, w, http.StatusNotFound, "child_not_found", "No child exists for this id", nil)
+		return
+	}
+	links, err := h.service.List(ctx, childID)
+	if err != nil {
+		h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", "Could not list the phones", nil)
+		return
+	}
+	got, _ := access.FromContext(ctx)
+	now := h.service.Now()
+	resp := linkListResponse{Links: make([]linkResponse, 0, len(links)), Limit: MaxLinksPerChild, CanManage: got.Level == access.Full}
+	for _, l := range links {
+		resp.Links = append(resp.Links, toLinkResponse(l, now))
+	}
+	h.responder.WriteJSON(ctx, w, http.StatusOK, resp, nil)
+}
+
+// Revoke handles POST /children/{childId}/device-links/{linkId}/revoke.
+//
+//	@Summary		Remove a phone
+//	@Description	At once: the phone's next request is refused. Also cancels a link nobody opened. Idempotent. What the phone already
+//	@Description	marked stays, still under the child's name.
+//	@Tags			child-device
+//	@Param			childId	path	string	true	"Child UUID"
+//	@Param			linkId	path	string	true	"Link UUID"
+//	@Success		204
+//	@Failure		404	{object}	errorDoc	"No such phone for this child"
+//	@Security		ClerkSession
+//	@Failure		401	{object}	errorDoc	"No valid Clerk session"
+//	@Failure		403	{object}	errorDoc	"The session can't manage this child"
+//	@Router			/children/{childId}/device-links/{linkId}/revoke [post]
+func (h *Handler) Revoke(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	childID, errChild := uuid.Parse(chi.URLParam(r, "childId"))
+	linkID, errLink := uuid.Parse(chi.URLParam(r, "linkId"))
+	actor := actorOf(ctx)
+	if errChild != nil || errLink != nil || actor == uuid.Nil {
+		h.responder.WriteJSONError(ctx, w, http.StatusNotFound, "not_found", "No such phone", nil)
+		return
+	}
+	if err := h.service.Revoke(ctx, childID, linkID, actor); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			h.responder.WriteJSONError(ctx, w, http.StatusNotFound, "not_found", "No such phone", &actor)
+			return
+		}
+		h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", "Could not remove the phone", &actor)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// Update handles PATCH /children/{childId}/device-links/{linkId}.
+//
+//	@Summary		What a phone's reminders say
+//	@Description	«generic» (no medication, no child) or «detailed». Generic by default.
+//	@Tags			child-device
+//	@Accept			json
+//	@Produce		json
+//	@Param			childId	path		string				true	"Child UUID"
+//	@Param			linkId	path		string				true	"Link UUID"
+//	@Param			payload	body		updateLinkRequest	true	"The choice"
+//	@Success		200		{object}	linkResponse
+//	@Failure		400		{object}	validationDoc	"Not generic or detailed"
+//	@Failure		404		{object}	errorDoc		"No such phone for this child"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	errorDoc	"No valid Clerk session"
+//	@Failure		403		{object}	errorDoc	"The session can't manage this child"
+//	@Router			/children/{childId}/device-links/{linkId} [patch]
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	childID, errChild := uuid.Parse(chi.URLParam(r, "childId"))
+	linkID, errLink := uuid.Parse(chi.URLParam(r, "linkId"))
+	if errChild != nil || errLink != nil {
+		h.responder.WriteJSONError(ctx, w, http.StatusNotFound, "not_found", "No such phone", nil)
+		return
+	}
+	invalid := httpx.ValidationBody("Invalid request body", []httpx.FieldError{{Field: "reminderDetail", Message: "Elige texto genérico o con detalle."}})
+	var req updateLinkRequest
+	if !decode(w, r, &req) {
+		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, invalid, nil)
+		return
+	}
+	link, err := h.service.SetReminderDetail(ctx, childID, linkID, req.ReminderDetail)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrInvalidDetail):
+			h.responder.WriteJSON(ctx, w, http.StatusBadRequest, invalid, nil)
+		case errors.Is(err, ErrNotFound):
+			h.responder.WriteJSONError(ctx, w, http.StatusNotFound, "not_found", "No such phone", nil)
+		default:
+			h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", "Could not save the choice", nil)
+		}
+		return
+	}
+	h.responder.WriteJSON(ctx, w, http.StatusOK, toLinkResponse(*link, h.service.Now()), nil)
+}
+
+// Rotate handles POST /child-device/rotate.
+//
+//	@Summary		Renew the phone's credential
+//	@Description	The new credential is returned once; the previous one keeps working for 24 hours and then stops.
+//	@Tags			child-device
+//	@Produce		json
+//	@Success		200	{object}	rotateResponse
+//	@Security		DeviceCredential
+//	@Failure		401	{object}	errorDoc	"The credential does not work"
+//	@Router			/child-device/rotate [post]
+func (h *Handler) Rotate(w http.ResponseWriter, r *http.Request) {
+	p, ok := PrincipalFromContext(r.Context())
+	if !ok {
+		h.responder.WriteJSONErrorUnlogged(w, http.StatusUnauthorized, "unauthorized", "This access is not active")
+		return
+	}
+	credential, after, err := h.service.Rotate(r.Context(), p.LinkID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			h.responder.WriteJSONErrorUnlogged(w, http.StatusUnauthorized, "unauthorized", "This access is not active")
+			return
+		}
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not renew the access", nil)
+		return
+	}
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, rotateResponse{Credential: credential, RotateAfter: formatTime(after)}, nil)
+}
+
 // Redeem handles POST /child-device/redeem.
 //
 //	@Summary		Open a child's link

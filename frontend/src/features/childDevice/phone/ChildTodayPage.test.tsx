@@ -13,6 +13,7 @@ interface Stub {
   doses: unknown[]
   activities: unknown[]
   status?: Record<string, number>
+  rotateAfter?: string
 }
 
 function stubApi(stub: Stub) {
@@ -31,7 +32,8 @@ function stubApi(stub: Stub) {
       const forced = stub.status?.[`${method} ${url.pathname}`]
       if (forced) return { ok: forced < 300, status: forced, json: async () => ({}) } as Response
       const ok = (body: unknown) => ({ ok: true, status: 200, json: async () => body }) as Response
-      if (url.pathname === '/child-device/me') return ok({ childId: CHILD, childFirstName: 'Mateo', deviceName: 'Teléfono', rotateAfter: at(23), reminderDetail: 'generic' })
+      if (url.pathname === '/child-device/me') return ok({ childId: CHILD, childFirstName: 'Mateo', deviceName: 'Teléfono', rotateAfter: stub.rotateAfter ?? new Date(Date.now() + 86_400_000).toISOString(), reminderDetail: 'generic' })
+      if (url.pathname === '/child-device/rotate') return ok({ credential: 'cred-nueva', rotateAfter: new Date(Date.now() + 7 * 86_400_000).toISOString() })
       if (url.pathname.endsWith('/overview')) return ok({ childId: CHILD, doses: stub.doses, activeTreatment: null })
       if (url.pathname.endsWith('/routines')) return ok({ routines: stub.activities, activeCount: stub.activities.length, limit: 10, paidPlan: true })
       return ok({})
@@ -174,5 +176,28 @@ describe('ChildTodayPage', () => {
     const before = calls.length
     await user.click(screen.getByRole('button', { name: PHONE.retry }))
     await waitFor(() => expect(calls.length).toBeGreaterThan(before))
+  })
+
+  it('renews its credential when its time has come, keeping the new one and asking only once', async () => {
+    const calls = stubApi({ doses: [], activities: [], rotateAfter: new Date(Date.now() - 1000).toISOString() })
+    show()
+    await waitFor(() => expect(window.localStorage.getItem('hijo-credencial')).toBe('cred-nueva'))
+    expect(calls.filter((c) => c.path === '/child-device/rotate')).toHaveLength(1)
+    expect(calls.find((c) => c.path === '/child-device/rotate')?.auth).toBe('Device cred-del-hijo')
+  })
+
+  it('does not renew before its time', async () => {
+    const calls = stubApi({ doses: [], activities: [] })
+    show()
+    await screen.findByText(PHONE.noDoses)
+    expect(calls.some((c) => c.path === '/child-device/rotate')).toBe(false)
+    expect(window.localStorage.getItem('hijo-credencial')).toBe('cred-del-hijo')
+  })
+
+  it('keeps the old credential if the renewal fails', async () => {
+    stubApi({ doses: [], activities: [], rotateAfter: new Date(Date.now() - 1000).toISOString(), status: { 'POST /child-device/rotate': 500 } })
+    show()
+    await screen.findByText(PHONE.noDoses)
+    expect(window.localStorage.getItem('hijo-credencial')).toBe('cred-del-hijo')
   })
 })

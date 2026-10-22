@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -85,3 +86,5 @@ func hashOf(t *testing.T, credential string) []byte {
 	require.True(t, ok)
 	return h
 }
+
+func stringsReader(s string) *strings.Reader { return strings.NewReader(s) }

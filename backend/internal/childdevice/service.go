@@ -30,6 +30,26 @@ func (s *Service) CreateLink(ctx context.Context, childID, actor uuid.UUID, name
 	return s.repo.Create(ctx, childID, actor, name, s.now())
 }
 
+// List is a child's phones and links.
+func (s *Service) List(ctx context.Context, childID uuid.UUID) ([]Link, error) {
+	return s.repo.List(ctx, childID, s.now())
+}
+
+// Revoke removes a phone, at once.
+func (s *Service) Revoke(ctx context.Context, childID, linkID, actor uuid.UUID) error {
+	return s.repo.Revoke(ctx, childID, linkID, actor, s.now())
+}
+
+// SetReminderDetail chooses what a phone's reminders say.
+func (s *Service) SetReminderDetail(ctx context.Context, childID, linkID uuid.UUID, detail string) (*Link, error) {
+	return s.repo.SetReminderDetail(ctx, childID, linkID, detail)
+}
+
+// Rotate renews a phone's credential.
+func (s *Service) Rotate(ctx context.Context, linkID uuid.UUID) (string, time.Time, error) {
+	return s.repo.Rotate(ctx, linkID, s.now())
+}
+
 // Redeem exchanges a link's token for the phone's credential.
 func (s *Service) Redeem(ctx context.Context, token string) (*Redeemed, error) {
 	return s.repo.Redeem(ctx, token, s.now())

@@ -117,6 +117,7 @@ func NewRouter(d Deps) *chi.Mux {
 			routineOfChild := d.ChildDevice.RoutineOfChild()
 			consultationOfChild := d.ChildDevice.ConsultationOfChild()
 			r.Get("/child-device/me", d.ChildDevice.Me)
+			r.Post("/child-device/rotate", d.ChildDevice.Rotate)
 			r.With(sameChild).Get("/child-device/children/{childId}/overview", d.Consultation.GetChildOverview)
 			r.With(sameChild).Get("/child-device/children/{childId}/routines", d.Supplement.ListRoutines)
 			r.With(consultationOfChild).Patch("/child-device/consultations/{consultationId}/doses/{doseId}", d.Consultation.UpdateDose)
@@ -188,6 +189,9 @@ func NewRouter(d Deps) *chi.Mux {
 		// A child's phone (specs/047): the parent makes its one-use link; the phone's own routes are in the /child-device group.
 		if d.ChildDevice != nil {
 			r.With(fullChild).Post("/children/{childId}/device-links", d.ChildDevice.CreateLink)
+			r.With(seesChild).Get("/children/{childId}/device-links", d.ChildDevice.List)
+			r.With(fullChild).Post("/children/{childId}/device-links/{linkId}/revoke", d.ChildDevice.Revoke)
+			r.With(fullChild).Patch("/children/{childId}/device-links/{linkId}", d.ChildDevice.Update)
 		}
 
 		r.With(seesChild).Get("/children/{childId}/consultations", d.Consultation.ListConsultations)

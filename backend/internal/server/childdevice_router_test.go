@@ -18,6 +18,7 @@ import (
 // phoneRoutes are the only routes the phone's credential opens (contracts/api.md, section C), as [method, pattern].
 var phoneRoutes = map[string]bool{
 	"GET /child-device/me":                                              true,
+	"POST /child-device/rotate":                                         true,
 	"GET /child-device/children/{childId}/overview":                     true,
 	"GET /child-device/children/{childId}/routines":                     true,
 	"PATCH /child-device/consultations/{consultationId}/doses/{doseId}": true,

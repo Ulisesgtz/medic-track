@@ -5,7 +5,7 @@ import { DayProgress } from '../../supplements/DayProgress'
 import { dayCount } from '../../supplements/scheduleText'
 import { useLocalDay } from '../../../shared/useLocalDay'
 import { PHONE } from '../childText'
-import { accessGone, useActivities, useDone, useMarkDose, useMe, useOverview } from './hooks'
+import { accessGone, useActivities, useDone, useMarkDose, useMe, useOverview, useRotation } from './hooks'
 import { NoAccess } from './NoAccess'
 import { clearCredential, readCredential } from './storage'
 
@@ -30,18 +30,19 @@ function DoseRow({ credential, dose }: { credential: string; dose: OverviewDose 
  * API with the phone's credential only; if the server says the access is gone the phone forgets it and says one sentence.
  */
 export function ChildTodayPage() {
-  const [credential] = useState(readCredential)
+  const [credential, setCredential] = useState(readCredential)
   if (!credential) return <NoAccess />
-  return <Today credential={credential} />
+  return <Today credential={credential} onRotated={setCredential} />
 }
 
-function Today({ credential }: { credential: string }) {
+function Today({ credential, onRotated }: { credential: string; onRotated: (credential: string) => void }) {
   const day = useLocalDay()
   const me = useMe(credential)
   const childId = me.data?.childId
   const overview = useOverview(credential, childId, day.from, day.to)
   const activities = useActivities(credential, childId, day.from, day.to)
   const done = useDone(credential, day.from, day.to)
+  useRotation(credential, me.data?.rotateAfter, onRotated)
   const gone = accessGone(me.error, overview.error, activities.error)
 
   useEffect(() => {
