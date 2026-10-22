@@ -238,6 +238,54 @@ definitions:
         example: true
         type: boolean
     type: object
+  ChildDeviceErrorResponse:
+    properties:
+      error:
+        example: not_found
+        type: string
+      message:
+        example: This link is no longer valid
+        type: string
+    type: object
+  ChildDeviceLinkCreatedResponse:
+    properties:
+      expiresAt:
+        example: "2026-10-23T14:00:00Z"
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      name:
+        example: Teléfono de Mateo
+        type: string
+      status:
+        enum:
+        - pending
+        example: pending
+        type: string
+      token:
+        description: Token is the link's secret. It exists in the clear only in this
+          answer; the app puts it in the `#` of the link.
+        type: string
+    type: object
+  ChildDeviceValidationResponse:
+    properties:
+      details:
+        items:
+          properties:
+            field:
+              example: name
+              type: string
+            message:
+              type: string
+          type: object
+        type: array
+      error:
+        example: validation_error
+        type: string
+      message:
+        type: string
+    type: object
   ChildNotFoundResponse:
     properties:
       error:
@@ -372,6 +420,13 @@ definitions:
         type: string
       message:
         example: One or more fields are invalid
+        type: string
+    type: object
+  CreateChildDeviceLinkRequest:
+    properties:
+      name:
+        description: Name is what the parent calls the phone. 1 to 40 characters.
+        example: Teléfono de Mateo
         type: string
     type: object
   CreatedFamilyInvitationResponse:
@@ -1014,6 +1069,27 @@ definitions:
           Reason is "active_treatment" (another treatment is still running), "record_only" (saving only as a record) or
           "history_search" (searching and filtering the history, specs/031).
         example: active_treatment
+        type: string
+    type: object
+  RedeemChildDeviceLinkRequest:
+    properties:
+      token:
+        type: string
+    type: object
+  RedeemedChildDeviceLinkResponse:
+    properties:
+      childFirstName:
+        example: Mateo
+        type: string
+      childId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      credential:
+        description: 'Credential is what the phone sends from now on as `Authorization:
+          Device <credential>`. It is shown only here.'
+        type: string
+      rotateAfter:
+        example: "2026-10-30T14:00:00Z"
         type: string
     type: object
   SearchConsultationsRequest:
@@ -2705,6 +2781,38 @@ paths:
       summary: List the symptoms a parent can mark
       tags:
       - catalog
+  /child-device/redeem:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Public: the secret in the body is the only thing it takes. A link that is unknown, used, expired or canceled
+        gets the same 404, which is not written to error_logs. Strictly rate limited.
+      parameters:
+      - description: The link's token
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/RedeemChildDeviceLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/RedeemedChildDeviceLinkResponse'
+        "404":
+          description: The link no longer works
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "429":
+          description: Too many requests
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+      summary: Open a child's link
+      tags:
+      - child-device
   /children/{childId}/appointments:
     get:
       description: |-
@@ -2935,6 +3043,58 @@ paths:
       summary: Search and filter a child's consultations
       tags:
       - consultations
+  /children/{childId}/device-links:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Part of the paid plan (the server decides, under the owner account's lock): a free account gets 422
+        "freemium_consultation_limit_exceeded" with reason "child_device". A child keeps at most 3 phones plus
+        pending links (422 "child_device_limit_exceeded"). The token is returned once.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: The phone's name
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/CreateChildDeviceLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ChildDeviceLinkCreatedResponse'
+        "400":
+          description: Invalid name
+          schema:
+            $ref: '#/definitions/ChildDeviceValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "403":
+          description: The session can't manage this child
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "422":
+          description: The plan or the cap of phones
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Make the one-use link of a child's phone
+      tags:
+      - child-device
   /children/{childId}/history-options:
     get:
       description: |-
@@ -4322,6 +4482,12 @@ paths:
 securityDefinitions:
   ClerkSession:
     description: Clerk session token, sent as "Bearer <token>".
+    in: header
+    name: Authorization
+    type: apiKey
+  DeviceCredential:
+    description: A child's phone credential (specs/047), sent as "Device <credential>"
+      (never "Bearer").
     in: header
     name: Authorization
     type: apiKey

@@ -162,6 +162,7 @@ func newWorld(t *testing.T) *world {
 		Payments:       paymentsHandler(t, pool, responder),
 		Supplement:     supplement.NewHandler(supplement.NewService(supplement.NewRepository(pool)), responder),
 		Appointment:    appointment.NewHandler(appointment.NewService(appointment.NewRepository(pool)), responder),
+		ChildDevice:    childdevice.NewHandler(childdevice.NewService(childdevice.NewRepository(pool)), responder),
 		Ownership:      ownership.NewRepository(pool),
 		Access:         access.NewRepository(pool),
 		FrontendOrigin: "http://localhost:5173",
@@ -248,6 +249,8 @@ func (w *world) routes() []struct {
 		{"resume routine", http.MethodPost, "/routines/" + w.routineA.String() + "/resume", `{"utcOffsetMinutes":0}`, http.StatusUnprocessableEntity},
 		{"finish routine", http.MethodPost, "/routines/" + w.routineA.String() + "/finish", "", http.StatusOK},
 		// Specs/033, part 2: the next appointment. Reading, one's own reminders and marking never need the plan; creating and editing do (an empty form is a 400 first).
+		// Specs/047: an empty name is a 400 before the plan is asked; it is a Full route (a Caregiver gets 403).
+		{"create device link", http.MethodPost, "/children/" + w.childA.String() + "/device-links", `{}`, http.StatusBadRequest},
 		{"child appointments", http.MethodGet, "/children/" + w.childA.String() + "/appointments", "", http.StatusOK},
 		{"consultation appointment", http.MethodGet, "/consultations/" + w.consultationA.String() + "/appointment", "", http.StatusOK},
 		{"create appointment of a child", http.MethodPost, "/children/" + w.childA.String() + "/appointments", `{}`, http.StatusBadRequest},
@@ -352,7 +355,7 @@ func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 // fullRoutes need the full level (the owner or a Tutor); every other protected route needs only Mark (see and mark).
 var (
 	ownRoutes  = map[string]bool{"get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true, "get subscription": true, "subscribe": true, "cancel subscription": true}
-	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "edit appointment": true, "mark appointment": true}
+	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "create device link": true, "edit appointment": true, "mark appointment": true}
 )
 
 func (w *world) setOwnerPlan(t *testing.T, plan string) {
@@ -492,4 +495,14 @@ func TestRouter_AChildDeviceCredentialOpensNoParentRoute(t *testing.T) {
 	for _, post := range []string{"/accounts", "/family/invitations", "/family/leave"} {
 		require.Equal(t, http.StatusUnauthorized, w.doDevice(t, http.MethodPost, post, w.deviceCredential, `{}`).Code, post)
 	}
+}
+
+// The phone of a child opens its link without any session: public, the same 404 for every failure.
+func TestRouter_TheChildDeviceLinkIsRedeemedWithoutASession(t *testing.T) {
+	w := newWorld(t)
+	rec := w.do(t, http.MethodPost, "/child-device/redeem", "", `{"token":"esto-no-es-una-ficha"}`)
+	require.Equal(t, http.StatusNotFound, rec.Code)
+	unknown, _, err := childdevice.NewToken()
+	require.NoError(t, err)
+	require.Equal(t, rec.Body.String(), w.do(t, http.MethodPost, "/child-device/redeem", "", `{"token":"`+unknown+`"}`).Body.String())
 }

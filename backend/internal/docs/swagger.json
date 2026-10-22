@@ -1272,6 +1272,52 @@
                 }
             }
         },
+        "/child-device/redeem": {
+            "post": {
+                "description": "Public: the secret in the body is the only thing it takes. A link that is unknown, used, expired or canceled\ngets the same 404, which is not written to error_logs. Strictly rate limited.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "child-device"
+                ],
+                "summary": "Open a child's link",
+                "parameters": [
+                    {
+                        "description": "The link's token",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/RedeemChildDeviceLinkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/RedeemedChildDeviceLinkResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "The link no longer works",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/children/{childId}/appointments": {
             "get": {
                 "security": [
@@ -1595,6 +1641,82 @@
                         "description": "Free plan: searching the history is part of the paid plan",
                         "schema": {
                             "$ref": "#/definitions/PlanLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/children/{childId}/device-links": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Part of the paid plan (the server decides, under the owner account's lock): a free account gets 422\n\"freemium_consultation_limit_exceeded\" with reason \"child_device\". A child keeps at most 3 phones plus\npending links (422 \"child_device_limit_exceeded\"). The token is returned once.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "child-device"
+                ],
+                "summary": "Make the one-use link of a child's phone",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The phone's name",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateChildDeviceLinkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceLinkCreatedResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid name",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't manage this child",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "The plan or the cap of phones",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
                         }
                     }
                 }
@@ -3954,6 +4076,74 @@
                 }
             }
         },
+        "ChildDeviceErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "not_found"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "This link is no longer valid"
+                }
+            }
+        },
+        "ChildDeviceLinkCreatedResponse": {
+            "type": "object",
+            "properties": {
+                "expiresAt": {
+                    "type": "string",
+                    "example": "2026-10-23T14:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Teléfono de Mateo"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "pending"
+                    ],
+                    "example": "pending"
+                },
+                "token": {
+                    "description": "Token is the link's secret. It exists in the clear only in this answer; the app puts it in the `#` of the link.",
+                    "type": "string"
+                }
+            }
+        },
+        "ChildDeviceValidationResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "field": {
+                                "type": "string",
+                                "example": "name"
+                            },
+                            "message": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "error": {
+                    "type": "string",
+                    "example": "validation_error"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "ChildNotFoundResponse": {
             "type": "object",
             "properties": {
@@ -4141,6 +4331,16 @@
                 "message": {
                     "type": "string",
                     "example": "One or more fields are invalid"
+                }
+            }
+        },
+        "CreateChildDeviceLinkRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "Name is what the parent calls the phone. 1 to 40 characters.",
+                    "type": "string",
+                    "example": "Teléfono de Mateo"
                 }
             }
         },
@@ -5009,6 +5209,35 @@
                     "description": "Reason is \"active_treatment\" (another treatment is still running), \"record_only\" (saving only as a record) or\n\"history_search\" (searching and filtering the history, specs/031).",
                     "type": "string",
                     "example": "active_treatment"
+                }
+            }
+        },
+        "RedeemChildDeviceLinkRequest": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "RedeemedChildDeviceLinkResponse": {
+            "type": "object",
+            "properties": {
+                "childFirstName": {
+                    "type": "string",
+                    "example": "Mateo"
+                },
+                "childId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "credential": {
+                    "description": "Credential is what the phone sends from now on as `Authorization: Device \u003ccredential\u003e`. It is shown only here.",
+                    "type": "string"
+                },
+                "rotateAfter": {
+                    "type": "string",
+                    "example": "2026-10-30T14:00:00Z"
                 }
             }
         },
@@ -6109,6 +6338,12 @@
     "securityDefinitions": {
         "ClerkSession": {
             "description": "Clerk session token, sent as \"Bearer \u003ctoken\u003e\".",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        },
+        "DeviceCredential": {
+            "description": "A child's phone credential (specs/047), sent as \"Device \u003ccredential\u003e\" (never \"Bearer\").",
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"

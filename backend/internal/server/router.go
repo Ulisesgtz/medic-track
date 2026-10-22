@@ -17,6 +17,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/appointment"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
+	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/family"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
@@ -39,6 +40,8 @@ type Deps struct {
 	Supplement *supplement.Handler
 	// Appointment: the next appointment of a consultation (specs/033, part 2).
 	Appointment *appointment.Handler
+	// ChildDevice: the access of a child's own phone (specs/047): the parents' routes to make it and the public one that opens it.
+	ChildDevice *childdevice.Handler
 	// Payments: the subscription of the full plan (specs/045). Nil = the charge is not available in this environment: none of its routes
 	// (including the provider's public notice) is registered.
 	Payments *payments.Handler
@@ -99,6 +102,11 @@ func NewRouter(d Deps) *chi.Mux {
 	// signed action token is the only thing it accepts, and it names a single dose (specs/011).
 	r.With(strict).Post("/reminders/actions/taken", d.Reminder.MarkTaken)
 
+	// A child's phone opens its link here: public (it has no session yet), strictly limited, and the same 404 for every failure (specs/047).
+	if d.ChildDevice != nil {
+		r.With(strict).Post("/child-device/redeem", d.ChildDevice.Redeem)
+	}
+
 	// The payment provider's notice (specs/045): public like the "Tomada" button, verified by the provider's signature and limited
 	// strictly; only registered when the charge is configured. The fake provider's helpers exist only with PAYMENTS_DRIVER=fake.
 	if d.Payments != nil {
@@ -158,6 +166,11 @@ func NewRouter(d Deps) *chi.Mux {
 		r.Post("/family/leave", d.Family.LeaveFamily)
 
 		r.Get("/reminders/config", d.Reminder.GetConfig)
+
+		// A child's phone (specs/047): the parent makes its one-use link; the phone's own routes are in the /child-device group.
+		if d.ChildDevice != nil {
+			r.With(fullChild).Post("/children/{childId}/device-links", d.ChildDevice.CreateLink)
+		}
 
 		r.With(seesChild).Get("/children/{childId}/consultations", d.Consultation.ListConsultations)
 		r.With(seesChild).Get("/children/{childId}/overview", d.Consultation.GetChildOverview)

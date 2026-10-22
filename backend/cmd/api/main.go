@@ -9,6 +9,10 @@
 //	@in							header
 //	@name						Authorization
 //	@description				Clerk session token, sent as "Bearer <token>".
+//	@securityDefinitions.apikey	DeviceCredential
+//	@in							header
+//	@name						Authorization
+//	@description				A child's phone credential (specs/047), sent as "Device <credential>" (never "Bearer").
 //	@securityDefinitions.apikey	OpsKey
 //	@in							header
 //	@name						Authorization
@@ -35,6 +39,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/appointment"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
+	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	_ "github.com/Ulisesgtz/medic-track/backend/internal/docs"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errordigest"
@@ -84,6 +89,9 @@ func main() {
 	consultationRepo := consultation.NewRepository(pool)
 	consultationService := consultation.NewService(consultationRepo)
 	consultationHandler := consultation.NewHandler(consultationService, responder)
+
+	// The access of a child's own phone (specs/047): the plan and the cap of phones are decided by the repository, under a lock.
+	childDeviceHandler := childdevice.NewHandler(childdevice.NewService(childdevice.NewRepository(pool)), responder)
 
 	// Supplement routines (specs/033): the plan and the cap of active routines are decided by the repository, under a lock.
 	supplementRepo := supplement.NewRepository(pool)
@@ -224,6 +232,7 @@ func main() {
 		Reminder:        reminderHandler,
 		Family:          familyHandler,
 		Supplement:      supplementHandler,
+		ChildDevice:     childDeviceHandler,
 		Appointment:     appointmentHandler,
 		Payments:        paymentsHandler,
 		Ops:             opsHandler,
