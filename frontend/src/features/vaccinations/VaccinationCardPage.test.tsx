@@ -237,6 +237,14 @@ describe('VaccinationCardPage', () => {
     expect(await screen.findByRole('link', { name: '← Mateo' })).toBeInTheDocument()
   })
 
+  it('puts the photos of the card next to the list on the web and under it on the phone', async () => {
+    stubApi({ account: account(), doses: [dose()], photos: [{ id: 'p1', createdAt: '2026-11-05T12:00:00', createdByName: 'Ana' }] })
+    page()
+    expect(await screen.findByRole('region', { name: TEXT.photos.title })).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: TEXT.photos.add })).toBeInTheDocument()
+    expect(await screen.findByText('Guardada por Ana el 05 nov 2026')).toBeInTheDocument()
+  })
+
   it('shows the corrected line with the first name of who corrected, the lot and the note', async () => {
     stubApi({ account: account(), doses: [dose({ correctedAt: '2026-11-05T12:00:00', correctedByName: 'Luis', lot: 'L9', notes: 'sin reacción' })] })
     page()

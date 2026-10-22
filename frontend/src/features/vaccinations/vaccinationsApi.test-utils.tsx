@@ -8,6 +8,9 @@ import type { Vaccination } from './types'
 
 export const CHILD_ID = 'c1'
 
+/** The first bytes of a JPEG: enough for the viewer to name its type. */
+export const JPEG_BASE64 = '/9j/4AAQSkZJRgABAQAAAQABAAD/'
+
 export const dose = (extra: Partial<Vaccination> = {}): Vaccination => ({
   id: 'v1',
   vaccineCode: 'hepatitis_b',
@@ -60,7 +63,9 @@ export function stubApi(state: ApiState) {
           { code: 'bcg', name: 'BCG' },
         ])
       if (method === 'GET' && path === `/children/${CHILD_ID}/vaccinations`) return state.listFails ? ok({}, 500) : ok({ vaccinations: state.doses })
-      if (method === 'GET' && path === `/children/${CHILD_ID}/vaccine-card-photos`) return ok({ photos: state.photos ?? [], limit: 10 })
+      if (method === 'GET' && path === `/children/${CHILD_ID}/vaccine-card-photos`) return state.writes?.[`GET ${path}`] ? ok({}, state.writes[`GET ${path}`].status) : ok({ photos: state.photos ?? [], limit: 10 })
+      if (method === 'GET' && path.startsWith(`/children/${CHILD_ID}/vaccine-card-photos/`) && !state.writes?.[`GET ${path}`])
+        return ok({ id: path.split('/').pop(), photoBase64: JPEG_BASE64 })
       const reply = state.writes?.[`${method} ${path}`] ?? { status: 204 }
       return ok(reply.body ?? {}, reply.status ?? 200)
     }),

@@ -56,6 +56,36 @@ export const TEXT = {
     place: 'El lugar puede tener hasta 120 caracteres.',
     notes: 'La nota puede tener hasta 500 caracteres.',
   },
+  photos: {
+    title: 'Fotos de la cartilla',
+    add: 'Guardar foto de la cartilla',
+    saving: 'Guardando la foto…',
+    empty: 'Aún no hay fotos de la cartilla.',
+    privacy: 'El texto se lee en tu equipo; la foto se guarda solo en tu cuenta.',
+    open: 'Abrir',
+    remove: 'Borrar',
+    viewerLabel: 'Foto de la cartilla',
+    loadError: 'No pudimos cargar las fotos.',
+    openError: 'No se pudo abrir la foto. Inténtalo de nuevo.',
+    saveError: 'No se pudo guardar la foto. No se perdió nada. Inténtalo de nuevo.',
+    notShrunk: 'No pudimos reducir la foto; se guardó tal cual.',
+    deleteTitle: '¿Borrar esta foto?',
+    deleteError: 'No se pudo borrar la foto. No se cambió nada. Inténtalo de nuevo.',
+  },
+  proposed: {
+    title: 'Leído de tu cartilla',
+    reading: 'Leyendo la cartilla…',
+    help: 'Revisa cada fila: puedes corregirla, descartarla o guardarla. No se guarda nada hasta que lo confirmes.',
+    none: 'No encontramos vacunas en la foto. Puedes capturarlas a mano.',
+    include: 'Guardar esta fila',
+    confirmOne: 'Guardar',
+    confirmSelected: 'Guardar las seleccionadas',
+    discard: 'Descartar',
+    discardAll: 'Descartar todo',
+    saving: 'Guardando…',
+    fixDate: 'Escribe la fecha de aplicación.',
+    saveError: 'No se pudo guardar. Inténtalo de nuevo.',
+  },
   confirmDelete: {
     title: '¿Borrar esta vacuna?',
     confirm: 'Borrar',
@@ -99,4 +129,25 @@ export function entrySummary(doses: number, photos: number): string {
   const dosesText = doses === 1 ? '1 dosis registrada' : `${doses} dosis registradas`
   const photosText = photos === 0 ? '' : photos === 1 ? ' · 1 foto' : ` · ${photos} fotos`
   return `${dosesText}${photosText}`
+}
+
+/** «Ya guardaste 10 fotos de esta cartilla. Borra una para guardar otra.» */
+export function photoLimitText(limit: number): string {
+  return `Ya guardaste ${limit} fotos de esta cartilla. Borra una para guardar otra.`
+}
+
+/** «Guardada por Ana el 05 nov 2026» for a thumbnail: who saved it and when (the first name, never an e-mail). */
+export function photoLine(p: { createdAt: string; createdByName: string }): string {
+  const d = new Date(p.createdAt)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const day = formatDateShort(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`)
+  return `Guardada${p.createdByName ? ` por ${p.createdByName}` : ''} el ${day}`
+}
+
+/** The rows of the confirmation to delete a photo. */
+export function deletePhotoRows(p: { createdAt: string; createdByName: string }): { k: string; v: string }[] {
+  return [
+    { k: 'Se borra', v: `${photoLine(p)}.` },
+    { k: 'No se puede deshacer', v: 'Las vacunas anotadas y las demás fotos no cambian.' },
+  ]
 }

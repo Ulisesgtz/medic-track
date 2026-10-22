@@ -1,13 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 
+const DEFAULT_LABEL = 'Foto de la receta'
+
 /**
  * Full-screen viewer for the prescription photo. Rendered in-app instead of
  * opening the image in a new tab: browsers block top-level navigation to
  * `data:` URLs (the tab would just be blank), and a new tab is awkward in an
  * installed PWA anyway. Tapping the image toggles between "fit to screen"
- * and actual size (scrollable) so small print stays readable.
+ * and actual size (scrollable) so small print stays readable. `label` names the
+ * photo for assistive tech (specs/046 reuses the viewer for the vaccination card).
  */
-export function PhotoViewer({ src, onClose }: { src: string; onClose: () => void }) {
+export function PhotoViewer({ src, onClose, label = DEFAULT_LABEL }: { src: string; onClose: () => void; label?: string }) {
   const [actualSize, setActualSize] = useState(false)
   const closeButtonRef = useRef<HTMLButtonElement>(null)
 
@@ -36,7 +39,7 @@ export function PhotoViewer({ src, onClose }: { src: string; onClose: () => void
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Foto de la receta en tamaño completo"
+      aria-label={`${label} en tamaño completo`}
       className="fixed inset-0 z-50 flex flex-col bg-ink"
     >
       <div className="flex shrink-0 items-center justify-between gap-4 px-5 py-3">
@@ -55,7 +58,7 @@ export function PhotoViewer({ src, onClose }: { src: string; onClose: () => void
       <div className="flex min-h-0 flex-1 overflow-auto p-4">
         <img
           src={src}
-          alt="Foto de la receta médica en tamaño completo"
+          alt={`${label === DEFAULT_LABEL ? 'Foto de la receta médica' : label} en tamaño completo`}
           onClick={() => setActualSize((v) => !v)}
           className={
             actualSize

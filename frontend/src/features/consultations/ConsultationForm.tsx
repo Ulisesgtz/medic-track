@@ -18,7 +18,7 @@ import {
   validateAppointment,
   type AppointmentErrors,
 } from '../appointments/appointmentValues'
-import { shrinkPhoto } from './shrinkPhoto'
+import { blobToBase64, shrinkPhoto } from './shrinkPhoto'
 import { Notice } from '../../shared/ui/Notice'
 import { createConsultation, ConsultationApiError, type CreateConsultationPayload } from './api'
 import { missingFieldsText } from './missingFields'
@@ -151,18 +151,6 @@ function extractMedications(ocrText: string): MedicationHint[] {
   return extractUnlistedMedications(ocrText)
 }
 
-function fileToBase64(file: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      const result = reader.result as string
-      resolve(result.split(',')[1] ?? '')
-    }
-    reader.onerror = () => reject(reader.error)
-    reader.readAsDataURL(file)
-  })
-}
-
 interface ConsultationFormProps {
   childId: string
   /** 'phone' = mock 04 (dark header with the OCR panel); 'desktop' = mock 14. */
@@ -266,7 +254,7 @@ export function ConsultationForm({
   const mutation = useMutation({
     mutationFn: async ({ values, photo }: { values: ConsultationFormValues; photo: File | null }) => {
       // The OCR already read the original; what is saved is the scaled-down copy (specs/043).
-      const photoBase64 = photo ? await fileToBase64(await shrinkPhoto(photo)) : undefined
+      const photoBase64 = photo ? await blobToBase64(await shrinkPhoto(photo)) : undefined
       const payload: CreateConsultationPayload = {
         doctorName: values.doctorName,
         consultDate: values.consultDate,

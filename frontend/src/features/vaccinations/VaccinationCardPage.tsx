@@ -6,6 +6,7 @@ import { useChildAccess } from '../family/useChildAccess'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { RoutinePageFrame } from '../supplements/RoutineFormPage'
 import { useDeleteVaccination, useVaccinations } from './hooks'
+import { CardPhotos } from './CardPhotos'
 import { VaccineDialog } from './VaccineDialog'
 import { VaccineList } from './VaccineList'
 import { TEXT, deleteRows } from './vaccineText'
@@ -106,7 +107,10 @@ export function VaccinationCardPage() {
           </button>
         </div>
       )}
-      {content}
+      <div className={isDesktop ? 'grid grid-cols-[minmax(0,1fr)_340px] items-start gap-8' : 'flex flex-col gap-7'}>
+        <div className="min-w-0">{content}</div>
+        {childId && child && !!account && <CardPhotos childId={childId} birthDate={child.birthDate} canEdit={canEdit} />}
+      </div>
       {open && child && (
         <VaccineDialog
           childId={childId!}
