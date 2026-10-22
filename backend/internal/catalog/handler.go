@@ -72,6 +72,36 @@ func NewSymptomResponse(s Symptom) SymptomResponse {
 	return SymptomResponse{Code: s.Code, Name: s.Name, Category: s.Category}
 }
 
+// VaccineResponse is the JSON of one vaccine of the catalog: a code and a name, never an age or a schedule (Principio I).
+type VaccineResponse struct {
+	Code string `json:"code" example:"hepatitis_b"`
+	Name string `json:"name" example:"Hepatitis B"`
+} // @name VaccineResponse
+
+// ListVaccines handles GET /catalog/vaccines.
+//
+//	@Summary	List the vaccines a parent can pick
+//	@Description	Active vaccines of the catalog, in order. Only names: the app records what the parent captured and
+//	@Description	never says what is due (specs/046-cartilla-vacunacion/contracts/api.md).
+//	@Tags		catalog
+//	@Produce	json
+//	@Success	200	{array}		VaccineResponse
+//	@Failure	500	{object}	notFoundResponseDoc	"Unexpected server error"
+//	@Router		/catalog/vaccines [get]
+func (h *Handler) ListVaccines(w http.ResponseWriter, r *http.Request) {
+	vaccines, err := h.repo.ListVaccines(r.Context())
+	if err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not load vaccines", nil)
+		return
+	}
+
+	resp := make([]VaccineResponse, 0, len(vaccines))
+	for _, v := range vaccines {
+		resp = append(resp, VaccineResponse{Code: v.Code, Name: v.Name})
+	}
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, resp, nil)
+}
+
 // ListSymptoms handles GET /catalog/symptoms.
 //
 //	@Summary	List the symptoms a parent can mark

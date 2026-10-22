@@ -71,6 +71,26 @@ func (r *Repository) ListSymptoms(ctx context.Context) ([]Symptom, error) {
 	return symptoms, rows.Err()
 }
 
+// ListVaccines returns the vaccines still offered (active) in the catalog's order. A retired one is left out here but its name is
+// still shown on the doses that were recorded with it (specs/046).
+func (r *Repository) ListVaccines(ctx context.Context) ([]Vaccine, error) {
+	rows, err := r.pool.Query(ctx, `SELECT code, name FROM vaccine_catalog WHERE active ORDER BY sort_order`)
+	if err != nil {
+		return nil, fmt.Errorf("querying vaccines: %w", err)
+	}
+	defer rows.Close()
+
+	vaccines := []Vaccine{}
+	for rows.Next() {
+		var v Vaccine
+		if err := rows.Scan(&v.Code, &v.Name); err != nil {
+			return nil, fmt.Errorf("scanning vaccine: %w", err)
+		}
+		vaccines = append(vaccines, v)
+	}
+	return vaccines, rows.Err()
+}
+
 // ListStatesByCountry returns every state belonging to countryCode, ordered by name.
 func (r *Repository) ListStatesByCountry(ctx context.Context, countryCode string) ([]State, error) {
 	rows, err := r.pool.Query(ctx,

@@ -55,6 +55,8 @@ describe('WelcomeDisclaimer', () => {
     expect(region).toHaveTextContent('la foto se guarda en tu cuenta y solo la ven las personas a las que tú invites')
     expect(region).toHaveTextContent('Compartir significa que otra persona ve los datos médicos del menor')
     expect(region).toHaveTextContent('solo repiten lo que tú escribiste')
+    expect(region).toHaveTextContent('Las vacunas y las fotos de la cartilla de tu hijo son datos de salud')
+    expect(region).toHaveTextContent('las personas que invites podrán verlas según su rol')
   })
 
   it('is not shown once the account acknowledged it, nor while there is no account yet', () => {

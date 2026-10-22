@@ -105,6 +105,9 @@ func TestRepository_ConnectionErrors(t *testing.T) {
 
 	_, err = repo.ListSymptoms(context.Background())
 	require.Error(t, err)
+
+	_, err = repo.ListVaccines(context.Background())
+	require.Error(t, err)
 }
 
 func TestRepository_ListSymptoms_TheSeededCatalogInOrder(t *testing.T) {
@@ -189,4 +192,47 @@ func TestRepository_ListStatesByCountry(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRepository_ListVaccines_TheSeededCatalogInOrderWithNoAgesOrSchedules(t *testing.T) {
+	repo := catalog.NewRepository(testPool(t))
+
+	vaccines, err := repo.ListVaccines(context.Background())
+
+	require.NoError(t, err)
+	var seeded []catalog.Vaccine
+	for _, v := range vaccines {
+		if !strings.HasPrefix(v.Code, "test_") { // rows other tests add and remove while running
+			seeded = append(seeded, v)
+		}
+	}
+	require.GreaterOrEqual(t, len(seeded), 15)
+	require.Equal(t, catalog.Vaccine{Code: "bcg", Name: "BCG"}, seeded[0])
+	require.Equal(t, catalog.Vaccine{Code: "hepatitis_b", Name: "Hepatitis B"}, seeded[1])
+}
+
+// A vaccine added with SQL shows up in its place and a retired one disappears, without releasing the app (specs/046).
+func TestRepository_ListVaccines_FollowsTheCatalogTable(t *testing.T) {
+	pool := testPool(t)
+	repo := catalog.NewRepository(pool)
+	ctx := context.Background()
+	added := "test_added_" + uuid.NewString()[:8]
+	retired := "test_retired_" + uuid.NewString()[:8]
+	base := 1_000_000 + rand.IntN(1_000_000_000)
+	_, err := pool.Exec(ctx, `INSERT INTO vaccine_catalog (code, name, sort_order, active) VALUES ($1, 'Agregada', $3, true), ($2, 'Retirada', $3 + 1, false)`, added, retired, base)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM vaccine_catalog WHERE code IN ($1, $2)`, added, retired)
+	})
+
+	vaccines, err := repo.ListVaccines(ctx)
+
+	require.NoError(t, err)
+	codes := make([]string, 0, len(vaccines))
+	for _, v := range vaccines {
+		codes = append(codes, v.Code)
+		require.NotEqual(t, retired, v.Code)
+	}
+	require.Contains(t, codes, added)
+	require.Equal(t, added, codes[len(codes)-1], "added last by sort_order")
 }

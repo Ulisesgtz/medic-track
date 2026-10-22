@@ -1484,6 +1484,162 @@ definitions:
         example: Ana
         type: string
     type: object
+  VaccinationErrorResponse:
+    properties:
+      error:
+        example: vaccination_not_found
+        type: string
+      message:
+        type: string
+    type: object
+  VaccinationInput:
+    properties:
+      allowDuplicate:
+        example: false
+        type: boolean
+      appliedOn:
+        example: "2021-03-14"
+        type: string
+      customName:
+        example: ""
+        type: string
+      doseNumber:
+        example: 1
+        type: integer
+      lot:
+        type: string
+      notes:
+        type: string
+      place:
+        type: string
+      vaccineCode:
+        example: hepatitis_b
+        type: string
+    type: object
+  VaccinationListResponse:
+    properties:
+      vaccinations:
+        items:
+          $ref: '#/definitions/VaccinationResponse'
+        type: array
+    type: object
+  VaccinationResponse:
+    properties:
+      appliedOn:
+        example: "2021-03-14"
+        type: string
+      correctedAt:
+        example: "2026-11-05T18:00:00Z"
+        type: string
+      correctedByName:
+        example: Ana
+        type: string
+      createdAt:
+        example: "2026-10-17T18:00:00Z"
+        type: string
+      createdByName:
+        example: Ana
+        type: string
+      customName:
+        type: string
+      doseNumber:
+        example: 1
+        type: integer
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      lot:
+        type: string
+      name:
+        description: Name is the catalog's name (even if the vaccine was retired since)
+          or the parent's own words.
+        example: Hepatitis B
+        type: string
+      notes:
+        type: string
+      place:
+        type: string
+      vaccineCode:
+        example: hepatitis_b
+        type: string
+    type: object
+  VaccinationValidationResponse:
+    properties:
+      details:
+        items:
+          properties:
+            field:
+              example: appliedOn
+              type: string
+            message:
+              type: string
+          type: object
+        type: array
+      error:
+        example: validation_error
+        type: string
+      message:
+        type: string
+    type: object
+  VaccineCardPhoto:
+    properties:
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      photoBase64:
+        type: string
+    type: object
+  VaccineCardPhotoLimitResponse:
+    properties:
+      error:
+        example: photo_limit_exceeded
+        type: string
+      limit:
+        example: "10"
+        type: string
+      message:
+        type: string
+      reason:
+        example: vaccine_card
+        type: string
+    type: object
+  VaccineCardPhotoListResponse:
+    properties:
+      limit:
+        description: Limit is how many photos of the card a child can keep.
+        example: 10
+        type: integer
+      photos:
+        items:
+          $ref: '#/definitions/VaccineCardPhotoMeta'
+        type: array
+    type: object
+  VaccineCardPhotoMeta:
+    properties:
+      createdAt:
+        example: "2026-10-17T18:00:00Z"
+        type: string
+      createdByName:
+        example: Ana
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+    type: object
+  VaccineCardPhotoUpload:
+    properties:
+      photoBase64:
+        type: string
+    type: object
+  VaccineResponse:
+    properties:
+      code:
+        example: hepatitis_b
+        type: string
+      name:
+        example: Hepatitis B
+        type: string
+    type: object
   ValidationErrorResponse:
     properties:
       details:
@@ -2705,6 +2861,27 @@ paths:
       summary: List the symptoms a parent can mark
       tags:
       - catalog
+  /catalog/vaccines:
+    get:
+      description: |-
+        Active vaccines of the catalog, in order. Only names: the app records what the parent captured and
+        never says what is due (specs/046-cartilla-vacunacion/contracts/api.md).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/VaccineResponse'
+            type: array
+        "500":
+          description: Unexpected server error
+          schema:
+            $ref: '#/definitions/NotFoundResponse'
+      summary: List the vaccines a parent can pick
+      tags:
+      - catalog
   /children/{childId}/appointments:
     get:
       description: |-
@@ -3136,6 +3313,330 @@ paths:
       summary: Create a supplement routine
       tags:
       - supplements
+  /children/{childId}/vaccinations:
+    get:
+      description: The most recent first. The client groups them by vaccine. The app
+        never says what is due, late or complete.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VaccinationListResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+        "403":
+          description: The session has no access to this child
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: 'A child''s vaccination card: the doses recorded'
+      tags:
+      - vaccinations
+    post:
+      consumes:
+      - application/json
+      description: |-
+        A vaccine of the catalog (`vaccineCode`) or the parent's own words (`customName`), never both, and the date it was
+        applied (not in the future, not before the birth). 409 `duplicate_vaccination` when the same vaccine, dose and date
+        are already there; repeat with `allowDuplicate: true` if the parent confirms.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: The dose
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/VaccinationInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/VaccinationResponse'
+        "400":
+          description: An invalid field
+          schema:
+            $ref: '#/definitions/VaccinationValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+        "403":
+          description: The session can't record doses for this child
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+        "409":
+          description: The dose is already recorded
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Record a dose
+      tags:
+      - vaccinations
+  /children/{childId}/vaccinations/{vaccinationId}:
+    delete:
+      description: 'No trash and no undo: the dose is removed.'
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: Dose UUID
+        in: path
+        name: vaccinationId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+        "403":
+          description: The session can't delete doses of this child
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+        "404":
+          description: No such dose for this child
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Delete a dose for good
+      tags:
+      - vaccinations
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        The whole dose is sent and replaces the one saved; it keeps who corrected it and when (`correctedByName`,
+        `correctedAt`), without the earlier values.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: Dose UUID
+        in: path
+        name: vaccinationId
+        required: true
+        type: string
+      - description: The dose
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/VaccinationInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VaccinationResponse'
+        "400":
+          description: An invalid field
+          schema:
+            $ref: '#/definitions/VaccinationValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+        "403":
+          description: The session can't correct doses of this child
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+        "404":
+          description: No such dose for this child
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+        "409":
+          description: The dose is already recorded
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Correct a dose
+      tags:
+      - vaccinations
+  /children/{childId}/vaccine-card-photos:
+    get:
+      description: Only who saved each one and when, oldest first; the image itself
+        is asked for one at a time.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VaccineCardPhotoListResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+        "403":
+          description: The session has no access to this child
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: The photos of a child's paper card, without the images
+      tags:
+      - vaccinations
+    post:
+      consumes:
+      - application/json
+      description: |-
+        `photoBase64` is an image (JPEG, PNG, GIF, WebP or HEIC) of up to 5 MiB. A child keeps at most 10 photos, on every plan
+        (422 `photo_limit_exceeded`, reason `vaccine_card`).
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: The photo
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/VaccineCardPhotoUpload'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/VaccineCardPhotoMeta'
+        "400":
+          description: Not an image, or over 5 MiB
+          schema:
+            $ref: '#/definitions/VaccinationValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+        "403":
+          description: The session can't save photos for this child
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+        "422":
+          description: The child already has 10 photos
+          schema:
+            $ref: '#/definitions/VaccineCardPhotoLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: Save a photo of the paper card
+      tags:
+      - vaccinations
+  /children/{childId}/vaccine-card-photos/{photoId}:
+    delete:
+      description: No trash and no undo. The doses recorded by hand are not touched.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: Photo UUID
+        in: path
+        name: photoId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+        "403":
+          description: The session can't delete photos of this child
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+        "404":
+          description: No such photo for this child
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Delete a photo of the paper card for good
+      tags:
+      - vaccinations
+    get:
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: Photo UUID
+        in: path
+        name: photoId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/VaccineCardPhoto'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+        "403":
+          description: The session has no access to this child
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+        "404":
+          description: No such photo for this child
+          schema:
+            $ref: '#/definitions/VaccinationErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: One photo of the paper card
+      tags:
+      - vaccinations
   /consultations/{consultationId}:
     get:
       description: |-
