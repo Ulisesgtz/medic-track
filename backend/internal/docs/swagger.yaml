@@ -1484,6 +1484,15 @@ definitions:
         example: Ana
         type: string
     type: object
+  VaccineResponse:
+    properties:
+      code:
+        example: hepatitis_b
+        type: string
+      name:
+        example: Hepatitis B
+        type: string
+    type: object
   ValidationErrorResponse:
     properties:
       details:
@@ -2703,6 +2712,27 @@ paths:
           schema:
             $ref: '#/definitions/NotFoundResponse'
       summary: List the symptoms a parent can mark
+      tags:
+      - catalog
+  /catalog/vaccines:
+    get:
+      description: |-
+        Active vaccines of the catalog, in order. Only names: the app records what the parent captured and
+        never says what is due (specs/046-cartilla-vacunacion/contracts/api.md).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/VaccineResponse'
+            type: array
+        "500":
+          description: Unexpected server error
+          schema:
+            $ref: '#/definitions/NotFoundResponse'
+      summary: List the vaccines a parent can pick
       tags:
       - catalog
   /children/{childId}/appointments:

@@ -320,6 +320,7 @@ func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 	w := newWorld(t)
 	require.Equal(t, http.StatusOK, w.do(t, http.MethodGet, "/catalog/countries", "", "").Code)
 	require.Equal(t, http.StatusOK, w.do(t, http.MethodGet, "/catalog/symptoms", "", "").Code)
+	require.Equal(t, http.StatusOK, w.do(t, http.MethodGet, "/catalog/vaccines", "", "").Code)
 }
 
 // ---- Specs/032-compartir-con-familia: the matrix of roles over every route.

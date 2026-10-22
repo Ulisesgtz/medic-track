@@ -1280,6 +1280,35 @@ const docTemplate = `{
                 }
             }
         },
+        "/catalog/vaccines": {
+            "get": {
+                "description": "Active vaccines of the catalog, in order. Only names: the app records what the parent captured and\nnever says what is due (specs/046-cartilla-vacunacion/contracts/api.md).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "summary": "List the vaccines a parent can pick",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/VaccineResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected server error",
+                        "schema": {
+                            "$ref": "#/definitions/NotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/children/{childId}/appointments": {
             "get": {
                 "security": [
@@ -5642,6 +5671,19 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "example": "Ana"
+                }
+            }
+        },
+        "VaccineResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "hepatitis_b"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Hepatitis B"
                 }
             }
         },

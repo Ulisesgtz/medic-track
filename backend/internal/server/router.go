@@ -86,6 +86,7 @@ func NewRouter(d Deps) *chi.Mux {
 	r.Get("/catalog/countries", d.Catalog.ListCountries)
 	r.Get("/catalog/countries/{countryCode}/states", d.Catalog.ListStates)
 	r.Get("/catalog/symptoms", d.Catalog.ListSymptoms)
+	r.Get("/catalog/vaccines", d.Catalog.ListVaccines)
 
 	// Operation queries: not for parents, so no Clerk session — a single key held by the server (ops.RequireKey), and
 	// only if the server has one. A wrong key gets the same 404 as any unknown route.

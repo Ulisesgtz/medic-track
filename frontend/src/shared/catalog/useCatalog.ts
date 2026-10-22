@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchCountries, fetchStates, fetchSymptoms } from './api'
+import { fetchCountries, fetchStates, fetchSymptoms, fetchVaccines } from './api'
 
 /** Key of the symptoms catalog; invalidated when the server says a chosen symptom was retired. */
 export const SYMPTOMS_QUERY_KEY = ['catalog', 'symptoms'] as const
@@ -12,6 +12,21 @@ export function useSymptoms() {
   return useQuery({
     queryKey: SYMPTOMS_QUERY_KEY,
     queryFn: fetchSymptoms,
+    staleTime: 10 * 60 * 1000,
+  })
+}
+
+/** Key of the vaccines catalog. */
+export const VACCINES_QUERY_KEY = ['catalog', 'vaccines'] as const
+
+/**
+ * The vaccines offered in the vaccination card (specs/046). Maintained on the server like the symptoms, so one added or retired
+ * there shows up on the next load, without a new release of the app.
+ */
+export function useVaccines() {
+  return useQuery({
+    queryKey: VACCINES_QUERY_KEY,
+    queryFn: fetchVaccines,
     staleTime: 10 * 60 * 1000,
   })
 }
