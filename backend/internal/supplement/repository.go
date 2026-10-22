@@ -385,11 +385,14 @@ func (r *Repository) counts(ctx context.Context, ids []uuid.UUID, now time.Time)
 
 // doseSelect reads doses with who marked them and the instant of the routine's next dose (for the status rule).
 const doseSelect = `
-	SELECT d.id, d.routine_id, d.scheduled_at, d.taken, d.taken_by_account_id, a.first_name, d.taken_at,
+	SELECT d.id, d.routine_id, d.scheduled_at, d.taken, COALESCE(d.taken_by_account_id, d.taken_by_child_device_id),
+	       COALESCE(a.first_name, tdc.first_name), d.taken_at,
 	       (SELECT min(n.scheduled_at) FROM supplement_doses n
 	         WHERE n.routine_id = d.routine_id AND n.scheduled_at > d.scheduled_at) AS next_at
 	FROM supplement_doses d
-	LEFT JOIN accounts a ON a.id = d.taken_by_account_id`
+	LEFT JOIN accounts a ON a.id = d.taken_by_account_id
+	LEFT JOIN child_device_links tdl ON tdl.id = d.taken_by_child_device_id
+	LEFT JOIN children tdc ON tdc.id = tdl.child_id`
 
 func (r *Repository) scanDose(row pgx.Row, now time.Time) (Dose, error) {
 	var d Dose
@@ -470,16 +473,17 @@ func (r *Repository) lastDone(ctx context.Context, routineID uuid.UUID, now time
 func (r *Repository) UpdateDoseStatus(ctx context.Context, routineID, doseID uuid.UUID, taken bool, actor Actor) (*Dose, error) {
 	if taken {
 		_, err := r.pool.Exec(ctx, `
-			UPDATE supplement_doses SET taken = true, taken_by_account_id = $3, taken_at = now()
-			WHERE id = $1 AND routine_id = $2 AND NOT taken`, doseID, routineID, authorOrNil(actor.AccountID))
+			UPDATE supplement_doses SET taken = true, taken_by_account_id = $3, taken_by_child_device_id = $4, taken_at = now()
+			WHERE id = $1 AND routine_id = $2 AND NOT taken`, doseID, routineID, authorOrNil(actor.AccountID), authorOrNil(actor.DeviceID))
 		if err != nil {
 			return nil, fmt.Errorf("marking dose: %w", err)
 		}
 	} else {
 		_, err := r.pool.Exec(ctx, `
-			UPDATE supplement_doses SET taken = false, taken_by_account_id = NULL, taken_at = NULL
-			WHERE id = $1 AND routine_id = $2 AND taken AND ($3::boolean OR taken_by_account_id = $4)`,
-			doseID, routineID, actor.Full, authorOrNil(actor.AccountID))
+			UPDATE supplement_doses SET taken = false, taken_by_account_id = NULL, taken_by_child_device_id = NULL, taken_at = NULL
+			WHERE id = $1 AND routine_id = $2 AND taken
+			  AND ($3::boolean OR taken_by_account_id = $4 OR taken_by_child_device_id = $5)`,
+			doseID, routineID, actor.Full, authorOrNil(actor.AccountID), authorOrNil(actor.DeviceID))
 		if err != nil {
 			return nil, fmt.Errorf("unmarking dose: %w", err)
 		}
@@ -525,7 +529,7 @@ func (r *Repository) KindOf(ctx context.Context, routineID uuid.UUID) (Kind, err
 func (r *Repository) MarkNext(ctx context.Context, routineID uuid.UUID, from, to time.Time, actor Actor) (*Dose, error) {
 	var doseID uuid.UUID
 	err := r.pool.QueryRow(ctx, `
-		UPDATE supplement_doses SET taken = true, taken_by_account_id = $4, taken_at = now()
+		UPDATE supplement_doses SET taken = true, taken_by_account_id = $4, taken_by_child_device_id = $5, taken_at = now()
 		WHERE id = (
 			SELECT d.id FROM supplement_doses d JOIN supplement_routines sr ON sr.id = d.routine_id
 			WHERE d.routine_id = $1 AND sr.kind = 'activity' AND sr.status = 'active'
@@ -533,7 +537,7 @@ func (r *Repository) MarkNext(ctx context.Context, routineID uuid.UUID, from, to
 			ORDER BY d.scheduled_at
 			LIMIT 1
 			FOR UPDATE OF d SKIP LOCKED)
-		RETURNING id`, routineID, from, to, authorOrNil(actor.AccountID)).Scan(&doseID)
+		RETURNING id`, routineID, from, to, authorOrNil(actor.AccountID), authorOrNil(actor.DeviceID)).Scan(&doseID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNothingToMark
 	}

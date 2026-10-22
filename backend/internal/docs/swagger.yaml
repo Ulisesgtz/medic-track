@@ -268,6 +268,28 @@ definitions:
           answer; the app puts it in the `#` of the link.
         type: string
     type: object
+  ChildDeviceMeResponse:
+    properties:
+      childFirstName:
+        example: Mateo
+        type: string
+      childId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      deviceName:
+        example: Teléfono de Mateo
+        type: string
+      reminderDetail:
+        enum:
+        - generic
+        - detailed
+        example: generic
+        type: string
+      rotateAfter:
+        description: RotateAfter is when the phone should ask for a new credential.
+        example: "2026-10-30T14:00:00Z"
+        type: string
+    type: object
   ChildDeviceValidationResponse:
     properties:
       details:
@@ -2781,6 +2803,26 @@ paths:
       summary: List the symptoms a parent can mark
       tags:
       - catalog
+  /child-device/me:
+    get:
+      description: The child the phone belongs to and when to renew its credential.
+        Only the first name the app already has of the child.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ChildDeviceMeResponse'
+        "401":
+          description: The credential does not work
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+      security:
+      - DeviceCredential: []
+      summary: Who this phone is
+      tags:
+      - child-device
   /child-device/redeem:
     post:
       consumes:

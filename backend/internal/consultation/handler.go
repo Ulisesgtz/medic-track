@@ -56,7 +56,7 @@ type takenByResponse struct {
 // actorOf is the session's own account for the request (what RequireAccess found), uuid.Nil when unknown.
 func actorOf(ctx context.Context) uuid.UUID {
 	if a, ok := access.FromContext(ctx); ok {
-		return a.ActorAccountID
+		return a.AuthorID()
 	}
 	return uuid.Nil
 }
@@ -764,7 +764,7 @@ func (h *Handler) UpdateDose(w http.ResponseWriter, r *http.Request) {
 		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not update dose", nil)
 		return
 	}
-	actor := Actor{AccountID: got.ActorAccountID, Full: got.Level == access.Full}
+	actor := Actor{AccountID: got.ActorAccountID, DeviceID: got.ActorDeviceID, Full: got.Level == access.Full}
 
 	dose, err := h.service.MarkDose(r.Context(), consultationID, doseID, req.Taken, actor)
 	if err != nil {

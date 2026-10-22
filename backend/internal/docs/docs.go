@@ -1280,6 +1280,37 @@ const docTemplate = `{
                 }
             }
         },
+        "/child-device/me": {
+            "get": {
+                "security": [
+                    {
+                        "DeviceCredential": []
+                    }
+                ],
+                "description": "The child the phone belongs to and when to renew its credential. Only the first name the app already has of the child.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "child-device"
+                ],
+                "summary": "Who this phone is",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceMeResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "The credential does not work",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/child-device/redeem": {
             "post": {
                 "description": "Public: the secret in the body is the only thing it takes. A link that is unknown, used, expired or canceled\ngets the same 404, which is not written to error_logs. Strictly rate limited.",
@@ -4122,6 +4153,36 @@ const docTemplate = `{
                 "token": {
                     "description": "Token is the link's secret. It exists in the clear only in this answer; the app puts it in the ` + "`" + `#` + "`" + ` of the link.",
                     "type": "string"
+                }
+            }
+        },
+        "ChildDeviceMeResponse": {
+            "type": "object",
+            "properties": {
+                "childFirstName": {
+                    "type": "string",
+                    "example": "Mateo"
+                },
+                "childId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "deviceName": {
+                    "type": "string",
+                    "example": "Teléfono de Mateo"
+                },
+                "reminderDetail": {
+                    "type": "string",
+                    "enum": [
+                        "generic",
+                        "detailed"
+                    ],
+                    "example": "generic"
+                },
+                "rotateAfter": {
+                    "description": "RotateAfter is when the phone should ask for a new credential.",
+                    "type": "string",
+                    "example": "2026-10-30T14:00:00Z"
                 }
             }
         },

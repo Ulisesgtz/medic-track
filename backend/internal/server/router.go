@@ -107,6 +107,24 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(strict).Post("/child-device/redeem", d.ChildDevice.Redeem)
 	}
 
+	// The routes of a child's own phone (specs/047): a SHORT CLOSED LIST that reuses the parents' handlers behind the phone's own
+	// credential (`Authorization: Device …`, never `Bearer`) and a guard that the resource is its child's. Everything else of the API
+	// answers 401 to that credential, because it is not a session. A new route here needs its row in the lists of router_test.go.
+	if d.ChildDevice != nil {
+		r.Group(func(r chi.Router) {
+			r.Use(d.ChildDevice.Auth())
+			sameChild := d.ChildDevice.SameChild()
+			routineOfChild := d.ChildDevice.RoutineOfChild()
+			consultationOfChild := d.ChildDevice.ConsultationOfChild()
+			r.Get("/child-device/me", d.ChildDevice.Me)
+			r.With(sameChild).Get("/child-device/children/{childId}/overview", d.Consultation.GetChildOverview)
+			r.With(sameChild).Get("/child-device/children/{childId}/routines", d.Supplement.ListRoutines)
+			r.With(consultationOfChild).Patch("/child-device/consultations/{consultationId}/doses/{doseId}", d.Consultation.UpdateDose)
+			r.With(routineOfChild).Patch("/child-device/routines/{routineId}/doses/{doseId}", d.Supplement.UpdateDose)
+			r.With(routineOfChild).Post("/child-device/routines/{routineId}/done", d.Supplement.MarkRoutineDone)
+		})
+	}
+
 	// The payment provider's notice (specs/045): public like the "Tomada" button, verified by the provider's signature and limited
 	// strictly; only registered when the charge is configured. The fake provider's helpers exist only with PAYMENTS_DRIVER=fake.
 	if d.Payments != nil {

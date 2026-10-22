@@ -22,6 +22,9 @@ func (s *Service) SetClock(now func() time.Time) { s.now = now }
 // Now is the service's clock; the middleware uses the same one so tests move everything at once.
 func (s *Service) Now() time.Time { return s.now() }
 
+// Repository is the service's repository (the middleware reads the device from it).
+func (s *Service) Repository() *Repository { return s.repo }
+
 // CreateLink makes the one-use link of a phone for a child.
 func (s *Service) CreateLink(ctx context.Context, childID, actor uuid.UUID, name string) (*Link, string, error) {
 	return s.repo.Create(ctx, childID, actor, name, s.now())

@@ -159,7 +159,7 @@ func optString(s string) *string {
 // actorOf is the session's own account for the request (what RequireAccess found), uuid.Nil when unknown.
 func actorOf(ctx context.Context) uuid.UUID {
 	if a, ok := access.FromContext(ctx); ok {
-		return a.ActorAccountID
+		return a.AuthorID()
 	}
 	return uuid.Nil
 }
@@ -469,7 +469,7 @@ func (h *Handler) UpdateDose(w http.ResponseWriter, r *http.Request) {
 		h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", "Could not update dose", nil)
 		return
 	}
-	dose, err := h.service.MarkDose(ctx, routineID, doseID, req.Taken, Actor{AccountID: got.ActorAccountID, Full: got.Level == access.Full})
+	dose, err := h.service.MarkDose(ctx, routineID, doseID, req.Taken, Actor{AccountID: got.ActorAccountID, DeviceID: got.ActorDeviceID, Full: got.Level == access.Full})
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrDoseNotFound):
@@ -481,5 +481,5 @@ func (h *Handler) UpdateDose(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	h.responder.WriteJSON(ctx, w, http.StatusOK, toDoseResponse(*dose, got.ActorAccountID), nil)
+	h.responder.WriteJSON(ctx, w, http.StatusOK, toDoseResponse(*dose, got.AuthorID()), nil)
 }

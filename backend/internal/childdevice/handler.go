@@ -68,6 +68,61 @@ type redeemResponse struct {
 	RotateAfter    string `json:"rotateAfter" example:"2026-10-30T14:00:00Z"`
 } // @name RedeemedChildDeviceLinkResponse
 
+// Auth is the middleware of the phone's own routes: `Authorization: Device …`, resolved against the database on every request.
+func (h *Handler) Auth() func(http.Handler) http.Handler {
+	return RequireChildDevice(h.responder, h.service.Repository(), h.service.Now)
+}
+
+// SameChild lets through only the route whose {childId} is the phone's own child.
+func (h *Handler) SameChild() func(http.Handler) http.Handler {
+	return SameChild(h.responder, "childId")
+}
+
+// RoutineOfChild lets through only a routine of the phone's own child.
+func (h *Handler) RoutineOfChild() func(http.Handler) http.Handler {
+	return RoutineOfChild(h.responder, h.service.Repository())
+}
+
+// ConsultationOfChild lets through only a consultation of the phone's own child.
+func (h *Handler) ConsultationOfChild() func(http.Handler) http.Handler {
+	return ConsultationOfChild(h.responder, h.service.Repository())
+}
+
+type meResponse struct {
+	ChildID        string `json:"childId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	ChildFirstName string `json:"childFirstName" example:"Mateo"`
+	DeviceName     string `json:"deviceName" example:"Teléfono de Mateo"`
+	// RotateAfter is when the phone should ask for a new credential.
+	RotateAfter    string `json:"rotateAfter" example:"2026-10-30T14:00:00Z"`
+	ReminderDetail string `json:"reminderDetail" enums:"generic,detailed" example:"generic"`
+} // @name ChildDeviceMeResponse
+
+// Me handles GET /child-device/me.
+//
+//	@Summary		Who this phone is
+//	@Description	The child the phone belongs to and when to renew its credential. Only the first name the app already has of the child.
+//	@Tags			child-device
+//	@Produce		json
+//	@Success		200	{object}	meResponse
+//	@Security		DeviceCredential
+//	@Failure		401	{object}	errorDoc	"The credential does not work"
+//	@Router			/child-device/me [get]
+func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
+	p, ok := PrincipalFromContext(r.Context())
+	if !ok {
+		h.responder.WriteJSONErrorUnlogged(w, http.StatusUnauthorized, "unauthorized", "This access is not active")
+		return
+	}
+	detail := "generic"
+	if p.ReminderDetail != nil {
+		detail = *p.ReminderDetail
+	}
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, meResponse{
+		ChildID: p.ChildID.String(), ChildFirstName: p.ChildFirstName, DeviceName: p.DeviceName,
+		RotateAfter: formatTime(p.RotateAfter), ReminderDetail: detail,
+	}, nil)
+}
+
 func formatTime(t time.Time) string { return t.UTC().Format(time.RFC3339) }
 
 // decode reads a small JSON body; false means it wasn't one.

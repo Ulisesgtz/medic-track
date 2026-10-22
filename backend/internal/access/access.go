@@ -56,6 +56,15 @@ func FromContext(ctx context.Context) (Access, bool) {
 	return a, ok
 }
 
+// AuthorID is the id a mark is stored and compared by: the child's phone when the actor is one, otherwise the account. The two
+// are different random UUIDs, so one can never be taken for the other; `takenBy.mine` and «unmark only what is yours» use it.
+func (a Access) AuthorID() uuid.UUID {
+	if a.ActorDeviceID != uuid.Nil {
+		return a.ActorDeviceID
+	}
+	return a.ActorAccountID
+}
+
 // Repository runs the access queries.
 type Repository struct {
 	pool *pgxpool.Pool

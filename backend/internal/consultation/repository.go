@@ -391,8 +391,11 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Consultation, 
 		med := &c.Medications[i]
 		doseRows, err := r.pool.Query(ctx, `
 			SELECT d.id, d.scheduled_at, d.taken, d.created_at, d.covered_by_extension_id IS NOT NULL,
-			       d.taken_by_account_id, a.first_name, d.taken_at
-			FROM doses d LEFT JOIN accounts a ON a.id = d.taken_by_account_id
+			       COALESCE(d.taken_by_account_id, d.taken_by_child_device_id), COALESCE(a.first_name, tdc.first_name), d.taken_at
+			FROM doses d
+			LEFT JOIN accounts a ON a.id = d.taken_by_account_id
+			LEFT JOIN child_device_links tdl ON tdl.id = d.taken_by_child_device_id
+			LEFT JOIN children tdc ON tdc.id = tdl.child_id
 			WHERE d.medication_id = $1 ORDER BY d.scheduled_at ASC
 		`, med.ID)
 		if err != nil {
@@ -460,6 +463,12 @@ func extensionsOf(ctx context.Context, q rowsQuerier, medicationID uuid.UUID) ([
 	return out, rows.Err()
 }
 
+// takenByName is the first name that goes on a mark made through the doses table in an UPDATE … RETURNING: the account's, or the
+// CHILD's when the mark was made by the child's own phone (specs/047) — never the name the parent gave the phone.
+const takenByName = `COALESCE(
+	(SELECT first_name FROM accounts WHERE id = doses.taken_by_account_id),
+	(SELECT c.first_name FROM child_device_links l JOIN children c ON c.id = l.child_id WHERE l.id = doses.taken_by_child_device_id))`
+
 // markAuthor is the nullable columns of who marked a dose, as the queries scan them.
 type markAuthor struct {
 	accountID *uuid.UUID
@@ -492,26 +501,27 @@ func authorOrNil(id uuid.UUID) *uuid.UUID {
 // change, so a dose marked after its time reads taken.
 func (r *Repository) UpdateDoseStatus(ctx context.Context, consultationID, id uuid.UUID, taken bool, actor Actor) (*Dose, error) {
 	author := authorOrNil(actor.AccountID)
+	device := authorOrNil(actor.DeviceID)
 
 	var query string
 	var args []any
 	if taken {
 		query = `
-			UPDATE doses SET taken = true, taken_by_account_id = $3, taken_at = now()
+			UPDATE doses SET taken = true, taken_by_account_id = $3, taken_by_child_device_id = $4, taken_at = now()
 			FROM medications m
 			WHERE doses.id = $1 AND m.id = doses.medication_id AND m.consultation_id = $2 AND NOT doses.taken
 			RETURNING doses.medication_id, doses.scheduled_at, doses.created_at, m.frequency_hours, m.ended_at,
-			          doses.taken_by_account_id, (SELECT first_name FROM accounts WHERE id = doses.taken_by_account_id), doses.taken_at`
-		args = []any{id, consultationID, author}
+			          COALESCE(doses.taken_by_account_id, doses.taken_by_child_device_id), ` + takenByName + `, doses.taken_at`
+		args = []any{id, consultationID, author, device}
 	} else {
 		query = `
-			UPDATE doses SET taken = false, taken_by_account_id = NULL, taken_at = NULL
+			UPDATE doses SET taken = false, taken_by_account_id = NULL, taken_by_child_device_id = NULL, taken_at = NULL
 			FROM medications m
 			WHERE doses.id = $1 AND m.id = doses.medication_id AND m.consultation_id = $2
-			  AND (NOT doses.taken OR $3::boolean OR doses.taken_by_account_id = $4)
+			  AND (NOT doses.taken OR $3::boolean OR doses.taken_by_account_id = $4 OR doses.taken_by_child_device_id = $5)
 			RETURNING doses.medication_id, doses.scheduled_at, doses.created_at, m.frequency_hours, m.ended_at,
-			          doses.taken_by_account_id, (SELECT first_name FROM accounts WHERE id = doses.taken_by_account_id), doses.taken_at`
-		args = []any{id, consultationID, actor.Full, author}
+			          NULL::uuid, NULL::text, NULL::timestamptz`
+		args = []any{id, consultationID, actor.Full, author, device}
 	}
 
 	dose := &Dose{ID: id, Taken: taken}
@@ -541,10 +551,12 @@ func (r *Repository) unchangedDose(ctx context.Context, consultationID, id uuid.
 	var by markAuthor
 	err := r.pool.QueryRow(ctx, `
 		SELECT d.medication_id, d.scheduled_at, d.created_at, d.taken, m.frequency_hours, m.ended_at,
-		       d.taken_by_account_id, a.first_name, d.taken_at
+		       COALESCE(d.taken_by_account_id, d.taken_by_child_device_id), COALESCE(a.first_name, tdc.first_name), d.taken_at
 		FROM doses d
 		JOIN medications m ON m.id = d.medication_id
 		LEFT JOIN accounts a ON a.id = d.taken_by_account_id
+		LEFT JOIN child_device_links tdl ON tdl.id = d.taken_by_child_device_id
+		LEFT JOIN children tdc ON tdc.id = tdl.child_id
 		WHERE d.id = $1 AND m.consultation_id = $2
 	`, id, consultationID).Scan(&dose.MedicationID, &dose.ScheduledAt, &dose.CreatedAt, &dose.Taken, &frequencyHours, &endedAt, &by.accountID, &by.name, &by.at)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -714,11 +726,13 @@ func (r *Repository) GetOverview(ctx context.Context, childID uuid.UUID, from, t
 
 	doseRows, err := r.pool.Query(ctx, `
 		SELECT d.id, m.consultation_id, m.name, d.scheduled_at, d.taken, m.frequency_hours,
-		       d.taken_by_account_id, a.first_name, d.taken_at
+		       COALESCE(d.taken_by_account_id, d.taken_by_child_device_id), COALESCE(a.first_name, tdc.first_name), d.taken_at
 		FROM doses d
 		JOIN medications m ON m.id = d.medication_id
 		JOIN consultations c ON c.id = m.consultation_id
 		LEFT JOIN accounts a ON a.id = d.taken_by_account_id
+		LEFT JOIN child_device_links tdl ON tdl.id = d.taken_by_child_device_id
+		LEFT JOIN children tdc ON tdc.id = tdl.child_id
 		WHERE c.child_id = $1 AND d.scheduled_at >= $2 AND d.scheduled_at < $3
 		  -- A dose canceled by ending the treatment early is not one of today's (specs/016).
 		  AND NOT (m.ended_at IS NOT NULL AND d.scheduled_at > m.ended_at AND NOT d.taken)

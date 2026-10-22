@@ -160,3 +160,61 @@ func TestHandler_NothingSecretNorTypedReachesErrorLogs(t *testing.T) {
 	}
 	_ = context.Background()
 }
+
+func TestHandler_MeAuthAndGuardsOfThePhonesOwnRoutes(t *testing.T) {
+	pool := testPool(t)
+	f := newFamily(t, pool, account.PlanPaid)
+	cred, _ := activeDevice(t, pool, f, "Teléfono de Mateo", time.Now().Add(-time.Hour))
+	h := childdevice.NewHandler(childdevice.NewService(childdevice.NewRepository(pool)), httpx.NewResponder(&capture{}))
+	r := chi.NewRouter()
+	r.Use(h.Auth())
+	ok := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })
+	r.Get("/me", h.Me)
+	r.With(h.SameChild()).Get("/c/{childId}", ok)
+	r.With(h.RoutineOfChild()).Get("/r/{routineId}", ok)
+	r.With(h.ConsultationOfChild()).Get("/k/{consultationId}", ok)
+
+	do := func(path, auth string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		if auth != "" {
+			req.Header.Set("Authorization", auth)
+		}
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+		return rec
+	}
+	me := do("/me", "Device "+cred)
+	require.Equal(t, http.StatusOK, me.Code, me.Body.String())
+	body := decodeBody(t, me)
+	require.Equal(t, "Mateo", body["childFirstName"])
+	require.Equal(t, "Teléfono de Mateo", body["deviceName"])
+	require.Equal(t, f.childID.String(), body["childId"])
+	require.Equal(t, "generic", body["reminderDetail"], "generic unless the parent chose the detail")
+	require.NotEmpty(t, body["rotateAfter"])
+
+	_, err := pool.Exec(context.Background(), `UPDATE child_device_links SET reminder_detail = 'detailed' WHERE child_id = $1`, f.childID)
+	require.NoError(t, err)
+	require.Equal(t, "detailed", decodeBody(t, do("/me", "Device "+cred))["reminderDetail"])
+
+	require.Equal(t, http.StatusUnauthorized, do("/me", "").Code)
+	require.Equal(t, http.StatusNoContent, do("/c/"+f.childID.String(), "Device "+cred).Code)
+	require.Equal(t, http.StatusForbidden, do("/c/"+uuid.NewString(), "Device "+cred).Code)
+	require.Equal(t, http.StatusForbidden, do("/r/"+uuid.NewString(), "Device "+cred).Code)
+	require.Equal(t, http.StatusForbidden, do("/k/"+uuid.NewString(), "Device "+cred).Code)
+}
+
+func TestHandler_MeWithoutAPrincipalIsUnauthorized(t *testing.T) {
+	pool := testPool(t)
+	h := childdevice.NewHandler(childdevice.NewService(childdevice.NewRepository(pool)), httpx.NewResponder(&capture{}))
+	rec := httptest.NewRecorder()
+	h.Me(rec, httptest.NewRequest(http.MethodGet, "/me", nil))
+	require.Equal(t, http.StatusUnauthorized, rec.Code)
+}
+
+func TestService_ClockCanBeReplaced(t *testing.T) {
+	pool := testPool(t)
+	svc := childdevice.NewService(childdevice.NewRepository(pool))
+	fixed := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	svc.SetClock(func() time.Time { return fixed })
+	require.Equal(t, fixed, svc.Now())
+}

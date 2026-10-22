@@ -107,7 +107,9 @@ type TakenBy struct {
 // or only see and mark.
 type Actor struct {
 	AccountID uuid.UUID
-	Full      bool
+	// DeviceID is the child's phone (specs/047) when the actor is one and not an account; never both.
+	DeviceID uuid.UUID
+	Full     bool
 }
 
 // Progress counts a routine's doses: marked, already come (elapsed) and, when it has an end, all up to it.

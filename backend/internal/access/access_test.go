@@ -107,6 +107,13 @@ func TestContext_StoresWhatTheSessionCanDo(t *testing.T) {
 	require.Equal(t, want, got)
 }
 
+func TestAccess_AuthorIDIsThePhoneWhenThereIsOneAndTheAccountOtherwise(t *testing.T) {
+	account, device := uuid.New(), uuid.New()
+	require.Equal(t, account, access.Access{Level: access.Full, ActorAccountID: account}.AuthorID())
+	require.Equal(t, device, access.Access{Level: access.Mark, ActorDeviceID: device}.AuthorID())
+	require.Equal(t, uuid.Nil, access.Access{}.AuthorID())
+}
+
 // The matrix: one family (paid owner, two children), every kind of person, on a child and on its consultation.
 func TestRoles_OnAChildAndItsConsultation(t *testing.T) {
 	pool := testPool(t)
