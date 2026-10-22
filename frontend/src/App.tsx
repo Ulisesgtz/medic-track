@@ -23,6 +23,7 @@ import { RequireSession } from './features/auth/RequireSession'
 import { useClearCacheOnUserChange } from './features/auth/useClearCacheOnUserChange'
 import { SsoCallbackPage } from './features/auth/SsoCallbackPage'
 import { MessagePage } from './shared/ui/MessagePage'
+import { VaccinationCardPage } from './features/vaccinations/VaccinationCardPage'
 
 const queryClient = new QueryClient()
 
@@ -62,6 +63,14 @@ function App() {
             element={
               <RequireSession>
                 <ChildDetailPage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/children/:childId/cartilla"
+            element={
+              <RequireSession>
+                <VaccinationCardPage />
               </RequireSession>
             }
           />
