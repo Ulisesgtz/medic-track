@@ -4,7 +4,7 @@
 
 **Creado**: 2026-10-17
 
-**Estado**: Borrador
+**Estado**: Implementada
 
 **Entrada**: Descripción del usuario: "Cartilla de vacunación del hijo. El padre/tutor registra las vacunas de cada hijo de dos maneras: (1) llenado manual y (2) tomando o eligiendo una foto de la cartilla, con el OCR en el teléfono solo como ayuda editable. Vista de la cartilla por hijo, foto consultable, qué plan la incluye, compartida con la familia por los niveles de la spec 032. La app registra y nunca interpreta ni aconseja. Fuera de alcance: recordatorios calculados por la app, importar registros del gobierno, certificados."
 

@@ -425,3 +425,29 @@ export async function pickTime(page: Page, name: string, time: string) {
   await dialog.getByRole('group', { name: 'Minutos', exact: true }).getByRole('button', { name: m, exact: true }).click()
   await expect(dialog).toHaveCount(0)
 }
+
+// ---- specs/046-cartilla-vacunacion: the child's vaccination card.
+
+/** Records a dose of a child's vaccination card through the API as the tutor whose token this is (BCG on 2024-01-15 unless overridden). */
+export async function vaccinationViaApi(
+  request: APIRequestContext,
+  token: string,
+  childId: string,
+  overrides: Record<string, unknown> = {},
+): Promise<{ id: string; name: string }> {
+  return apiPost(request, token, `/children/${childId}/vaccinations`, {
+    vaccineCode: 'bcg',
+    customName: '',
+    appliedOn: '2024-01-15',
+    doseNumber: null,
+    lot: '',
+    place: '',
+    notes: '',
+    ...overrides,
+  })
+}
+
+/** Saves a photo of the paper card (the small test PNG) through the API. */
+export async function vaccinePhotoViaApi(request: APIRequestContext, token: string, childId: string): Promise<{ id: string }> {
+  return apiPost(request, token, `/children/${childId}/vaccine-card-photos`, { photoBase64: PNG_BASE64 })
+}

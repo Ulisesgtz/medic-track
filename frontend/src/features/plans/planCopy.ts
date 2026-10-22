@@ -36,7 +36,6 @@ export const SOON_ITEMS = [
   'Exportar el historial a PDF para el pediatra.',
   'Liga de solo lectura para el pediatra.',
   'Curvas de crecimiento OMS.',
-  'Cartilla de vacunas.',
   'Resumen semanal por correo.',
 ]
 
