@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -46,18 +47,21 @@ type world struct {
 	clerkA, clerkB string
 	// Specs/032: people of A's family (and one who left), each with their own account and no children of their own.
 	clerkTutor, clerkCaregiver, clerkKid, clerkRemoved string
-	pool                                              *pgxpool.Pool
+	pool                                               *pgxpool.Pool
 	// emails is each session's verified e-mail, what the (fake) Clerk answers to the family's invitations.
-	emails map[string]string
-	accountA       uuid.UUID
-	childA         uuid.UUID
-	consultationA  uuid.UUID
-	doseA          uuid.UUID
+	emails        map[string]string
+	accountA      uuid.UUID
+	childA        uuid.UUID
+	consultationA uuid.UUID
+	doseA         uuid.UUID
 	// Specs/033: a supplement routine of child A (inserted directly: A is on the free plan here) and one of its doses.
 	routineA     uuid.UUID
 	routineDoseA uuid.UUID
 	// Specs/033, part 2: the next appointment of consultation A (inserted directly: A is on the free plan here).
 	appointmentA uuid.UUID
+	// Specs/047: an active phone of child A (inserted directly) and the credential it sends as `Authorization: Device …`.
+	deviceCredential string
+	deviceLinkID     uuid.UUID
 }
 
 func newWorld(t *testing.T) *world {
@@ -132,6 +136,14 @@ func newWorld(t *testing.T) *world {
 	require.NoError(t, pool.QueryRow(context.Background(), `
 		INSERT INTO supplement_doses (routine_id, scheduled_at) VALUES ($1, now() + interval '1 hour') RETURNING id`, w.routineA).Scan(&w.routineDoseA))
 
+	credential, credentialHash, err := childdevice.NewToken()
+	require.NoError(t, err)
+	require.NoError(t, pool.QueryRow(context.Background(), `
+		INSERT INTO child_device_links (child_id, account_id, name, created_by_account_id, status, expires_at, redeemed_at, credential_hash, rotated_at)
+		VALUES ($1, $2, 'Teléfono de Ana', $2, 'active', now(), now(), $3, now()) RETURNING id`,
+		w.childA, w.accountA, credentialHash).Scan(&w.deviceLinkID))
+	w.deviceCredential = credential
+
 	w.router = server.NewRouter(server.Deps{
 		Responder:    responder,
 		Catalog:      catalog.NewHandler(catalog.NewRepository(pool), responder),
@@ -175,6 +187,18 @@ func (w *world) do(t *testing.T, method, path, token, body string) *httptest.Res
 	req := httptest.NewRequest(method, path, bytes.NewBufferString(body))
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	w.router.ServeHTTP(rec, req)
+	return rec
+}
+
+// doDevice sends the request as the phone of child A: `Authorization: Device …`, never `Bearer`.
+func (w *world) doDevice(t *testing.T, method, path, credential, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(method, path, bytes.NewBufferString(body))
+	if credential != "" {
+		req.Header.Set("Authorization", "Device "+credential)
 	}
 	rec := httptest.NewRecorder()
 	w.router.ServeHTTP(rec, req)
@@ -449,4 +473,23 @@ func TestRouter_TheFakeProvidersHelpersAreOnlyThereWithTheFakeDriver(t *testing.
 	rec := w.do(t, http.MethodPost, "/payments/fake/nope/approve", "", "")
 	require.Equal(t, http.StatusNotFound, rec.Code)
 	require.Contains(t, rec.Body.String(), "subscription_not_found")
+}
+
+// Specs/047: the phone of a child opens NOTHING of the parents' API. Its credential is not a session (another scheme), so every route
+// that expects a Clerk session answers 401 to it, whoever's data it names; the routes of its own (/child-device) are tested in
+// childdevice_router_test.go.
+func TestRouter_AChildDeviceCredentialOpensNoParentRoute(t *testing.T) {
+	w := newWorld(t)
+	for _, rt := range w.routes() {
+		t.Run(rt.name, func(t *testing.T) {
+			rec := w.doDevice(t, rt.method, rt.path, w.deviceCredential, rt.body)
+			require.Equal(t, http.StatusUnauthorized, rec.Code, rec.Body.String())
+		})
+	}
+	for _, path := range []string{"/accounts/me", "/reminders/config", "/family"} {
+		require.Equal(t, http.StatusUnauthorized, w.doDevice(t, http.MethodGet, path, w.deviceCredential, "").Code, path)
+	}
+	for _, post := range []string{"/accounts", "/family/invitations", "/family/leave"} {
+		require.Equal(t, http.StatusUnauthorized, w.doDevice(t, http.MethodPost, post, w.deviceCredential, `{}`).Code, post)
+	}
 }

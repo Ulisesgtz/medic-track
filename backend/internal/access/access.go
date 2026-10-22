@@ -39,6 +39,8 @@ type Access struct {
 	Level Level
 	// ActorAccountID is the account of the session; uuid.Nil if the session has no PediTrack account yet.
 	ActorAccountID uuid.UUID
+	// ActorDeviceID is the child's phone (specs/047) when the actor is a device and not an account; uuid.Nil otherwise. Never both.
+	ActorDeviceID uuid.UUID
 }
 
 type contextKey struct{}

@@ -95,8 +95,14 @@ func TestContext_StoresWhatTheSessionCanDo(t *testing.T) {
 	_, ok := access.FromContext(context.Background())
 	require.False(t, ok)
 
+	device := access.Access{Level: access.Mark, ActorDeviceID: uuid.New()}
+	got, ok := access.FromContext(access.WithAccess(context.Background(), device))
+	require.True(t, ok)
+	require.Equal(t, device, got)
+	require.Equal(t, uuid.Nil, got.ActorAccountID, "a device is not an account")
+
 	want := access.Access{Level: access.Mark, ActorAccountID: uuid.New()}
-	got, ok := access.FromContext(access.WithAccess(context.Background(), want))
+	got, ok = access.FromContext(access.WithAccess(context.Background(), want))
 	require.True(t, ok)
 	require.Equal(t, want, got)
 }
