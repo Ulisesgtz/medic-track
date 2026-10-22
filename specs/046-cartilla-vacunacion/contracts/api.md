@@ -7,7 +7,7 @@ Todas las rutas van detrás de `RequireSession` y escriben por `*httpx.Responder
 | `GET /catalog/vaccines` | público | Vacunas activas del catálogo, en orden: `[{ code, name }]` (un arreglo, como `/catalog/symptoms`) |
 | `GET /children/{childId}/vaccinations` | Mark | `{ vaccinations: [Registro] }` del más reciente al más antiguo (`appliedOn DESC, createdAt DESC`) |
 | `POST /children/{childId}/vaccinations` | Full | Crea una dosis. Cuerpo: `{ vaccineCode? , customName? , appliedOn, doseNumber?, lot?, place?, notes?, allowDuplicate? }` → 201 `Registro` |
-| `PATCH /children/{childId}/vaccinations/{vaccinationId}` | Full | Corrige (mismos campos; solo los enviados cambian; `allowDuplicate` también) → 200 `Registro` con `correctedByName` y `correctedAt` |
+| `PATCH /children/{childId}/vaccinations/{vaccinationId}` | Full | Corrige: se envía la dosis **completa** (mismos campos que el alta, `allowDuplicate` incluido) y reemplaza la guardada → 200 `Registro` con `correctedByName` y `correctedAt` |
 | `DELETE /children/{childId}/vaccinations/{vaccinationId}` | Full | Borrado real → 204 |
 | `GET /children/{childId}/vaccine-card-photos` | Mark | `{ photos: [{ id, createdAt, createdByName }], limit: 10 }` (sin imágenes) |
 | `POST /children/{childId}/vaccine-card-photos` | Full | Cuerpo `{ photoBase64 }` → 201 `{ id, createdAt, createdByName }` |

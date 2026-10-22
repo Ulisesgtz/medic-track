@@ -25,6 +25,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/payments"
 	"github.com/Ulisesgtz/medic-track/backend/internal/reminder"
 	"github.com/Ulisesgtz/medic-track/backend/internal/supplement"
+	"github.com/Ulisesgtz/medic-track/backend/internal/vaccination"
 )
 
 // Deps is everything the router is built from.
@@ -39,6 +40,8 @@ type Deps struct {
 	Supplement *supplement.Handler
 	// Appointment: the next appointment of a consultation (specs/033, part 2).
 	Appointment *appointment.Handler
+	// Vaccination: the child's vaccination card, the doses a parent records by hand (specs/046).
+	Vaccination *vaccination.Handler
 	// Payments: the subscription of the full plan (specs/045). Nil = the charge is not available in this environment: none of its routes
 	// (including the provider's public notice) is registered.
 	Payments *payments.Handler
@@ -193,6 +196,12 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(seesConsultation).Get("/consultations/{consultationId}/appointment", d.Appointment.ForConsultation)
 		r.With(fullConsultation).Post("/consultations/{consultationId}/appointments", d.Appointment.Create)
 		r.With(fullChild).Post("/children/{childId}/appointments", d.Appointment.CreateForChild)
+		// Specs/046: the vaccination card. Reading is Mark (a Caregiver sees it); recording, correcting and deleting are Full. The ids of
+		// a dose are checked against the child of the route, so a dose of another child is a 404 and needs no access function of its own.
+		r.With(seesChild).Get("/children/{childId}/vaccinations", d.Vaccination.ListVaccinations)
+		r.With(fullChild).Post("/children/{childId}/vaccinations", d.Vaccination.CreateVaccination)
+		r.With(fullChild).Patch("/children/{childId}/vaccinations/{vaccinationId}", d.Vaccination.UpdateVaccination)
+		r.With(fullChild).Delete("/children/{childId}/vaccinations/{vaccinationId}", d.Vaccination.DeleteVaccination)
 		r.With(seesAppointment).Get("/appointments/{appointmentId}", d.Appointment.Get)
 		r.With(fullAppointment).Patch("/appointments/{appointmentId}", d.Appointment.Update)
 		r.With(fullAppointment).Post("/appointments/{appointmentId}/status", d.Appointment.SetStatus)
