@@ -63,3 +63,26 @@ func TestLapsedPlan_KeepsWhatWasAlreadyGivenAndOnlyRefusesNewLinks(t *testing.T)
 	_, err = repo.Authenticate(ctx, hashOf(t, rotated), now.Add(10*time.Minute))
 	require.NoError(t, err)
 }
+
+// A phone idle for longer than its credential lasts can't get in any more, so it must not hold one of the child's three places: the
+// parent would have no way to free it (the list calls it «Vencido»).
+func TestCreate_AnIdlePhoneDoesNotTakeAPlace(t *testing.T) {
+	ctx := context.Background()
+	pool := testPool(t)
+	repo := childdevice.NewRepository(pool)
+	f := newFamily(t, pool, account.PlanPaid)
+	now := time.Now().UTC().Truncate(time.Second)
+
+	long := now.Add(-childdevice.CredentialIdle - 24*time.Hour)
+	for _, name := range []string{"Uno", "Dos", "Tres"} {
+		activeDevice(t, pool, f, name, long)
+	}
+	_, _, err := repo.Create(ctx, f.childID, f.accountID, "Nuevo", now)
+	require.NoError(t, err, "the three idle phones leave room")
+
+	// One that is still in use does count.
+	activeDevice(t, pool, f, "En uso", now.Add(-time.Hour))
+	activeDevice(t, pool, f, "En uso 2", now.Add(-time.Hour))
+	_, _, err = repo.Create(ctx, f.childID, f.accountID, "Otro", now)
+	require.ErrorAs(t, err, new(childdevice.ErrLimit))
+}

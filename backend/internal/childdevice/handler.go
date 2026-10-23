@@ -131,6 +131,7 @@ func decode(w http.ResponseWriter, r *http.Request, into any) bool {
 	return json.NewDecoder(r.Body).Decode(into) == nil
 }
 
+// actorOf is the ACCOUNT of the parent's session (the routes that use it are the parents' own); uuid.Nil if it has none.
 func actorOf(ctx context.Context) uuid.UUID {
 	if a, ok := access.FromContext(ctx); ok {
 		return a.ActorAccountID

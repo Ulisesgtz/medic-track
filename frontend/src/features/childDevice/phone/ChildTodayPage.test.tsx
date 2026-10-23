@@ -168,6 +168,28 @@ describe('ChildTodayPage', () => {
     expect(screen.queryByText('Mateo')).not.toBeInTheDocument()
   })
 
+  it('a stale tab whose credential was renewed elsewhere reloads instead of wiping the newer one', async () => {
+    const reload = vi.fn()
+    vi.stubGlobal('location', { ...window.location, reload })
+    stubApi({ doses: [], activities: [], status: { 'GET /child-device/me': 401 } })
+    show()
+    // Another tab renewed it: the storage already holds a different credential.
+    window.localStorage.setItem('hijo-credencial', 'cred-renovada-en-otra-pestana')
+    await waitFor(() => expect(reload).toHaveBeenCalled())
+    expect(window.localStorage.getItem('hijo-credencial')).toBe('cred-renovada-en-otra-pestana')
+  })
+
+  it('advises to put the app on the home screen unless it already runs installed', async () => {
+    stubApi({ doses: [], activities: [] })
+    const { unmount } = show()
+    expect(await screen.findByText(PHONE.install)).toBeInTheDocument()
+    unmount()
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('standalone'), media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
+    show()
+    await screen.findByText(PHONE.noDoses)
+    expect(screen.queryByText(PHONE.install)).not.toBeInTheDocument()
+  })
+
   it('offers to try again when the screen cannot be loaded', async () => {
     const user = userEvent.setup()
     const calls = stubApi({ doses: [], activities: [], status: { 'GET /child-device/children/child-1/overview': 500 } })

@@ -92,6 +92,12 @@ describe('ChildAccessBlock', () => {
     expect(screen.getByLabelText(PARENT.ready.linkLabel)).toBeInTheDocument()
   })
 
+  it('stops the name at the 40 characters the server accepts', async () => {
+    stubApi(account('paid'))
+    show()
+    expect(await screen.findByLabelText(PARENT.nameLabel)).toHaveAttribute('maxlength', '40')
+  })
+
   it('shows the plan notice instead of the form on the free plan', async () => {
     stubApi(account('free'))
     show()

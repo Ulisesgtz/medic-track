@@ -34,7 +34,8 @@ func cleanName(name string) (string, error) {
 // take the last place). It returns the link and the link's token, which is the only time the token exists in the clear.
 //
 // A pending link with the same name is canceled first (a new link for the same phone replaces the old one). Active links plus
-// pending ones that haven't expired are at most MaxLinksPerChild.
+// pending ones that haven't expired are at most MaxLinksPerChild. A phone idle for longer than its credential lasts (it can no
+// longer get in, and the list says «Vencido») doesn't take a place.
 func (r *Repository) Create(ctx context.Context, childID, actor uuid.UUID, name string, now time.Time) (*Link, string, error) {
 	name, err := cleanName(name)
 	if err != nil {
@@ -75,7 +76,8 @@ func (r *Repository) Create(ctx context.Context, childID, actor uuid.UUID, name 
 	var taken int
 	if err := tx.QueryRow(ctx, `
 		SELECT count(*) FROM child_device_links
-		WHERE child_id = $1 AND (status = 'active' OR (status = 'pending' AND expires_at > $2))`, childID, now).Scan(&taken); err != nil {
+		WHERE child_id = $1 AND ((status = 'active' AND COALESCE(last_seen_at, redeemed_at) > $2::timestamptz - make_interval(secs => $3))
+		       OR (status = 'pending' AND expires_at > $2))`, childID, now, CredentialIdle.Seconds()).Scan(&taken); err != nil {
 		return nil, "", fmt.Errorf("counting the child's devices: %w", err)
 	}
 	if taken >= MaxLinksPerChild {

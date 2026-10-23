@@ -224,7 +224,6 @@ func (h *Handler) MarkTaken(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// accountID parses {accountId}; a malformed one is answered as 404, like the account endpoints.
 // linkID is the child phone behind the request, as the phone's middleware found it.
 func (h *Handler) linkID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	p, ok := childdevice.PrincipalFromContext(r.Context())
@@ -320,6 +319,7 @@ func (h *Handler) RemoveChildDevice(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// accountID parses {accountId}; a malformed one is answered as 404, like the account endpoints.
 func (h *Handler) accountID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	id, err := uuid.Parse(chi.URLParam(r, "accountId"))
 	if err != nil {

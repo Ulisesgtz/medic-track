@@ -12,6 +12,15 @@ import { clearCredential, readCredential } from './storage'
 
 const card = 'flex flex-col gap-3 rounded-[22px] bg-surface px-[22px] py-5 shadow-[0_8px_20px_rgba(4,37,43,0.07)]'
 
+/** True when the page runs as the app installed on the home screen (the advice to install is then not needed). */
+function isInstalled(): boolean {
+  try {
+    return window.matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true
+  } catch {
+    return false
+  }
+}
+
 function DoseRow({ credential, dose }: { credential: string; dose: OverviewDose }) {
   const mark = useMarkDose(credential)
   return (
@@ -47,8 +56,13 @@ function Today({ credential, onRotated }: { credential: string; onRotated: (cred
   const gone = accessGone(me.error, overview.error, activities.error)
 
   useEffect(() => {
-    if (gone) clearCredential()
-  }, [gone])
+    if (!gone) return
+    // Another tab may have renewed the credential (the storage is shared): this one then reloads to use it. Only the credential this
+    // tab holds, if it is still the stored one, is forgotten.
+    const stored = readCredential()
+    if (stored && stored !== credential) window.location.reload()
+    else clearCredential()
+  }, [gone, credential])
 
   if (gone) return <NoAccess />
   const failed = me.isError || overview.isError || activities.isError
@@ -63,6 +77,7 @@ function Today({ credential, onRotated }: { credential: string; onRotated: (cred
         </h1>
       </header>
       <div className="flex flex-col gap-5 px-5 pt-6">
+        {!isInstalled() && <p className="text-[13px] leading-relaxed text-body">{PHONE.install}</p>}
         {loading && !failed && (
           <p role="status" className="text-base font-semibold text-action">
             {PHONE.loading}

@@ -121,11 +121,19 @@ describe('the phones of a child', () => {
     expect(await screen.findByText(PARENT.list.saveError)).toBeInTheDocument()
   })
 
-  it('offers no choice or removal for a phone that is already removed or expired', async () => {
-    stubApi(account('paid'), [link({ status: 'revoked' }), link({ id: 'l2', status: 'expired' })])
+  it('offers no choice or removal for a phone that is already removed', async () => {
+    stubApi(account('paid'), [link({ status: 'revoked' })])
     show()
     await screen.findByRole('region', { name: PARENT.list.title('Mateo') })
     expect(screen.queryByRole('button', { name: /^Quitar/ })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(PARENT.list.reminderText)).not.toBeInTheDocument()
+  })
+
+  it('lets the parent remove an expired phone (it no longer gets in) but not choose its reminder text', async () => {
+    stubApi(account('paid'), [link({ id: 'l2', name: 'Vieja', status: 'expired' })])
+    show()
+    await screen.findByRole('region', { name: PARENT.list.title('Mateo') })
+    expect(screen.getByRole('button', { name: PARENT.list.removeLabel('Vieja') })).toBeInTheDocument()
     expect(screen.queryByLabelText(PARENT.list.reminderText)).not.toBeInTheDocument()
   })
 

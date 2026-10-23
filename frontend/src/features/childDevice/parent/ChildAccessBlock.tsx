@@ -129,7 +129,7 @@ export function ChildAccessBlock({ childId, childName }: { childId: string; chil
               id="child-device-name"
               type="text"
               value={name}
-              maxLength={80}
+              maxLength={40}
               onChange={(e) => {
                 setName(e.target.value)
                 setError(null)

@@ -45,23 +45,25 @@ export function ChildAccessList({ childId, childName, links, canManage }: { chil
                 <span className="rounded-full border border-hint-border bg-hint px-3 py-1 text-[13px] font-bold text-ink">{PARENT.list.status[link.status]}</span>
               </div>
               <p className="text-[13px] leading-relaxed text-body">{lastLine(link)}</p>
-              {canManage && live && (
+              {canManage && (live || link.status === 'expired') && (
                 <div className="flex flex-wrap items-end gap-3">
-                  <div className="flex min-w-[170px] flex-1 flex-col gap-1">
-                    <label htmlFor={`detail-${link.id}`} className="text-[13px] font-bold text-ink">
-                      {PARENT.list.reminderText}
-                    </label>
-                    <select
-                      id={`detail-${link.id}`}
-                      value={link.reminderDetail}
-                      disabled={setDetail.isPending}
-                      onChange={(e) => setDetail.mutate({ linkId: link.id, detail: e.target.value as 'generic' | 'detailed' })}
-                      className={fieldRoutine}
-                    >
-                      <option value="generic">{PARENT.list.generic}</option>
-                      <option value="detailed">{PARENT.list.detailed}</option>
-                    </select>
-                  </div>
+                  {live && (
+                    <div className="flex min-w-[170px] flex-1 flex-col gap-1">
+                      <label htmlFor={`detail-${link.id}`} className="text-[13px] font-bold text-ink">
+                        {PARENT.list.reminderText}
+                      </label>
+                      <select
+                        id={`detail-${link.id}`}
+                        value={link.reminderDetail}
+                        disabled={setDetail.isPending}
+                        onChange={(e) => setDetail.mutate({ linkId: link.id, detail: e.target.value as 'generic' | 'detailed' })}
+                        className={fieldRoutine}
+                      >
+                        <option value="generic">{PARENT.list.generic}</option>
+                        <option value="detailed">{PARENT.list.detailed}</option>
+                      </select>
+                    </div>
+                  )}
                   <button
                     type="button"
                     aria-label={PARENT.list.removeLabel(link.name)}

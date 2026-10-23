@@ -83,6 +83,14 @@ func (r *Repository) ActiveDevicesForLink(ctx context.Context, linkID uuid.UUID,
 // never a candidate (the same rules as the accounts', candidates.go) and the owner's plan is not asked: a phone linked while the plan
 // was paid keeps being reminded if it lapses.
 func (r *Repository) ClaimDueChildDevices(ctx context.Context, now time.Time, window time.Duration) ([]DueDose, error) {
+	// Most deployments have no child phone with reminders on: skip both candidate scans then (the partial index answers this one).
+	var hasPhones bool
+	if err := r.pool.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM reminder_devices WHERE child_link_id IS NOT NULL AND active)`).Scan(&hasPhones); err != nil {
+		return nil, fmt.Errorf("checking the child phones' reminder devices: %w", err)
+	}
+	if !hasPhones {
+		return nil, nil
+	}
 	medications, err := r.claimChild(ctx, now, window, SourceMedication, `
 		WITH cand AS (
 			`+medicationCandidates+`

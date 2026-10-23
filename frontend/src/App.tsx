@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from '@clerk/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AccountSignupPage } from './features/account-signup/AccountSignupPage'
 import { CompleteGoogleSignupPage } from './features/account-signup/CompleteGoogleSignupPage'
@@ -25,8 +26,23 @@ import { SsoCallbackPage } from './features/auth/SsoCallbackPage'
 import { MessagePage } from './shared/ui/MessagePage'
 import { ChildTodayPage } from './features/childDevice/phone/ChildTodayPage'
 import { RedeemPage } from './features/childDevice/phone/RedeemPage'
+import { readCredential } from './features/childDevice/phone/storage'
 
 const queryClient = new QueryClient()
+
+/**
+ * `/home`, the installed app's start_url. A phone that carries a child's access (specs/047) and has no parent session is the child's:
+ * it goes to its own screen instead of the parents' login. Everybody else gets the home behind the session guard, as before.
+ */
+function HomeRoute() {
+  const { isLoaded, isSignedIn } = useAuth()
+  if (isLoaded && !isSignedIn && readCredential()) return <Navigate to="/hijo/hoy" replace />
+  return (
+    <RequireSession>
+      <HomePage />
+    </RequireSession>
+  )
+}
 
 function SessionCacheGuard() {
   useClearCacheOnUserChange()
@@ -51,14 +67,7 @@ function App() {
           <Route path="/sso-callback" element={<SsoCallbackPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/recuperar-contrasena" element={<ForgotPasswordPage />} />
-          <Route
-            path="/home"
-            element={
-              <RequireSession>
-                <HomePage />
-              </RequireSession>
-            }
-          />
+          <Route path="/home" element={<HomeRoute />} />
           <Route
             path="/children/:childId"
             element={

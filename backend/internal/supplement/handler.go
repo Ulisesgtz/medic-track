@@ -156,7 +156,8 @@ func optString(s string) *string {
 	return &s
 }
 
-// actorOf is the session's own account for the request (what RequireAccess found), uuid.Nil when unknown.
+// actorOf is who made the request, as the id a mark is stored and compared by: the session's own account (what RequireAccess found)
+// or, for a child's phone (specs/047), its device link; uuid.Nil when unknown. Never use it where an ACCOUNT id is required.
 func actorOf(ctx context.Context) uuid.UUID {
 	if a, ok := access.FromContext(ctx); ok {
 		return a.AuthorID()
