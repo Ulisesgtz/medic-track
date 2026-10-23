@@ -99,6 +99,23 @@ describe('ChildAccessBlock', () => {
     expect(screen.queryByLabelText(PARENT.nameLabel)).not.toBeInTheDocument()
   })
 
+  it('on the free plan keeps the list and Quitar of what was already given, with the notice instead of the form', async () => {
+    const link = { id: 'l9', name: 'Teléfono de Mateo', status: 'active', createdAt: '2026-10-20T10:00:00Z', redeemedAt: '2026-10-20T10:05:00Z', lastSeenAt: null, expiresAt: '2026-10-21T10:00:00Z', reminderDetail: 'generic' }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+        const path = new URL(String(input)).pathname
+        const body = path === '/accounts/me' ? account('free') : { links: [link], limit: 3, canManage: true }
+        return { ok: true, status: 200, json: async () => body } as Response
+      }),
+    )
+    show()
+    expect(await screen.findByText(PARENT.plan.text)).toBeInTheDocument()
+    expect(await screen.findByText('Teléfono de Mateo')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: PARENT.list.removeLabel('Teléfono de Mateo') })).toBeInTheDocument()
+    expect(screen.queryByLabelText(PARENT.nameLabel)).not.toBeInTheDocument()
+  })
+
   it('draws nothing for who cannot manage the child (a caregiver) or before the account loads', async () => {
     stubApi(account('paid', [child({ role: 'caregiver', plan: 'paid', readOnly: false })]))
     const { container } = show()

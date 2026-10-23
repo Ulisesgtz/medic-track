@@ -152,8 +152,8 @@ description: "Lista de tareas de la spec 047: dispositivo del hijo"
 
 **Prueba Independiente**: con la dueña en `free`, el dispositivo marca y recibe avisos; crear una liga responde 422.
 
-- [ ] T046 [P] [US5] Pruebas de integración en `backend/internal/childdevice/plan_test.go` (base real) y en `router_test.go`: la dueña pasa a `free`; `Authenticate`, `Redeem` de una liga **ya creada**, marcar, `rotate`, `list`, `revoke` y los avisos siguen funcionando; `Create` ⇒ `ErrPlanRequired`; al volver a `paid` crear funciona y los dispositivos previos siguen. Confirmar que ningún camino de `RequireChildDevice` consulta el plan.
-- [ ] T047 [P] [US5] Frontend: con `useChildAccess(...).isFree` el bloque «Acceso del hijo» muestra `PlanAvisoCompacto` en lugar de «Crear liga» **pero conserva la lista y «Quitar»** de lo ya vinculado; prueba para cuenta gratuita con y sin dispositivos.
+- [X] T046 [P] [US5] Pruebas de integración en `backend/internal/childdevice/plan_test.go` (base real) y en `router_test.go`: la dueña pasa a `free`; `Authenticate`, `Redeem` de una liga **ya creada**, marcar, `rotate`, `list`, `revoke` y los avisos siguen funcionando; `Create` ⇒ `ErrPlanRequired`; al volver a `paid` crear funciona y los dispositivos previos siguen. Confirmar que ningún camino de `RequireChildDevice` consulta el plan.
+- [X] T047 [P] [US5] Frontend: con `useChildAccess(...).isFree` el bloque «Acceso del hijo» muestra `PlanAvisoCompacto` en lugar de «Crear liga» **pero conserva la lista y «Quitar»** de lo ya vinculado; prueba para cuenta gratuita con y sin dispositivos.
 
 **Commit de fase**: «feat(047): el plan caducado solo impide crear accesos nuevos».
 
