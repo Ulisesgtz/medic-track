@@ -23,19 +23,7 @@ import (
 func (r *Repository) ClaimDueSupplementDoses(ctx context.Context, now time.Time, window time.Duration) ([]DueDose, error) {
 	rows, err := r.pool.Query(ctx, `
 		WITH cand AS (
-			SELECT d.id, d.scheduled_at, d.routine_id, sr.name, sr.kind, ch.id AS child_id, COALESCE(ch.first_name, '') AS first_name,
-			       COALESCE(ch.account_id, sr.account_id) AS owner_id
-			FROM supplement_doses d
-			JOIN supplement_routines sr ON sr.id = d.routine_id AND sr.status = 'active'
-			LEFT JOIN children ch ON ch.id = sr.child_id
-			WHERE d.taken = false
-			  AND d.scheduled_at <= $1
-			  AND d.scheduled_at > $1 - make_interval(secs => $2)
-			  -- Never a dose already "sin registrar": the routine's next dose came.
-			  AND NOT EXISTS (
-				SELECT 1 FROM supplement_doses n
-				WHERE n.routine_id = d.routine_id AND n.scheduled_at > d.scheduled_at AND n.scheduled_at <= $1
-			  )
+			`+supplementCandidates+`
 		),
 		pairs AS (
 			SELECT cand.id AS dose_id, a.id AS account_id, cand.scheduled_at

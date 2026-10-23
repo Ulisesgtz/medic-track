@@ -1357,6 +1357,113 @@ const docTemplate = `{
                 }
             }
         },
+        "/child-device/reminder-devices": {
+            "post": {
+                "security": [
+                    {
+                        "DeviceCredential": []
+                    }
+                ],
+                "description": "Registers the push subscription of the child's own phone. Its reminders are only for its child's doses, supplements and\nactivities: never appointments or anything of the family.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "child-device"
+                ],
+                "summary": "Turn reminders on for a child's phone",
+                "parameters": [
+                    {
+                        "description": "The browser's push subscription",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.registerDeviceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Already registered",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.deviceResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Registered now",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.deviceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.validationErrorDoc"
+                        }
+                    },
+                    "401": {
+                        "description": "The credential does not work",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    },
+                    "503": {
+                        "description": "This server has no push keys",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    }
+                }
+            }
+        },
+        "/child-device/reminder-devices/remove": {
+            "post": {
+                "security": [
+                    {
+                        "DeviceCredential": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "child-device"
+                ],
+                "summary": "Turn reminders off for a child's phone",
+                "parameters": [
+                    {
+                        "description": "The browser's endpoint",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.removeDeviceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.validationErrorDoc"
+                        }
+                    },
+                    "401": {
+                        "description": "The credential does not work",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    }
+                }
+            }
+        },
         "/child-device/rotate": {
             "post": {
                 "security": [

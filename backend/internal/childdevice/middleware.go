@@ -22,6 +22,11 @@ func PrincipalFromContext(ctx context.Context) (*Principal, bool) {
 	return p, ok && p != nil
 }
 
+// WithPrincipal puts a device in the context, as RequireChildDevice does (for tests of handlers that read it).
+func WithPrincipal(ctx context.Context, p *Principal) context.Context {
+	return context.WithValue(ctx, principalKey{}, p)
+}
+
 // credentialFrom reads `Authorization: Device <credential>`. Any other scheme (a Clerk session is `Bearer`) is no credential.
 func credentialFrom(r *http.Request) (string, bool) {
 	scheme, value, ok := strings.Cut(r.Header.Get("Authorization"), " ")

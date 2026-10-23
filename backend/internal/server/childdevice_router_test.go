@@ -19,6 +19,9 @@ import (
 var phoneRoutes = map[string]bool{
 	"GET /child-device/me":                                              true,
 	"POST /child-device/rotate":                                         true,
+	"GET /child-device/reminders/config":                                true,
+	"POST /child-device/reminder-devices":                               true,
+	"POST /child-device/reminder-devices/remove":                        true,
 	"GET /child-device/children/{childId}/overview":                     true,
 	"GET /child-device/children/{childId}/routines":                     true,
 	"PATCH /child-device/consultations/{consultationId}/doses/{doseId}": true,

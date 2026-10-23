@@ -9,6 +9,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 )
 
@@ -224,6 +225,101 @@ func (h *Handler) MarkTaken(w http.ResponseWriter, r *http.Request) {
 }
 
 // accountID parses {accountId}; a malformed one is answered as 404, like the account endpoints.
+// linkID is the child phone behind the request, as the phone's middleware found it.
+func (h *Handler) linkID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
+	p, ok := childdevice.PrincipalFromContext(r.Context())
+	if !ok {
+		h.responder.WriteJSONErrorUnlogged(w, http.StatusUnauthorized, "unauthorized", "This access is not active")
+		return uuid.Nil, false
+	}
+	return p.LinkID, true
+}
+
+// RegisterChildDevice handles POST /child-device/reminder-devices.
+//
+//	@Summary		Turn reminders on for a child's phone
+//	@Description	Registers the push subscription of the child's own phone. Its reminders are only for its child's doses, supplements and
+//	@Description	activities: never appointments or anything of the family.
+//	@Tags			child-device
+//	@Accept			json
+//	@Produce		json
+//	@Param			payload	body		registerDeviceRequest	true	"The browser's push subscription"
+//	@Success		200		{object}	deviceResponse			"Already registered"
+//	@Success		201		{object}	deviceResponse			"Registered now"
+//	@Failure		400		{object}	validationErrorDoc
+//	@Failure		503		{object}	errorDoc	"This server has no push keys"
+//	@Security		DeviceCredential
+//	@Failure		401		{object}	errorDoc	"The credential does not work"
+//	@Router			/child-device/reminder-devices [post]
+func (h *Handler) RegisterChildDevice(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+	linkID, ok := h.linkID(w, r)
+	if !ok {
+		return
+	}
+	var req registerDeviceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusBadRequest, "validation_error", "Malformed JSON body", nil)
+		return
+	}
+	device, created, err := h.service.ActivateChildDevice(r.Context(), linkID, req.Endpoint, req.Keys.P256dh, req.Keys.Auth)
+	if errs, isValidation := IsValidationError(err); isValidation {
+		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationBody(errs), nil)
+		return
+	}
+	switch {
+	case errors.Is(err, ErrRemindersUnavailable):
+		h.responder.WriteJSONError(r.Context(), w, http.StatusServiceUnavailable, "reminders_unavailable", "Reminders are not available on this server", nil)
+		return
+	case err != nil:
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not turn reminders on", nil)
+		return
+	}
+	status := http.StatusOK
+	if created {
+		status = http.StatusCreated
+	}
+	h.responder.WriteJSON(r.Context(), w, status, deviceResponse{
+		ID:          device.ID.String(),
+		Active:      device.Active,
+		ActivatedAt: device.ActivatedAt.UTC().Format(time.RFC3339),
+	}, nil)
+}
+
+// RemoveChildDevice handles POST /child-device/reminder-devices/remove.
+//
+//	@Summary		Turn reminders off for a child's phone
+//	@Tags			child-device
+//	@Accept			json
+//	@Param			payload	body	removeDeviceRequest	true	"The browser's endpoint"
+//	@Success		204
+//	@Failure		400	{object}	validationErrorDoc
+//	@Security		DeviceCredential
+//	@Failure		401	{object}	errorDoc	"The credential does not work"
+//	@Router			/child-device/reminder-devices/remove [post]
+func (h *Handler) RemoveChildDevice(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+	linkID, ok := h.linkID(w, r)
+	if !ok {
+		return
+	}
+	var req removeDeviceRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusBadRequest, "validation_error", "Malformed JSON body", nil)
+		return
+	}
+	err := h.service.DeactivateChildDevice(r.Context(), linkID, req.Endpoint)
+	if errs, isValidation := IsValidationError(err); isValidation {
+		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationBody(errs), nil)
+		return
+	}
+	if err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not turn reminders off", nil)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (h *Handler) accountID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
 	id, err := uuid.Parse(chi.URLParam(r, "accountId"))
 	if err != nil {

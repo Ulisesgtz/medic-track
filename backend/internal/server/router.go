@@ -123,6 +123,10 @@ func NewRouter(d Deps) *chi.Mux {
 			r.With(consultationOfChild).Patch("/child-device/consultations/{consultationId}/doses/{doseId}", d.Consultation.UpdateDose)
 			r.With(routineOfChild).Patch("/child-device/routines/{routineId}/doses/{doseId}", d.Supplement.UpdateDose)
 			r.With(routineOfChild).Post("/child-device/routines/{routineId}/done", d.Supplement.MarkRoutineDone)
+			// The phone's own reminders: the push key, and turning them on and off for this browser.
+			r.Get("/child-device/reminders/config", d.Reminder.GetConfig)
+			r.Post("/child-device/reminder-devices", d.Reminder.RegisterChildDevice)
+			r.Post("/child-device/reminder-devices/remove", d.Reminder.RemoveChildDevice)
 		})
 	}
 

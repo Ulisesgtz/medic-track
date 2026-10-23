@@ -2919,6 +2919,75 @@ paths:
       summary: Open a child's link
       tags:
       - child-device
+  /child-device/reminder-devices:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Registers the push subscription of the child's own phone. Its reminders are only for its child's doses, supplements and
+        activities: never appointments or anything of the family.
+      parameters:
+      - description: The browser's push subscription
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_reminder.registerDeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Already registered
+          schema:
+            $ref: '#/definitions/internal_reminder.deviceResponse'
+        "201":
+          description: Registered now
+          schema:
+            $ref: '#/definitions/internal_reminder.deviceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_reminder.validationErrorDoc'
+        "401":
+          description: The credential does not work
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+        "503":
+          description: This server has no push keys
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+      security:
+      - DeviceCredential: []
+      summary: Turn reminders on for a child's phone
+      tags:
+      - child-device
+  /child-device/reminder-devices/remove:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: The browser's endpoint
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_reminder.removeDeviceRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_reminder.validationErrorDoc'
+        "401":
+          description: The credential does not work
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+      security:
+      - DeviceCredential: []
+      summary: Turn reminders off for a child's phone
+      tags:
+      - child-device
   /child-device/rotate:
     post:
       description: The new credential is returned once; the previous one keeps working

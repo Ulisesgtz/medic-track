@@ -7,6 +7,7 @@ import { useLocalDay } from '../../../shared/useLocalDay'
 import { PHONE } from '../childText'
 import { accessGone, useActivities, useDone, useMarkDose, useMe, useOverview, useRotation } from './hooks'
 import { NoAccess } from './NoAccess'
+import { RemindersCard } from './RemindersCard'
 import { clearCredential, readCredential } from './storage'
 
 const card = 'flex flex-col gap-3 rounded-[22px] bg-surface px-[22px] py-5 shadow-[0_8px_20px_rgba(4,37,43,0.07)]'
@@ -98,6 +99,8 @@ function Today({ credential, onRotated }: { credential: string; onRotated: (cred
             )}
           </section>
         )}
+
+        {!failed && !loading && <RemindersCard credential={credential} />}
 
         {activities.data && activities.data.length > 0 && (
           <section aria-label={PHONE.activities} className={card}>
