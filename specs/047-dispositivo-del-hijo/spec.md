@@ -4,7 +4,7 @@
 
 **Creado**: 2026-10-22
 
-**Estado**: Borrador
+**Estado**: Implementada
 
 **Entrada**: Descripción del usuario: "Dispositivo del hijo (spec 047, completa la Entrega 3 «rol Hijo» de la spec 032). En lugar de que el hijo inicie sesión con una cuenta propia, la persona Tutora genera para un hijo una liga de un solo uso; quien la abre (el teléfono del niño) recibe una credencial de dispositivo propia de ese hijo, sin correo, sin contraseña y sin datos personales del menor. El hijo ve solo lo suyo (sus tomas de hoy, sus suplementos y sus actividades) y puede marcarlas. Solo plan de pago. La edad queda a responsabilidad del padre."
 

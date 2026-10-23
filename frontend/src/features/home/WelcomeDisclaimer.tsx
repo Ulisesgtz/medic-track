@@ -66,6 +66,10 @@ export function WelcomeDisclaimer({ account }: { account: Account | undefined })
         Los suplementos y las actividades que registres <strong>solo repiten lo que tú escribiste</strong>: PediTrack no sugiere
         suplementos, actividades, cantidades ni horarios, y avisa a las personas de tu familia que tengan acceso a ese hijo.
       </p>
+      <p>
+        Si le das acceso a tu hijo, <strong>verá en su teléfono sus tomas y actividades y podrá marcarlas</strong>; no se
+        guarda ningún dato personal suyo y puedes quitar el acceso cuando quieras.
+      </p>
       {mutation.isError && (
         <p role="alert" className="font-semibold text-red-700">
           No pudimos guardar tu confirmación. Revisa tu conexión e inténtalo de nuevo.

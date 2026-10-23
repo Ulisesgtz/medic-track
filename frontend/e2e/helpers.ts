@@ -425,3 +425,27 @@ export async function pickTime(page: Page, name: string, time: string) {
   await dialog.getByRole('group', { name: 'Minutos', exact: true }).getByRole('button', { name: m, exact: true }).click()
   await expect(dialog).toHaveCount(0)
 }
+
+// ---- specs/047-dispositivo-del-hijo: the child's phone (no Clerk, no e-mail, no password).
+
+/** The one-use link a parent made for a child's phone (the token only exists in this answer). */
+export interface ChildDeviceLink {
+  id: string
+  name: string
+  token: string
+}
+
+/** The address the child's phone opens: the token in the `#`, as the app builds it. */
+export const childLinkUrl = (link: ChildDeviceLink) => `/hijo#${link.token}`
+
+/** Makes a child's device link through the API as the tutor whose token this is. */
+export async function childDeviceLinkViaApi(request: APIRequestContext, token: string, childId: string, name = 'Teléfono de Mateo'): Promise<ChildDeviceLink> {
+  return apiPost(request, token, `/children/${childId}/device-links`, { name })
+}
+
+/** Redeems a link through the API (no session at all) and returns the phone's credential. */
+export async function redeemChildLinkViaApi(request: APIRequestContext, linkToken: string): Promise<string> {
+  const got = await request.post(`${API}/child-device/redeem`, { data: { token: linkToken } })
+  expect(got.ok(), `redeem -> ${got.status()}`).toBeTruthy()
+  return (await got.json()).credential as string
+}

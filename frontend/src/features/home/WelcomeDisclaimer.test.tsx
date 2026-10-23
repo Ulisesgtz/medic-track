@@ -53,6 +53,7 @@ describe('WelcomeDisclaimer', () => {
     expect(region).toHaveTextContent('solo cuando está impresa (no escrita a mano)')
     expect(region).toHaveTextContent('no la interpretamos y no autollenamos ningún campo')
     expect(region).toHaveTextContent('la foto se guarda en tu cuenta y solo la ven las personas a las que tú invites')
+    expect(region).toHaveTextContent('podrá marcarlas; no se guarda ningún dato personal suyo')
     expect(region).toHaveTextContent('Compartir significa que otra persona ve los datos médicos del menor')
     expect(region).toHaveTextContent('solo repiten lo que tú escribiste')
   })

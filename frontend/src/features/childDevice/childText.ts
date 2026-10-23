@@ -55,6 +55,11 @@ export const PARENT = {
       error: 'No se pudo quitar. No se cambió nada. Inténtalo de nuevo.',
     },
   },
+  family: {
+    title: 'Acceso del hijo en su teléfono',
+    text: 'Cada hijo puede ver y marcar sus tomas y actividades en su propio teléfono, sin cuenta ni contraseña. La liga se crea desde la ficha de cada hijo.',
+    link: (name: string) => `Acceso de ${name}`,
+  },
   plan: {
     title: 'Acceso del hijo',
     text: 'Con el plan completo, cada hijo puede ver y marcar sus tomas y actividades en su propio teléfono.',
