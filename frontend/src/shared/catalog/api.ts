@@ -26,6 +26,21 @@ export async function fetchSymptoms(): Promise<Symptom[]> {
   return res.json()
 }
 
+/** A vaccine of the catalog (specs/046): only a name to pick, with no age or schedule (the app never says what is due). */
+export interface Vaccine {
+  code: string
+  name: string
+}
+
+/** The active vaccines, in catalog order (specs/046 contracts/api.md). */
+export async function fetchVaccines(): Promise<Vaccine[]> {
+  const res = await fetch(`${API_BASE_URL}/catalog/vaccines`)
+  if (!res.ok) {
+    throw new Error(`Failed to fetch vaccines: ${res.status}`)
+  }
+  return res.json()
+}
+
 export async function fetchCountries(): Promise<CatalogCountry[]> {
   const res = await fetch(`${API_BASE_URL}/catalog/countries`)
   if (!res.ok) {

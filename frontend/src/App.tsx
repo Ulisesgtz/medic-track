@@ -27,6 +27,7 @@ import { MessagePage } from './shared/ui/MessagePage'
 import { ChildTodayPage } from './features/childDevice/phone/ChildTodayPage'
 import { RedeemPage } from './features/childDevice/phone/RedeemPage'
 import { readCredential } from './features/childDevice/phone/storage'
+import { VaccinationCardPage } from './features/vaccinations/VaccinationCardPage'
 
 const queryClient = new QueryClient()
 
@@ -73,6 +74,14 @@ function App() {
             element={
               <RequireSession>
                 <ChildDetailPage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/children/:childId/cartilla"
+            element={
+              <RequireSession>
+                <VaccinationCardPage />
               </RequireSession>
             }
           />

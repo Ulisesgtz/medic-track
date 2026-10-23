@@ -24,6 +24,7 @@ func newTestRouter(t *testing.T) http.Handler {
 	r.Get("/catalog/countries", h.ListCountries)
 	r.Get("/catalog/countries/{countryCode}/states", h.ListStates)
 	r.Get("/catalog/symptoms", h.ListSymptoms)
+	r.Get("/catalog/vaccines", h.ListVaccines)
 	return r
 }
 
@@ -63,6 +64,13 @@ func TestHandler_InternalErrors(t *testing.T) {
 	r.Get("/catalog/countries", h.ListCountries)
 	r.Get("/catalog/countries/{countryCode}/states", h.ListStates)
 	r.Get("/catalog/symptoms", h.ListSymptoms)
+	r.Get("/catalog/vaccines", h.ListVaccines)
+
+	t.Run("ListVaccines", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/catalog/vaccines", nil))
+		require.Equal(t, http.StatusInternalServerError, rec.Code)
+	})
 
 	t.Run("ListSymptoms", func(t *testing.T) {
 		rec := httptest.NewRecorder()
@@ -106,4 +114,16 @@ func TestHandler_ListStates(t *testing.T) {
 			require.Equal(t, tt.wantStatus, rec.Code)
 		})
 	}
+}
+
+func TestHandler_ListVaccines(t *testing.T) {
+	router := newTestRouter(t)
+
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/catalog/vaccines", nil))
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	var body []map[string]string
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, map[string]string{"code": "bcg", "name": "BCG"}, body[0], "only a code and a name: no age, schedule or dose")
 }

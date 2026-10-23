@@ -70,6 +70,10 @@ export function WelcomeDisclaimer({ account }: { account: Account | undefined })
         Si le das acceso a tu hijo, <strong>verá en su teléfono sus tomas y actividades y podrá marcarlas</strong>; no se
         guarda ningún dato personal suyo y puedes quitar el acceso cuando quieras.
       </p>
+      <p>
+        Las vacunas y las fotos de la cartilla de tu hijo son datos de salud: se guardan solo en tu cuenta y las personas
+        que invites podrán verlas según su rol.
+      </p>
       {mutation.isError && (
         <p role="alert" className="font-semibold text-red-700">
           No pudimos guardar tu confirmación. Revisa tu conexión e inténtalo de nuevo.

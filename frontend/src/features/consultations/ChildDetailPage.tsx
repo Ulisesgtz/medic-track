@@ -18,6 +18,7 @@ import { TodayDosesPanel } from './TodayDosesPanel'
 import { ChildAppointmentSection } from '../appointments/AppointmentSections'
 import { ChildAccessBlock } from '../childDevice/parent/ChildAccessBlock'
 import { RegistroSeccion } from '../supplements/RegistroSeccion'
+import { CardEntry } from '../vaccinations/CardEntry'
 import { DOSE_REFETCH_MS, isUnmarked, isUnregistered, unregisteredText } from './doseStatus'
 
 /**
@@ -195,6 +196,7 @@ export function ChildDetailPage() {
                   </div>
                   {consultationList('desktop')}
                 </section>
+                {childId && <CardEntry childId={childId} />}
                 {childId && <ChildAppointmentSection childId={childId} historyPath={`/children/${childId}/citas`} />}
                 {childId && <RegistroSeccion kind="supplement" childId={childId} childName={child?.firstName ?? 'tu hijo'} />}
                 {childId && (
@@ -270,6 +272,12 @@ export function ChildDetailPage() {
         </section>
 
         <TodayDosesBlock doses={todayDoses} status={overviewStatus} />
+
+        {childId && (
+          <div className="px-6 pt-7">
+            <CardEntry childId={childId} />
+          </div>
+        )}
 
         {childId && (
           <div className="px-6 pt-7">

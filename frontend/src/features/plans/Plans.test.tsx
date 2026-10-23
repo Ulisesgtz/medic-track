@@ -67,7 +67,7 @@ describe('the words of the plans', () => {
     expect(PLAN_PRICE).toBe('MX$499')
     expect(FREE_ITEMS).toHaveLength(8)
     expect(FULL_ITEMS).toHaveLength(8)
-    expect(SOON_ITEMS).toHaveLength(5)
+    expect(SOON_ITEMS).toHaveLength(4)
     for (const motive of Object.values(LIMIT_MOTIVES)) expect(motive.rows).toHaveLength(3)
   })
 

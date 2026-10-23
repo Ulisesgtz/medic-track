@@ -16,6 +16,13 @@ type State struct {
 	Name        string
 }
 
+// Vaccine is an entry of the vaccines catalog (specs/046): a NAME a parent can pick when recording a dose, nothing more. It has no
+// age, schedule or target dose on purpose: the app registers what the parent captured and never says what is due (Principio I).
+type Vaccine struct {
+	Code string
+	Name string
+}
+
 // Symptom is an entry of the symptoms catalog: something a parent can observe,
 // never a diagnosis (Principio I). Category is its group's title. Also what a
 // consultation carries for each symptom marked on it (specs/012).
