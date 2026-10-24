@@ -50,7 +50,8 @@ func TestDeviceMarks_TheChildsPhoneMarksAndTheChildsNameIsShown(t *testing.T) {
 	got := detail.Medications[0].Doses[0]
 	require.NotNil(t, got.TakenBy)
 	require.Equal(t, childName, got.TakenBy.Name)
-	overview, err := svc.GetChildOverview(context.Background(), c.ChildID, time.Now().Add(-24*time.Hour), time.Now().Add(24*time.Hour))
+	now := time.Now() // one reading: two would make the window a few nanoseconds longer than the 48 hours allowed
+	overview, err := svc.GetChildOverview(context.Background(), c.ChildID, now.Add(-24*time.Hour), now.Add(24*time.Hour))
 	require.NoError(t, err)
 	found := false
 	for _, d := range overview.Doses {
