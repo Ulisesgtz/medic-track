@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { useIsDesktop } from '../../shared/ui/useIsDesktop'
+import { useBodyScrollLock } from '../../shared/ui/useBodyScrollLock'
 
 interface ConfirmDialogProps {
   title: string
@@ -69,6 +70,8 @@ export function ConfirmDialog({ title, rows, confirmLabel, cancelLabel = 'Cancel
   }, [onCancel, opener])
 
   const confirmClass = tone === 'danger' ? 'bg-red-700 hover:opacity-90' : 'bg-ink hover:opacity-90'
+  useBodyScrollLock()
+
   return createPortal(
     <div
       className={`fixed inset-0 z-50 flex bg-ink/70 ${desktop ? 'items-center justify-center p-6' : 'items-end p-4'}`}

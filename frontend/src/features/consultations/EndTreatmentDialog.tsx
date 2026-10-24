@@ -1,5 +1,6 @@
 import { useEffect, useRef, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
+import { useBodyScrollLock } from '../../shared/ui/useBodyScrollLock'
 
 interface EndTreatmentDialogProps {
   medicationName: string
@@ -51,6 +52,8 @@ export function EndTreatmentDialog({ medicationName, busy, error, onConfirm, onC
       restoreTo?.focus()
     }
   }, [onCancel, opener])
+
+  useBodyScrollLock()
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4" onClick={() => !busy && onCancel()}>

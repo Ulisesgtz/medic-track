@@ -78,6 +78,22 @@ test.describe('Pop-up del plan gratuito — diseño móvil (specs/034)', () => {
     await expect(opener(page)).toBeFocused()
   })
 
+  test('la página de atrás no se mueve mientras el pop-up está abierto y vuelve a moverse al cerrarlo', async ({ page }) => {
+    const overflow = () => page.evaluate(() => getComputedStyle(document.body).overflow)
+    expect(await overflow()).not.toBe('hidden')
+    await opener(page).click()
+    await expect(dialog(page)).toBeVisible()
+    expect(await overflow()).toBe('hidden')
+    // A drag on the backdrop moves nothing behind it.
+    const before = await page.evaluate(() => window.scrollY)
+    await page.mouse.move(195, 20)
+    await page.mouse.wheel(0, 400)
+    expect(await page.evaluate(() => window.scrollY)).toBe(before)
+    await dialog(page).getByRole('button', { name: 'Ahora no' }).click()
+    await expect(dialog(page)).toBeHidden()
+    expect(await overflow()).not.toBe('hidden')
+  })
+
   test('un toque en el fondo lo cierra; dentro del pop-up no', async ({ page }) => {
     await opener(page).click()
 

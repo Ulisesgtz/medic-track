@@ -2,6 +2,7 @@ import { useEffect, useRef, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { formatTime } from '../../shared/date'
 import type { ReminderDetail } from './api'
+import { useBodyScrollLock } from '../../shared/ui/useBodyScrollLock'
 
 interface ReminderDetailDialogProps {
   /** Name used in the "detailed" example (the account's first child). */
@@ -71,6 +72,8 @@ export function ReminderDetailDialog({ childName, current, onChoose, onCancel, o
       note: 'No muestra el medicamento ni el nombre; lo ves al abrir la app.',
     },
   ]
+
+  useBodyScrollLock()
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4" onClick={onCancel}>

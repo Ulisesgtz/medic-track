@@ -431,6 +431,12 @@ describe('HomePage, family (specs/032)', () => {
     sessionStorage.clear()
   })
 
+  it('links to «Planes» from the phone home, which has no sidebar', async () => {
+    stubApi(shared('tutor'))
+    renderHome()
+    expect(await screen.findByRole('link', { name: /^Planes/ })).toHaveAttribute('href', '/planes')
+  })
+
   it('links to «Familia» from the home', async () => {
     stubApi(shared('tutor'))
     renderHome()

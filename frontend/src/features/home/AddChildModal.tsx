@@ -9,6 +9,7 @@ import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
 import { nameError, nameValidation, positiveNumberValidation } from '../account-signup/validation'
 import { FormField } from '../../shared/ui/FormField'
 import { addChild, AccountApiError } from './api'
+import { useBodyScrollLock } from '../../shared/ui/useBodyScrollLock'
 
 interface AddChildModalProps {
   accountId: string
@@ -113,6 +114,8 @@ export function AddChildModal({ accountId, onClose }: AddChildModalProps) {
     // whatever had it before, clobbering the correct restore that already ran in `close()`.
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [onClose])
+
+  useBodyScrollLock()
 
   if (showFreemiumModal) {
     // FreemiumLimitModal renders itself into <body>.

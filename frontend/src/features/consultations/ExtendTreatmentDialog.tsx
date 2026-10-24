@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { formatDayMonth } from '../../shared/date'
 import { MAX_EXTENSION_DOSES, parseDoses } from './treatmentDays'
+import { useBodyScrollLock } from '../../shared/ui/useBodyScrollLock'
 
 interface ExtendTreatmentDialogProps {
   medicationName: string
@@ -81,6 +82,8 @@ export function ExtendTreatmentDialog({
       restoreTo?.focus()
     }
   }, [onCancel, opener])
+
+  useBodyScrollLock()
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/70 p-4" onClick={() => !busy && onCancel()}>

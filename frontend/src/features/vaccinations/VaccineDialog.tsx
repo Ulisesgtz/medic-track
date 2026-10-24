@@ -10,6 +10,7 @@ import { useSaveVaccination } from './hooks'
 import { OTHER, emptyValues, isDirty, localToday, serverErrors, toInput, validateDose, valuesOf, type DoseErrors, type DoseField, type DoseFormValues } from './vaccineForm'
 import { TEXT } from './vaccineText'
 import type { Vaccination } from './types'
+import { useBodyScrollLock } from '../../shared/ui/useBodyScrollLock'
 
 interface VaccineDialogProps {
   childId: string
@@ -117,6 +118,8 @@ export function VaccineDialog({ childId, birthDate, vaccination, initial, onClos
   const border = (field: DoseField) => fieldBorder(!!errors[field])
   const other = values.vaccine === OTHER
   const title = vaccination ? TEXT.dialog.editTitle : TEXT.dialog.addTitle
+  useBodyScrollLock()
+
   return createPortal(
     <div className={`fixed inset-0 z-50 flex bg-ink/70 ${desktop ? 'items-center justify-center p-6' : 'items-end p-4'}`} onClick={close}>
       <div
