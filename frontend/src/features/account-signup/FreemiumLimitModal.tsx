@@ -2,6 +2,7 @@ import { useEffect, useRef, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { useIsDesktop } from '../../shared/ui/useIsDesktop'
 import { LIMIT_MOTIVES, PLAN_PERIOD, PLAN_PRICE } from '../plans/planCopy'
+import { useBodyScrollLock } from '../../shared/ui/useBodyScrollLock'
 
 /**
  * What the free plan stopped (specs/030 adds the last two): a second child, a second consultation while one treatment is
@@ -110,6 +111,8 @@ export function FreemiumLimitModal({ reason = 'children', onViewPlans, onStayFre
     </div>
   )
 
+  useBodyScrollLock()
+
   return createPortal(
     <div className={`fixed inset-0 z-50 flex bg-ink/70 ${desktop ? 'items-center justify-center p-6' : 'items-end p-3'}`} onClick={onStayFree}>
       <div
@@ -118,7 +121,7 @@ export function FreemiumLimitModal({ reason = 'children', onViewPlans, onStayFre
         aria-modal="true"
         aria-labelledby="freemium-limit-title"
         aria-describedby="freemium-limit-body"
-        className={`max-h-[92vh] w-full overflow-y-auto rounded-3xl bg-surface shadow-2xl ${desktop ? 'max-w-[580px]' : 'max-w-lg'}`}
+        className={`max-h-[92vh] w-full overflow-y-auto overscroll-contain rounded-3xl bg-surface shadow-2xl ${desktop ? 'max-w-[580px]' : 'max-w-lg'}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3 bg-ink py-5 pr-4 pl-6">

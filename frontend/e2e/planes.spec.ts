@@ -48,6 +48,15 @@ for (const design of designs) {
       await expectNoHorizontalScroll(page)
     })
 
+    test('«Planes» is reachable from the home without waiting for a limit notice (the sidebar on the web, a card on the phone)', async ({ page }) => {
+      await allowClerkOn(page)
+      await seedChild(page, { withConsultation: false, plan: 'free' })
+      await page.goto('/home')
+      await page.getByRole('link', { name: /^Planes/ }).click()
+      await expect(page).toHaveURL(/\/planes$/)
+      await expect(page.getByRole('heading', { name: 'Planes', level: 1 })).toBeVisible()
+    })
+
     test('a paid account has the full plan as its own and nothing to buy', async ({ page }) => {
       await allowClerkOn(page)
       const owner = await seedChild(page, { withConsultation: false, plan: 'free' })

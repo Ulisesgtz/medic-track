@@ -14,6 +14,7 @@ import { WelcomeDisclaimer } from './WelcomeDisclaimer'
 import { RemindersCard } from '../reminders/RemindersCard'
 import { readPendingInvitation } from '../family/pendingInvitation'
 import { FamilyEntry } from '../family/FamilyEntry'
+import { PlanEntry } from '../plans/PlanEntry'
 import { PersonalHomeBlock } from '../supplements/PersonalHomeBlock'
 
 /**
@@ -255,6 +256,11 @@ export function HomePage() {
           {account && (
             <div className="mt-6">
               <FamilyEntry variant="phone" />
+            </div>
+          )}
+          {account && (
+            <div className="mt-4">
+              <PlanEntry account={account} />
             </div>
           )}
           <PersonalHomeBlock account={account} variant="phone" />
