@@ -17,6 +17,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/appointment"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
+	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/family"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
@@ -40,6 +41,8 @@ type Deps struct {
 	Supplement *supplement.Handler
 	// Appointment: the next appointment of a consultation (specs/033, part 2).
 	Appointment *appointment.Handler
+	// ChildDevice: the access of a child's own phone (specs/047): the parents' routes to make it and the public one that opens it.
+	ChildDevice *childdevice.Handler
 	// Vaccination: the child's vaccination card, the doses a parent records by hand (specs/046).
 	Vaccination *vaccination.Handler
 	// Payments: the subscription of the full plan (specs/045). Nil = the charge is not available in this environment: none of its routes
@@ -103,6 +106,34 @@ func NewRouter(d Deps) *chi.Mux {
 	// signed action token is the only thing it accepts, and it names a single dose (specs/011).
 	r.With(strict).Post("/reminders/actions/taken", d.Reminder.MarkTaken)
 
+	// A child's phone opens its link here: public (it has no session yet), strictly limited, and the same 404 for every failure (specs/047).
+	if d.ChildDevice != nil {
+		r.With(strict).Post("/child-device/redeem", d.ChildDevice.Redeem)
+	}
+
+	// The routes of a child's own phone (specs/047): a SHORT CLOSED LIST that reuses the parents' handlers behind the phone's own
+	// credential (`Authorization: Device …`, never `Bearer`) and a guard that the resource is its child's. Everything else of the API
+	// answers 401 to that credential, because it is not a session. A new route here needs its row in the lists of router_test.go.
+	if d.ChildDevice != nil {
+		r.Group(func(r chi.Router) {
+			r.Use(d.ChildDevice.Auth())
+			sameChild := d.ChildDevice.SameChild()
+			routineOfChild := d.ChildDevice.RoutineOfChild()
+			consultationOfChild := d.ChildDevice.ConsultationOfChild()
+			r.Get("/child-device/me", d.ChildDevice.Me)
+			r.Post("/child-device/rotate", d.ChildDevice.Rotate)
+			r.With(sameChild).Get("/child-device/children/{childId}/overview", d.Consultation.GetChildOverview)
+			r.With(sameChild).Get("/child-device/children/{childId}/routines", d.Supplement.ListRoutines)
+			r.With(consultationOfChild).Patch("/child-device/consultations/{consultationId}/doses/{doseId}", d.Consultation.UpdateDose)
+			r.With(routineOfChild).Patch("/child-device/routines/{routineId}/doses/{doseId}", d.Supplement.UpdateDose)
+			r.With(routineOfChild).Post("/child-device/routines/{routineId}/done", d.Supplement.MarkRoutineDone)
+			// The phone's own reminders: the push key, and turning them on and off for this browser.
+			r.Get("/child-device/reminders/config", d.Reminder.GetConfig)
+			r.Post("/child-device/reminder-devices", d.Reminder.RegisterChildDevice)
+			r.Post("/child-device/reminder-devices/remove", d.Reminder.RemoveChildDevice)
+		})
+	}
+
 	// The payment provider's notice (specs/045): public like the "Tomada" button, verified by the provider's signature and limited
 	// strictly; only registered when the charge is configured. The fake provider's helpers exist only with PAYMENTS_DRIVER=fake.
 	if d.Payments != nil {
@@ -162,6 +193,14 @@ func NewRouter(d Deps) *chi.Mux {
 		r.Post("/family/leave", d.Family.LeaveFamily)
 
 		r.Get("/reminders/config", d.Reminder.GetConfig)
+
+		// A child's phone (specs/047): the parent makes its one-use link; the phone's own routes are in the /child-device group.
+		if d.ChildDevice != nil {
+			r.With(fullChild).Post("/children/{childId}/device-links", d.ChildDevice.CreateLink)
+			r.With(seesChild).Get("/children/{childId}/device-links", d.ChildDevice.List)
+			r.With(fullChild).Post("/children/{childId}/device-links/{linkId}/revoke", d.ChildDevice.Revoke)
+			r.With(fullChild).Patch("/children/{childId}/device-links/{linkId}", d.ChildDevice.Update)
+		}
 
 		r.With(seesChild).Get("/children/{childId}/consultations", d.Consultation.ListConsultations)
 		r.With(seesChild).Get("/children/{childId}/overview", d.Consultation.GetChildOverview)

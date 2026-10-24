@@ -19,6 +19,9 @@ const family = (extra: Partial<FamilyView> = {}): FamilyView => ({
 
 type Reply = { status?: number; body?: unknown }
 
+/** The children `/accounts/me` answers with (reset after each test). */
+let meChildren: unknown[] = []
+
 /** One stub for the whole API: `/family` reads, and each write is answered from `writes`. */
 function stubApi(read: () => FamilyView, writes: Record<string, Reply> = {}) {
   const calls: { method: string; path: string; body?: unknown }[] = []
@@ -36,7 +39,7 @@ function stubApi(read: () => FamilyView, writes: Record<string, Reply> = {}) {
           return { ok: false, status: 500, json: async () => ({}) } as Response
         }
       }
-      if (path.startsWith('/accounts/me')) return { ok: true, status: 200, json: async () => ({ id: 'a', firstName: 'Ana', lastName: 'G', plan: 'paid', children: [] }) } as Response
+      if (path.startsWith('/accounts/me')) return { ok: true, status: 200, json: async () => ({ id: 'a', firstName: 'Ana', lastName: 'G', plan: 'paid', children: meChildren }) } as Response
       const reply = writes[`${method} ${path}`] ?? { status: 204 }
       const status = reply.status ?? 200
       return { ok: status < 300, status, json: async () => reply.body ?? {} } as Response
@@ -62,6 +65,7 @@ function renderPage() {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  meChildren = []
 })
 
 describe('FamilyPage', () => {
@@ -113,6 +117,33 @@ describe('FamilyPage', () => {
     expect(await screen.findByText(/La familia está en el plan gratuito/)).toBeInTheDocument()
     expect(screen.queryByRole('form', { name: 'Invitar a alguien' })).not.toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Compartir con tu familia' })).not.toBeInTheDocument()
+  })
+
+  it('points the people who manage a child to the child access (specs/047), and nobody else', async () => {
+    meChildren = [
+      { id: 'c1', firstName: 'Mateo', lastName: 'G', birthDate: '2021-03-14' },
+      { id: 'c2', firstName: 'Sofía', lastName: 'G', birthDate: '2020-01-01', role: 'caregiver' },
+      { id: 'c3', firstName: 'Leo', lastName: 'G', birthDate: '2020-01-01', role: 'tutor', readOnly: true },
+    ]
+    stubApi(() => family())
+    renderPage()
+    const section = await screen.findByRole('region', { name: 'Acceso del hijo en su teléfono' })
+    expect(within(section).getByRole('link', { name: 'Acceso de Mateo' })).toHaveAttribute('href', '/children/c1')
+    expect(within(section).queryByRole('link', { name: 'Acceso de Sofía' })).not.toBeInTheDocument()
+    expect(within(section).queryByRole('link', { name: 'Acceso de Leo' })).not.toBeInTheDocument()
+  })
+
+  it('shows no child access summary without children, on the free plan or for a Caregiver', async () => {
+    stubApi(() => family())
+    const { unmount } = renderPage()
+    await screen.findByRole('list', { name: 'Personas de la familia' })
+    expect(screen.queryByRole('region', { name: 'Acceso del hijo en su teléfono' })).not.toBeInTheDocument()
+    unmount()
+    meChildren = [{ id: 'c1', firstName: 'Mateo', lastName: 'G', birthDate: '2021-03-14' }]
+    stubApi(() => family({ role: 'caregiver' }))
+    renderPage()
+    await screen.findByRole('list', { name: 'Personas de la familia' })
+    expect(screen.queryByRole('region', { name: 'Acceso del hijo en su teléfono' })).not.toBeInTheDocument()
   })
 
   it('does not offer a Caregiver the form nor the invitations', async () => {

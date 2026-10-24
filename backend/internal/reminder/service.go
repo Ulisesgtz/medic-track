@@ -68,7 +68,9 @@ func (s *Service) SetReporter(r FailureReporter) { s.reporter = r }
 // shouldReport says whether a failure goes to error_logs: there is a reporter and the server is not shutting down
 // (which cancels the cycle and is not a failure). The call to Report stays in Tick itself — the row's file and line are
 // the caller's, so a helper in between would make every row point at the helper.
-func (s *Service) shouldReport(ctx context.Context) bool { return s.reporter != nil && ctx.Err() == nil }
+func (s *Service) shouldReport(ctx context.Context) bool {
+	return s.reporter != nil && ctx.Err() == nil
+}
 
 func (s *Service) recovered(kind string) {
 	if s.reporter != nil {
@@ -79,7 +81,12 @@ func (s *Service) recovered(kind string) {
 // accountSet collects the accounts a cycle's failures belong to: the row names the account only when it is just one.
 type accountSet map[uuid.UUID]struct{}
 
-func (a accountSet) add(id uuid.UUID) { a[id] = struct{}{} }
+// add ignores the empty id: the reminder of a child's phone belongs to no account, and error_logs only takes real ones.
+func (a accountSet) add(id uuid.UUID) {
+	if id != uuid.Nil {
+		a[id] = struct{}{}
+	}
+}
 
 func (a accountSet) single() *uuid.UUID {
 	if len(a) != 1 {
@@ -102,10 +109,34 @@ func (s *Service) VAPIDPublicKey() string {
 	return s.config.VAPIDPublicKey
 }
 
+// ActivateChildDevice turns reminders on for the phone of a child (specs/047), with the same checks as an account's device.
+func (s *Service) ActivateChildDevice(ctx context.Context, linkID uuid.UUID, endpoint, p256dh, auth string) (Device, bool, error) {
+	if err := s.checkSubscription(endpoint, p256dh, auth); err != nil {
+		return Device{}, false, err
+	}
+	return s.repo.UpsertChildDevice(ctx, linkID, endpoint, p256dh, auth)
+}
+
+// DeactivateChildDevice turns reminders off for this browser of the child's phone.
+func (s *Service) DeactivateChildDevice(ctx context.Context, linkID uuid.UUID, endpoint string) error {
+	if strings.TrimSpace(endpoint) == "" {
+		return ValidationErrors{{Field: "endpoint", Message: "is required"}}
+	}
+	return s.repo.DeactivateChildDevice(ctx, linkID, endpoint)
+}
+
 // ActivateDevice turns reminders on for this browser in the account.
 func (s *Service) ActivateDevice(ctx context.Context, accountID uuid.UUID, endpoint, p256dh, auth string) (Device, bool, error) {
+	if err := s.checkSubscription(endpoint, p256dh, auth); err != nil {
+		return Device{}, false, err
+	}
+	return s.repo.UpsertDevice(ctx, accountID, endpoint, p256dh, auth)
+}
+
+// checkSubscription is what a browser's subscription must be: reminders available, a known push service and both keys.
+func (s *Service) checkSubscription(endpoint, p256dh, auth string) error {
 	if !s.Available() {
-		return Device{}, false, ErrRemindersUnavailable
+		return ErrRemindersUnavailable
 	}
 	var errs ValidationErrors
 	if !s.validEndpoint(endpoint) {
@@ -118,9 +149,9 @@ func (s *Service) ActivateDevice(ctx context.Context, accountID uuid.UUID, endpo
 		errs = append(errs, FieldError{Field: "keys.auth", Message: "is required"})
 	}
 	if len(errs) > 0 {
-		return Device{}, false, errs
+		return errs
 	}
-	return s.repo.UpsertDevice(ctx, accountID, endpoint, p256dh, auth)
+	return nil
 }
 
 // DeactivateDevice turns reminders off for this browser in the account.
@@ -208,6 +239,18 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 	} else {
 		due = append(due, appointments...)
 	}
+	// The child's own phones (specs/047): their doses, once each, only for their child.
+	children, childErr := s.repo.ClaimDueChildDevices(ctx, now, remindWindow)
+	if childErr != nil {
+		if s.shouldReport(ctx) {
+			s.reporter.Report(failureTick, "reminder tick failed: could not read the due doses", nil)
+		}
+		if claimErr == nil {
+			claimErr = childErr
+		}
+	} else {
+		due = append(due, children...)
+	}
 	// Only when every kind of claim ran clean does the next failure get written at once (otherwise one kind failing every tick would
 	// be un-grouped by another kind's success and fill error_logs).
 	if claimErr == nil {
@@ -224,15 +267,25 @@ func (s *Service) Tick(ctx context.Context) (int, error) {
 		devicesByAcc = map[uuid.UUID][]Device{}
 	)
 	for _, dose := range due {
-		devices, ok := devicesByAcc[dose.AccountID]
+		// A reminder is for an account's devices or for one child phone's: the key tells them apart (their ids never meet).
+		recipient := dose.AccountID
+		if dose.ChildLinkID != uuid.Nil {
+			recipient = dose.ChildLinkID
+		}
+		devices, ok := devicesByAcc[recipient]
 		if !ok {
 			var err error
-			if devices, err = s.repo.ActiveDevicesFor(ctx, dose.AccountID, now); err != nil {
+			if dose.ChildLinkID != uuid.Nil {
+				devices, err = s.repo.ActiveDevicesForLink(ctx, dose.ChildLinkID, now)
+			} else {
+				devices, err = s.repo.ActiveDevicesFor(ctx, dose.AccountID, now)
+			}
+			if err != nil {
 				skipped++
 				skippedFor.add(dose.AccountID)
 				continue
 			}
-			devicesByAcc[dose.AccountID] = devices
+			devicesByAcc[recipient] = devices
 		}
 		for _, device := range devices {
 			if device.ActivatedAt.After(dose.ScheduledAt) {
@@ -313,6 +366,9 @@ func buildPayload(dose DueDose, actionToken string) Payload {
 		DoseID:      dose.DoseID.String(),
 		ScheduledAt: dose.ScheduledAt.UTC().Format(time.RFC3339),
 		ActionToken: actionToken,
+	}
+	if dose.ChildLinkID != uuid.Nil {
+		p.Scope = "child"
 	}
 	if dose.Source == SourceAppointment {
 		// The reminder of a next appointment: it carries when the appointment starts and how long before it goes off; the

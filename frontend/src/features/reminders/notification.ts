@@ -21,6 +21,8 @@ export interface ReminderPayload {
   medication?: string
   child?: string
   actionToken?: string
+  /** "child" for the reminder of a child's own phone (specs/047): tapping it opens the child's screen. */
+  scope?: 'child'
 }
 
 export interface ReminderNotification {
@@ -138,6 +140,7 @@ export function buildNotification(p: ReminderPayload, now: Date = new Date()): R
 
 /** Where tapping a reminder goes: the consultation of that dose. */
 export function targetUrl(p: ReminderPayload): string {
+  if (p.scope === 'child') return '/hijo/hoy'
   if (p.routineId) return `${p.source === 'activity' ? '/actividades' : '/suplementos'}/${p.routineId}`
   // An appointment's carries its consultation; one added without a consultation (specs/043) goes to the home.
   return p.consultationId ? `/consultations/${p.consultationId}` : '/home'

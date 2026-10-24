@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth } from '@clerk/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AccountSignupPage } from './features/account-signup/AccountSignupPage'
 import { CompleteGoogleSignupPage } from './features/account-signup/CompleteGoogleSignupPage'
@@ -23,9 +24,26 @@ import { RequireSession } from './features/auth/RequireSession'
 import { useClearCacheOnUserChange } from './features/auth/useClearCacheOnUserChange'
 import { SsoCallbackPage } from './features/auth/SsoCallbackPage'
 import { MessagePage } from './shared/ui/MessagePage'
+import { ChildTodayPage } from './features/childDevice/phone/ChildTodayPage'
+import { RedeemPage } from './features/childDevice/phone/RedeemPage'
+import { readCredential } from './features/childDevice/phone/storage'
 import { VaccinationCardPage } from './features/vaccinations/VaccinationCardPage'
 
 const queryClient = new QueryClient()
+
+/**
+ * `/home`, the installed app's start_url. A phone that carries a child's access (specs/047) and has no parent session is the child's:
+ * it goes to its own screen instead of the parents' login. Everybody else gets the home behind the session guard, as before.
+ */
+function HomeRoute() {
+  const { isLoaded, isSignedIn } = useAuth()
+  if (isLoaded && !isSignedIn && readCredential()) return <Navigate to="/hijo/hoy" replace />
+  return (
+    <RequireSession>
+      <HomePage />
+    </RequireSession>
+  )
+}
 
 function SessionCacheGuard() {
   useClearCacheOnUserChange()
@@ -50,14 +68,7 @@ function App() {
           <Route path="/sso-callback" element={<SsoCallbackPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/recuperar-contrasena" element={<ForgotPasswordPage />} />
-          <Route
-            path="/home"
-            element={
-              <RequireSession>
-                <HomePage />
-              </RequireSession>
-            }
-          />
+          <Route path="/home" element={<HomeRoute />} />
           <Route
             path="/children/:childId"
             element={
@@ -220,6 +231,9 @@ function App() {
           />
           {/* Public on purpose: an invitation is opened before the person has a session; the page itself asks for one. */}
           <Route path="/familia/invitacion" element={<InvitationPage />} />
+          {/* A child's own phone (specs/047): no Clerk session and no parents' shell; it carries its own credential. */}
+          <Route path="/hijo" element={<RedeemPage />} />
+          <Route path="/hijo/hoy" element={<ChildTodayPage />} />
           <Route path="/" element={<Navigate to="/signup" replace />} />
           {/* The plans (specs/034): every "Ver el plan completo" lands here. */}
           <Route

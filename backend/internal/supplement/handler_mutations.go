@@ -296,10 +296,10 @@ func (h *Handler) MarkRoutineDone(w http.ResponseWriter, r *http.Request) {
 		h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", "Could not mark the activity", nil)
 		return
 	}
-	dose, err := h.service.MarkNext(ctx, id, from, to, Actor{AccountID: got.ActorAccountID, Full: got.Level == access.Full})
+	dose, err := h.service.MarkNext(ctx, id, from, to, Actor{AccountID: got.ActorAccountID, DeviceID: got.ActorDeviceID, Full: got.Level == access.Full})
 	if err != nil {
 		h.writeMutationError(ctx, w, err, got.ActorAccountID, "Could not mark the activity")
 		return
 	}
-	h.responder.WriteJSON(ctx, w, http.StatusOK, toDoseResponse(*dose, got.ActorAccountID), nil)
+	h.responder.WriteJSON(ctx, w, http.StatusOK, toDoseResponse(*dose, got.AuthorID()), nil)
 }

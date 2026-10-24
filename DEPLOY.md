@@ -293,3 +293,11 @@ El plan completo (MX$499 al año) se contrata desde `/planes`: el padre paga **e
 5. **Comprobar**: `https://dev.pedi-track.com/planes` con una cuenta gratuita → «Contratar plan completo» → paga con un **comprador de prueba** y una **tarjeta de prueba** de Mercado Pago → regresas a `/planes/regreso` y en segundos dice «Tu plan completo está activo». Revisa que haya una fila en `payment_events` y que `GET /ops/error-logs?endpointPrefix=job:payments` esté vacío. Prueba también un cobro rechazado y la cancelación desde la app y desde el panel (`specs/045-cobro-mercado-pago/quickstart.md` §3).
 6. **Si algo falla**: `GET /ops/error-logs?endpointPrefix=job:payments` (mensajes fijos con conteos, sin tarjetas, correos, tokens ni cuerpos). Una firma inválida responde 401 y **no** se escribe en `error_logs`.
 7. **Antes del primer cobro real** (no antes de probar en DEV): contador (RFC / actividad empresarial, facturación, nombre legal), términos y aviso de privacidad actualizados, y las credenciales **reales** en Railway de producción.
+
+## Acceso del hijo (spec 047)
+
+1. **Migración `0029`** (`child_device_links`, `taken_by_child_device_id` en `doses` y `supplement_doses`, `reminder_devices.child_link_id` con `account_id` ahora opcional, `child_dose_reminders` y `child_supplement_dose_reminders`) en la base de DEV **antes** de desplegar el backend de esta rama (script de `node`/`pg`, no `psql`; mismo método que de la `0025` a la `0028`). El backend anterior sigue funcionando sin ella; el nuevo no. No toca datos existentes.
+2. **Sin variables nuevas.** Los avisos del teléfono del niño usan las mismas llaves VAPID de los recordatorios.
+3. El aviso «Antes de empezar» cambió de versión (`2026-10-23`: nombra el acceso del hijo), así que cada cuenta lo verá una vez más.
+4. Probar con un iPhone real: abrir la liga desde Mensajes o WhatsApp, instalar la PWA, marcar una toma y activar los avisos. En Safari **sin** instalar la app el almacenamiento se limpia a los 7 días sin uso y el niño necesitaría otra liga.
+5. Pendiente legal del dueño: el aviso de privacidad debe mencionar este acceso (sin datos personales del menor, quitable en cualquier momento).

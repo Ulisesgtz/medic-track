@@ -39,6 +39,8 @@ type Access struct {
 	Level Level
 	// ActorAccountID is the account of the session; uuid.Nil if the session has no PediTrack account yet.
 	ActorAccountID uuid.UUID
+	// ActorDeviceID is the child's phone (specs/047) when the actor is a device and not an account; uuid.Nil otherwise. Never both.
+	ActorDeviceID uuid.UUID
 }
 
 type contextKey struct{}
@@ -52,6 +54,15 @@ func WithAccess(ctx context.Context, a Access) context.Context {
 func FromContext(ctx context.Context) (Access, bool) {
 	a, ok := ctx.Value(contextKey{}).(Access)
 	return a, ok
+}
+
+// AuthorID is the id a mark is stored and compared by: the child's phone when the actor is one, otherwise the account. The two
+// are different random UUIDs, so one can never be taken for the other; `takenBy.mine` and «unmark only what is yours» use it.
+func (a Access) AuthorID() uuid.UUID {
+	if a.ActorDeviceID != uuid.Nil {
+		return a.ActorDeviceID
+	}
+	return a.ActorAccountID
 }
 
 // Repository runs the access queries.

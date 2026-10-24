@@ -14,6 +14,7 @@ import { FamilyCounter } from './FamilyCounter'
 import { InvitationsList } from './InvitationsList'
 import { InviteForm } from './InviteForm'
 import { liveEmailStatus } from './emailStatus'
+import { PARENT } from '../childDevice/childText'
 import { InviteLink } from './InviteLink'
 import { MembersList } from './MembersList'
 import { namesText, ROLE_LABEL } from './roles'
@@ -178,6 +179,7 @@ export function FamilyPage() {
     const full = d.role === 'owner' || d.role === 'tutor'
     const paid = d.plan === 'paid'
     const canInvite = full && paid && !d.readOnly
+    const childrenWithAccess = (account?.children ?? []).filter((c) => (c.role === undefined || c.role === 'owner' || c.role === 'tutor') && !c.readOnly)
     return (
       <>
         {actionError && <Notice tone="error">{actionError}</Notice>}
@@ -205,6 +207,24 @@ export function FamilyPage() {
             title="Compartir con tu familia"
             text={`Hasta ${d.capacity.max} personas ven y marcan las tomas, cada una con sus avisos. Quienes invitas quedan incluidos en tu suscripción.`}
           />
+        )}
+        {canInvite && childrenWithAccess.length > 0 && (
+          <section aria-label={PARENT.family.title} className={`flex flex-col gap-3 ${isDesktop ? 'rounded-[22px] bg-surface p-6 shadow-[0_8px_20px_rgba(4,37,43,0.07)]' : 'pt-1'}`}>
+            <h2 className="text-xl font-black tracking-[-0.02em] text-ink">{PARENT.family.title}</h2>
+            <p className="text-[15px] leading-relaxed text-body">{PARENT.family.text}</p>
+            <ul className="flex flex-wrap gap-2.5">
+              {childrenWithAccess.map((child) => (
+                <li key={child.id}>
+                  <Link
+                    to={`/children/${child.id}`}
+                    className="inline-flex min-h-11 items-center rounded-2xl border-2 border-action px-5 text-[15px] font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+                  >
+                    {PARENT.family.link(child.firstName)}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
         {d.role !== 'owner' && (
           <section className={`flex flex-col gap-3 ${isDesktop ? 'rounded-[22px] bg-surface p-6 shadow-[0_8px_20px_rgba(4,37,43,0.07)]' : 'pt-1'}`}>

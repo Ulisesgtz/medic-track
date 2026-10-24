@@ -92,7 +92,9 @@ type TakenBy struct {
 // only see and mark.
 type Actor struct {
 	AccountID uuid.UUID
-	Full      bool
+	// DeviceID is the child's phone (specs/047) when the actor is one and not an account; never both.
+	DeviceID uuid.UUID
+	Full     bool
 }
 
 // Dose represents one expected occurrence of a Medication, generated only

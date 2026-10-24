@@ -33,8 +33,10 @@ const (
 
 // Device is a browser or installed PWA on which a tutor turned reminders on.
 type Device struct {
-	ID          uuid.UUID
-	AccountID   uuid.UUID
+	ID        uuid.UUID
+	AccountID uuid.UUID
+	// ChildLinkID is set instead of AccountID for the phone of a child (specs/047).
+	ChildLinkID uuid.UUID
 	Endpoint    string
 	P256dh      string
 	Auth        string
@@ -60,7 +62,9 @@ type DueDose struct {
 	DoctorName    string
 	Note          string
 	// AccountID is the person this reminder is for (the account whose devices receive it), not the child's owner.
-	AccountID      uuid.UUID
+	AccountID uuid.UUID
+	// ChildLinkID is, instead, the child's own phone this reminder is for (specs/047); AccountID is then empty.
+	ChildLinkID    uuid.UUID
 	ScheduledAt    time.Time
 	MedicationName string
 	ChildFirstName string
@@ -82,6 +86,8 @@ type Payload struct {
 	Medication     string `json:"medication,omitempty"`
 	Child          string `json:"child,omitempty"`
 	ActionToken    string `json:"actionToken,omitempty"`
+	// Scope is "child" for the reminder of a child's own phone (specs/047): tapping it opens the child's screen, not the parents' app.
+	Scope string `json:"scope,omitempty"`
 	// An appointment's reminder (specs/033, part 2): `scheduledAt` is when the appointment starts and `leadMinutes` how long before it this goes off.
 	AppointmentID string `json:"appointmentId,omitempty"`
 	LeadMinutes   *int   `json:"leadMinutes,omitempty"`

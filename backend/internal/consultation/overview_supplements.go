@@ -23,12 +23,14 @@ const (
 // time. They are not an «active treatment»: that stays derived from consultations only.
 func (r *Repository) addSupplementDoses(ctx context.Context, overview *ChildOverview, childID uuid.UUID, from, to, now time.Time) error {
 	rows, err := r.pool.Query(ctx, `
-		SELECT d.id, d.routine_id, sr.name, d.scheduled_at, d.taken, d.taken_by_account_id, a.first_name, d.taken_at,
+		SELECT d.id, d.routine_id, sr.name, d.scheduled_at, d.taken, COALESCE(d.taken_by_account_id, d.taken_by_child_device_id), COALESCE(a.first_name, tdc.first_name), d.taken_at,
 		       (SELECT min(n.scheduled_at) FROM supplement_doses n
 		         WHERE n.routine_id = d.routine_id AND n.scheduled_at > d.scheduled_at) AS next_at
 		FROM supplement_doses d
 		JOIN supplement_routines sr ON sr.id = d.routine_id
 		LEFT JOIN accounts a ON a.id = d.taken_by_account_id
+		LEFT JOIN child_device_links tdl ON tdl.id = d.taken_by_child_device_id
+		LEFT JOIN children tdc ON tdc.id = tdl.child_id
 		WHERE sr.child_id = $1 AND sr.kind = 'supplement' AND sr.status = 'active' AND d.scheduled_at >= $2 AND d.scheduled_at < $3
 	`, childID, from, to)
 	if err != nil {

@@ -67,6 +67,10 @@ export function WelcomeDisclaimer({ account }: { account: Account | undefined })
         suplementos, actividades, cantidades ni horarios, y avisa a las personas de tu familia que tengan acceso a ese hijo.
       </p>
       <p>
+        Si le das acceso a tu hijo, <strong>verá en su teléfono sus tomas y actividades y podrá marcarlas</strong>; no se
+        guarda ningún dato personal suyo y puedes quitar el acceso cuando quieras.
+      </p>
+      <p>
         Las vacunas y las fotos de la cartilla de tu hijo son datos de salud: se guardan solo en tu cuenta y las personas
         que invites podrán verlas según su rol.
       </p>

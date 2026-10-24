@@ -238,6 +238,123 @@ definitions:
         example: true
         type: boolean
     type: object
+  ChildDeviceErrorResponse:
+    properties:
+      error:
+        example: not_found
+        type: string
+      message:
+        example: This link is no longer valid
+        type: string
+    type: object
+  ChildDeviceLinkCreatedResponse:
+    properties:
+      expiresAt:
+        example: "2026-10-23T14:00:00Z"
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      name:
+        example: Teléfono de Mateo
+        type: string
+      status:
+        enum:
+        - pending
+        example: pending
+        type: string
+      token:
+        description: Token is the link's secret. It exists in the clear only in this
+          answer; the app puts it in the `#` of the link.
+        type: string
+    type: object
+  ChildDeviceLinkListResponse:
+    properties:
+      canManage:
+        description: 'CanManage: the session can make and remove phones; a caregiver
+          only sees the list.'
+        type: boolean
+      limit:
+        example: 3
+        type: integer
+      links:
+        items:
+          $ref: '#/definitions/ChildDeviceLinkResponse'
+        type: array
+    type: object
+  ChildDeviceLinkResponse:
+    properties:
+      createdAt:
+        example: "2026-10-22T14:00:00Z"
+        type: string
+      expiresAt:
+        example: "2026-10-23T14:00:00Z"
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      lastSeenAt:
+        type: string
+      name:
+        example: Teléfono de Mateo
+        type: string
+      redeemedAt:
+        type: string
+      reminderDetail:
+        enum:
+        - generic
+        - detailed
+        example: generic
+        type: string
+      status:
+        enum:
+        - pending
+        - active
+        - revoked
+        - expired
+        example: active
+        type: string
+    type: object
+  ChildDeviceMeResponse:
+    properties:
+      childFirstName:
+        example: Mateo
+        type: string
+      childId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      deviceName:
+        example: Teléfono de Mateo
+        type: string
+      reminderDetail:
+        enum:
+        - generic
+        - detailed
+        example: generic
+        type: string
+      rotateAfter:
+        description: RotateAfter is when the phone should ask for a new credential.
+        example: "2026-10-30T14:00:00Z"
+        type: string
+    type: object
+  ChildDeviceValidationResponse:
+    properties:
+      details:
+        items:
+          properties:
+            field:
+              example: name
+              type: string
+            message:
+              type: string
+          type: object
+        type: array
+      error:
+        example: validation_error
+        type: string
+      message:
+        type: string
+    type: object
   ChildNotFoundResponse:
     properties:
       error:
@@ -372,6 +489,13 @@ definitions:
         type: string
       message:
         example: One or more fields are invalid
+        type: string
+    type: object
+  CreateChildDeviceLinkRequest:
+    properties:
+      name:
+        description: Name is what the parent calls the phone. 1 to 40 characters.
+        example: Teléfono de Mateo
         type: string
     type: object
   CreatedFamilyInvitationResponse:
@@ -1016,6 +1140,35 @@ definitions:
         example: active_treatment
         type: string
     type: object
+  RedeemChildDeviceLinkRequest:
+    properties:
+      token:
+        type: string
+    type: object
+  RedeemedChildDeviceLinkResponse:
+    properties:
+      childFirstName:
+        example: Mateo
+        type: string
+      childId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      credential:
+        description: 'Credential is what the phone sends from now on as `Authorization:
+          Device <credential>`. It is shown only here.'
+        type: string
+      rotateAfter:
+        example: "2026-10-30T14:00:00Z"
+        type: string
+    type: object
+  RotatedChildDeviceCredentialResponse:
+    properties:
+      credential:
+        type: string
+      rotateAfter:
+        example: "2026-10-30T14:00:00Z"
+        type: string
+    type: object
   SearchConsultationsRequest:
     properties:
       doctor:
@@ -1482,6 +1635,15 @@ definitions:
         type: boolean
       name:
         example: Ana
+        type: string
+    type: object
+  UpdateChildDeviceLinkRequest:
+    properties:
+      reminderDetail:
+        enum:
+        - generic
+        - detailed
+        example: detailed
         type: string
     type: object
   VaccinationErrorResponse:
@@ -2882,6 +3044,147 @@ paths:
       summary: List the vaccines a parent can pick
       tags:
       - catalog
+  /child-device/me:
+    get:
+      description: The child the phone belongs to and when to renew its credential.
+        Only the first name the app already has of the child.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ChildDeviceMeResponse'
+        "401":
+          description: The credential does not work
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+      security:
+      - DeviceCredential: []
+      summary: Who this phone is
+      tags:
+      - child-device
+  /child-device/redeem:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Public: the secret in the body is the only thing it takes. A link that is unknown, used, expired or canceled
+        gets the same 404, which is not written to error_logs. Strictly rate limited.
+      parameters:
+      - description: The link's token
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/RedeemChildDeviceLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/RedeemedChildDeviceLinkResponse'
+        "404":
+          description: The link no longer works
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "429":
+          description: Too many requests
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+      summary: Open a child's link
+      tags:
+      - child-device
+  /child-device/reminder-devices:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Registers the push subscription of the child's own phone. Its reminders are only for its child's doses, supplements and
+        activities: never appointments or anything of the family.
+      parameters:
+      - description: The browser's push subscription
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_reminder.registerDeviceRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Already registered
+          schema:
+            $ref: '#/definitions/internal_reminder.deviceResponse'
+        "201":
+          description: Registered now
+          schema:
+            $ref: '#/definitions/internal_reminder.deviceResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_reminder.validationErrorDoc'
+        "401":
+          description: The credential does not work
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+        "503":
+          description: This server has no push keys
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+      security:
+      - DeviceCredential: []
+      summary: Turn reminders on for a child's phone
+      tags:
+      - child-device
+  /child-device/reminder-devices/remove:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: The browser's endpoint
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_reminder.removeDeviceRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_reminder.validationErrorDoc'
+        "401":
+          description: The credential does not work
+          schema:
+            $ref: '#/definitions/internal_reminder.errorDoc'
+      security:
+      - DeviceCredential: []
+      summary: Turn reminders off for a child's phone
+      tags:
+      - child-device
+  /child-device/rotate:
+    post:
+      description: The new credential is returned once; the previous one keeps working
+        for 24 hours and then stops.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/RotatedChildDeviceCredentialResponse'
+        "401":
+          description: The credential does not work
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+      security:
+      - DeviceCredential: []
+      summary: Renew the phone's credential
+      tags:
+      - child-device
   /children/{childId}/appointments:
     get:
       description: |-
@@ -3112,6 +3415,178 @@ paths:
       summary: Search and filter a child's consultations
       tags:
       - consultations
+  /children/{childId}/device-links:
+    get:
+      description: |-
+        Names, when each was linked, when it was last used and its state. Never a secret or a hash. A caregiver can see it
+        (`canManage` false) but not change it.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ChildDeviceLinkListResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "403":
+          description: The session has no access to this child
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: A child's phones
+      tags:
+      - child-device
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Part of the paid plan (the server decides, under the owner account's lock): a free account gets 422
+        "freemium_consultation_limit_exceeded" with reason "child_device". A child keeps at most 3 phones plus
+        pending links (422 "child_device_limit_exceeded"). The token is returned once.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: The phone's name
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/CreateChildDeviceLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/ChildDeviceLinkCreatedResponse'
+        "400":
+          description: Invalid name
+          schema:
+            $ref: '#/definitions/ChildDeviceValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "403":
+          description: The session can't manage this child
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "422":
+          description: The plan or the cap of phones
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Make the one-use link of a child's phone
+      tags:
+      - child-device
+  /children/{childId}/device-links/{linkId}:
+    patch:
+      consumes:
+      - application/json
+      description: «generic» (no medication, no child) or «detailed». Generic by default.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: Link UUID
+        in: path
+        name: linkId
+        required: true
+        type: string
+      - description: The choice
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateChildDeviceLinkRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ChildDeviceLinkResponse'
+        "400":
+          description: Not generic or detailed
+          schema:
+            $ref: '#/definitions/ChildDeviceValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "403":
+          description: The session can't manage this child
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "404":
+          description: No such phone for this child
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: What a phone's reminders say
+      tags:
+      - child-device
+  /children/{childId}/device-links/{linkId}/revoke:
+    post:
+      description: |-
+        At once: the phone's next request is refused. Also cancels a link nobody opened. Idempotent. What the phone already
+        marked stays, still under the child's name.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: Link UUID
+        in: path
+        name: linkId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "403":
+          description: The session can't manage this child
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+        "404":
+          description: No such phone for this child
+          schema:
+            $ref: '#/definitions/ChildDeviceErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Remove a phone
+      tags:
+      - child-device
   /children/{childId}/history-options:
     get:
       description: |-
@@ -4823,6 +5298,12 @@ paths:
 securityDefinitions:
   ClerkSession:
     description: Clerk session token, sent as "Bearer <token>".
+    in: header
+    name: Authorization
+    type: apiKey
+  DeviceCredential:
+    description: A child's phone credential (specs/047), sent as "Device <credential>"
+      (never "Bearer").
     in: header
     name: Authorization
     type: apiKey

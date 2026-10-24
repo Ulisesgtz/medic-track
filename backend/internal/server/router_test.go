@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -47,18 +48,21 @@ type world struct {
 	clerkA, clerkB string
 	// Specs/032: people of A's family (and one who left), each with their own account and no children of their own.
 	clerkTutor, clerkCaregiver, clerkKid, clerkRemoved string
-	pool                                              *pgxpool.Pool
+	pool                                               *pgxpool.Pool
 	// emails is each session's verified e-mail, what the (fake) Clerk answers to the family's invitations.
-	emails map[string]string
-	accountA       uuid.UUID
-	childA         uuid.UUID
-	consultationA  uuid.UUID
-	doseA          uuid.UUID
+	emails        map[string]string
+	accountA      uuid.UUID
+	childA        uuid.UUID
+	consultationA uuid.UUID
+	doseA         uuid.UUID
 	// Specs/033: a supplement routine of child A (inserted directly: A is on the free plan here) and one of its doses.
 	routineA     uuid.UUID
 	routineDoseA uuid.UUID
 	// Specs/033, part 2: the next appointment of consultation A (inserted directly: A is on the free plan here).
 	appointmentA uuid.UUID
+	// Specs/047: an active phone of child A (inserted directly) and the credential it sends as `Authorization: Device …`.
+	deviceCredential string
+	deviceLinkID     uuid.UUID
 }
 
 func newWorld(t *testing.T) *world {
@@ -133,6 +137,14 @@ func newWorld(t *testing.T) *world {
 	require.NoError(t, pool.QueryRow(context.Background(), `
 		INSERT INTO supplement_doses (routine_id, scheduled_at) VALUES ($1, now() + interval '1 hour') RETURNING id`, w.routineA).Scan(&w.routineDoseA))
 
+	credential, credentialHash, err := childdevice.NewToken()
+	require.NoError(t, err)
+	require.NoError(t, pool.QueryRow(context.Background(), `
+		INSERT INTO child_device_links (child_id, account_id, name, created_by_account_id, status, expires_at, redeemed_at, credential_hash, rotated_at)
+		VALUES ($1, $2, 'Teléfono de Ana', $2, 'active', now(), now(), $3, now()) RETURNING id`,
+		w.childA, w.accountA, credentialHash).Scan(&w.deviceLinkID))
+	w.deviceCredential = credential
+
 	w.router = server.NewRouter(server.Deps{
 		Responder:    responder,
 		Catalog:      catalog.NewHandler(catalog.NewRepository(pool), responder),
@@ -151,6 +163,7 @@ func newWorld(t *testing.T) *world {
 		Payments:       paymentsHandler(t, pool, responder),
 		Supplement:     supplement.NewHandler(supplement.NewService(supplement.NewRepository(pool)), responder),
 		Appointment:    appointment.NewHandler(appointment.NewService(appointment.NewRepository(pool)), responder),
+		ChildDevice:    childdevice.NewHandler(childdevice.NewService(childdevice.NewRepository(pool)), responder),
 		Vaccination:    vaccination.NewHandler(vaccination.NewService(vaccination.NewRepository(pool)), responder),
 		Ownership:      ownership.NewRepository(pool),
 		Access:         access.NewRepository(pool),
@@ -177,6 +190,18 @@ func (w *world) do(t *testing.T, method, path, token, body string) *httptest.Res
 	req := httptest.NewRequest(method, path, bytes.NewBufferString(body))
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	rec := httptest.NewRecorder()
+	w.router.ServeHTTP(rec, req)
+	return rec
+}
+
+// doDevice sends the request as the phone of child A: `Authorization: Device …`, never `Bearer`.
+func (w *world) doDevice(t *testing.T, method, path, credential, body string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest(method, path, bytes.NewBufferString(body))
+	if credential != "" {
+		req.Header.Set("Authorization", "Device "+credential)
 	}
 	rec := httptest.NewRecorder()
 	w.router.ServeHTTP(rec, req)
@@ -226,6 +251,11 @@ func (w *world) routes() []struct {
 		{"resume routine", http.MethodPost, "/routines/" + w.routineA.String() + "/resume", `{"utcOffsetMinutes":0}`, http.StatusUnprocessableEntity},
 		{"finish routine", http.MethodPost, "/routines/" + w.routineA.String() + "/finish", "", http.StatusOK},
 		// Specs/033, part 2: the next appointment. Reading, one's own reminders and marking never need the plan; creating and editing do (an empty form is a 400 first).
+		// Specs/047: an empty name is a 400 before the plan is asked; it is a Full route (a Caregiver gets 403).
+		{"list device links", http.MethodGet, "/children/" + w.childA.String() + "/device-links", "", http.StatusOK},
+		{"remove device link", http.MethodPost, "/children/" + w.childA.String() + "/device-links/" + uuid.NewString() + "/revoke", "", http.StatusNotFound},
+		{"choose device reminders", http.MethodPatch, "/children/" + w.childA.String() + "/device-links/" + uuid.NewString(), `{"reminderDetail":"generic"}`, http.StatusNotFound},
+		{"create device link", http.MethodPost, "/children/" + w.childA.String() + "/device-links", `{}`, http.StatusBadRequest},
 		{"child appointments", http.MethodGet, "/children/" + w.childA.String() + "/appointments", "", http.StatusOK},
 		{"consultation appointment", http.MethodGet, "/consultations/" + w.consultationA.String() + "/appointment", "", http.StatusOK},
 		{"create appointment of a child", http.MethodPost, "/children/" + w.childA.String() + "/appointments", `{}`, http.StatusBadRequest},
@@ -340,7 +370,7 @@ func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 // fullRoutes need the full level (the owner or a Tutor); every other protected route needs only Mark (see and mark).
 var (
 	ownRoutes  = map[string]bool{"get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true, "get subscription": true, "subscribe": true, "cancel subscription": true}
-	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "record vaccination": true, "correct vaccination": true, "delete vaccination": true, "save card photo": true, "delete card photo": true, "edit appointment": true, "mark appointment": true}
+	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "record vaccination": true, "correct vaccination": true, "delete vaccination": true, "save card photo": true, "delete card photo": true, "edit appointment": true, "create device link": true, "remove device link": true, "choose device reminders": true, "mark appointment": true}
 )
 
 func (w *world) setOwnerPlan(t *testing.T, plan string) {
@@ -461,6 +491,35 @@ func TestRouter_TheFakeProvidersHelpersAreOnlyThereWithTheFakeDriver(t *testing.
 	rec := w.do(t, http.MethodPost, "/payments/fake/nope/approve", "", "")
 	require.Equal(t, http.StatusNotFound, rec.Code)
 	require.Contains(t, rec.Body.String(), "subscription_not_found")
+}
+
+// Specs/047: the phone of a child opens NOTHING of the parents' API. Its credential is not a session (another scheme), so every route
+// that expects a Clerk session answers 401 to it, whoever's data it names; the routes of its own (/child-device) are tested in
+// childdevice_router_test.go.
+func TestRouter_AChildDeviceCredentialOpensNoParentRoute(t *testing.T) {
+	w := newWorld(t)
+	for _, rt := range w.routes() {
+		t.Run(rt.name, func(t *testing.T) {
+			rec := w.doDevice(t, rt.method, rt.path, w.deviceCredential, rt.body)
+			require.Equal(t, http.StatusUnauthorized, rec.Code, rec.Body.String())
+		})
+	}
+	for _, path := range []string{"/accounts/me", "/reminders/config", "/family"} {
+		require.Equal(t, http.StatusUnauthorized, w.doDevice(t, http.MethodGet, path, w.deviceCredential, "").Code, path)
+	}
+	for _, post := range []string{"/accounts", "/family/invitations", "/family/leave"} {
+		require.Equal(t, http.StatusUnauthorized, w.doDevice(t, http.MethodPost, post, w.deviceCredential, `{}`).Code, post)
+	}
+}
+
+// The phone of a child opens its link without any session: public, the same 404 for every failure.
+func TestRouter_TheChildDeviceLinkIsRedeemedWithoutASession(t *testing.T) {
+	w := newWorld(t)
+	rec := w.do(t, http.MethodPost, "/child-device/redeem", "", `{"token":"esto-no-es-una-ficha"}`)
+	require.Equal(t, http.StatusNotFound, rec.Code)
+	unknown, _, err := childdevice.NewToken()
+	require.NoError(t, err)
+	require.Equal(t, rec.Body.String(), w.do(t, http.MethodPost, "/child-device/redeem", "", `{"token":"`+unknown+`"}`).Body.String())
 }
 
 // The browser asks first (a preflight) before every DELETE, PATCH or PUT; a method the CORS list leaves out never reaches the API

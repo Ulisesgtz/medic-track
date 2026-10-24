@@ -1301,6 +1301,221 @@
                 }
             }
         },
+        "/child-device/me": {
+            "get": {
+                "security": [
+                    {
+                        "DeviceCredential": []
+                    }
+                ],
+                "description": "The child the phone belongs to and when to renew its credential. Only the first name the app already has of the child.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "child-device"
+                ],
+                "summary": "Who this phone is",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceMeResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "The credential does not work",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/child-device/redeem": {
+            "post": {
+                "description": "Public: the secret in the body is the only thing it takes. A link that is unknown, used, expired or canceled\ngets the same 404, which is not written to error_logs. Strictly rate limited.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "child-device"
+                ],
+                "summary": "Open a child's link",
+                "parameters": [
+                    {
+                        "description": "The link's token",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/RedeemChildDeviceLinkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/RedeemedChildDeviceLinkResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "The link no longer works",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Too many requests",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/child-device/reminder-devices": {
+            "post": {
+                "security": [
+                    {
+                        "DeviceCredential": []
+                    }
+                ],
+                "description": "Registers the push subscription of the child's own phone. Its reminders are only for its child's doses, supplements and\nactivities: never appointments or anything of the family.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "child-device"
+                ],
+                "summary": "Turn reminders on for a child's phone",
+                "parameters": [
+                    {
+                        "description": "The browser's push subscription",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.registerDeviceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Already registered",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.deviceResponse"
+                        }
+                    },
+                    "201": {
+                        "description": "Registered now",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.deviceResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.validationErrorDoc"
+                        }
+                    },
+                    "401": {
+                        "description": "The credential does not work",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    },
+                    "503": {
+                        "description": "This server has no push keys",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    }
+                }
+            }
+        },
+        "/child-device/reminder-devices/remove": {
+            "post": {
+                "security": [
+                    {
+                        "DeviceCredential": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "child-device"
+                ],
+                "summary": "Turn reminders off for a child's phone",
+                "parameters": [
+                    {
+                        "description": "The browser's endpoint",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.removeDeviceRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.validationErrorDoc"
+                        }
+                    },
+                    "401": {
+                        "description": "The credential does not work",
+                        "schema": {
+                            "$ref": "#/definitions/internal_reminder.errorDoc"
+                        }
+                    }
+                }
+            }
+        },
+        "/child-device/rotate": {
+            "post": {
+                "security": [
+                    {
+                        "DeviceCredential": []
+                    }
+                ],
+                "description": "The new credential is returned once; the previous one keeps working for 24 hours and then stops.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "child-device"
+                ],
+                "summary": "Renew the phone's credential",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/RotatedChildDeviceCredentialResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "The credential does not work",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/children/{childId}/appointments": {
             "get": {
                 "security": [
@@ -1624,6 +1839,262 @@
                         "description": "Free plan: searching the history is part of the paid plan",
                         "schema": {
                             "$ref": "#/definitions/PlanLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/children/{childId}/device-links": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Names, when each was linked, when it was last used and its state. Never a secret or a hash. A caregiver can see it\n(`canManage` false) but not change it.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "child-device"
+                ],
+                "summary": "A child's phones",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceLinkListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session has no access to this child",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Part of the paid plan (the server decides, under the owner account's lock): a free account gets 422\n\"freemium_consultation_limit_exceeded\" with reason \"child_device\". A child keeps at most 3 phones plus\npending links (422 \"child_device_limit_exceeded\"). The token is returned once.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "child-device"
+                ],
+                "summary": "Make the one-use link of a child's phone",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The phone's name",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateChildDeviceLinkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceLinkCreatedResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid name",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't manage this child",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "The plan or the cap of phones",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/children/{childId}/device-links/{linkId}": {
+            "patch": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "«generic» (no medication, no child) or «detailed». Generic by default.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "child-device"
+                ],
+                "summary": "What a phone's reminders say",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Link UUID",
+                        "name": "linkId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The choice",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/UpdateChildDeviceLinkRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceLinkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Not generic or detailed",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't manage this child",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such phone for this child",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/children/{childId}/device-links/{linkId}/revoke": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "At once: the phone's next request is refused. Also cancels a link nobody opened. Idempotent. What the phone already\nmarked stays, still under the child's name.",
+                "tags": [
+                    "child-device"
+                ],
+                "summary": "Remove a phone",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Link UUID",
+                        "name": "linkId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't manage this child",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such phone for this child",
+                        "schema": {
+                            "$ref": "#/definitions/ChildDeviceErrorResponse"
                         }
                     }
                 }
@@ -4472,6 +4943,168 @@
                 }
             }
         },
+        "ChildDeviceErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "not_found"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "This link is no longer valid"
+                }
+            }
+        },
+        "ChildDeviceLinkCreatedResponse": {
+            "type": "object",
+            "properties": {
+                "expiresAt": {
+                    "type": "string",
+                    "example": "2026-10-23T14:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Teléfono de Mateo"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "pending"
+                    ],
+                    "example": "pending"
+                },
+                "token": {
+                    "description": "Token is the link's secret. It exists in the clear only in this answer; the app puts it in the `#` of the link.",
+                    "type": "string"
+                }
+            }
+        },
+        "ChildDeviceLinkListResponse": {
+            "type": "object",
+            "properties": {
+                "canManage": {
+                    "description": "CanManage: the session can make and remove phones; a caregiver only sees the list.",
+                    "type": "boolean"
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "links": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ChildDeviceLinkResponse"
+                    }
+                }
+            }
+        },
+        "ChildDeviceLinkResponse": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string",
+                    "example": "2026-10-22T14:00:00Z"
+                },
+                "expiresAt": {
+                    "type": "string",
+                    "example": "2026-10-23T14:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "lastSeenAt": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Teléfono de Mateo"
+                },
+                "redeemedAt": {
+                    "type": "string"
+                },
+                "reminderDetail": {
+                    "type": "string",
+                    "enum": [
+                        "generic",
+                        "detailed"
+                    ],
+                    "example": "generic"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "pending",
+                        "active",
+                        "revoked",
+                        "expired"
+                    ],
+                    "example": "active"
+                }
+            }
+        },
+        "ChildDeviceMeResponse": {
+            "type": "object",
+            "properties": {
+                "childFirstName": {
+                    "type": "string",
+                    "example": "Mateo"
+                },
+                "childId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "deviceName": {
+                    "type": "string",
+                    "example": "Teléfono de Mateo"
+                },
+                "reminderDetail": {
+                    "type": "string",
+                    "enum": [
+                        "generic",
+                        "detailed"
+                    ],
+                    "example": "generic"
+                },
+                "rotateAfter": {
+                    "description": "RotateAfter is when the phone should ask for a new credential.",
+                    "type": "string",
+                    "example": "2026-10-30T14:00:00Z"
+                }
+            }
+        },
+        "ChildDeviceValidationResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "field": {
+                                "type": "string",
+                                "example": "name"
+                            },
+                            "message": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "error": {
+                    "type": "string",
+                    "example": "validation_error"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "ChildNotFoundResponse": {
             "type": "object",
             "properties": {
@@ -4659,6 +5292,16 @@
                 "message": {
                     "type": "string",
                     "example": "One or more fields are invalid"
+                }
+            }
+        },
+        "CreateChildDeviceLinkRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "description": "Name is what the parent calls the phone. 1 to 40 characters.",
+                    "type": "string",
+                    "example": "Teléfono de Mateo"
                 }
             }
         },
@@ -5530,6 +6173,47 @@
                 }
             }
         },
+        "RedeemChildDeviceLinkRequest": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "RedeemedChildDeviceLinkResponse": {
+            "type": "object",
+            "properties": {
+                "childFirstName": {
+                    "type": "string",
+                    "example": "Mateo"
+                },
+                "childId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "credential": {
+                    "description": "Credential is what the phone sends from now on as `Authorization: Device \u003ccredential\u003e`. It is shown only here.",
+                    "type": "string"
+                },
+                "rotateAfter": {
+                    "type": "string",
+                    "example": "2026-10-30T14:00:00Z"
+                }
+            }
+        },
+        "RotatedChildDeviceCredentialResponse": {
+            "type": "object",
+            "properties": {
+                "credential": {
+                    "type": "string"
+                },
+                "rotateAfter": {
+                    "type": "string",
+                    "example": "2026-10-30T14:00:00Z"
+                }
+            }
+        },
         "SearchConsultationsRequest": {
             "type": "object",
             "properties": {
@@ -6152,6 +6836,19 @@
                 "name": {
                     "type": "string",
                     "example": "Ana"
+                }
+            }
+        },
+        "UpdateChildDeviceLinkRequest": {
+            "type": "object",
+            "properties": {
+                "reminderDetail": {
+                    "type": "string",
+                    "enum": [
+                        "generic",
+                        "detailed"
+                    ],
+                    "example": "detailed"
                 }
             }
         },
@@ -6851,6 +7548,12 @@
     "securityDefinitions": {
         "ClerkSession": {
             "description": "Clerk session token, sent as \"Bearer \u003ctoken\u003e\".",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        },
+        "DeviceCredential": {
+            "description": "A child's phone credential (specs/047), sent as \"Device \u003ccredential\u003e\" (never \"Bearer\").",
             "type": "apiKey",
             "name": "Authorization",
             "in": "header"
