@@ -90,9 +90,22 @@ Cuatro, todos por `*httpx.Responder`: `POST /accounts/{id}/subscription` (inicia
 
 `frontend/public/_headers` no define `form-action` ni `navigate-to`, y ir a la página de Mercado Pago es una **navegación de nivel superior** (`window.location.assign`), que la CSP no restringe; el regreso es una navegación normal a `/planes/regreso`. **No hace falta cambiar la CSP** con el modo alojado. Queda por confirmar en el navegador en DEV (T054); con el plan B del spike (SDK + `card_token_id`) habría que agregar los dominios del SDK.
 
-## Resultado del spike (T003)
+## Resultado del spike (T003) — 2026-10-18 a 2026-10-20, DEV con credenciales de PRUEBA
 
-**Pendiente**: necesita las credenciales de prueba del dueño (T001). Hasta entonces todo se construyó y probó con el proveedor falso (`PAYMENTS_DRIVER=fake`) y con pruebas del cliente HTTP contra un servidor simulado; los puntos (a) a (g) de la tarea siguen sin comprobarse contra Mercado Pago real.
+Hecho por el dueño con el desarrollador contra Mercado Pago de prueba (aplicación `Pedi-track-dev`, México, cuenta vendedora y compradora de prueba). Lo que se comprobó y lo que se aprendió:
+
+- **(a) `POST /preapproval` sin plan** (`status: "pending"`, `auto_recurring` 12 meses, MXN 499, `back_url` y `notification_url` https): funciona y devuelve `init_point`. El comprador de prueba llega a «Confirma tu suscripción» con el monto correcto.
+- **El correo del pagador (hallazgo principal).** Con credenciales de **prueba** el sandbox rechaza un pagador real: `400 «Both payer and collector must be real or test users»`. Por eso existe `MERCADOPAGO_TEST_PAYER_EMAIL` (solo DEV; el correo de la cuenta compradora de prueba, con el formato `test_user_<número>@testuser.com`, **no** `TESTUSER<número>@…`: ese daba `400 «User bad request»`). El pago se hace en una ventana **de incógnito** y con la **sesión de la cuenta compradora de prueba**; con la sesión real de Mercado Pago el checkout dice «Una de las partes con la que intentas hacer el pago es de prueba».
+- **(b) Regreso del navegador:** vuelve a `/planes/regreso` (la `back_url`).
+- **Pago aprobado:** con una tarjeta de prueba de México del panel (la terminada en `3764`, con una suscripción **nueva**: reutilizar la pendiente anterior no sirvió) la suscripción se autorizó («Al día», próximo cobro un año después, «19/10/2027»). Con la Mastercard de prueba (`5474 …`, titular `APRO`) el checkout respondió «No pudimos procesar tu pago»; no se averiguó la causa (el formulario no tiene campo de documento).
+- **(d) Avisos (webhook):** el **simulador** del panel sí llega a nuestra URL y recibe `200` (la firma se valida con la clave del **modo de prueba**; hay configuración separada para Prueba y Producción). **Los avisos reales del sandbox no llegaron** (la lista de notificaciones del panel, Ambiente «Prueba», quedó vacía). Por eso se agregó la **revisión al momento** (`Service.CheckNow`, PR 61): al abrir `/planes` o `/planes/regreso` con un pago pendiente, el servidor le pregunta a Mercado Pago (como máximo cada 5 s) y aplica la respuesta; la reconciliación cada 30 min queda de red de seguridad. En producción el aviso debería llegar, pero el diseño ya no depende de él.
+- **(c) `GET /preapproval/{id}`** devuelve el estado y `next_payment_date`; la reconciliación y la revisión al momento lo usan.
+- **(f) Cancelar:** funciona desde la app (`PUT /preapproval/{id}` con `status: "cancelled"`) y también se detecta una cancelación hecha desde el panel de Mercado Pago.
+- **Diagnóstico:** `error_logs` (`job:payments`) ahora trae `(status N slug, causes …: "mensaje limpio")` cuando Mercado Pago rechaza crear la suscripción (PR 58 y 59); nunca correos, tokens ni descripciones por causa.
+
+**Pruebas de la tarea T054 hechas por el dueño, todas bien:** pago aprobado (plan activo, «Vigente hasta …»), cancelar la renovación desde la app y desde el panel de Mercado Pago (el plan sigue hasta la fecha pagada), cobro rechazado (el plan no se activa) y persona invitada a una familia con plan vigente («Incluido por la familia de …», sin botón de pagar).
+
+**Pendiente antes del primer cobro real (no es código):** pasos legales de T053 (contador, términos, aviso de privacidad) y las credenciales reales **solo** en el entorno de producción, sin `MERCADOPAGO_TEST_PAYER_EMAIL`. DEV de Railway nunca lleva credenciales reales.
 
 ## Fuentes
 
