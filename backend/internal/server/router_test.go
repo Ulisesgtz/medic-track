@@ -31,6 +31,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/reminder"
 	"github.com/Ulisesgtz/medic-track/backend/internal/server"
 	"github.com/Ulisesgtz/medic-track/backend/internal/supplement"
+	"github.com/Ulisesgtz/medic-track/backend/internal/vaccination"
 )
 
 type noopRecorder struct{}
@@ -150,6 +151,7 @@ func newWorld(t *testing.T) *world {
 		Payments:       paymentsHandler(t, pool, responder),
 		Supplement:     supplement.NewHandler(supplement.NewService(supplement.NewRepository(pool)), responder),
 		Appointment:    appointment.NewHandler(appointment.NewService(appointment.NewRepository(pool)), responder),
+		Vaccination:    vaccination.NewHandler(vaccination.NewService(vaccination.NewRepository(pool)), responder),
 		Ownership:      ownership.NewRepository(pool),
 		Access:         access.NewRepository(pool),
 		FrontendOrigin: "http://localhost:5173",
@@ -229,6 +231,15 @@ func (w *world) routes() []struct {
 		{"create appointment of a child", http.MethodPost, "/children/" + w.childA.String() + "/appointments", `{}`, http.StatusBadRequest},
 		{"create appointment", http.MethodPost, "/consultations/" + w.consultationA.String() + "/appointments", `{}`, http.StatusBadRequest},
 		{"get appointment", http.MethodGet, "/appointments/" + w.appointmentA.String(), "", http.StatusOK},
+		// Specs/046: the vaccination card. An empty form is a 400 (nothing is asked of the database first); a dose that is not there, a 404.
+		{"list vaccinations", http.MethodGet, "/children/" + w.childA.String() + "/vaccinations", "", http.StatusOK},
+		{"record vaccination", http.MethodPost, "/children/" + w.childA.String() + "/vaccinations", `{}`, http.StatusBadRequest},
+		{"correct vaccination", http.MethodPatch, "/children/" + w.childA.String() + "/vaccinations/" + uuid.NewString(), `{}`, http.StatusBadRequest},
+		{"delete vaccination", http.MethodDelete, "/children/" + w.childA.String() + "/vaccinations/" + uuid.NewString(), "", http.StatusNotFound},
+		{"list card photos", http.MethodGet, "/children/" + w.childA.String() + "/vaccine-card-photos", "", http.StatusOK},
+		{"save card photo", http.MethodPost, "/children/" + w.childA.String() + "/vaccine-card-photos", `{}`, http.StatusBadRequest},
+		{"get card photo", http.MethodGet, "/children/" + w.childA.String() + "/vaccine-card-photos/" + uuid.NewString(), "", http.StatusNotFound},
+		{"delete card photo", http.MethodDelete, "/children/" + w.childA.String() + "/vaccine-card-photos/" + uuid.NewString(), "", http.StatusNotFound},
 		{"get subscription", http.MethodGet, "/accounts/" + w.accountA.String() + "/subscription", "", http.StatusOK},
 		{"subscribe", http.MethodPost, "/accounts/" + w.accountA.String() + "/subscription", "", http.StatusCreated},
 		{"cancel subscription", http.MethodPost, "/accounts/" + w.accountA.String() + "/subscription/cancel", "", http.StatusOK},
@@ -320,6 +331,7 @@ func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 	w := newWorld(t)
 	require.Equal(t, http.StatusOK, w.do(t, http.MethodGet, "/catalog/countries", "", "").Code)
 	require.Equal(t, http.StatusOK, w.do(t, http.MethodGet, "/catalog/symptoms", "", "").Code)
+	require.Equal(t, http.StatusOK, w.do(t, http.MethodGet, "/catalog/vaccines", "", "").Code)
 }
 
 // ---- Specs/032-compartir-con-familia: the matrix of roles over every route.
@@ -328,7 +340,7 @@ func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 // fullRoutes need the full level (the owner or a Tutor); every other protected route needs only Mark (see and mark).
 var (
 	ownRoutes  = map[string]bool{"get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true, "get subscription": true, "subscribe": true, "cancel subscription": true}
-	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "edit appointment": true, "mark appointment": true}
+	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "record vaccination": true, "correct vaccination": true, "delete vaccination": true, "save card photo": true, "delete card photo": true, "edit appointment": true, "mark appointment": true}
 )
 
 func (w *world) setOwnerPlan(t *testing.T, plan string) {
@@ -449,4 +461,20 @@ func TestRouter_TheFakeProvidersHelpersAreOnlyThereWithTheFakeDriver(t *testing.
 	rec := w.do(t, http.MethodPost, "/payments/fake/nope/approve", "", "")
 	require.Equal(t, http.StatusNotFound, rec.Code)
 	require.Contains(t, rec.Body.String(), "subscription_not_found")
+}
+
+// The browser asks first (a preflight) before every DELETE, PATCH or PUT; a method the CORS list leaves out never reaches the API
+// and the screen sees a failed request (the vaccination card's «Borrar» was the first DELETE the app made).
+func TestRouter_CORSAllowsEveryMethodTheAppUses(t *testing.T) {
+	w := newWorld(t)
+	for _, method := range []string{"GET", "POST", "PATCH", "PUT", "DELETE"} {
+		req := httptest.NewRequest(http.MethodOptions, "/children/"+w.childA.String()+"/vaccinations", nil)
+		req.Header.Set("Origin", "http://localhost:5173")
+		req.Header.Set("Access-Control-Request-Method", method)
+		req.Header.Set("Access-Control-Request-Headers", "authorization,content-type")
+		rec := httptest.NewRecorder()
+		w.router.ServeHTTP(rec, req)
+		require.Contains(t, rec.Header().Get("Access-Control-Allow-Methods"), method, method)
+		require.Equal(t, "http://localhost:5173", rec.Header().Get("Access-Control-Allow-Origin"), method)
+	}
 }

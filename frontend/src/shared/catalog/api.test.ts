@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { fetchCountries, fetchStates, fetchSymptoms } from './api'
+import { fetchCountries, fetchStates, fetchSymptoms, fetchVaccines } from './api'
 
 describe('catalog api', () => {
   beforeEach(() => {
@@ -30,6 +30,16 @@ describe('catalog api', () => {
 
     vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 500 } as Response)
     await expect(fetchSymptoms()).rejects.toThrow('Failed to fetch symptoms: 500')
+  })
+
+  it('fetchVaccines returns the catalog, and throws when the response is not ok', async () => {
+    const vaccines = [{ code: 'bcg', name: 'BCG' }]
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => vaccines } as Response)
+    await expect(fetchVaccines()).resolves.toEqual(vaccines)
+    expect(vi.mocked(fetch).mock.calls[0][0]).toMatch(/\/catalog\/vaccines$/)
+
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 500 } as Response)
+    await expect(fetchVaccines()).rejects.toThrow('Failed to fetch vaccines: 500')
   })
 
   it('fetchStates throws on a non-404 error response', async () => {

@@ -1280,6 +1280,35 @@ const docTemplate = `{
                 }
             }
         },
+        "/catalog/vaccines": {
+            "get": {
+                "description": "Active vaccines of the catalog, in order. Only names: the app records what the parent captured and\nnever says what is due (specs/046-cartilla-vacunacion/contracts/api.md).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "summary": "List the vaccines a parent can pick",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/VaccineResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected server error",
+                        "schema": {
+                            "$ref": "#/definitions/NotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/children/{childId}/appointments": {
             "get": {
                 "security": [
@@ -1891,6 +1920,495 @@ const docTemplate = `{
                         "description": "Free plan, or the child has the maximum of active routines (routineLimitDoc)",
                         "schema": {
                             "$ref": "#/definitions/SupplementPlanLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/children/{childId}/vaccinations": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The most recent first. The client groups them by vaccine. The app never says what is due, late or complete.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vaccinations"
+                ],
+                "summary": "A child's vaccination card: the doses recorded",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session has no access to this child",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "A vaccine of the catalog (` + "`" + `vaccineCode` + "`" + `) or the parent's own words (` + "`" + `customName` + "`" + `), never both, and the date it was\napplied (not in the future, not before the birth). 409 ` + "`" + `duplicate_vaccination` + "`" + ` when the same vaccine, dose and date\nare already there; repeat with ` + "`" + `allowDuplicate: true` + "`" + ` if the parent confirms.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vaccinations"
+                ],
+                "summary": "Record a dose",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The dose",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "An invalid field",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't record doses for this child",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "The dose is already recorded",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/children/{childId}/vaccinations/{vaccinationId}": {
+            "delete": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "No trash and no undo: the dose is removed.",
+                "tags": [
+                    "vaccinations"
+                ],
+                "summary": "Delete a dose for good",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Dose UUID",
+                        "name": "vaccinationId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't delete doses of this child",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such dose for this child",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The whole dose is sent and replaces the one saved; it keeps who corrected it and when (` + "`" + `correctedByName` + "`" + `,\n` + "`" + `correctedAt` + "`" + `), without the earlier values.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vaccinations"
+                ],
+                "summary": "Correct a dose",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Dose UUID",
+                        "name": "vaccinationId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The dose",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "An invalid field",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't correct doses of this child",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such dose for this child",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "The dose is already recorded",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/children/{childId}/vaccine-card-photos": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Only who saved each one and when, oldest first; the image itself is asked for one at a time.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vaccinations"
+                ],
+                "summary": "The photos of a child's paper card, without the images",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/VaccineCardPhotoListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session has no access to this child",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "` + "`" + `photoBase64` + "`" + ` is an image (JPEG, PNG, GIF, WebP or HEIC) of up to 5 MiB. A child keeps at most 10 photos, on every plan\n(422 ` + "`" + `photo_limit_exceeded` + "`" + `, reason ` + "`" + `vaccine_card` + "`" + `).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vaccinations"
+                ],
+                "summary": "Save a photo of the paper card",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The photo",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/VaccineCardPhotoUpload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/VaccineCardPhotoMeta"
+                        }
+                    },
+                    "400": {
+                        "description": "Not an image, or over 5 MiB",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't save photos for this child",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "The child already has 10 photos",
+                        "schema": {
+                            "$ref": "#/definitions/VaccineCardPhotoLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/children/{childId}/vaccine-card-photos/{photoId}": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "vaccinations"
+                ],
+                "summary": "One photo of the paper card",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Photo UUID",
+                        "name": "photoId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/VaccineCardPhoto"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session has no access to this child",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such photo for this child",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "No trash and no undo. The doses recorded by hand are not touched.",
+                "tags": [
+                    "vaccinations"
+                ],
+                "summary": "Delete a photo of the paper card for good",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Photo UUID",
+                        "name": "photoId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't delete photos of this child",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such photo for this child",
+                        "schema": {
+                            "$ref": "#/definitions/VaccinationErrorResponse"
                         }
                     }
                 }
@@ -5642,6 +6160,230 @@ const docTemplate = `{
                 "name": {
                     "type": "string",
                     "example": "Ana"
+                }
+            }
+        },
+        "VaccinationErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "vaccination_not_found"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "VaccinationInput": {
+            "type": "object",
+            "properties": {
+                "allowDuplicate": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "appliedOn": {
+                    "type": "string",
+                    "example": "2021-03-14"
+                },
+                "customName": {
+                    "type": "string",
+                    "example": ""
+                },
+                "doseNumber": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "lot": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "place": {
+                    "type": "string"
+                },
+                "vaccineCode": {
+                    "type": "string",
+                    "example": "hepatitis_b"
+                }
+            }
+        },
+        "VaccinationListResponse": {
+            "type": "object",
+            "properties": {
+                "vaccinations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/VaccinationResponse"
+                    }
+                }
+            }
+        },
+        "VaccinationResponse": {
+            "type": "object",
+            "properties": {
+                "appliedOn": {
+                    "type": "string",
+                    "example": "2021-03-14"
+                },
+                "correctedAt": {
+                    "type": "string",
+                    "example": "2026-11-05T18:00:00Z"
+                },
+                "correctedByName": {
+                    "type": "string",
+                    "example": "Ana"
+                },
+                "createdAt": {
+                    "type": "string",
+                    "example": "2026-10-17T18:00:00Z"
+                },
+                "createdByName": {
+                    "type": "string",
+                    "example": "Ana"
+                },
+                "customName": {
+                    "type": "string"
+                },
+                "doseNumber": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "lot": {
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Name is the catalog's name (even if the vaccine was retired since) or the parent's own words.",
+                    "type": "string",
+                    "example": "Hepatitis B"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "place": {
+                    "type": "string"
+                },
+                "vaccineCode": {
+                    "type": "string",
+                    "example": "hepatitis_b"
+                }
+            }
+        },
+        "VaccinationValidationResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "field": {
+                                "type": "string",
+                                "example": "appliedOn"
+                            },
+                            "message": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "error": {
+                    "type": "string",
+                    "example": "validation_error"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "VaccineCardPhoto": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "photoBase64": {
+                    "type": "string"
+                }
+            }
+        },
+        "VaccineCardPhotoLimitResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "photo_limit_exceeded"
+                },
+                "limit": {
+                    "type": "string",
+                    "example": "10"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string",
+                    "example": "vaccine_card"
+                }
+            }
+        },
+        "VaccineCardPhotoListResponse": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "description": "Limit is how many photos of the card a child can keep.",
+                    "type": "integer",
+                    "example": 10
+                },
+                "photos": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/VaccineCardPhotoMeta"
+                    }
+                }
+            }
+        },
+        "VaccineCardPhotoMeta": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string",
+                    "example": "2026-10-17T18:00:00Z"
+                },
+                "createdByName": {
+                    "type": "string",
+                    "example": "Ana"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                }
+            }
+        },
+        "VaccineCardPhotoUpload": {
+            "type": "object",
+            "properties": {
+                "photoBase64": {
+                    "type": "string"
+                }
+            }
+        },
+        "VaccineResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "hepatitis_b"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Hepatitis B"
                 }
             }
         },

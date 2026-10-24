@@ -2,6 +2,16 @@
 export const MAX_PHOTO_SIDE = 2000
 const JPEG_QUALITY = 0.85
 
+/** The base64 of a file or blob, without the `data:…;base64,` prefix (what the API takes for a photo). */
+export function blobToBase64(file: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve((reader.result as string).split(',')[1] ?? '')
+    reader.onerror = () => reject(reader.error)
+    reader.readAsDataURL(file)
+  })
+}
+
 /**
  * The prescription photo as it is sent to the server: scaled down to `MAX_PHOTO_SIDE` on its longest side and saved as a
  * JPEG (specs/043). It runs in the browser, after the OCR read the original, and nothing leaves the phone. A JPEG is shown

@@ -66,6 +66,10 @@ export function WelcomeDisclaimer({ account }: { account: Account | undefined })
         Los suplementos y las actividades que registres <strong>solo repiten lo que tú escribiste</strong>: PediTrack no sugiere
         suplementos, actividades, cantidades ni horarios, y avisa a las personas de tu familia que tengan acceso a ese hijo.
       </p>
+      <p>
+        Las vacunas y las fotos de la cartilla de tu hijo son datos de salud: se guardan solo en tu cuenta y las personas
+        que invites podrán verlas según su rol.
+      </p>
       {mutation.isError && (
         <p role="alert" className="font-semibold text-red-700">
           No pudimos guardar tu confirmación. Revisa tu conexión e inténtalo de nuevo.
