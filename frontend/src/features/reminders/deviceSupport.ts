@@ -15,13 +15,13 @@ export function detectDeviceSupport(): DeviceSupport {
   return 'ready'
 }
 
-function isIOS(): boolean {
+export function isIOS(): boolean {
   const ua = navigator.userAgent
   // iPadOS 13+ reports itself as a Mac: tell it apart by its touch screen.
   return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
 }
 
-function isInstalled(): boolean {
+export function isInstalled(): boolean {
   const standalone = (navigator as Navigator & { standalone?: boolean }).standalone === true
   return standalone || (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches)
 }

@@ -1,0 +1,35 @@
+{
+  "name": "PediTrack — Mis tomas",
+  "short_name": "PediTrack",
+  "description": "Tus tomas y actividades de hoy.",
+  "lang": "es-MX",
+  "start_url": "/hijo",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#04252b",
+  "background_color": "#04252b",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "id": "/hijo"
+}
