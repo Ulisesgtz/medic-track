@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #dfe7ea; }
+  body { font-family: 'Figtree', system-ui, sans-serif; }
+  a { color: #0e7490; }
+  a:hover { color: #04252b; }
+</style>
+</helmet>
+
+<section style="padding: 56px 48px 24px; display: flex; flex-wrap: wrap; gap: 32px; font-family: 'Figtree', system-ui, sans-serif; color: #04252b;">
+  <div style="flex: 1 1 520px; max-width: 760px; display: flex; flex-direction: column; gap: 10px;">
+    <span style="font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #0e7490;">Exportar historial a PDF · A. Documento</span>
+    <h1 style="margin: 0; font-size: 40px; font-weight: 900; letter-spacing: -0.03em;">PDF del historial, a tamaño real</h1>
+    <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #1f3d44; text-wrap: pretty;">Carta 8.5 × 11 in (816 × 1056 px a 96 ppp). Área de contenido fija de 680 px de ancho: márgenes laterales de 68 px en Carta y 57 px en A4, superior 44 px, inferior 36 px. En A4 sobran 67 px de alto al pie. Texto corrido 15 px (11 pt), datos 14 px, pie 12.5 px. Tinta sobre blanco; el color solo acompaña marcas que también se distinguen por forma al imprimir en blanco y negro.</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 18px; padding-top: 6px; font-size: 14px; color: #1f3d44;">
+      <span style="display: inline-flex; align-items: center; gap: 8px;"><span style="width: 16px; height: 16px; border-radius: 4px; background: #047857; color: #fff; font-size: 11px; font-weight: 900; display: inline-flex; align-items: center; justify-content: center;">✓</span>Toma marcada (verde, relleno)</span>
+      <span style="display: inline-flex; align-items: center; gap: 8px;"><span style="width: 16px; height: 16px; border-radius: 4px; border: 2px dashed #f59e0b; background: #fef3c7; box-sizing: border-box;"></span>Sin registrar (ámbar, punteado)</span>
+      <span style="display: inline-flex; align-items: center; gap: 8px;"><span style="width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid #94a3b8; box-sizing: border-box;"></span>Por venir (contorno gris)</span>
+    </div>
+  </div>
+  <div style="flex: 1 1 380px; max-width: 520px; padding: 22px 24px; background: #ffffff; border-radius: 22px; display: flex; flex-direction: column; gap: 10px;">
+    <span style="font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #0e7490;">Datos propuestos, por validar</span>
+    <ol style="margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; line-height: 1.5; color: #1f3d44;">
+      <li>Índice de páginas en la portada.</li>
+      <li>Fecha en que se anotaron talla y peso.</li>
+      <li>Próxima cita repetida en la portada.</li>
+      <li>«Indicado por» en el tratamiento en curso.</li>
+      <li>Etiqueta «En curso» y tomas «por venir» en tratamientos activos.</li>
+      <li>«Última marca: 24 oct, 08:05, por Ana» por medicamento.</li>
+      <li>La cartilla siempre sale entera, sin filtro de periodo (se avisa en la portada).</li>
+      <li>«Nombre escrito por la familia» en vacunas fuera del catálogo.</li>
+      <li>«Continúa en la página 3» cuando una consulta cruza de página.</li>
+    </ol>
+  </div>
+</section>
+
+<section data-screen-label="Caso A" style="padding: 24px 48px; display: flex; flex-direction: column; gap: 18px; font-family: 'Figtree', system-ui, sans-serif;">
+  <h2 style="margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -0.02em; color: #04252b;">Caso A · Mateo, con muchas consultas (5 páginas, una consulta cruza de página)</h2>
+  <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+
+    <div data-screen-label="A · Página 1" style="width: 816px; height: 1056px; flex: none; background: #ffffff; box-shadow: 0 12px 36px rgba(4,37,43,0.14); padding: 44px 68px 36px; box-sizing: border-box; display: flex; flex-direction: column; color: #04252b;">
+      <div style="padding-bottom: 12px; border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+        <span style="display: flex; align-items: center; gap: 8px;"><img src="correo/peditrack-icono.png" alt="PediTrack" width="24" height="24" style="border-radius: 6px;"><span style="font-size: 16px; font-weight: 800; letter-spacing: -0.03em;">PediTrack</span></span>
+        <span style="font-size: 15px; font-weight: 800;">Mateo Morales</span>
+      </div>
+      <div style="flex: 1; min-height: 0; padding-top: 36px; display: flex; flex-direction: column; gap: 30px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #0e7490;">Historial de salud</span>
+          <h1 style="margin: 0; font-size: 42px; font-weight: 900; letter-spacing: -0.03em;">Mateo Morales</h1>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid #04252b; border-bottom: 1px solid #cbd5e1;">
+          <div style="padding: 14px 12px 14px 0; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Nacimiento</span><span style="font-size: 17px; font-weight: 800;">14 mar 2021</span></div>
+          <div style="padding: 14px 12px; border-left: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Edad</span><span style="font-size: 17px; font-weight: 800;">5 años 7 meses</span></div>
+          <div style="padding: 14px 12px; border-left: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Talla</span><span style="font-size: 17px; font-weight: 800;">112 cm</span><span style="font-size: 13px; color: #1f3d44;">anotada el 2 jun 2026</span></div>
+          <div style="padding: 14px 12px; border-left: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Peso</span><span style="font-size: 17px; font-weight: 800;">19.4 kg</span><span style="font-size: 13px; color: #1f3d44;">anotado el 2 jun 2026</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #0e7490;">Qué incluye este PDF</span>
+          <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 8px 16px; font-size: 15px; line-height: 1.5;">
+            <span style="font-weight: 700; color: #1f3d44;">Periodo</span><span style="font-weight: 700;">Del 1 ene 2026 al 24 oct 2026</span>
+            <span style="font-weight: 700; color: #1f3d44;">Filtros</span><span>Sin filtros</span>
+            <span style="font-weight: 700; color: #1f3d44;">Secciones</span><span>Consultas · Cartilla de vacunación · Fotos (anexo)</span>
+            <span style="font-weight: 700; color: #1f3d44;">Cartilla</span><span>Todas las vacunas registradas, sin filtro de periodo</span>
+          </div>
+          <div style="margin-top: 6px; padding: 14px 0; border-top: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; font-size: 19px; font-weight: 800; letter-spacing: -0.01em;">4 consultas · 10 vacunas registradas · 2 fotos de la cartilla · 1 foto de receta</div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+          <div style="padding: 16px 18px; border: 1.5px solid #04252b; border-radius: 12px; display: flex; flex-direction: column; gap: 6px;">
+            <span style="font-size: 13px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #0e7490;">Tratamiento en curso</span>
+            <span style="font-size: 18px; font-weight: 800;">Amoxicilina</span>
+            <span style="font-size: 15px; line-height: 1.5;">Cada 8 h · desde el 18 oct 2026</span>
+            <span style="font-size: 14px; color: #1f3d44;">Indicado por Dra. Laura Cázares</span>
+          </div>
+          <div style="padding: 16px 18px; border: 1.5px solid #cbd5e1; border-radius: 12px; display: flex; flex-direction: column; gap: 6px;">
+            <span style="font-size: 13px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #0e7490;">Próxima cita</span>
+            <span style="font-size: 18px; font-weight: 800;">28 oct 2026 · 10:30</span>
+            <span style="font-size: 15px; line-height: 1.5;">Dra. Laura Cázares</span>
+            <span style="font-size: 14px; color: #1f3d44;">Consultorio 204, Torre Médica Satélite</span>
+          </div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <span style="font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #0e7490;">Contenido</span>
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; font-size: 15px;">
+            <span>Consultas, de la más reciente a la más antigua</span><span style="font-weight: 700;">p. 2–3</span>
+            <span>Cartilla de vacunación</span><span style="font-weight: 700;">p. 4</span>
+            <span>Anexo: fotos de la cartilla y de recetas</span><span style="font-weight: 700;">p. 5</span>
+          </div>
+        </div>
+      </div>
+      <div style="padding-top: 10px; border-top: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; line-height: 1.45; color: #1f3d44;">
+        <span style="font-weight: 700;">Generado con PediTrack el 24 oct 2026 · Página 1 de 5</span>
+        <span>Lo registrado es lo que la familia capturó. No sustituye el expediente ni el criterio de tu médico.</span>
+      </div>
+    </div>
+
+    <div data-screen-label="A · Página 2" style="width: 816px; height: 1056px; flex: none; background: #ffffff; box-shadow: 0 12px 36px rgba(4,37,43,0.14); padding: 44px 68px 36px; box-sizing: border-box; display: flex; flex-direction: column; color: #04252b;">
+      <div style="padding-bottom: 12px; border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+        <span style="display: flex; align-items: center; gap: 8px;"><img src="correo/peditrack-icono.png" alt="PediTrack" width="24" height="24" style="border-radius: 6px;"><span style="font-size: 16px; font-weight: 800; letter-spacing: -0.03em;">PediTrack</span></span>
+        <span style="font-size: 15px; font-weight: 800;">Mateo Morales</span>
+      </div>
+      <div style="flex: 1; min-height: 0; overflow: hidden; padding-top: 24px; display: flex; flex-direction: column; gap: 18px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px;">
+          <h2 style="margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -0.02em;">Consultas</h2>
+          <span style="font-size: 14px; color: #1f3d44;">4 consultas · de la más reciente a la más antigua</span>
+        </div>
+
+        <div style="border-top: 2px solid #04252b; padding-top: 14px; display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; justify-content: space-between; gap: 20px;">
+            <div style="display: flex; flex-direction: column; gap: 10px; min-width: 0;">
+              <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;"><span style="font-size: 22px; font-weight: 900; letter-spacing: -0.02em;">18 oct 2026</span><span style="font-size: 16px; font-weight: 700;">Dra. Laura Cázares</span></div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1f3d44; margin-right: 4px;">Síntomas</span><span style="padding: 2px 10px; border: 1px solid #04252b; border-radius: 999px; font-size: 14px; font-weight: 700;">Fiebre</span><span style="padding: 2px 10px; border: 1px solid #04252b; border-radius: 999px; font-size: 14px; font-weight: 700;">Tos</span></div>
+            </div>
+            <div style="flex: none; display: flex; flex-direction: column; gap: 4px; align-items: center;">
+              <div style="width: 84px; height: 104px; border: 1px solid #94a3b8; border-radius: 6px; background: repeating-linear-gradient(135deg, #f1f5f9 0 6px, #e2e8f0 6px 12px); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #475569; text-align: center;">Receta</div>
+              <span style="font-size: 12.5px; color: #1f3d44;">Foto en p. 5</span>
+            </div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1f3d44;">Notas previas a la consulta</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.55; text-wrap: pretty;">Desde el miércoles 15 tiene fiebre por las noches; la más alta fue 38.6 °C el jueves. Tos seca que aumenta al acostarse. Come menos que de costumbre, pero toma bien líquidos. En su salón hay varios niños con gripa.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1f3d44;">Medicamentos</span>
+            <div style="padding: 10px 0; border-bottom: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;"><span style="font-size: 16px; font-weight: 800;">Amoxicilina</span><span style="font-size: 14px;">cada 8 h · 7 días · primera toma 08:00 del 18 oct</span><span style="padding: 1px 8px; border: 1px solid #04252b; border-radius: 999px; font-size: 12.5px; font-weight: 800;">En curso</span></div>
+              <div style="display: flex; flex-wrap: wrap; gap: 4px; max-width: 460px;">
+                <sc-for list="{{ tA }}" as="t" hint-placeholder-count="21"><sc-if value="{{ t.m }}"><span style="width: 16px; height: 16px; border-radius: 4px; background: #047857; color: #fff; font-size: 11px; font-weight: 900; display: inline-flex; align-items: center; justify-content: center;">✓</span></sc-if><sc-if value="{{ t.s }}"><span style="width: 16px; height: 16px; border-radius: 4px; border: 2px dashed #f59e0b; background: #fef3c7; box-sizing: border-box;"></span></sc-if><sc-if value="{{ t.v }}"><span style="width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid #94a3b8; box-sizing: border-box;"></span></sc-if></sc-for>
+              </div>
+              <span style="font-size: 14px;"><strong>16 de 18 tomas marcadas</strong> · 2 sin registrar · 3 por venir · Última marca: 24 oct, 08:05, por Ana</span>
+            </div>
+            <div style="padding: 10px 0; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;"><span style="font-size: 16px; font-weight: 800;">Paracetamol</span><span style="font-size: 14px;">cada 6 h · 3 días · primera toma 08:00 del 18 oct</span><span style="padding: 1px 8px; border: 1px solid #94a3b8; border-radius: 999px; font-size: 12.5px; font-weight: 800; color: #1f3d44;">Terminado el 20 oct</span></div>
+              <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                <sc-for list="{{ tB }}" as="t" hint-placeholder-count="8"><sc-if value="{{ t.m }}"><span style="width: 16px; height: 16px; border-radius: 4px; background: #047857; color: #fff; font-size: 11px; font-weight: 900; display: inline-flex; align-items: center; justify-content: center;">✓</span></sc-if><sc-if value="{{ t.s }}"><span style="width: 16px; height: 16px; border-radius: 4px; border: 2px dashed #f59e0b; background: #fef3c7; box-sizing: border-box;"></span></sc-if></sc-for>
+              </div>
+              <span style="font-size: 14px;"><strong>7 de 8 tomas marcadas</strong> · 1 sin registrar · Última marca: 20 oct, 14:10, por Ana</span>
+            </div>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; padding: 10px 14px; border: 1px solid #cbd5e1; border-radius: 10px;">
+            <span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1f3d44;">Próxima cita</span>
+            <span style="font-size: 15px;"><strong>28 oct 2026, 10:30</strong> · Dra. Laura Cázares · Consultorio 204, Torre Médica Satélite</span>
+          </div>
+        </div>
+
+        <div style="border-top: 2px solid #04252b; padding-top: 14px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;"><span style="font-size: 22px; font-weight: 900; letter-spacing: -0.02em;">12 sep 2026</span><span style="font-size: 16px; font-weight: 700;">Dra. Laura Cázares</span></div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1f3d44; margin-right: 4px;">Síntomas</span><span style="padding: 2px 10px; border: 1px solid #04252b; border-radius: 999px; font-size: 14px; font-weight: 700;">Vómito</span><span style="padding: 2px 10px; border: 1px solid #04252b; border-radius: 999px; font-size: 14px; font-weight: 700;">Fiebre</span></div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1f3d44;">Notas previas a la consulta</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.55; text-wrap: pretty;">Vomitó tres veces el jueves en la noche y una vez el viernes en la mañana. Fiebre de 38.1 °C el viernes a mediodía.</p>
+          </div>
+          <span style="align-self: flex-end; font-size: 14px; font-weight: 700; color: #0e7490;">Continúa en la página 3 →</span>
+        </div>
+      </div>
+      <div style="padding-top: 10px; border-top: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; line-height: 1.45; color: #1f3d44;">
+        <span style="font-weight: 700;">Generado con PediTrack el 24 oct 2026 · Página 2 de 5</span>
+        <span>Lo registrado es lo que la familia capturó. No sustituye el expediente ni el criterio de tu médico.</span>
+      </div>
+    </div>
+
+    <div data-screen-label="A · Página 3" style="width: 816px; height: 1056px; flex: none; background: #ffffff; box-shadow: 0 12px 36px rgba(4,37,43,0.14); padding: 44px 68px 36px; box-sizing: border-box; display: flex; flex-direction: column; color: #04252b;">
+      <div style="padding-bottom: 12px; border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+        <span style="display: flex; align-items: center; gap: 8px;"><img src="correo/peditrack-icono.png" alt="PediTrack" width="24" height="24" style="border-radius: 6px;"><span style="font-size: 16px; font-weight: 800; letter-spacing: -0.03em;">PediTrack</span></span>
+        <span style="font-size: 15px; font-weight: 800;">Mateo Morales</span>
+      </div>
+      <div style="flex: 1; min-height: 0; overflow: hidden; padding-top: 24px; display: flex; flex-direction: column; gap: 20px;">
+        <div style="border-top: 1px dashed #04252b; padding-top: 12px; display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;"><span style="font-size: 18px; font-weight: 900;">12 sep 2026</span><span style="font-size: 15px; font-weight: 700;">Dra. Laura Cázares</span><span style="font-size: 14px; color: #1f3d44;">(continuación)</span></div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1f3d44;">Medicamentos</span>
+            <div style="padding: 10px 0; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;"><span style="font-size: 16px; font-weight: 800;">Paracetamol</span><span style="font-size: 14px;">cada 6 h · 3 días · primera toma 07:00 del 12 sep</span><span style="padding: 1px 8px; border: 1px solid #94a3b8; border-radius: 999px; font-size: 12.5px; font-weight: 800; color: #1f3d44;">Se recorrió el 15 sep · +2 tomas</span></div>
+              <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                <sc-for list="{{ tC }}" as="t" hint-placeholder-count="14"><sc-if value="{{ t.m }}"><span style="width: 16px; height: 16px; border-radius: 4px; background: #047857; color: #fff; font-size: 11px; font-weight: 900; display: inline-flex; align-items: center; justify-content: center;">✓</span></sc-if><sc-if value="{{ t.s }}"><span style="width: 16px; height: 16px; border-radius: 4px; border: 2px dashed #f59e0b; background: #fef3c7; box-sizing: border-box;"></span></sc-if></sc-for>
+              </div>
+              <span style="font-size: 14px;"><strong>12 de 14 tomas marcadas</strong> · 2 sin registrar · Última marca: 16 sep, 01:05, por Luis</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="border-top: 2px solid #04252b; padding-top: 14px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;"><span style="font-size: 22px; font-weight: 900; letter-spacing: -0.02em;">2 jun 2026</span><span style="font-size: 16px; font-weight: 700;">Dr. Ernesto Ruiz</span><span style="padding: 1px 8px; border: 1px solid #94a3b8; border-radius: 999px; font-size: 12.5px; font-weight: 800; color: #1f3d44;">Solo registro</span></div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1f3d44;">Notas previas a la consulta</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.55;">Revisión anual. Talla 112 cm y peso 19.4 kg, anotados en la consulta.</p>
+          </div>
+          <span style="font-size: 14px; color: #1f3d44;">Sin síntomas marcados · Sin medicamentos</span>
+        </div>
+
+        <div style="border-top: 2px solid #04252b; padding-top: 14px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;"><span style="font-size: 22px; font-weight: 900; letter-spacing: -0.02em;">20 feb 2026</span><span style="font-size: 16px; font-weight: 700;">Dra. Laura Cázares</span></div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1f3d44; margin-right: 4px;">Síntomas</span><span style="padding: 2px 10px; border: 1px solid #04252b; border-radius: 999px; font-size: 14px; font-weight: 700;">Tos</span><span style="padding: 2px 10px; border: 1px solid #04252b; border-radius: 999px; font-size: 14px; font-weight: 700;">Fiebre</span></div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1f3d44;">Notas previas a la consulta</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.55; text-wrap: pretty;">Tos con flemas desde hace una semana. Fiebre de 37.9 °C el domingo y el lunes. Duerme poco por la tos.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1f3d44;">Medicamentos</span>
+            <div style="padding: 10px 0; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;"><span style="font-size: 16px; font-weight: 800;">Amoxicilina</span><span style="font-size: 14px;">cada 8 h · 7 días · primera toma 08:00 del 20 feb</span></div>
+              <div style="display: flex; flex-wrap: wrap; gap: 4px; max-width: 460px;">
+                <sc-for list="{{ tD }}" as="t" hint-placeholder-count="21"><span style="width: 16px; height: 16px; border-radius: 4px; background: #047857; color: #fff; font-size: 11px; font-weight: 900; display: inline-flex; align-items: center; justify-content: center;">✓</span></sc-for>
+              </div>
+              <span style="font-size: 14px;"><strong>21 de 21 tomas marcadas</strong> · Del 20 al 26 feb · Última marca: 26 feb, 22:00, por Ana</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="padding-top: 10px; border-top: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; line-height: 1.45; color: #1f3d44;">
+        <span style="font-weight: 700;">Generado con PediTrack el 24 oct 2026 · Página 3 de 5</span>
+        <span>Lo registrado es lo que la familia capturó. No sustituye el expediente ni el criterio de tu médico.</span>
+      </div>
+    </div>
+
+    <div data-screen-label="A · Página 4" style="width: 816px; height: 1056px; flex: none; background: #ffffff; box-shadow: 0 12px 36px rgba(4,37,43,0.14); padding: 44px 68px 36px; box-sizing: border-box; display: flex; flex-direction: column; color: #04252b;">
+      <div style="padding-bottom: 12px; border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+        <span style="display: flex; align-items: center; gap: 8px;"><img src="correo/peditrack-icono.png" alt="PediTrack" width="24" height="24" style="border-radius: 6px;"><span style="font-size: 16px; font-weight: 800; letter-spacing: -0.03em;">PediTrack</span></span>
+        <span style="font-size: 15px; font-weight: 800;">Mateo Morales</span>
+      </div>
+      <div style="flex: 1; min-height: 0; overflow: hidden; padding-top: 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px;">
+          <h2 style="margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -0.02em;">Cartilla de vacunación</h2>
+          <span style="font-size: 14px; color: #1f3d44;">10 vacunas registradas</span>
+        </div>
+        <div style="display: flex; flex-direction: column;">
+          <div style="display: grid; grid-template-columns: 70px 104px 88px minmax(0, 1fr) 150px; gap: 12px; padding: 8px 0; border-bottom: 2px solid #04252b; font-size: 12.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #1f3d44;"><span>Dosis</span><span>Fecha</span><span>Lote</span><span>Lugar</span><span>Nota</span></div>
+          <sc-for list="{{ vacA }}" as="g" hint-placeholder-count="6">
+            <div style="padding: 12px 0 4px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;"><span style="font-size: 16px; font-weight: 900;">{{ g.nombre }}</span><sc-if value="{{ g.escrita }}"><span style="font-size: 13px; color: #1f3d44;">Nombre escrito por la familia</span></sc-if></div>
+            <sc-for list="{{ g.dosis }}" as="d" hint-placeholder-count="2">
+              <div style="display: grid; grid-template-columns: 70px 104px 88px minmax(0, 1fr) 150px; gap: 12px; padding: 7px 0; border-bottom: 1px solid #e2e8f0; font-size: 14px; line-height: 1.4;">
+                <span style="font-weight: 700;">{{ d.n }}</span><span>{{ d.f }}</span><span>{{ d.l }}</span><span>{{ d.lugar }}</span>
+                <span style="display: flex; flex-direction: column; gap: 2px;"><span>{{ d.nota }}</span><sc-if value="{{ d.corr }}"><span style="font-size: 12.5px; font-style: italic; color: #1f3d44;">{{ d.corr }}</span></sc-if></span>
+              </div>
+            </sc-for>
+          </sc-for>
+        </div>
+      </div>
+      <div style="padding-top: 10px; border-top: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; line-height: 1.45; color: #1f3d44;">
+        <span style="font-weight: 700;">Generado con PediTrack el 24 oct 2026 · Página 4 de 5</span>
+        <span>Lo registrado es lo que la familia capturó. No sustituye el expediente ni el criterio de tu médico.</span>
+      </div>
+    </div>
+
+    <div data-screen-label="A · Página 5" style="width: 816px; height: 1056px; flex: none; background: #ffffff; box-shadow: 0 12px 36px rgba(4,37,43,0.14); padding: 44px 68px 36px; box-sizing: border-box; display: flex; flex-direction: column; color: #04252b;">
+      <div style="padding-bottom: 12px; border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+        <span style="display: flex; align-items: center; gap: 8px;"><img src="correo/peditrack-icono.png" alt="PediTrack" width="24" height="24" style="border-radius: 6px;"><span style="font-size: 16px; font-weight: 800; letter-spacing: -0.03em;">PediTrack</span></span>
+        <span style="font-size: 15px; font-weight: 800;">Mateo Morales</span>
+      </div>
+      <div style="flex: 1; min-height: 0; overflow: hidden; padding-top: 24px; display: flex; flex-direction: column; gap: 16px;">
+        <h2 style="margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -0.02em;">Anexo: fotos</h2>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px;">
+          <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 420px; border: 1px solid #94a3b8; border-radius: 8px; background: repeating-linear-gradient(135deg, #f1f5f9 0 8px, #e2e8f0 8px 16px); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #475569;">Foto de la cartilla de papel</div><span style="font-size: 14px;"><strong>Cartilla de papel, hoja 1</strong> · tomada el 3 oct 2026</span></div>
+          <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 420px; border: 1px solid #94a3b8; border-radius: 8px; background: repeating-linear-gradient(135deg, #f1f5f9 0 8px, #e2e8f0 8px 16px); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #475569;">Foto de la cartilla de papel</div><span style="font-size: 14px;"><strong>Cartilla de papel, hoja 2</strong> · tomada el 3 oct 2026</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px;"><div style="height: 290px; border: 1px solid #94a3b8; border-radius: 8px; background: repeating-linear-gradient(135deg, #f1f5f9 0 8px, #e2e8f0 8px 16px); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #475569;">Foto de la receta</div><span style="font-size: 14px;"><strong>Receta de la consulta del 18 oct 2026</strong> · Dra. Laura Cázares · tomada el 18 oct 2026</span></div>
+      </div>
+      <div style="padding-top: 10px; border-top: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; line-height: 1.45; color: #1f3d44;">
+        <span style="font-weight: 700;">Generado con PediTrack el 24 oct 2026 · Página 5 de 5</span>
+        <span>Lo registrado es lo que la familia capturó. No sustituye el expediente ni el criterio de tu médico.</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section data-screen-label="Caso B" style="padding: 24px 48px; display: flex; flex-direction: column; gap: 18px; font-family: 'Figtree', system-ui, sans-serif;">
+  <h2 style="margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -0.02em; color: #04252b;">Caso B · Sofía, sin consultas y con vacunas (2 páginas)</h2>
+  <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+
+    <div data-screen-label="B · Página 1" style="width: 816px; height: 1056px; flex: none; background: #ffffff; box-shadow: 0 12px 36px rgba(4,37,43,0.14); padding: 44px 68px 36px; box-sizing: border-box; display: flex; flex-direction: column; color: #04252b;">
+      <div style="padding-bottom: 12px; border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+        <span style="display: flex; align-items: center; gap: 8px;"><img src="correo/peditrack-icono.png" alt="PediTrack" width="24" height="24" style="border-radius: 6px;"><span style="font-size: 16px; font-weight: 800; letter-spacing: -0.03em;">PediTrack</span></span>
+        <span style="font-size: 15px; font-weight: 800;">Sofía Morales</span>
+      </div>
+      <div style="flex: 1; min-height: 0; padding-top: 36px; display: flex; flex-direction: column; gap: 30px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #0e7490;">Historial de salud</span>
+          <h1 style="margin: 0; font-size: 42px; font-weight: 900; letter-spacing: -0.03em;">Sofía Morales</h1>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid #04252b; border-bottom: 1px solid #cbd5e1;">
+          <div style="padding: 14px 12px 14px 0; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Nacimiento</span><span style="font-size: 17px; font-weight: 800;">2 ago 2025</span></div>
+          <div style="padding: 14px 12px; border-left: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Edad</span><span style="font-size: 17px; font-weight: 800;">1 año 2 meses</span></div>
+          <div style="padding: 14px 12px; border-left: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Talla</span><span style="font-size: 17px; font-weight: 800;">Sin dato</span></div>
+          <div style="padding: 14px 12px; border-left: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Peso</span><span style="font-size: 17px; font-weight: 800;">Sin dato</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #0e7490;">Qué incluye este PDF</span>
+          <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 8px 16px; font-size: 15px; line-height: 1.5;">
+            <span style="font-weight: 700; color: #1f3d44;">Periodo</span><span style="font-weight: 700;">Todo el historial</span>
+            <span style="font-weight: 700; color: #1f3d44;">Filtros</span><span>Sin filtros</span>
+            <span style="font-weight: 700; color: #1f3d44;">Secciones</span><span>Consultas · Cartilla de vacunación</span>
+            <span style="font-weight: 700; color: #1f3d44;">Fotos</span><span>No incluidas</span>
+          </div>
+          <div style="margin-top: 6px; padding: 14px 0; border-top: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; font-size: 19px; font-weight: 800; letter-spacing: -0.01em;">0 consultas · 9 vacunas registradas</div>
+        </div>
+        <div style="padding: 16px 18px; border: 1px dashed #94a3b8; border-radius: 12px; display: flex; flex-direction: column; gap: 4px;">
+          <span style="font-size: 16px; font-weight: 800;">Consultas</span>
+          <span style="font-size: 15px; line-height: 1.5; color: #1f3d44;">No hay consultas registradas en este periodo.</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <span style="font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #0e7490;">Contenido</span>
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; font-size: 15px;"><span>Cartilla de vacunación</span><span style="font-weight: 700;">p. 2</span></div>
+        </div>
+      </div>
+      <div style="padding-top: 10px; border-top: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; line-height: 1.45; color: #1f3d44;">
+        <span style="font-weight: 700;">Generado con PediTrack el 24 oct 2026 · Página 1 de 2</span>
+        <span>Lo registrado es lo que la familia capturó. No sustituye el expediente ni el criterio de tu médico.</span>
+      </div>
+    </div>
+
+    <div data-screen-label="B · Página 2" style="width: 816px; height: 1056px; flex: none; background: #ffffff; box-shadow: 0 12px 36px rgba(4,37,43,0.14); padding: 44px 68px 36px; box-sizing: border-box; display: flex; flex-direction: column; color: #04252b;">
+      <div style="padding-bottom: 12px; border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+        <span style="display: flex; align-items: center; gap: 8px;"><img src="correo/peditrack-icono.png" alt="PediTrack" width="24" height="24" style="border-radius: 6px;"><span style="font-size: 16px; font-weight: 800; letter-spacing: -0.03em;">PediTrack</span></span>
+        <span style="font-size: 15px; font-weight: 800;">Sofía Morales</span>
+      </div>
+      <div style="flex: 1; min-height: 0; overflow: hidden; padding-top: 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px;">
+          <h2 style="margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -0.02em;">Cartilla de vacunación</h2>
+          <span style="font-size: 14px; color: #1f3d44;">9 vacunas registradas</span>
+        </div>
+        <div style="display: flex; flex-direction: column;">
+          <div style="display: grid; grid-template-columns: 70px 104px 88px minmax(0, 1fr) 150px; gap: 12px; padding: 8px 0; border-bottom: 2px solid #04252b; font-size: 12.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #1f3d44;"><span>Dosis</span><span>Fecha</span><span>Lote</span><span>Lugar</span><span>Nota</span></div>
+          <sc-for list="{{ vacB }}" as="g" hint-placeholder-count="5">
+            <div style="padding: 12px 0 4px;"><span style="font-size: 16px; font-weight: 900;">{{ g.nombre }}</span></div>
+            <sc-for list="{{ g.dosis }}" as="d" hint-placeholder-count="2">
+              <div style="display: grid; grid-template-columns: 70px 104px 88px minmax(0, 1fr) 150px; gap: 12px; padding: 7px 0; border-bottom: 1px solid #e2e8f0; font-size: 14px; line-height: 1.4;">
+                <span style="font-weight: 700;">{{ d.n }}</span><span>{{ d.f }}</span><span>{{ d.l }}</span><span>{{ d.lugar }}</span><span>{{ d.nota }}</span>
+              </div>
+            </sc-for>
+          </sc-for>
+        </div>
+      </div>
+      <div style="padding-top: 10px; border-top: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; line-height: 1.45; color: #1f3d44;">
+        <span style="font-weight: 700;">Generado con PediTrack el 24 oct 2026 · Página 2 de 2</span>
+        <span>Lo registrado es lo que la familia capturó. No sustituye el expediente ni el criterio de tu médico.</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section data-screen-label="Caso C" style="padding: 24px 48px 72px; display: flex; flex-direction: column; gap: 18px; font-family: 'Figtree', system-ui, sans-serif;">
+  <h2 style="margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -0.02em; color: #04252b;">Caso C · Diego, solo consultas (2 páginas, filtros aplicados)</h2>
+  <div style="display: flex; flex-wrap: wrap; gap: 32px; align-items: flex-start;">
+
+    <div data-screen-label="C · Página 1" style="width: 816px; height: 1056px; flex: none; background: #ffffff; box-shadow: 0 12px 36px rgba(4,37,43,0.14); padding: 44px 68px 36px; box-sizing: border-box; display: flex; flex-direction: column; color: #04252b;">
+      <div style="padding-bottom: 12px; border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+        <span style="display: flex; align-items: center; gap: 8px;"><img src="correo/peditrack-icono.png" alt="PediTrack" width="24" height="24" style="border-radius: 6px;"><span style="font-size: 16px; font-weight: 800; letter-spacing: -0.03em;">PediTrack</span></span>
+        <span style="font-size: 15px; font-weight: 800;">Diego Morales</span>
+      </div>
+      <div style="flex: 1; min-height: 0; padding-top: 36px; display: flex; flex-direction: column; gap: 30px;">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <span style="font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #0e7490;">Historial de salud</span>
+          <h1 style="margin: 0; font-size: 42px; font-weight: 900; letter-spacing: -0.03em;">Diego Morales</h1>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid #04252b; border-bottom: 1px solid #cbd5e1;">
+          <div style="padding: 14px 12px 14px 0; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Nacimiento</span><span style="font-size: 17px; font-weight: 800;">5 ene 2019</span></div>
+          <div style="padding: 14px 12px; border-left: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Edad</span><span style="font-size: 17px; font-weight: 800;">7 años 9 meses</span></div>
+          <div style="padding: 14px 12px; border-left: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Talla</span><span style="font-size: 17px; font-weight: 800;">126 cm</span><span style="font-size: 13px; color: #1f3d44;">anotada el 14 ago 2026</span></div>
+          <div style="padding: 14px 12px; border-left: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Peso</span><span style="font-size: 17px; font-weight: 800;">25.8 kg</span><span style="font-size: 13px; color: #1f3d44;">anotado el 14 ago 2026</span></div>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #0e7490;">Qué incluye este PDF</span>
+          <div style="display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 8px 16px; font-size: 15px; line-height: 1.5;">
+            <span style="font-weight: 700; color: #1f3d44;">Periodo</span><span style="font-weight: 700;">Filtros actuales del historial</span>
+            <span style="font-weight: 700; color: #1f3d44;">Filtros</span><span>Fechas: del 1 jul 2026 al 24 oct 2026 · Medicamento: Paracetamol · Tipo: Consultas</span>
+            <span style="font-weight: 700; color: #1f3d44;">Secciones</span><span>Consultas · Cartilla de vacunación</span>
+            <span style="font-weight: 700; color: #1f3d44;">Fotos</span><span>No incluidas</span>
+          </div>
+          <div style="margin-top: 6px; padding: 14px 0; border-top: 1px solid #cbd5e1; border-bottom: 1px solid #cbd5e1; font-size: 19px; font-weight: 800; letter-spacing: -0.01em;">2 consultas · 0 vacunas registradas</div>
+        </div>
+        <div style="padding: 16px 18px; border: 1px dashed #94a3b8; border-radius: 12px; display: flex; flex-direction: column; gap: 4px;">
+          <span style="font-size: 16px; font-weight: 800;">Cartilla de vacunación</span>
+          <span style="font-size: 15px; line-height: 1.5; color: #1f3d44;">No hay vacunas registradas.</span>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <span style="font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #0e7490;">Contenido</span>
+          <div style="display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; font-size: 15px;"><span>Consultas, de la más reciente a la más antigua</span><span style="font-weight: 700;">p. 2</span></div>
+        </div>
+      </div>
+      <div style="padding-top: 10px; border-top: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; line-height: 1.45; color: #1f3d44;">
+        <span style="font-weight: 700;">Generado con PediTrack el 24 oct 2026 · Página 1 de 2</span>
+        <span>Lo registrado es lo que la familia capturó. No sustituye el expediente ni el criterio de tu médico.</span>
+      </div>
+    </div>
+
+    <div data-screen-label="C · Página 2" style="width: 816px; height: 1056px; flex: none; background: #ffffff; box-shadow: 0 12px 36px rgba(4,37,43,0.14); padding: 44px 68px 36px; box-sizing: border-box; display: flex; flex-direction: column; color: #04252b;">
+      <div style="padding-bottom: 12px; border-bottom: 1px solid #cbd5e1; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+        <span style="display: flex; align-items: center; gap: 8px;"><img src="correo/peditrack-icono.png" alt="PediTrack" width="24" height="24" style="border-radius: 6px;"><span style="font-size: 16px; font-weight: 800; letter-spacing: -0.03em;">PediTrack</span></span>
+        <span style="font-size: 15px; font-weight: 800;">Diego Morales</span>
+      </div>
+      <div style="flex: 1; min-height: 0; overflow: hidden; padding-top: 24px; display: flex; flex-direction: column; gap: 18px;">
+        <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 16px;">
+          <h2 style="margin: 0; font-size: 26px; font-weight: 900; letter-spacing: -0.02em;">Consultas</h2>
+          <span style="font-size: 14px; color: #1f3d44;">2 consultas · de la más reciente a la más antigua</span>
+        </div>
+        <div style="border-top: 2px solid #04252b; padding-top: 14px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;"><span style="font-size: 22px; font-weight: 900; letter-spacing: -0.02em;">3 oct 2026</span><span style="font-size: 16px; font-weight: 700;">Dra. Laura Cázares</span></div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1f3d44; margin-right: 4px;">Síntomas</span><span style="padding: 2px 10px; border: 1px solid #04252b; border-radius: 999px; font-size: 14px; font-weight: 700;">Tos</span><span style="padding: 2px 10px; border: 1px solid #04252b; border-radius: 999px; font-size: 14px; font-weight: 700;">Fiebre</span></div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1f3d44;">Notas previas a la consulta</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.55; text-wrap: pretty;">Tos desde el lunes, más fuerte en la mañana. Fiebre de 38.0 °C el miércoles en la noche. Se queja de dolor de garganta al tragar.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1f3d44;">Medicamentos</span>
+            <div style="padding: 10px 0; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;"><span style="font-size: 16px; font-weight: 800;">Paracetamol</span><span style="font-size: 14px;">cada 6 h · 3 días · primera toma 20:00 del 3 oct</span><span style="padding: 1px 8px; border: 1px solid #94a3b8; border-radius: 999px; font-size: 12.5px; font-weight: 800; color: #1f3d44;">Terminado el 4 oct</span></div>
+              <div style="display: flex; flex-wrap: wrap; gap: 4px;">
+                <sc-for list="{{ tE }}" as="t" hint-placeholder-count="6"><sc-if value="{{ t.m }}"><span style="width: 16px; height: 16px; border-radius: 4px; background: #047857; color: #fff; font-size: 11px; font-weight: 900; display: inline-flex; align-items: center; justify-content: center;">✓</span></sc-if><sc-if value="{{ t.s }}"><span style="width: 16px; height: 16px; border-radius: 4px; border: 2px dashed #f59e0b; background: #fef3c7; box-sizing: border-box;"></span></sc-if></sc-for>
+              </div>
+              <span style="font-size: 14px;"><strong>5 de 6 tomas marcadas</strong> · 1 sin registrar · Última marca: 4 oct, 20:05, por Ana</span>
+            </div>
+          </div>
+        </div>
+        <div style="border-top: 2px solid #04252b; padding-top: 14px; display: flex; flex-direction: column; gap: 12px;">
+          <div style="display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;"><span style="font-size: 22px; font-weight: 900; letter-spacing: -0.02em;">14 ago 2026</span><span style="font-size: 16px; font-weight: 700;">Dr. Ernesto Ruiz</span><span style="padding: 1px 8px; border: 1px solid #94a3b8; border-radius: 999px; font-size: 12.5px; font-weight: 800; color: #1f3d44;">Solo registro</span></div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;"><span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1f3d44; margin-right: 4px;">Síntomas</span><span style="padding: 2px 10px; border: 1px solid #04252b; border-radius: 999px; font-size: 14px; font-weight: 700;">Fiebre</span></div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1f3d44;">Notas previas a la consulta</span>
+            <p style="margin: 0; font-size: 15px; line-height: 1.55;">Revisión antes de entrar a la escuela. Talla 126 cm y peso 25.8 kg. Fiebre leve el día anterior, se le dio Paracetamol en casa.</p>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 4px;">
+            <span style="font-size: 12.5px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #1f3d44;">Medicamentos</span>
+            <div style="padding: 10px 0; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;"><span style="font-size: 16px; font-weight: 800;">Paracetamol</span><span style="font-size: 14px;">una sola toma el 13 ago · sin registro de tomas en la app</span></div>
+          </div>
+        </div>
+      </div>
+      <div style="padding-top: 10px; border-top: 1px solid #cbd5e1; display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; line-height: 1.45; color: #1f3d44;">
+        <span style="font-weight: 700;">Generado con PediTrack el 24 oct 2026 · Página 2 de 2</span>
+        <span>Lo registrado es lo que la familia capturó. No sustituye el expediente ni el criterio de tu médico.</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const grid = (n, sin, venir = 0) => Array.from({ length: n }, (_, i) =>
+      i >= n - venir ? { v: true } : sin.includes(i) ? { s: true } : { m: true });
+    const cs = 'Centro de Salud T-III Coyoacán';
+    const vacA = [
+      { nombre: 'BCG', dosis: [{ n: 'Única', f: '14 mar 2021', l: 'BCG-2103', lugar: 'Hospital Ángeles Lindavista', nota: '—' }] },
+      { nombre: 'Hepatitis B', dosis: [
+        { n: '1.ª dosis', f: '14 mar 2021', l: 'HB-0321', lugar: 'Hospital Ángeles Lindavista', nota: '—' },
+        { n: '2.ª dosis', f: '15 may 2021', l: 'HB-0521', lugar: cs, nota: '—' },
+        { n: '3.ª dosis', f: '16 sep 2021', l: 'HB-0921', lugar: cs, nota: '—' }] },
+      { nombre: 'Hexavalente', dosis: [
+        { n: '1.ª dosis', f: '15 may 2021', l: 'HX-4410', lugar: cs, nota: '—' },
+        { n: '2.ª dosis', f: '17 jul 2021', l: 'HX-4492', lugar: cs, nota: 'Lote copiado de la cartilla', corr: 'Corregida el 3 oct por Ana' }] },
+      { nombre: 'Neumococo', dosis: [
+        { n: '1.ª dosis', f: '17 jul 2021', l: 'NM-1187', lugar: cs, nota: '—' },
+        { n: '2.ª dosis', f: '16 sep 2021', l: 'NM-1203', lugar: cs, nota: '—' }] },
+      { nombre: 'Triple viral (SRP)', dosis: [{ n: '1.ª dosis', f: '16 mar 2022', l: 'SRP-7781', lugar: 'Consultorio Dra. Laura Cázares', nota: 'Fiebre leve al día siguiente' }] },
+      { nombre: 'Influenza estacional 2025', escrita: true, dosis: [{ n: '1.ª dosis', f: '10 nov 2025', l: 'FLU-25B', lugar: 'Farmacia San Pablo Satélite', nota: 'Campaña de invierno' }] }
+    ];
+    const vacB = [
+      { nombre: 'BCG', dosis: [{ n: 'Única', f: '2 ago 2025', l: 'BCG-2508', lugar: 'Hospital Ángeles Lindavista', nota: '—' }] },
+      { nombre: 'Hepatitis B', dosis: [
+        { n: '1.ª dosis', f: '2 ago 2025', l: 'HB-0825', lugar: 'Hospital Ángeles Lindavista', nota: '—' },
+        { n: '2.ª dosis', f: '3 oct 2025', l: 'HB-1025', lugar: cs, nota: '—' }] },
+      { nombre: 'Hexavalente', dosis: [
+        { n: '1.ª dosis', f: '3 oct 2025', l: 'HX-5120', lugar: cs, nota: '—' },
+        { n: '2.ª dosis', f: '5 dic 2025', l: 'HX-5188', lugar: cs, nota: '—' },
+        { n: '3.ª dosis', f: '6 feb 2026', l: 'HX-5231', lugar: cs, nota: 'Lloró poco, durmió bien' }] },
+      { nombre: 'Neumococo', dosis: [
+        { n: '1.ª dosis', f: '3 oct 2025', l: 'NM-2290', lugar: cs, nota: '—' },
+        { n: '2.ª dosis', f: '5 dic 2025', l: 'NM-2341', lugar: cs, nota: '—' }] },
+      { nombre: 'Influenza', dosis: [{ n: '1.ª dosis', f: '6 feb 2026', l: 'FLU-25C', lugar: cs, nota: '—' }] }
+    ];
+    return {
+      tA: grid(21, [5, 11], 3), tB: grid(8, [6]), tC: grid(14, [3, 9]), tD: grid(21, []), tE: grid(6, [2]),
+      vacA, vacB
+    };
+  }
+}
+</script>
+</body>
+</html>
