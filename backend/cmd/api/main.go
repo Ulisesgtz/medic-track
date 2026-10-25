@@ -46,6 +46,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/errordigest"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/family"
+	"github.com/Ulisesgtz/medic-track/backend/internal/historyexport"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/jobreport"
 	"github.com/Ulisesgtz/medic-track/backend/internal/mailer"
@@ -103,7 +104,10 @@ func main() {
 	// The next appointment of a consultation (specs/033, part 2): plan and one-scheduled-per-consultation under the owner's lock.
 	appointmentHandler := appointment.NewHandler(appointment.NewService(appointment.NewRepository(pool)), responder)
 	// The child's vaccination card (specs/046): the doses a parent records by hand and the photos of the paper card.
-	vaccinationHandler := vaccination.NewHandler(vaccination.NewService(vaccination.NewRepository(pool)), responder)
+	vaccinationRepo := vaccination.NewRepository(pool)
+	vaccinationHandler := vaccination.NewHandler(vaccination.NewService(vaccinationRepo), responder)
+	// The history's PDF (specs/050): one read-only answer with everything the document shows; the PDF is made on the phone.
+	historyExportHandler := historyexport.NewHandler(historyexport.NewService(historyexport.NewRepository(pool), consultationRepo, vaccinationRepo), responder)
 
 	// Sharing with the family (specs/032): who can accept an invitation is decided by the session's verified e-mail.
 	familyService := family.NewService(family.NewRepository(pool), access.NewRepository(pool), family.EmailFunc(func(ctx context.Context, clerkUserID string) (string, error) {
@@ -238,6 +242,7 @@ func main() {
 		ChildDevice:     childDeviceHandler,
 		Appointment:     appointmentHandler,
 		Vaccination:     vaccinationHandler,
+		HistoryExport:   historyExportHandler,
 		Payments:        paymentsHandler,
 		Ops:             opsHandler,
 		OpsKey:          opsKey,

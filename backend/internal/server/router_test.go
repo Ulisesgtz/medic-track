@@ -26,6 +26,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/family"
+	"github.com/Ulisesgtz/medic-track/backend/internal/historyexport"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
 	"github.com/Ulisesgtz/medic-track/backend/internal/payments"
@@ -165,6 +166,8 @@ func newWorld(t *testing.T) *world {
 		Appointment:    appointment.NewHandler(appointment.NewService(appointment.NewRepository(pool)), responder),
 		ChildDevice:    childdevice.NewHandler(childdevice.NewService(childdevice.NewRepository(pool)), responder),
 		Vaccination:    vaccination.NewHandler(vaccination.NewService(vaccination.NewRepository(pool)), responder),
+		HistoryExport: historyexport.NewHandler(historyexport.NewService(historyexport.NewRepository(pool), consultation.NewRepository(pool),
+			vaccination.NewRepository(pool)), responder),
 		Ownership:      ownership.NewRepository(pool),
 		Access:         access.NewRepository(pool),
 		FrontendOrigin: "http://localhost:5173",
@@ -234,6 +237,10 @@ func (w *world) routes() []struct {
 		{"child overview", http.MethodGet, "/children/" + w.childA.String() + "/overview" + window, "", http.StatusOK},
 		{"create consultation", http.MethodPost, "/children/" + w.childA.String() + "/consultations", `{}`, http.StatusBadRequest},
 		{"get consultation", http.MethodGet, "/consultations/" + w.consultationA.String(), "", http.StatusOK},
+		// Specs/050: the prescription photo alone (read access, no plan of its own) and the history's PDF data (read access; the owner
+		// is on the free plan here, so a valid request reaches the handler and is told it is the paid plan's).
+		{"get consultation photo", http.MethodGet, "/consultations/" + w.consultationA.String() + "/photo", "", http.StatusOK},
+		{"export history", http.MethodPost, "/children/" + w.childA.String() + "/export", `{"period":{"kind":"all"},"sections":{"consultations":true,"vaccinations":true}}`, http.StatusUnprocessableEntity},
 		{"mark dose", http.MethodPatch, "/consultations/" + w.consultationA.String() + "/doses/" + w.doseA.String(), `{"taken":true}`, http.StatusOK},
 		// The owner reaches the handler, which knows no such medication (a real one would be ended for good).
 		{"end treatment", http.MethodPost, "/consultations/" + w.consultationA.String() + "/medications/" + uuid.NewString() + "/end", "", http.StatusNotFound},

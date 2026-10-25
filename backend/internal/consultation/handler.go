@@ -524,7 +524,7 @@ type planLimitResponseDoc struct {
 	Error   string `json:"error" example:"freemium_consultation_limit_exceeded"`
 	Message string `json:"message" example:"The free plan includes one active treatment at a time"`
 	// Reason is "active_treatment" (another treatment is still running), "record_only" (saving only as a record) or
-	// "history_search" (searching and filtering the history, specs/031).
+	// "history_search" (searching and filtering the history, specs/031) or "pdf_export" (the history's PDF, specs/050).
 	Reason string `json:"reason" example:"active_treatment"`
 } // @name PlanLimitResponse
 
@@ -537,6 +537,8 @@ func planLimitBody(reason string) map[string]string {
 		message = "Saving a consultation only as a record is part of the paid plan"
 	case PlanLimitHistorySearch:
 		message = "Searching and filtering the history is part of the paid plan"
+	case PlanLimitPDFExport:
+		message = "Exporting the history to PDF is part of the paid plan"
 	}
 	return map[string]string{"error": "freemium_consultation_limit_exceeded", "message": message, "reason": reason}
 }

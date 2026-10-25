@@ -20,6 +20,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/family"
+	"github.com/Ulisesgtz/medic-track/backend/internal/historyexport"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ops"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
@@ -45,6 +46,8 @@ type Deps struct {
 	ChildDevice *childdevice.Handler
 	// Vaccination: the child's vaccination card, the doses a parent records by hand (specs/046).
 	Vaccination *vaccination.Handler
+	// HistoryExport: the data of the history's PDF (specs/050). Nil = the route is not registered.
+	HistoryExport *historyexport.Handler
 	// Payments: the subscription of the full plan (specs/045). Nil = the charge is not available in this environment: none of its routes
 	// (including the provider's public notice) is registered.
 	Payments *payments.Handler
@@ -209,6 +212,8 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(seesChild).Get("/children/{childId}/history-options", d.Consultation.HistoryOptions)
 		r.With(fullChild).Post("/children/{childId}/consultations", d.Consultation.CreateConsultation)
 		r.With(seesConsultation).Get("/consultations/{consultationId}", d.Consultation.GetConsultation)
+		// The prescription photo alone, for the history's PDF (specs/050), which asks for each photo apart.
+		r.With(seesConsultation).Get("/consultations/{consultationId}/photo", d.Consultation.GetPhoto)
 		r.With(seesConsultation).Patch("/consultations/{consultationId}/doses/{doseId}", d.Consultation.UpdateDose)
 		r.With(fullConsultation).Post("/consultations/{consultationId}/medications/{medicationId}/end", d.Consultation.EndTreatment)
 		r.With(fullConsultation).Post("/consultations/{consultationId}/medications/{medicationId}/extend", d.Consultation.ExtendTreatment)
@@ -237,6 +242,10 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(fullChild).Post("/children/{childId}/appointments", d.Appointment.CreateForChild)
 		// Specs/046: the vaccination card. Reading is Mark (a Caregiver sees it); recording, correcting and deleting are Full. The ids of
 		// a dose are checked against the child of the route, so a dose of another child is a 404 and needs no access function of its own.
+		// The history's PDF (specs/050): everything the document shows, the choice in the body; read access, the paid plan decided inside.
+		if d.HistoryExport != nil {
+			r.With(seesChild).Post("/children/{childId}/export", d.HistoryExport.Export)
+		}
 		r.With(seesChild).Get("/children/{childId}/vaccinations", d.Vaccination.ListVaccinations)
 		r.With(fullChild).Post("/children/{childId}/vaccinations", d.Vaccination.CreateVaccination)
 		r.With(fullChild).Patch("/children/{childId}/vaccinations/{vaccinationId}", d.Vaccination.UpdateVaccination)
