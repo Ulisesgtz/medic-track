@@ -7,7 +7,8 @@
 - **Alternativas**: *pdfmake* (JSON declarativo, encabezado/pie y `pageBreakBefore` buenos, pero sin componentes, pastillas y bordes punteados difíciles, fuentes en un `vfs` en base64); *jsPDF* (bajo nivel: paginación, cortes y envoltura de texto a mano); *servidor Go* (gofpdf/maroto: fuentes y dibujo a mano, CPU en el API y un archivo con datos de salud generado en el servidor; descartado).
 - **Avance «Página N de M»**: `@react-pdf` arma el documento de una vez, sin aviso por página. El avance se informa por **etapas reales**: datos (1), fotos («Preparando fotos 3 de 7»), armado del documento, y al final el número real de páginas. La barra avanza por esas etapas; el texto «Página N de M» del mock se muestra cuando ya se sabe el total. Desviación anotada.
 - **Cancelar**: se cancela la petición de datos y las de fotos (`AbortController`); el armado en curso se descarta al terminar (no hay forma de interrumpirlo). No queda archivo.
-- **Rendimiento**: el paquete se descarga solo al generar (chunk aparte de Vite); se mide en la tarea del spike y se anota. Meta SC-001: < 15 s con 20 consultas sin fotos.
+- **Rendimiento**: el paquete se descarga solo al generar (chunk aparte de Vite). **Medido en el spike (2026-10-25): 1,215 KB minificado, 445 KB con gzip**, más 80 KB de las cinco fuentes WOFF; la app no carga nada de esto hasta «Generar PDF». Meta SC-001: < 15 s con 20 consultas sin fotos.
+- **Spike confirmado (T004, `document/library.test.tsx`)**: en un PDF Carta con Figtree, el encabezado y el pie `fixed` salen en cada página con «Página X de Y»; dentro de la vista de una consulta que cruza de página, `render` con `subPageNumber`/`subPageTotalPages` escribe «Continúa en la página 2» al pie de la primera y «(continuación)» en la siguiente; una foto JPEG se incrusta. El texto con acentos y «·» se lee bien con pdf.js. «→» y «✓» no están en la fuente: se dibujan como figuras.
 
 ## R2. Fuentes e imágenes en el PDF
 
