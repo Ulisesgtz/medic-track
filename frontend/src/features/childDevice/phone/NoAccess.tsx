@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { PHONE } from '../childText'
 
 /** What the child's phone shows when it has no working access: no data of the child, only what to do (ask the parent for a new one). */
@@ -8,6 +9,12 @@ export function NoAccess({ message = PHONE.noAccess }: { message?: string }) {
       <p role="status" className="text-[17px] leading-relaxed text-body">
         {message}
       </p>
+      <Link
+        to="/hijo"
+        className="inline-flex min-h-12 items-center self-start rounded-2xl border-2 border-action px-5 text-base font-extrabold text-action hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
+      >
+        {PHONE.paste.withNew}
+      </Link>
     </main>
   )
 }
