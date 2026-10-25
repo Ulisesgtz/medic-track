@@ -1,7 +1,5 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest'
-import { fileURLToPath } from 'node:url'
-import { readFileSync } from 'node:fs'
 import { Document, Font, Image, Page, Text, View, renderToBuffer } from '@react-pdf/renderer'
 import { OPS, getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { registerFonts } from './fonts'
@@ -9,9 +7,15 @@ import { registerFonts } from './fonts'
 // What the mock asks of the PDF library (specs/050, the spike of T004, kept as a guard against a library update) — header and footer on every page, «Página X de Y», and inside ONE
 // consultation that crosses a page «Continúa en la página N →» at the bottom and «(continuación)» at the top of the next.
 
-const file = (weight: number) => fileURLToPath(new URL(`../../../../node_modules/@fontsource/figtree/files/figtree-latin-${weight}-normal.woff`, import.meta.url))
+import figtree400 from '@fontsource/figtree/files/figtree-latin-400-normal.woff?inline'
+import figtree600 from '@fontsource/figtree/files/figtree-latin-600-normal.woff?inline'
+import figtree700 from '@fontsource/figtree/files/figtree-latin-700-normal.woff?inline'
+import figtree800 from '@fontsource/figtree/files/figtree-latin-800-normal.woff?inline'
+import figtree900 from '@fontsource/figtree/files/figtree-latin-900-normal.woff?inline'
+import photo from './__fixtures__/foto.jpg?inline'
 
-registerFonts(Font, { 400: file(400), 600: file(600), 700: file(700), 800: file(800), 900: file(900) })
+// The fonts and the photo come as data: URLs (no file system in the browser build's types).
+registerFonts(Font, { 400: figtree400, 600: figtree600, 700: figtree700, 800: figtree800, 900: figtree900 })
 
 const long = 'Desde el miércoles 15 tiene fiebre por las noches; la más alta fue 38.6 °C el jueves. Tos seca que aumenta al acostarse. '.repeat(80)
 
@@ -49,7 +53,7 @@ function Spike() {
 }
 
 async function pagesText(buffer: Uint8Array): Promise<string[]> {
-  const pdf = await getDocument({ data: buffer, useSystemFonts: false, isEvalSupported: false }).promise
+  const pdf = await getDocument({ data: buffer, useSystemFonts: false }).promise
   const pages: string[] = []
   for (let i = 1; i <= pdf.numPages; i++) {
     const content = await (await pdf.getPage(i)).getTextContent()
@@ -61,7 +65,7 @@ async function pagesText(buffer: Uint8Array): Promise<string[]> {
 describe('the PDF library (spike)', () => {
   it('repeats header and footer, numbers the pages, and says where a crossing consultation continues', async () => {
     const buffer = await renderToBuffer(<Spike />)
-    expect(Buffer.from(buffer.subarray(0, 4)).toString()).toBe('%PDF')
+    expect(new TextDecoder().decode(buffer.subarray(0, 4))).toBe('%PDF')
     const pages = await pagesText(new Uint8Array(buffer))
     expect(pages.length).toBeGreaterThan(1)
     pages.forEach((text, i) => {
@@ -76,15 +80,14 @@ describe('the PDF library (spike)', () => {
   }, 60_000)
 
   it('embeds a JPEG photo', async () => {
-    const jpeg = readFileSync(fileURLToPath(new URL('./__fixtures__/foto.jpg', import.meta.url)))
     const buffer = await renderToBuffer(
       <Document>
         <Page size="LETTER">
-          <Image src={{ data: jpeg, format: 'jpg' }} style={{ width: 240, height: 160 }} />
+          <Image src={photo} style={{ width: 240, height: 160 }} />
         </Page>
       </Document>,
     )
-    const pdf = await getDocument({ data: new Uint8Array(buffer), isEvalSupported: false }).promise
+    const pdf = await getDocument({ data: new Uint8Array(buffer) }).promise
     const ops = await (await pdf.getPage(1)).getOperatorList()
     expect(ops.fnArray).toContain(OPS.paintImageXObject)
   }, 60_000)
