@@ -20,7 +20,7 @@ dejó pendientes (2026-09-21). No se construye nada de esto hasta que se respond
   fecha y síntomas; si se permite borrar una consulta o un medicamento; y el diseño (los mocks no tienen esa pantalla).
   Requiere endpoint nuevo y su spec. Recomendación que se dio: editar solo nombre, frecuencia, duración y hora de cada
   medicamento, regenerando sus tomas con un aviso de que se pierden las marcas.
-  **Decidido 2026-10-26 → `specs/051-editar-consultas/`**: se edita todo (doctor, fecha, síntomas, notas y cada
+  **Hecho en `specs/051-editar-consultas/` (decidido 2026-10-26)**: se edita todo (doctor, fecha, síntomas, notas y cada
   medicamento: nombre, frecuencia, duración, primera toma) pero **un cambio de horario solo rehace las tomas futuras sin
   marcar** (lo marcado y lo pasado no cambia nunca, como editar un suplemento); se puede **quitar un medicamento sin
   ninguna toma marcada** (la consulta completa no se borra); edita el nivel `Full` (dueña y Tutor) **en cualquier plan**

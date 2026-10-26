@@ -22,6 +22,8 @@
 > **Nota (spec 020, 2026-09-30)**: segunda excepción a FR-014: el padre, por indicación de su médico y tras confirmarlo, puede **agregar
 > tomas al final** de un medicamento (`POST …/medications/{id}/extend`). Se agregan filas (`doses`) y se guarda un registro de
 > solo agregar (`medication_extensions`: cuenta, número propuesto y confirmado, hora); nada existente se edita ni se borra.
+>
+> **Nota (spec 051, 2026-10-26)**: la consulta se puede **editar** (`PUT /consultations/{id}`, ver `specs/051-editar-consultas/`). Lo ya registrado no cambia: una toma marcada o cuya hora ya pasó se conserva tal cual; un cambio de horario solo rehace las tomas que aún no llegan y no están marcadas. Una consulta nunca se borra; un medicamento solo se quita si no tiene tomas marcadas.
 
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
@@ -84,7 +86,7 @@ Como padre/tutor, quiero abrir una consulta ya registrada y marcar cada toma pro
 - ¿Qué pasa si el padre intenta guardar la consulta sin ningún medicamento? El sistema rechaza el guardado (FR-015) — una consulta sin receta queda fuera de alcance de esta funcionalidad.
 - ¿Qué pasa si dos medicamentos de la misma consulta tienen frecuencias distintas (uno cada 8h, otro cada 24h)? Cada uno genera su propio listado de tomas de forma independiente.
 - ¿Qué pasa si el padre no puede tomar/subir una foto en ese momento? No puede guardar la consulta todavía — la foto es obligatoria (ver Aclaraciones); debe volver a intentarlo cuando la tenga.
-- ¿Se puede editar o borrar una consulta ya guardada? No — es inmutable una vez guardada (FR-014), igual que los hijos en specs/001-registro-cuenta-usuario.
+- ¿Se puede editar o borrar una consulta ya guardada? No — es inmutable una vez guardada (FR-014), igual que los hijos en specs/001-registro-cuenta-usuario. (Desde la spec 051 se puede editar; nunca borrar.)
 - ¿Se puede marcar una toma de un tratamiento cuya duración ya terminó (p. ej. hace 2 meses)? Sí, el marcado queda siempre disponible sin importar cuándo fue la toma (ver Aclaraciones).
 
 ## Requisitos *(obligatorio)*
