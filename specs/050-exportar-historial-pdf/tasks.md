@@ -86,6 +86,8 @@
 - [ ] T030 [P] Documentar: `CLAUDE.md` raíz (spec 050 en «Current features»), `backend/CLAUDE.md` (`internal/historyexport`, las dos rutas), `frontend/CLAUDE.md` (`features/pdfExport/`, la biblioteca cargada aparte, el documento y sus pruebas), `BACKLOG.md` (el extra «exportar el historial a PDF» hecho; queda la liga de solo lectura para el médico).
 - [ ] T031 Verificación completa: `go vet ./...`; `go test ./... -cover` con y sin `pool_max_conns=4`; Swagger sin cambios; `govulncheck ./...`; `npx vitest run --coverage --testTimeout=30000 --maxWorkers=4`; `npm run build` (anotar el tamaño del chunk del PDF); `npx eslint src e2e`; `npx playwright test --list e2e/exportar-pdf.spec.ts`.
 - [ ] T032 `/code-review` y corregir; marcar las tareas hechas y la spec «Implementada».
+- [ ] T034 [P] (de la revisión del 2026-10-26) `historyexport`: leer las consultas en lote en vez de una por una (`GetByIDWithoutPhoto` hace síntomas, medicamentos y, por medicamento, tomas y extensiones: ~9 consultas por consulta de 3 medicamentos); una consulta por tabla para todos los ids encontrados y el estado de cada toma con `StatusAt` en Go. Medir con 60 consultas y `pool_max_conns=4`.
+- [ ] T035 [P] (de la revisión del 2026-10-26) Fuentes: registrar también los archivos `latin-ext` de Figtree (o Helvetica como respaldo) para que un nombre o una nota con «ł», «ő», «ş»… no salga en blanco en el PDF; prueba con esos caracteres en `library.test.tsx`.
 - [ ] T033 Push y PR a `develop` (primera corrida del CI en cinco jobs: revisar tiempos y 429 de Clerk; si aparecen, bajar los workers por job a 3).
 
 ---

@@ -113,27 +113,19 @@ func trimmedCodes(codes []string) []string {
 	return out
 }
 
-// requirePaid reads the plan of the account that owns the child and refuses the search unless it is the paid one (research
-// R6). ErrChildNotFound when the child doesn't exist. The server decides, never the client.
-func (r *Repository) requirePaid(ctx context.Context, childID uuid.UUID) error {
-	_, plan, err := accountPlanOf(ctx, r.pool, childID, false)
-	if err != nil {
-		return err
-	}
-	if plan != planPaid {
-		return &PlanLimitError{Reason: PlanLimitHistorySearch}
-	}
-	return nil
-}
-
 // Search lists the child's consultations that meet every criterion given, most recent first, in the same shape as
 // GetByChild. Values only ever travel as query arguments; the SQL text is built from fixed fragments. A free account gets
-// a *PlanLimitError (and no rows, whatever it asked); a symptom code the catalog never had is ErrSymptomNotAvailable.
+// a *PlanLimitError (and no rows, whatever it asked; research R6: the server decides, never the client); a symptom code
+// the catalog never had is ErrSymptomNotAvailable.
 func (r *Repository) Search(ctx context.Context, childID uuid.UUID, s HistorySearch) ([]Consultation, error) {
-	if err := r.requirePaid(ctx, childID); err != nil {
+	if err := r.RequirePaid(ctx, childID, PlanLimitHistorySearch); err != nil {
 		return nil, err
 	}
+	return r.search(ctx, childID, s)
+}
 
+// search is Search once the plan was checked.
+func (r *Repository) search(ctx context.Context, childID uuid.UUID, s HistorySearch) ([]Consultation, error) {
 	if len(s.SymptomCodes) > 0 {
 		// Retired symptoms count: an old consultation keeps them and must still be found by them (specs/012).
 		var known int
@@ -202,7 +194,7 @@ func (r *Repository) Search(ctx context.Context, childID uuid.UUID, s HistorySea
 // are not unified or corrected), sorted without telling apart case or accents. Paid accounts only, like Search. One
 // query for both lists; never nil: a child without consultations has empty lists, not null.
 func (r *Repository) HistoryOptions(ctx context.Context, childID uuid.UUID) (*HistoryOptions, error) {
-	if err := r.requirePaid(ctx, childID); err != nil {
+	if err := r.RequirePaid(ctx, childID, PlanLimitHistorySearch); err != nil {
 		return nil, err
 	}
 	rows, err := r.pool.Query(ctx, `

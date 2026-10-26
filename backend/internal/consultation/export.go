@@ -32,6 +32,17 @@ func (r *Repository) RequirePaid(ctx context.Context, childID uuid.UUID, reason 
 	return nil
 }
 
+// SearchAfterPlan is Search for a caller that already checked the plan under its own reason (the PDF: pdf_export), so the
+// plan is decided once and a plan that lapses in between can't answer with the history's reason.
+func (r *Repository) SearchAfterPlan(ctx context.Context, childID uuid.UUID, s HistorySearch) ([]Consultation, error) {
+	return r.search(ctx, childID, s)
+}
+
+// Photo is the consultation's prescription photo alone; see Repository.Photo.
+func (s *Service) Photo(ctx context.Context, id uuid.UUID) ([]byte, error) {
+	return s.repo.Photo(ctx, id)
+}
+
 // ValidateHistorySearch is the history's criteria rules (specs/031), for the PDF's «Usar los filtros del historial».
 func ValidateHistorySearch(in HistorySearch) (HistorySearch, ValidationErrors) {
 	return validateHistorySearch(in)
@@ -82,7 +93,7 @@ func (h *Handler) GetPhoto(w http.ResponseWriter, r *http.Request) {
 		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, consultationNotFoundBody(), nil)
 		return
 	}
-	photo, err := h.service.repo.Photo(r.Context(), id)
+	photo, err := h.service.Photo(r.Context(), id)
 	if errors.Is(err, ErrConsultationNotFound) {
 		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, consultationNotFoundBody(), nil)
 		return

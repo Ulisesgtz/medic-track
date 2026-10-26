@@ -70,7 +70,7 @@ func (s *Service) Build(ctx context.Context, childID uuid.UUID, req Request) (*D
 }
 
 func (s *Service) addConsultations(ctx context.Context, childID uuid.UUID, req Request, appointments []appointmentRow, doc *Document) error {
-	found, err := s.consultations.Search(ctx, childID, req.search())
+	found, err := s.consultations.SearchAfterPlan(ctx, childID, req.search())
 	if err != nil {
 		return err
 	}
