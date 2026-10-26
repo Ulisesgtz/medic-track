@@ -215,6 +215,8 @@ func NewRouter(d Deps) *chi.Mux {
 		// The prescription photo alone, for the history's PDF (specs/050), which asks for each photo apart.
 		r.With(seesConsultation).Get("/consultations/{consultationId}/photo", d.Consultation.GetPhoto)
 		r.With(seesConsultation).Patch("/consultations/{consultationId}/doses/{doseId}", d.Consultation.UpdateDose)
+		// Specs/051: editing a saved consultation (any plan; the free plan's one-active-treatment rule still applies).
+		r.With(fullConsultation).Put("/consultations/{consultationId}", d.Consultation.UpdateConsultation)
 		r.With(fullConsultation).Post("/consultations/{consultationId}/medications/{medicationId}/end", d.Consultation.EndTreatment)
 		r.With(fullConsultation).Post("/consultations/{consultationId}/medications/{medicationId}/extend", d.Consultation.ExtendTreatment)
 

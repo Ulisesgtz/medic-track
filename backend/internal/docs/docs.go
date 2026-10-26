@@ -3011,6 +3011,86 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The whole consultation as the parent left it: doctor, date, notes, symptoms, photo (optional: empty keeps it) and\nthe medications (with id = an existing one, without = a new one; one left out is removed, only if none of its\ndoses is marked). A changed schedule (frequency, duration, first dose or the consultation's date) only drops\nthe doses still ahead and unmarked and adds the new schedule's doses still ahead; a marked dose or one whose\ntime passed never changes. An ended treatment keeps its schedule. Any plan; the free plan's rule of one\nactive treatment at a time still applies. The kind (record only) never changes.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "Edit a saved consultation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Consultation UUID",
+                        "name": "consultationId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The consultation as edited",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/UpdateConsultationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationDetailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing/invalid field, medication_not_found, treatment_ended or symptom_not_available",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't edit this consultation",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No consultation exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationNotFoundResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "edit_conflict (another edit was saved) or medication_has_marks",
+                        "schema": {
+                            "$ref": "#/definitions/EditConflictResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Free plan: another treatment is active, or the photo limit (photo_limit_exceeded)",
+                        "schema": {
+                            "$ref": "#/definitions/PlanLimitResponse"
+                        }
+                    }
+                }
             }
         },
         "/consultations/{consultationId}/appointment": {
@@ -5283,9 +5363,22 @@ const docTemplate = `{
                     "type": "string",
                     "example": "2026-01-15"
                 },
+                "createdAt": {
+                    "description": "CreatedAt is when it was saved; with Edited, the version an edit sends back as expectedVersion (specs/051).",
+                    "type": "string",
+                    "example": "2026-10-18T15:20:00.123456Z"
+                },
                 "doctorName": {
                     "type": "string",
                     "example": "Dra. López"
+                },
+                "edited": {
+                    "description": "Edited is the last edit (specs/051); null if the consultation was never edited.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/ConsultationEditedResponse"
+                        }
+                    ]
                 },
                 "id": {
                     "type": "string",
@@ -5315,6 +5408,19 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/SymptomResponse"
                     }
+                }
+            }
+        },
+        "ConsultationEditedResponse": {
+            "type": "object",
+            "properties": {
+                "at": {
+                    "type": "string",
+                    "example": "2026-10-26T17:05:00.123456Z"
+                },
+                "by": {
+                    "type": "string",
+                    "example": "Ana"
                 }
             }
         },
@@ -5547,6 +5653,23 @@ const docTemplate = `{
                             "$ref": "#/definitions/TakenByResponse"
                         }
                     ]
+                }
+            }
+        },
+        "EditConflictResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "enum": [
+                        "edit_conflict",
+                        "medication_has_marks"
+                    ],
+                    "example": "edit_conflict"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Another edit of this consultation was saved after it was opened"
                 }
             }
         },
@@ -7441,6 +7564,78 @@ const docTemplate = `{
                         "detailed"
                     ],
                     "example": "detailed"
+                }
+            }
+        },
+        "UpdateConsultationRequest": {
+            "type": "object",
+            "properties": {
+                "consultDate": {
+                    "type": "string",
+                    "example": "2026-10-18"
+                },
+                "doctorName": {
+                    "type": "string",
+                    "example": "Dra. López"
+                },
+                "expectedVersion": {
+                    "description": "ExpectedVersion is the detail's edited.at, or its createdAt if it was never edited (specs/051).",
+                    "type": "string",
+                    "example": "2026-10-18T15:20:00.123456Z"
+                },
+                "medications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/UpdateMedicationRequest"
+                    }
+                },
+                "notes": {
+                    "type": "string",
+                    "example": "La fiebre empezó el domingo"
+                },
+                "photoBase64": {
+                    "description": "PhotoBase64 replaces the prescription photo; empty or omitted leaves it as it is.",
+                    "type": "string"
+                },
+                "symptomCodes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "fever",
+                        "cough"
+                    ]
+                },
+                "utcOffsetMinutes": {
+                    "type": "integer",
+                    "example": -360
+                }
+            }
+        },
+        "UpdateMedicationRequest": {
+            "type": "object",
+            "properties": {
+                "durationDays": {
+                    "type": "integer",
+                    "example": 7
+                },
+                "frequencyHours": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "id": {
+                    "description": "ID is an existing medication of this consultation; omit it for a new one. A medication left out is removed.",
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Amoxicilina"
+                },
+                "startTime": {
+                    "type": "string",
+                    "example": "08:00"
                 }
             }
         },

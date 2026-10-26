@@ -126,7 +126,17 @@ type consultationDetailResponse struct {
 	Medications []medicationResponse      `json:"medications"`
 	// RecordOnly: saved only as a record (specs/024) — its medications have no start time and no doses.
 	RecordOnly bool `json:"recordOnly" example:"false"`
+	// CreatedAt is when it was saved; with Edited, the version an edit sends back as expectedVersion (specs/051).
+	CreatedAt string `json:"createdAt" example:"2026-10-18T15:20:00.123456Z"`
+	// Edited is the last edit (specs/051); null if the consultation was never edited.
+	Edited *editedResponse `json:"edited"`
 } // @name ConsultationDetailResponse
+
+// editedResponse says when a consultation was last edited and by whom: the first name of the account, never its e-mail.
+type editedResponse struct {
+	At string `json:"at" example:"2026-10-26T17:05:00.123456Z"`
+	By string `json:"by" example:"Ana"`
+} // @name ConsultationEditedResponse
 
 // sessionErrorResponseDoc documents the 401/403 bodies every endpoint here can
 // answer (missing/invalid session, or a resource the session doesn't own).
@@ -993,5 +1003,19 @@ func toConsultationDetailResponse(c *Consultation, actor uuid.UUID) consultation
 		Symptoms:    symptoms,
 		Medications: medications,
 		RecordOnly:  c.RecordOnly,
+		CreatedAt:   c.CreatedAt.UTC().Format(time.RFC3339Nano),
+		Edited:      toEditedResponse(c),
 	}
+}
+
+// toEditedResponse is the consultation's last edit, or nil if it was never edited.
+func toEditedResponse(c *Consultation) *editedResponse {
+	if c.EditedAt == nil {
+		return nil
+	}
+	by := ""
+	if c.EditedBy != nil {
+		by = *c.EditedBy
+	}
+	return &editedResponse{At: c.EditedAt.UTC().Format(time.RFC3339Nano), By: by}
 }

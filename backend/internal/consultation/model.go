@@ -11,8 +11,8 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 )
 
-// Consultation represents a single medical visit for a child. Immutable
-// once created (FR-014) — there is no update/delete endpoint in this scope.
+// Consultation represents a single medical visit for a child. It is never deleted; since specs/051 it can be edited
+// (Repository.Update), but what was already registered — a marked dose, a dose whose time passed — never changes.
 type Consultation struct {
 	ID          uuid.UUID
 	ChildID     uuid.UUID
@@ -38,8 +38,12 @@ type Consultation struct {
 	// instants are real. Nil means ConsultDate's own location (UTC).
 	ScheduleLocation *time.Location
 	// RecordOnly says the consultation was saved only as a record (specs/024): its medications have no start time and no
-	// doses exist. Set when creating, never changed (consultations are immutable).
+	// doses exist. Set when creating, never changed (an edit keeps the kind, specs/051).
 	RecordOnly bool
+	// EditedAt and EditedBy are the last edit (specs/051): when, and the first name of the account that made it (never its
+	// e-mail); nil if the consultation was never edited. Filled by GetByID.
+	EditedAt *time.Time
+	EditedBy *string
 	// MedicationCount is filled only when listing (GetByChild), where the
 	// medications themselves aren't loaded.
 	MedicationCount int

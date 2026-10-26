@@ -21,6 +21,7 @@ import { RecordOnlyBadge } from './RecordOnlyBadge'
 import { TreatmentCalendar } from './TreatmentCalendar'
 import { dayKey, firstDoseDay, initialDay, numbered } from './treatmentDays'
 import { DOSE_REFETCH_MS } from './doseStatus'
+import { EDIT_TEXT, editedLine } from './editText'
 
 /** Said where the photo would be when the consultation was saved after the account reached its photo limit (specs/043). */
 const NO_PHOTO_TEXT = 'Esta consulta se guardó sin foto.'
@@ -104,6 +105,9 @@ export function ConsultationDetailPage() {
   const hasSymptoms = consultation.symptoms.length > 0
   // Notes made only of spaces or line breaks count as none, as in the list card.
   const hasNotes = consultation.notes.trim() !== ''
+  // specs/051: who can do everything edits the consultation; the last edit is said under its title.
+  const editPath = `/consultations/${consultation.id}/editar`
+  const edited = consultation.edited ? editedLine(consultation.edited) : null
 
   const photoImage = (className: string) => (
     <button
@@ -182,8 +186,16 @@ export function ConsultationDetailPage() {
                   {consultation.recordOnly && <RecordOnlyBadge />}
                 </p>
                 <h1 className="mt-1 text-4xl font-black tracking-tight text-ink">{consultation.doctorName}</h1>
+                {edited && <p className="mt-2 text-sm font-semibold text-slate-600">{edited}</p>}
               </div>
               {access.canAdd && (
+                <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  to={editPath}
+                  className="inline-flex min-h-11 items-center rounded-2xl border-2 border-action px-6 py-3 text-[15px] font-extrabold text-action transition-colors hover:bg-hint"
+                >
+                  {EDIT_TEXT.open}
+                </Link>
                 <NewConsultationEntry
                   to={`${childPath}/consultations/new`}
                   // specs/030: the free plan with a treatment still running gets the plan pop-up, not a form it can't save.
@@ -192,6 +204,7 @@ export function ConsultationDetailPage() {
                 >
                   Nueva consulta
                 </NewConsultationEntry>
+                </div>
               )}
             </div>
 
@@ -282,6 +295,15 @@ export function ConsultationDetailPage() {
             {consultation.recordOnly && <RecordOnlyBadge />}
           </p>
           <h1 className="mt-1.5 text-2xl font-black tracking-tight text-white">{consultation.doctorName}</h1>
+          {edited && <p className="mt-1.5 text-[13px] font-semibold text-hint-border">{edited}</p>}
+          {access.canAdd && (
+            <Link
+              to={editPath}
+              className="mt-4 inline-flex min-h-11 items-center rounded-2xl border-2 border-bright px-5 py-2.5 text-[15px] font-extrabold text-bright transition-colors hover:bg-white/10"
+            >
+              {EDIT_TEXT.open}
+            </Link>
+          )}
         </header>
 
         <section className="px-6 pt-6">

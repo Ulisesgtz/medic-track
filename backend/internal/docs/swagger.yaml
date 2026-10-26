@@ -384,9 +384,19 @@ definitions:
       consultDate:
         example: "2026-01-15"
         type: string
+      createdAt:
+        description: CreatedAt is when it was saved; with Edited, the version an edit
+          sends back as expectedVersion (specs/051).
+        example: "2026-10-18T15:20:00.123456Z"
+        type: string
       doctorName:
         example: Dra. López
         type: string
+      edited:
+        allOf:
+        - $ref: '#/definitions/ConsultationEditedResponse'
+        description: Edited is the last edit (specs/051); null if the consultation
+          was never edited.
       id:
         example: a1b2c3d4-0000-0000-0000-000000000000
         type: string
@@ -410,6 +420,15 @@ definitions:
         items:
           $ref: '#/definitions/SymptomResponse'
         type: array
+    type: object
+  ConsultationEditedResponse:
+    properties:
+      at:
+        example: "2026-10-26T17:05:00.123456Z"
+        type: string
+      by:
+        example: Ana
+        type: string
     type: object
   ConsultationFieldError:
     properties:
@@ -583,6 +602,18 @@ definitions:
         - $ref: '#/definitions/TakenByResponse'
         description: 'TakenBy: who marked it and when (specs/032); null if it isn''t
           marked or was marked before that feature.'
+    type: object
+  EditConflictResponse:
+    properties:
+      error:
+        enum:
+        - edit_conflict
+        - medication_has_marks
+        example: edit_conflict
+        type: string
+      message:
+        example: Another edit of this consultation was saved after it was opened
+        type: string
     type: object
   EmailConflictResponse:
     properties:
@@ -1960,6 +1991,61 @@ definitions:
         - generic
         - detailed
         example: detailed
+        type: string
+    type: object
+  UpdateConsultationRequest:
+    properties:
+      consultDate:
+        example: "2026-10-18"
+        type: string
+      doctorName:
+        example: Dra. López
+        type: string
+      expectedVersion:
+        description: ExpectedVersion is the detail's edited.at, or its createdAt if
+          it was never edited (specs/051).
+        example: "2026-10-18T15:20:00.123456Z"
+        type: string
+      medications:
+        items:
+          $ref: '#/definitions/UpdateMedicationRequest'
+        type: array
+      notes:
+        example: La fiebre empezó el domingo
+        type: string
+      photoBase64:
+        description: PhotoBase64 replaces the prescription photo; empty or omitted
+          leaves it as it is.
+        type: string
+      symptomCodes:
+        example:
+        - fever
+        - cough
+        items:
+          type: string
+        type: array
+      utcOffsetMinutes:
+        example: -360
+        type: integer
+    type: object
+  UpdateMedicationRequest:
+    properties:
+      durationDays:
+        example: 7
+        type: integer
+      frequencyHours:
+        example: 8
+        type: integer
+      id:
+        description: ID is an existing medication of this consultation; omit it for
+          a new one. A medication left out is removed.
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      name:
+        example: Amoxicilina
+        type: string
+      startTime:
+        example: "08:00"
         type: string
     type: object
   VaccinationErrorResponse:
@@ -4515,6 +4601,66 @@ paths:
       security:
       - ClerkSession: []
       summary: Get a consultation's full detail
+      tags:
+      - consultations
+    put:
+      consumes:
+      - application/json
+      description: |-
+        The whole consultation as the parent left it: doctor, date, notes, symptoms, photo (optional: empty keeps it) and
+        the medications (with id = an existing one, without = a new one; one left out is removed, only if none of its
+        doses is marked). A changed schedule (frequency, duration, first dose or the consultation's date) only drops
+        the doses still ahead and unmarked and adds the new schedule's doses still ahead; a marked dose or one whose
+        time passed never changes. An ended treatment keeps its schedule. Any plan; the free plan's rule of one
+        active treatment at a time still applies. The kind (record only) never changes.
+      parameters:
+      - description: Consultation UUID
+        in: path
+        name: consultationId
+        required: true
+        type: string
+      - description: The consultation as edited
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateConsultationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ConsultationDetailResponse'
+        "400":
+          description: Missing/invalid field, medication_not_found, treatment_ended
+            or symptom_not_available
+          schema:
+            $ref: '#/definitions/ConsultationValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session can't edit this consultation
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "404":
+          description: No consultation exists for this id
+          schema:
+            $ref: '#/definitions/ConsultationNotFoundResponse'
+        "409":
+          description: edit_conflict (another edit was saved) or medication_has_marks
+          schema:
+            $ref: '#/definitions/EditConflictResponse'
+        "422":
+          description: 'Free plan: another treatment is active, or the photo limit
+            (photo_limit_exceeded)'
+          schema:
+            $ref: '#/definitions/PlanLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: Edit a saved consultation
       tags:
       - consultations
   /consultations/{consultationId}/appointment:

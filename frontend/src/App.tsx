@@ -18,6 +18,7 @@ import { RoutineFormPage } from './features/supplements/RoutineFormPage'
 import { FamilyPage } from './features/family/FamilyPage'
 import { InvitationPage } from './features/family/InvitationPage'
 import { NewConsultationPage } from './features/consultations/NewConsultationPage'
+import { EditConsultationPage } from './features/consultations/EditConsultationPage'
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage'
 import { LoginPage } from './features/auth/LoginPage'
 import { RequireSession } from './features/auth/RequireSession'
@@ -106,6 +107,14 @@ function App() {
             element={
               <RequireSession>
                 <ConsultationDetailPage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/consultations/:consultationId/editar"
+            element={
+              <RequireSession>
+                <EditConsultationPage />
               </RequireSession>
             }
           />
