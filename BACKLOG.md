@@ -26,6 +26,9 @@ dejó pendientes (2026-09-21). No se construye nada de esto hasta que se respond
   ninguna toma marcada** (la consulta completa no se borra); edita el nivel `Full` (dueña y Tutor) **en cualquier plan**
   (corregir lo propio no se cobra, Principio IV); la consulta dice **«Editada el … por Ana»** (la última edición, sin
   historial de versiones).
+  Pendiente de la revisión (2026-10-26): el horario nuevo se calcula con la zona horaria del dispositivo que edita, y las
+  tomas conservadas con la de quien creó la consulta; si alguien edita desde otra zona, una toma nueva puede quedar a una
+  hora de una conservada. En México no hay horario de verano, así que es raro; se arregla guardando el desfase con la consulta.
 
 ## Próximo a trabajar (decidido 2026-09-28)
 
