@@ -85,6 +85,10 @@ export interface ConsultationDetail {
   /** The marked symptoms in catalog order, retired ones included ([] when none). */
   symptoms: Symptom[]
   medications: Medication[]
+  /** When it was saved (specs/051). With `edited`, the version an edit sends back. Optional: an older backend doesn't send it. */
+  createdAt?: string
+  /** The last edit (specs/051): when, and the first name of who made it; null if never edited. */
+  edited?: { at: string; by: string } | null
 }
 
 // Mirrors specs/006-resumen-detalle-hijo/contracts/get-overview.md.

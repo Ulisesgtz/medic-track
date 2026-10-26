@@ -20,12 +20,16 @@ import {
 } from '../appointments/appointmentValues'
 import { blobToBase64, shrinkPhoto } from './shrinkPhoto'
 import { Notice } from '../../shared/ui/Notice'
-import { createConsultation, ConsultationApiError, type CreateConsultationPayload } from './api'
+import { createConsultation, updateConsultation, ConsultationApiError, type CreateConsultationPayload } from './api'
+import { EDIT_TEXT } from './editText'
+import { toUpdatePayload, type MedicationFlags } from './editValues'
 import { missingFieldsText } from './missingFields'
 import { SymptomPicker } from './SymptomPicker'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
 
 export interface MedicationFormValues {
+  /** The saved medication this row edits (specs/051); absent for a new one. */
+  medicationId?: string
   name: string
   frequencyHours: string
   durationDays: string
@@ -151,6 +155,17 @@ function extractMedications(ocrText: string): MedicationHint[] {
   return extractUnlistedMedications(ocrText)
 }
 
+/** Editing a saved consultation (specs/051) instead of creating one. */
+export interface ConsultationEdit {
+  consultationId: string
+  /** The consultation as it is saved, as the form's values. */
+  values: ConsultationFormValues
+  /** What the edit sends back as `expectedVersion`. */
+  version: string
+  /** Each saved medication, by id: ended, with marks. */
+  flags: Record<string, MedicationFlags>
+}
+
 interface ConsultationFormProps {
   childId: string
   /** 'phone' = mock 04 (dark header with the OCR panel); 'desktop' = mock 14. */
@@ -169,6 +184,10 @@ interface ConsultationFormProps {
   recordOnlyAvailable?: boolean
   /** False on the free plan (specs/033, part 2): the «Próxima cita» fields are shown disabled with a link to the plan. Default: true. */
   appointmentAvailable?: boolean
+  /** Specs/051: edit this saved consultation. No «Próxima cita» (it is edited on its own page), the photo is optional. */
+  edit?: ConsultationEdit
+  /** Specs/051: the edit was refused because the saved consultation changed (another edit, or a mark on a medication taken out). */
+  onConflict?: (kind: 'edit_conflict' | 'medication_has_marks') => void
 }
 
 const MEDICATION_STAGGER_MS = 180
@@ -202,6 +221,8 @@ export function ConsultationForm({
   onDirtyChange,
   recordOnlyAvailable = true,
   appointmentAvailable = true,
+  edit,
+  onConflict,
 }: ConsultationFormProps) {
   const navigate = useNavigate()
   // The free plan's pop-up (specs/030) when the server refuses to save: the form and what was typed stay as they are.
@@ -227,7 +248,7 @@ export function ConsultationForm({
     getValues,
     formState: { errors, isDirty, submitCount },
   } = useForm<ConsultationFormValues>({
-    defaultValues: {
+    defaultValues: edit?.values ?? {
       doctorName: '',
       consultDate: '',
       notes: '',
@@ -255,6 +276,11 @@ export function ConsultationForm({
     mutationFn: async ({ values, photo }: { values: ConsultationFormValues; photo: File | null }) => {
       // The OCR already read the original; what is saved is the scaled-down copy (specs/043).
       const photoBase64 = photo ? await blobToBase64(await shrinkPhoto(photo)) : undefined
+      if (edit) {
+        // Specs/051: the whole consultation; without a new photo the saved one stays.
+        const consultation = await updateConsultation(edit.consultationId, toUpdatePayload(values, edit.version, photoBase64), await getToken())
+        return { consultation, appointmentFailed: false }
+      }
       const payload: CreateConsultationPayload = {
         doctorName: values.doctorName,
         consultDate: values.consultDate,
@@ -286,6 +312,10 @@ export function ConsultationForm({
     },
     onSuccess: ({ consultation, appointmentFailed }) => onSuccess(consultation.id, appointmentFailed),
     onError: async (error) => {
+      if (error instanceof ConsultationApiError && (error.kind === 'edit_conflict' || error.kind === 'medication_has_marks')) {
+        onConflict?.(error.kind)
+        return
+      }
       if (error instanceof ConsultationApiError && error.kind === 'photo_limit_exceeded') setPhotoLimit(true)
       if (error instanceof ConsultationApiError && error.kind === 'plan_limit_active_treatment') setPlanLimit('active_treatment')
       if (error instanceof ConsultationApiError && error.kind === 'plan_limit_record_only') setPlanLimit('record_only')
@@ -392,16 +422,17 @@ export function ConsultationForm({
 
   const onSubmit = handleSubmit(
     (values) => {
-      const apptFound = appointmentAvailable && hasAppointment(appt) ? validateAppointment(appt, values.consultDate) : {}
+      const apptFound = !edit && appointmentAvailable && hasAppointment(appt) ? validateAppointment(appt, values.consultDate) : {}
       setApptErrors(apptFound)
-      if (!photoFile && !photoLimit) {
+      // Editing keeps the saved photo when no other is chosen (specs/051).
+      if (!edit && !photoFile && !photoLimit) {
         setPhotoMissing(true)
         return
       }
       if (Object.keys(apptFound).length > 0) return
       mutation.mutate({ values, photo: photoLimit ? null : photoFile })
     },
-    () => setPhotoMissing(!photoFile && !photoLimit),
+    () => setPhotoMissing(!edit && !photoFile && !photoLimit),
   )
 
   // ---- "Leyendo receta" panel: chooser -> progress -> "Listo".
@@ -461,9 +492,11 @@ export function ConsultationForm({
         </p>
       )}
       <p className={`${gapTop} text-[13px] leading-relaxed text-hint-border`}>
-        {desktop
-          ? 'El texto se lee en tu equipo; la foto se guarda solo en tu cuenta.'
-          : 'El texto se lee en tu teléfono; la foto se guarda solo en tu cuenta.'}
+        {edit && !photoFile
+          ? EDIT_TEXT.photoKept
+          : desktop
+            ? 'El texto se lee en tu equipo; la foto se guarda solo en tu cuenta.'
+            : 'El texto se lee en tu teléfono; la foto se guarda solo en tu cuenta.'}
       </p>
       {showChooser && (
         <div className={gapTop}>
@@ -473,7 +506,7 @@ export function ConsultationForm({
             aria-describedby="photo-label"
             className="min-h-11 cursor-pointer rounded-2xl border-2 border-bright px-5 py-2.5 text-base font-extrabold text-bright transition-colors duration-200 hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-bright focus-visible:ring-offset-2 focus-visible:ring-offset-ink"
           >
-            Seleccionar archivo
+            {edit ? EDIT_TEXT.changePhoto : 'Seleccionar archivo'}
           </button>
         </div>
       )}
@@ -514,9 +547,13 @@ export function ConsultationForm({
   )
 
   const missing = submitCount > 0 && (Object.keys(errors).length > 0 || (photoMissing && !photoFile && !photoLimit))
-  const statusText = mutation.isError && !(mutation.error instanceof ConsultationApiError && mutation.error.kind === 'photo_limit_exceeded')
+  // A conflict of an edit is the page's to say (it reloads the saved consultation).
+  const conflict = mutation.error instanceof ConsultationApiError && (mutation.error.kind === 'edit_conflict' || mutation.error.kind === 'medication_has_marks')
+  const statusText = mutation.isError && !conflict && !(mutation.error instanceof ConsultationApiError && mutation.error.kind === 'photo_limit_exceeded')
     ? mutation.error instanceof ConsultationApiError && mutation.error.kind === 'symptom_not_available'
       ? 'Uno de los síntomas que elegiste ya no está disponible. Revisa la lista e intenta de nuevo.'
+      : edit
+      ? EDIT_TEXT.error
       : mutation.error instanceof ConsultationApiError
       ? mutation.error.message
       : 'Ocurrió un error al guardar la consulta. Intenta de nuevo.'
@@ -555,20 +592,22 @@ export function ConsultationForm({
 
   // specs/024: an old consultation kept only as a record. Decided here, once: consultations are immutable.
   // specs/030: part of the paid plan; on the free plan it is shown (so the parent knows it exists) but can't be marked.
+  // specs/051: the kind of a saved consultation never changes — shown fixed when editing.
+  const recordOnlyEditable = recordOnlyAvailable && !edit
   const recordOnlyField = (
     <label
       htmlFor="recordOnly"
       className={`flex min-h-11 min-w-0 items-start gap-3 rounded-2xl border-[1.5px] border-slate-200 bg-surface ${
-        recordOnlyAvailable ? 'cursor-pointer' : 'cursor-not-allowed bg-slate-50'
+        recordOnlyEditable ? 'cursor-pointer' : 'cursor-not-allowed bg-slate-50'
       } ${desktop ? 'p-5' : 'p-4'}`}
     >
       <input
         id="recordOnly"
         type="checkbox"
-        disabled={!recordOnlyAvailable}
+        disabled={!recordOnlyEditable}
         aria-labelledby="recordOnly-title"
         aria-describedby="recordOnly-help"
-        className={`mt-0.5 h-6 w-6 shrink-0 accent-action ${recordOnlyAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+        className={`mt-0.5 h-6 w-6 shrink-0 accent-action ${recordOnlyEditable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
         {...register('recordOnly')}
       />
       <span className="flex min-w-0 flex-col gap-1">
@@ -576,7 +615,9 @@ export function ConsultationForm({
           Consulta anterior: guardar solo como registro
         </span>
         <span id="recordOnly-help" className="text-[13px] font-semibold text-slate-600">
-          {recordOnlyAvailable
+          {edit
+            ? EDIT_TEXT.recordOnlyFixed
+            : recordOnlyAvailable
             ? 'No se crearán horarios de tomas ni avisos. Esto no se puede cambiar después.'
             : 'Disponible en el plan completo. Con el plan gratuito registras la consulta actual, con sus horarios y avisos.'}
         </span>
@@ -672,7 +713,7 @@ export function ConsultationForm({
         desktop ? 'px-8 py-3.5' : 'py-4'
       }`}
     >
-      {mutation.isPending ? 'Guardando…' : 'Guardar consulta'}
+      {mutation.isPending ? 'Guardando…' : edit ? EDIT_TEXT.save : 'Guardar consulta'}
     </button>
   )
   const photoLimitNotice = photoLimit && (
@@ -702,7 +743,7 @@ export function ConsultationForm({
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             {cancelLink}
-            <h1 className="mt-3 text-4xl font-black tracking-tight text-ink">Nueva consulta</h1>
+            <h1 className="mt-3 text-4xl font-black tracking-tight text-ink">{edit ? EDIT_TEXT.title : 'Nueva consulta'}</h1>
             {childLabel && <p className="mt-2 text-base text-slate-600">Para {childLabel}</p>}
           </div>
           {photoFile && changePhoto}
@@ -714,7 +755,7 @@ export function ConsultationForm({
           {symptomsSection}
           {medications}
           <div className="flex flex-wrap items-center gap-4">{addButton}</div>
-          {appointmentSection}
+          {!edit && appointmentSection}
           {photoLimitNotice}
           <div className="flex flex-wrap items-center justify-end gap-4">{saveButton}</div>
           {status}
@@ -731,7 +772,7 @@ export function ConsultationForm({
           {cancelLink}
           {photoFile && changePhoto}
         </div>
-        <h1 className="mt-5 text-2xl font-black tracking-tight text-white">Nueva consulta</h1>
+        <h1 className="mt-5 text-2xl font-black tracking-tight text-white">{edit ? EDIT_TEXT.title : 'Nueva consulta'}</h1>
         {ocrPanel}
       </header>
       <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5 px-6 pt-6">
@@ -740,7 +781,7 @@ export function ConsultationForm({
         {symptomsSection}
         {medications}
         {addButton}
-        {appointmentSection}
+        {!edit && appointmentSection}
         {photoLimitNotice}
         {saveButton}
         {status}

@@ -9,7 +9,7 @@ export type { ValidationErrorDetail }
 
 /** Discriminated error thrown by this feature's api functions. */
 export class ConsultationApiError extends ApiError<
-  'child_not_found' | 'consultation_not_found' | 'dose_not_found' | 'medication_not_found' | 'nothing_to_extend' | 'validation_error' | 'symptom_not_available' | 'plan_limit_active_treatment' | 'plan_limit_record_only' | 'plan_limit_history_search' | 'photo_limit_exceeded' | 'unknown'
+  'child_not_found' | 'consultation_not_found' | 'dose_not_found' | 'medication_not_found' | 'nothing_to_extend' | 'validation_error' | 'symptom_not_available' | 'plan_limit_active_treatment' | 'plan_limit_record_only' | 'plan_limit_history_search' | 'photo_limit_exceeded' | 'edit_conflict' | 'medication_has_marks' | 'unknown'
 > {}
 
 // contracts/get-consultations.md
@@ -103,6 +103,63 @@ export async function createConsultation(
     )
   }
   throw new ConsultationApiError('unknown', body.message ?? 'Unexpected error creating consultation')
+}
+
+export interface UpdateMedicationPayload extends CreateMedicationPayload {
+  /** An existing medication of the consultation; left out for a new one. A medication left out of the list is removed. */
+  id?: string
+}
+
+/** The whole consultation as edited (specs/051, contracts/api.md). Its kind (record only) never changes, so it isn't here. */
+export interface UpdateConsultationPayload {
+  /** The detail's `edited.at`, or its `createdAt` if it was never edited. */
+  expectedVersion: string
+  doctorName: string
+  consultDate: string
+  /** A new prescription photo; left out, the saved one stays. */
+  photoBase64?: string
+  notes: string
+  symptomCodes: string[]
+  medications: UpdateMedicationPayload[]
+  utcOffsetMinutes: number
+}
+
+// specs/051-editar-consultas/contracts/api.md
+export async function updateConsultation(
+  consultationId: string,
+  payload: UpdateConsultationPayload,
+  token: string | null,
+): Promise<ConsultationDetail> {
+  const res = await fetch(`${API_BASE_URL}/consultations/${consultationId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...withAuthHeader(token) },
+    body: JSON.stringify(payload),
+  })
+  const body = await res.json()
+
+  if (res.ok) {
+    return body as ConsultationDetail
+  }
+  if (res.status === 404 || res.status === 403) {
+    throw new ConsultationApiError('consultation_not_found', body.message ?? 'Consultation not found')
+  }
+  if (res.status === 409) {
+    // Someone saved another edit meanwhile, or a medication taken out got a mark: nothing was saved.
+    throw new ConsultationApiError(body.error === 'medication_has_marks' ? 'medication_has_marks' : 'edit_conflict', body.message ?? 'Conflict')
+  }
+  if (res.status === 400 && body.details?.some((d: ValidationErrorDetail) => d.message === 'symptom_not_available')) {
+    throw new ConsultationApiError('symptom_not_available', body.message ?? 'Symptom not available', body.details)
+  }
+  if (res.status === 400) {
+    throw new ConsultationApiError('validation_error', body.message ?? 'Validation error', body.details)
+  }
+  if (res.status === 422 && body.error === 'photo_limit_exceeded') {
+    throw new ConsultationApiError('photo_limit_exceeded', body.message ?? 'The account reached its limit of photos')
+  }
+  if (res.status === 422 && body.error === 'freemium_consultation_limit_exceeded') {
+    throw new ConsultationApiError('plan_limit_active_treatment', body.message ?? 'The free plan does not include this')
+  }
+  throw new ConsultationApiError('unknown', body.message ?? 'Unexpected error editing the consultation')
 }
 
 /**
