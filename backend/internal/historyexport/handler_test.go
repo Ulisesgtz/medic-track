@@ -13,10 +13,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Ulisesgtz/medic-track/backend/internal/access"
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/historyexport"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
+	"github.com/Ulisesgtz/medic-track/backend/internal/vaccination"
 )
 
 func post(t *testing.T, h *historyexport.Handler, childID, body string) *httptest.ResponseRecorder {
@@ -24,6 +26,8 @@ func post(t *testing.T, h *historyexport.Handler, childID, body string) *httptes
 	r := chi.NewRouter()
 	r.Post("/children/{childId}/export", h.Export)
 	req := httptest.NewRequest(http.MethodPost, "/children/"+childID+"/export", strings.NewReader(body))
+	// As behind the route's access check: a session with an account.
+	req = req.WithContext(access.WithAccess(req.Context(), access.Access{Level: access.Mark, ActorAccountID: uuid.New()}))
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, req)
 	return rec
@@ -60,6 +64,62 @@ func TestExport_AnswersTheDocument(t *testing.T) {
 	require.Equal(t, float64(3), med["doses"].(map[string]any)["total"])
 	require.NotNil(t, body["photos"])
 	require.Equal(t, []any{}, body["vaccinations"])
+}
+
+// Every part of the answer: the running treatment, the next appointment, an ended medication with its last mark, a corrected
+// vaccine of the family's own, and the photos.
+func TestExport_AnswersEveryPart(t *testing.T) {
+	ctx := context.Background()
+	pool := testPool(t)
+	f := newFamily(t, pool, account.PlanPaid)
+	c := consult(t, pool, f, today(), "Dra. Laura Cázares",
+		consultation.CreateMedicationInput{Name: "Amoxicilina", FrequencyHours: 8, DurationDays: 30, StartTime: strPtr("00:00")},
+		consultation.CreateMedicationInput{Name: "Ibuprofeno", FrequencyHours: 8, DurationDays: 30, StartTime: strPtr("00:00")})
+	svc := consultation.NewService(consultation.NewRepository(pool))
+	_, err := svc.MarkDose(ctx, c.ID, c.Medications[1].Doses[0].ID, true, consultation.Actor{AccountID: f.accountID, Full: true})
+	require.NoError(t, err)
+	_, err = svc.EndTreatment(ctx, c.ID, c.Medications[1].ID)
+	require.NoError(t, err)
+	vacc := vaccination.NewService(vaccination.NewRepository(pool))
+	v, err := vacc.Create(ctx, f.childID, f.accountID, vaccination.Input{CustomName: "Vacuna del viaje", AppliedOn: "2024-05-02"})
+	require.NoError(t, err)
+	_, err = vacc.Update(ctx, f.childID, v.ID, f.accountID, vaccination.Input{CustomName: "Vacuna del viaje", AppliedOn: "2024-05-03", Lot: "L-1"})
+	require.NoError(t, err)
+	_, err = pool.Exec(ctx, `INSERT INTO consultation_appointments (consultation_id, child_id, account_id, starts_at, utc_offset_minutes, created_by_account_id, location)
+		VALUES ($1, $2, $3, now() + interval '2 days', -360, $3, 'Consultorio 204')`, c.ID, f.childID, f.accountID)
+	require.NoError(t, err)
+
+	rec := post(t, handler(t, &capture{}), f.childID.String(), `{"period":{"kind":"all"},"sections":{"consultations":true,"vaccinations":true,"photos":true}}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var body struct {
+		ActiveTreatment *struct{ MedicationName, DoctorName string } `json:"activeTreatment"`
+		NextAppointment *struct{ Location string }                   `json:"nextAppointment"`
+		Consultations   []struct {
+			Appointment *struct{ Location string } `json:"appointment"`
+			Medications []struct {
+				EndedAt  *string              `json:"endedAt"`
+				LastMark *struct{ By string } `json:"lastMark"`
+				Doses    struct{ Total int }  `json:"doses"`
+			} `json:"medications"`
+		} `json:"consultations"`
+		Vaccinations []struct {
+			Custom    bool                  `json:"custom"`
+			Corrected *struct{ By *string } `json:"corrected"`
+		} `json:"vaccinations"`
+		Photos struct {
+			Consultations []struct{ ConsultationID string } `json:"consultations"`
+		} `json:"photos"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Equal(t, "Amoxicilina", body.ActiveTreatment.MedicationName)
+	require.Equal(t, "Consultorio 204", body.NextAppointment.Location)
+	require.Equal(t, "Consultorio 204", body.Consultations[0].Appointment.Location)
+	ibu := body.Consultations[0].Medications[1]
+	require.NotNil(t, ibu.EndedAt)
+	require.Equal(t, "Ana", ibu.LastMark.By)
+	require.True(t, body.Vaccinations[0].Custom)
+	require.Equal(t, "Ana", *body.Vaccinations[0].Corrected.By)
+	require.Equal(t, c.ID.String(), body.Photos.Consultations[0].ConsultationID)
 }
 
 func TestExport_AFreeFamilyGets422AndNoData(t *testing.T) {

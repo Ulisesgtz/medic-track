@@ -25,9 +25,6 @@ func NewService(repo *Repository, consultations *consultation.Repository, vaccin
 	return &Service{repo: repo, consultations: consultations, vaccinations: vaccinations, now: time.Now}
 }
 
-// SetClock replaces the clock (tests).
-func (s *Service) SetClock(now func() time.Time) { s.now = now }
-
 // Build checks the plan FIRST — a free family gets a *consultation.PlanLimitError (reason pdf_export) and nothing is read, also
 // when only the card was asked for — and then reads the document. The period only narrows the consultations; the card is always
 // whole. ErrChildNotFound if the child doesn't exist.
