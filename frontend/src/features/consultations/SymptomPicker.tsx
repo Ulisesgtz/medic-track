@@ -10,6 +10,11 @@ interface SymptomPickerProps {
   variant: 'phone' | 'desktop'
   /** The group's heading; "¿Qué síntomas tuvo?" in "Nueva consulta" (the default). */
   legend?: string
+  /**
+   * Specs/051: the symptoms a saved consultation already has. One retired from the catalog is still drawn (in its category),
+   * so editing can take it off; it can't be marked on any other consultation.
+   */
+  kept?: Symptom[]
 }
 
 /**
@@ -39,8 +44,9 @@ const chipOn = 'border-action bg-action text-white'
  * `aria-pressed`; the marked one is filled and carries a check, so it doesn't rely on color alone.
  * If the catalog can't load, the consultation can still be saved (FR-016).
  */
-export function SymptomPicker({ value, onChange, variant, legend = '¿Qué síntomas tuvo?' }: SymptomPickerProps) {
-  const { data, isPending, isError } = useSymptoms()
+export function SymptomPicker({ value, onChange, variant, legend = '¿Qué síntomas tuvo?', kept }: SymptomPickerProps) {
+  const { data: catalog, isPending, isError } = useSymptoms()
+  const data = catalog && [...catalog, ...(kept ?? []).filter((s) => !catalog.some((c) => c.code === s.code))]
   const baseId = useId()
   const selected = new Set(value)
 

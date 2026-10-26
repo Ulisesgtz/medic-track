@@ -66,6 +66,10 @@ describe('hasScheduleChange', () => {
     expect(hasScheduleChange(initial, { ...initial, consultDate: '2026-10-17' })).toBe(true)
   })
 
+  it('an ended treatment moves nothing: a new date with only ended medications asks nothing', () => {
+    expect(hasScheduleChange(initial, { ...initial, consultDate: '2026-10-17' }, { m1: { ended: true, hasMarks: false } })).toBe(false)
+  })
+
   it('never for a record-only consultation, nor a date change once every saved medication is gone', () => {
     const record = valuesOfDetail(detail({ recordOnly: true }))
     expect(hasScheduleChange(record, { ...record, consultDate: '2026-10-01' })).toBe(false)

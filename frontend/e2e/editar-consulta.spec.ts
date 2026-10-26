@@ -145,7 +145,7 @@ for (const design of designs) {
       await page.locator('#medications\\.1\\.frequencyHours').fill('8')
       await page.locator('#medications\\.1\\.durationDays').fill('30')
       await page.locator('#medications\\.1\\.startTime').fill('09:00')
-      // The new date moves no saved dose ahead; the new medication is what adds doses ahead.
+      // No schedule of a saved medication changes (no confirmation): the new medication is what adds doses ahead.
       await page.getByRole('button', { name: 'Guardar cambios' }).click()
       await expect(page.getByRole('dialog')).toContainText(/plan completo/i)
       await page.getByRole('button', { name: 'Ahora no' }).click()

@@ -4,7 +4,7 @@ import { useAuth } from '@clerk/react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Controller, useForm, useFieldArray, useWatch, type Path } from 'react-hook-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { fetchSymptoms } from '../../shared/catalog/api'
+import { fetchSymptoms, type Symptom } from '../../shared/catalog/api'
 import { SYMPTOMS_QUERY_KEY } from '../../shared/catalog/useCatalog'
 import { MedicationFieldset } from './MedicationFieldset'
 import { parsePositiveInt } from './parsePositiveInt'
@@ -165,6 +165,8 @@ export interface ConsultationEdit {
   version: string
   /** Each saved medication, by id: ended, with marks. */
   flags: Record<string, MedicationFlags>
+  /** The symptoms it has, retired ones included, so each can be taken off. */
+  symptoms: Symptom[]
 }
 
 interface ConsultationFormProps {
@@ -435,7 +437,7 @@ export function ConsultationForm({
       }
       if (Object.keys(apptFound).length > 0) return
       const save = { values, photo: photoLimit ? null : photoFile }
-      if (edit && hasScheduleChange(edit.values, values)) {
+      if (edit && hasScheduleChange(edit.values, values, edit.flags)) {
         setPendingSave(save)
         return
       }
@@ -582,7 +584,7 @@ export function ConsultationForm({
       <Controller
         control={control}
         name="symptomCodes"
-        render={({ field }) => <SymptomPicker value={field.value} onChange={field.onChange} variant={variant} />}
+        render={({ field }) => <SymptomPicker value={field.value} onChange={field.onChange} variant={variant} kept={edit?.symptoms} />}
       />
       <div className="flex min-w-0 flex-col gap-2">
         <label htmlFor="notes" className={label}>

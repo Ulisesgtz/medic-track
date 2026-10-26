@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useRef, useState, type ComponentProps } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@clerk/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -10,7 +10,8 @@ import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { useChildAccess } from '../family/useChildAccess'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { fetchConsultationDetail } from './api'
-import { ConsultationForm } from './ConsultationForm'
+import type { ConsultationDetail } from './types'
+import { ConsultationForm, type ConsultationEdit } from './ConsultationForm'
 import { EDIT_TEXT } from './editText'
 import { flagsOf, valuesOfDetail, versionOf } from './editValues'
 
@@ -81,15 +82,14 @@ export function EditConsultationPage() {
             <Notice tone="info">{notice}</Notice>
           </div>
         )}
-        <ConsultationForm
+        <EditRound
           key={`${detail.id}:${round}`}
-          childId={detail.childId}
+          detail={detail}
           variant={isDesktop ? 'desktop' : 'phone'}
           childLabel={childLabel}
           cancelTo={detailPath}
           confirmLeave={() => !dirtyRef.current || window.confirm(EDIT_TEXT.leave)}
           onDirtyChange={handleDirtyChange}
-          edit={{ consultationId: detail.id, values: valuesOfDetail(detail), version: versionOf(detail), flags: flagsOf(detail) }}
           onConflict={handleConflict}
           onSuccess={() => {
             dirtyRef.current = false
@@ -104,4 +104,22 @@ export function EditConsultationPage() {
       </main>
     </AppShell>
   )
+}
+
+type EditRoundProps = Omit<ComponentProps<typeof ConsultationForm>, 'edit' | 'childId'> & { detail: ConsultationDetail }
+
+/**
+ * One round of editing: what the form starts from — the values, the version it sends back and each medication's state — is taken
+ * once, when it mounts. A refetch of the consultation in the background (the app coming back to the front) must not hand a
+ * newer version to a form still holding the older values: that would overwrite someone else's edit without a conflict.
+ */
+function EditRound({ detail, ...props }: EditRoundProps) {
+  const [edit] = useState<ConsultationEdit>(() => ({
+    consultationId: detail.id,
+    values: valuesOfDetail(detail),
+    version: versionOf(detail),
+    flags: flagsOf(detail),
+    symptoms: detail.symptoms,
+  }))
+  return <ConsultationForm {...props} childId={detail.childId} edit={edit} />
 }

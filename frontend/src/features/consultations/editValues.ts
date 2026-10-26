@@ -46,13 +46,20 @@ export function flagsOf(detail: ConsultationDetail): Record<string, MedicationFl
 
 /**
  * Whether the edit moves doses of a saved medication: its frequency, duration or first dose changed, or the consultation's
- * date did (the first dose is read on that day). A new medication doesn't count (nothing it had changes); a record-only
- * consultation has no doses.
+ * date did (the first dose is read on that day). A new medication doesn't count (nothing it had changes), nor an ended one
+ * (its doses stay); a record-only consultation has no doses.
  */
-export function hasScheduleChange(initial: ConsultationFormValues, current: ConsultationFormValues): boolean {
+export function hasScheduleChange(
+  initial: ConsultationFormValues,
+  current: ConsultationFormValues,
+  flags: Record<string, MedicationFlags> = {},
+): boolean {
   if (initial.recordOnly) return false
   const saved = new Map(initial.medications.map((m) => [m.medicationId, m]))
-  const kept = current.medications.filter((m) => m.medicationId !== undefined && saved.has(m.medicationId))
+  // An ended treatment keeps its doses whatever changes (specs/016): it moves nothing.
+  const kept = current.medications.filter(
+    (m) => m.medicationId !== undefined && saved.has(m.medicationId) && flags[m.medicationId]?.ended !== true,
+  )
   if (kept.length > 0 && initial.consultDate !== current.consultDate) return true
   return kept.some((m) => {
     const before = saved.get(m.medicationId)!

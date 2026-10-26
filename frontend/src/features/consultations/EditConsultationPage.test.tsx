@@ -57,8 +57,7 @@ function stubApi({ role = 'owner', detail: d = detail(), put = { status: 200, bo
   return fetchMock
 }
 
-function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+function renderPage(queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
   const invalidate = vi.spyOn(queryClient, 'invalidateQueries')
   render(
     <QueryClientProvider client={queryClient}>
@@ -142,6 +141,33 @@ describe('EditConsultationPage', () => {
     expect(await screen.findByText(EDIT_TEXT.conflict)).toBeInTheDocument()
     await waitFor(() => expect(screen.getByLabelText('Doctor')).toHaveValue('Dra. Laura Cazares'))
     expect(fetchMock.mock.calls.filter(([url, init]) => String(url).endsWith('/consultations/c1') && !init?.method).length).toBeGreaterThan(1)
+  })
+
+  it('a refetch in the background never hands the open form a newer version', async () => {
+    const user = userEvent.setup()
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const fetchMock = stubApi()
+    renderPage(queryClient)
+    await screen.findByLabelText('Doctor')
+    // Someone else's edit arrives while the form is open (e.g. the app came back to the front).
+    queryClient.setQueryData(['consultation', 'c1'], detail({ doctorName: 'Otro', edited: { at: '2026-10-20T10:00:00.5Z', by: 'Luis' } }))
+    await user.click(screen.getByRole('button', { name: EDIT_TEXT.save }))
+
+    await screen.findByText('DETALLE DE CONSULTA')
+    expect(putBody(fetchMock).expectedVersion).toBe('2026-10-18T15:20:00.123456Z')
+  })
+
+  it('a retired symptom the consultation has is shown, so it can be taken off', async () => {
+    const user = userEvent.setup()
+    const fetchMock = stubApi({ detail: detail({ symptoms: [{ code: 'rash_old', name: 'Sarpullido', category: 'Piel' }] }) })
+    renderPage()
+    const chip = await screen.findByRole('button', { name: 'Sarpullido' })
+    expect(chip).toHaveAttribute('aria-pressed', 'true')
+    await user.click(chip)
+    await user.click(screen.getByRole('button', { name: EDIT_TEXT.save }))
+
+    await screen.findByText('DETALLE DE CONSULTA')
+    expect(putBody(fetchMock).symptomCodes).toEqual([])
   })
 
   it('a medication taken out that got a mark meanwhile: says so', async () => {
