@@ -280,6 +280,18 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
   (`pedi-track.com`), y **volver a configurar el login con Google ahí** — Clerk no copia la configuración de
   SSO/Integrations de dev a prod, y en prod ya no se usan las credenciales de Google compartidas de Clerk, hay
   que dar de alta credenciales propias en Google Cloud Console.
+- **Proteger el orden migración → despliegue** (anotado 2026-10-26, tras el digest semanal del 19–26 oct): Railway
+  despliega al hacer merge a `develop` y las migraciones se aplican a mano, así que un backend nuevo puede correr sin su
+  migración. Pasó con la `0029` (spec 047): del 23 oct 23:45 al 24 oct 18:17 fallaron rutinas, «Tomas de hoy»,
+  «Teléfonos del hijo», activar recordatorios y **el proceso de recordatorios entero** (unos 143 de los 149 errores de
+  la semana; no salió ningún aviso en DEV), y solo se vio en el correo semanal. Dos protecciones:
+  1. **Revisión del esquema al arrancar el API**: el API comprueba que existan las tablas/columnas de la última
+     migración (p. ej. una lista fija en el código que se actualiza con cada migración, o una tabla `schema_migrations`
+     si se adopta una herramienta de migraciones) y, si falta alguna, lo dice en la consola y deja **una** fila clara
+     en `error_logs` (`job:startup`, «falta la migración 0029»), así se nota en minutos y no en el digest. Decidir si
+     además se niega a arrancar (Railway dejaría corriendo la versión anterior) o arranca igual.
+  2. **Aviso en el PR**: un paso del CI (o un comentario automático) que, cuando el PR agrega un archivo en
+     `backend/migrations/`, recuerde aplicarla en DEV **antes** de hacer merge (y lo deje en la descripción del PR).
 
 ## Producto / Legal
 
