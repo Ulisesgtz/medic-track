@@ -668,6 +668,7 @@ export function ConsultationForm({
     </fieldset>
   )
 
+  const hasMarks = (medicationId?: string) => edit !== undefined && medicationId !== undefined && edit.flags[medicationId]?.hasMarks === true
   const medications = (
     <div className={`flex min-w-0 flex-col ${desktop ? 'gap-4' : 'gap-3.5'}`}>
       {fields.map((field, index) => (
@@ -677,7 +678,9 @@ export function ConsultationForm({
           register={register}
           errors={errors}
           onRemove={() => removeMedication(index)}
-          canRemove={fields.length > 1}
+          // Specs/051: a saved medication with a marked dose stays (what was registered is never deleted).
+          canRemove={fields.length > 1 && !hasMarks(field.medicationId)}
+          hasMarks={hasMarks(field.medicationId)}
           removeDisabled={ocrProgress !== null}
           suggested={suggested}
           variant={variant}

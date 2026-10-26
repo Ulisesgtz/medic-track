@@ -35,6 +35,8 @@ interface MedicationFieldsetProps {
    * name can. Read-only rather than disabled, so the saved values are still sent.
    */
   ended?: boolean
+  /** Specs/051: a saved medication with a marked dose — it can't be removed, and says so where «Quitar» would be. */
+  hasMarks?: boolean
 }
 
 /**
@@ -62,6 +64,7 @@ export function MedicationFieldset({
   variant,
   recordOnly = false,
   ended = false,
+  hasMarks = false,
 }: MedicationFieldsetProps) {
   const medErrors = errors.medications?.[index]
   const fixed = ended ? 'cursor-not-allowed bg-slate-50 text-slate-500' : ''
@@ -97,6 +100,7 @@ export function MedicationFieldset({
             Quitar
           </button>
         )}
+        {hasMarks && <span className="text-right text-[13px] font-semibold text-slate-600">{EDIT_TEXT.cantRemove}</span>}
       </div>
 
       <div

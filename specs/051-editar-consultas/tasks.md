@@ -75,8 +75,8 @@ finales de línea, vitest con `--testTimeout=30000 --maxWorkers=4`, `DATABASE_UR
 
 **Prueba independiente**: agregar un medicamento y verlo en el detalle y en «Tomas de hoy»; quitar uno sin marcas; uno con marcas no se puede.
 
-- [ ] T021 [US3] `ConsultationForm.tsx`/`MedicationFieldset.tsx` en modo edición: «+ Otro medicamento» agrega uno sin `id`; «Quitar» solo en los que no tienen marcas (`hasMarks` falso) y nunca cuando queda uno; uno con marcas muestra «Tiene tomas marcadas: no se puede quitar.».
-- [ ] T022 [US3] `EditConsultationPage.tsx`/`ConsultationForm.tsx`: 409 `medication_has_marks` → `Notice` y recarga; 422 `freemium_consultation_limit_exceeded` `active_treatment` → `FreemiumLimitModal reason="active_treatment"` sin perder lo escrito; 422 `photo_limit_exceeded` como al crear. Pruebas de los tres.
+- [X] T021 [US3] `ConsultationForm.tsx`/`MedicationFieldset.tsx` en modo edición: «+ Otro medicamento» agrega uno sin `id`; «Quitar» solo en los que no tienen marcas (`hasMarks` falso) y nunca cuando queda uno; uno con marcas muestra «Tiene tomas marcadas: no se puede quitar.».
+- [X] T022 [US3] `EditConsultationPage.tsx`/`ConsultationForm.tsx`: 409 `medication_has_marks` → `Notice` y recarga; 422 `freemium_consultation_limit_exceeded` `active_treatment` → `FreemiumLimitModal reason="active_treatment"` sin perder lo escrito; 422 `photo_limit_exceeded` como al crear. Pruebas de los tres.
 
 **Punto de control**: las tres historias funcionan.
 

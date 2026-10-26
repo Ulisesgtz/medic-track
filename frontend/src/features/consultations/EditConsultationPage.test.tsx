@@ -25,7 +25,7 @@ function detail(over: Record<string, unknown> = {}) {
     symptoms: [], recordOnly: false, createdAt: '2026-10-18T15:20:00.123456Z', edited: null,
     medications: [
       {
-        id: 'm1', name: 'Amoxicilina', frequencyHours: 8, durationDays: 7, startTime: '08:00', endedAt: null, extendableDoses: 0, extensions: [],
+        id: 'm1', name: 'Amoxicilina', frequencyHours: 8, durationDays: 7, startTime: '08:00', endedAt: null as string | null, extendableDoses: 0, extensions: [],
         doses: [{ id: 'd1', scheduledAt: '2026-10-18T14:00:00Z', taken: true, status: 'taken' }],
       },
     ],
@@ -225,6 +225,68 @@ describe('EditConsultationPage', () => {
     expect(byId('medications.0.startTime')).toHaveAttribute('readonly')
     expect(byId('medications.0.name')).not.toHaveAttribute('readonly')
     expect(byId('medications.0.frequencyHours')).toHaveAccessibleDescription(EDIT_TEXT.ended)
+  })
+
+  it('a medication with a marked dose is not taken out; one without marks can, and a new one goes without id', async () => {
+    const user = userEvent.setup()
+    const two = detail()
+    two.medications = [
+      two.medications[0],
+      { ...two.medications[0], id: 'm2', name: 'Repetido', doses: [{ id: 'd9', scheduledAt: '2026-10-18T14:00:00Z', taken: false, status: 'taken' }] },
+    ]
+    const fetchMock = stubApi({ detail: two })
+    renderPage()
+
+    expect(await screen.findByText(EDIT_TEXT.cantRemove)).toBeInTheDocument()
+    const first = screen.getByTestId('medication-fieldset-0')
+    expect(within(first).queryByRole('button', { name: 'Quitar medicamento' })).not.toBeInTheDocument()
+    await user.click(within(screen.getByTestId('medication-fieldset-1')).getByRole('button', { name: 'Quitar medicamento' }))
+    expect(screen.queryByTestId('medication-fieldset-1')).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: '+ Otro medicamento' }))
+    await user.type(byId('medications.1.name'), 'Jarabe')
+    await user.type(byId('medications.1.frequencyHours'), '12')
+    await user.type(byId('medications.1.durationDays'), '5')
+    await user.type(byId('medications.1.startTime'), '0900')
+    await user.click(screen.getByRole('button', { name: EDIT_TEXT.save }))
+
+    expect(await screen.findByText('DETALLE DE CONSULTA')).toBeInTheDocument()
+    const meds = putBody(fetchMock).medications
+    expect(meds).toHaveLength(2)
+    expect(meds[0].id).toBe('m1')
+    expect(meds[1]).toMatchObject({ name: 'Jarabe', frequencyHours: 12, durationDays: 5, startTime: '09:00' })
+    expect(meds[1]).not.toHaveProperty('id')
+  })
+
+  it('the only medication left is not taken out', async () => {
+    const one = detail()
+    one.medications[0] = { ...one.medications[0], doses: [] }
+    stubApi({ detail: one })
+    renderPage()
+    await screen.findByLabelText('Doctor')
+    expect(screen.queryByRole('button', { name: 'Quitar medicamento' })).not.toBeInTheDocument()
+  })
+
+  it('the free plan with another treatment running: the plan notice, keeping what was typed', async () => {
+    const user = userEvent.setup()
+    stubApi({ put: { status: 422, body: { error: 'freemium_consultation_limit_exceeded', reason: 'active_treatment', message: 'x' } } })
+    renderPage()
+    const doctor = await screen.findByLabelText('Doctor')
+    await user.clear(doctor)
+    await user.type(doctor, 'Otro')
+    await user.click(screen.getByRole('button', { name: EDIT_TEXT.save }))
+
+    expect(await screen.findByRole('dialog')).toHaveTextContent(/plan completo/i)
+    expect(screen.getByLabelText('Doctor')).toHaveValue('Otro')
+  })
+
+  it('the photo limit: says so and the next save sends no photo', async () => {
+    const user = userEvent.setup()
+    stubApi({ put: { status: 422, body: { error: 'photo_limit_exceeded', message: 'x' } } })
+    renderPage()
+    await screen.findByLabelText('Doctor')
+    await user.click(screen.getByRole('button', { name: EDIT_TEXT.save }))
+    expect(await screen.findByText(/100 recetas con foto/)).toBeInTheDocument()
   })
 
   it('a Caregiver, or a consultation that is not there, goes back to the consultation', async () => {
