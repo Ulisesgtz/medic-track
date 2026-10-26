@@ -684,6 +684,32 @@ func TestHandler_CreateAccount_ClerkDownForANewSessionIs500(t *testing.T) {
 	require.Equal(t, http.StatusInternalServerError, rec.Code)
 }
 
+// Clerk over its rate limit (429) for a moment: the signup asks again and is created instead of failing with a 500.
+func TestHandler_CreateAccount_ClerkRateLimitedIsAskedAgain(t *testing.T) {
+	t.Cleanup(account.ShortenClerkRateLimitWaits())
+	router, verifier := newTestRouter(t)
+	clerkUserID := "user_" + uuid.NewString()
+	token := verifier.Token(t, clerkUserID)
+	authmwtest.MockClerkRateLimited(t, 2, clerkUserID, uniqueEmail("handler.ratelimited"))
+
+	rec := doPost(t, router, token, map[string]any{"firstName": "Ana", "lastName": "Gómez"})
+
+	require.Equal(t, http.StatusCreated, rec.Code, rec.Body.String())
+}
+
+// Still over the limit after every try: a 500, as with Clerk down.
+func TestHandler_CreateAccount_ClerkRateLimitedTooLongIs500(t *testing.T) {
+	t.Cleanup(account.ShortenClerkRateLimitWaits())
+	router, verifier := newTestRouter(t)
+	clerkUserID := "user_" + uuid.NewString()
+	token := verifier.Token(t, clerkUserID)
+	authmwtest.MockClerkRateLimited(t, 10, clerkUserID, uniqueEmail("handler.ratelimited"))
+
+	rec := doPost(t, router, token, map[string]any{"firstName": "Ana", "lastName": "Gómez"})
+
+	require.Equal(t, http.StatusInternalServerError, rec.Code)
+}
+
 func TestHandler_GetMe_ClerkDownForASessionWithoutAnAccountIs500(t *testing.T) {
 	router, verifier := newTestRouter(t)
 	token := verifier.Token(t, "user_"+uuid.NewString())

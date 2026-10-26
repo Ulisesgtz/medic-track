@@ -214,10 +214,19 @@ jobs:
         working-directory: frontend
         # Only this job's browser and its system packages. The package mirrors are sometimes very slow (a run took 15 minutes here):
         # each try is cut at 4 minutes and tried again once, instead of holding the whole gate.
-        timeout-minutes: 10
+        # The runner's own apt (unattended upgrades) can hold the dpkg lock at start, and a try cut by `timeout` can leave its
+        # apt-get holding it too: before each try, wait (up to 3 minutes) until nobody holds it.
+        timeout-minutes: 15
         run: |
+          wait_for_apt() {
+            for i in $(seq 1 36); do
+              sudo fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock >/dev/null 2>&1 || return 0
+              sleep 5
+            done
+          }
           for try in 1 2; do
-            timeout 240 npx playwright install --with-deps ${{ matrix.project }} && exit 0
+            wait_for_apt
+            timeout 300 npx playwright install --with-deps ${{ matrix.project }} && exit 0
             echo "Installing the browser took too long or failed (try $try)"
           done
           exit 1
@@ -237,9 +246,12 @@ jobs:
         # or Playwright refuses to bind :5173 ("already used") since
         # reuseExistingServer is false in CI (process.env.CI is set). The build
         # reads VITE_CLERK_PUBLISHABLE_KEY from the env below. Several workers
-        # (E2E_WORKERS, 4 by default) share the job; the job runs one project and one shard.
+        # (E2E_WORKERS) share the job; the job runs one project and one shard.
         run: npx playwright test --project=${{ matrix.project }} --shard=${{ matrix.shard }}
         env:
+          # Two per job, ten at once across the five: with four per job (twenty at once) the shared Clerk development instance
+          # answered 429 more than the retries could absorb (PR 67's first run).
+          E2E_WORKERS: '2'
           # Tells the suite the API was started with MAIL_DRIVER=discard (specs/040).
           MAIL_DRIVER: discard
           # The frontend throws without it (specs/008). Repository secret: the *test* (pk_test_) key of the Clerk development instance.

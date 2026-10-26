@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -105,6 +106,34 @@ func MockUserProfileWithVerification(t *testing.T, clerkUserID, email, verificat
 	)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(body))
+	}))
+	t.Cleanup(server.Close)
+
+	clerk.SetKey("test-secret-key")
+	clerk.SetBackend(clerk.NewBackend(&clerk.BackendConfig{
+		HTTPClient: server.Client(),
+		URL:        &server.URL,
+	}))
+}
+
+// MockClerkRateLimited is MockUserProfile whose first `limited` calls answer 429 Too Many Requests, as Clerk does when an
+// instance is over its rate limit. Same global-state caveats as MockUserProfile.
+func MockClerkRateLimited(t *testing.T, limited int, clerkUserID, email string) {
+	t.Helper()
+
+	body := fmt.Sprintf(
+		`{"id":%q,"email_addresses":[{"id":"idn_test","email_address":%q,"verification":{"status":"verified"}}],"primary_email_address_id":"idn_test"}`,
+		clerkUserID, email,
+	)
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		if int(calls.Add(1)) <= limited {
+			w.WriteHeader(http.StatusTooManyRequests)
+			_, _ = w.Write([]byte(`{"errors":[{"code":"too_many_requests","message":"Too Many Requests"}]}`))
+			return
+		}
 		_, _ = w.Write([]byte(body))
 	}))
 	t.Cleanup(server.Close)
