@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -177,6 +177,54 @@ describe('EditConsultationPage', () => {
 
     expect(confirm).toHaveBeenCalledWith(EDIT_TEXT.leave)
     expect(screen.getByRole('heading', { level: 1, name: EDIT_TEXT.title })).toBeInTheDocument()
+  })
+
+  it('a new schedule asks first: «Volver» sends nothing, confirming saves', async () => {
+    const user = userEvent.setup()
+    const fetchMock = stubApi()
+    renderPage()
+    const frequency = await screen.findByLabelText('Frecuencia')
+    await user.clear(frequency)
+    await user.type(frequency, '6')
+    await user.click(screen.getByRole('button', { name: EDIT_TEXT.save }))
+
+    const dialog = await screen.findByRole('dialog', { name: EDIT_TEXT.scheduleConfirm.title })
+    expect(dialog).toHaveTextContent('Las tomas que ya marcaste no cambian.')
+    expect(dialog).toHaveTextContent('Las que aún no llegan se acomodan al nuevo horario.')
+    await user.click(within(dialog).getByRole('button', { name: EDIT_TEXT.scheduleConfirm.cancel }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false)
+
+    await user.click(screen.getByRole('button', { name: EDIT_TEXT.save }))
+    const again = await screen.findByRole('dialog', { name: EDIT_TEXT.scheduleConfirm.title })
+    await user.click(within(again).getByRole('button', { name: EDIT_TEXT.scheduleConfirm.confirm }))
+    expect(await screen.findByText('DETALLE DE CONSULTA')).toBeInTheDocument()
+    expect(putBody(fetchMock).medications[0].frequencyHours).toBe(6)
+  })
+
+  it('another date asks too', async () => {
+    const user = userEvent.setup()
+    stubApi()
+    renderPage()
+    const date = await screen.findByLabelText('Fecha')
+    await user.clear(date)
+    await user.type(date, '2026-10-17')
+    await user.click(screen.getByRole('button', { name: EDIT_TEXT.save }))
+    expect(await screen.findByRole('dialog', { name: EDIT_TEXT.scheduleConfirm.title })).toBeInTheDocument()
+  })
+
+  it('an ended treatment keeps its schedule: frequency, duration and first dose are read-only, the name is not', async () => {
+    const ended = detail()
+    ended.medications[0] = { ...ended.medications[0], endedAt: '2026-10-20T10:00:00Z' }
+    stubApi({ detail: ended })
+    renderPage()
+
+    expect(await screen.findByText(EDIT_TEXT.ended)).toBeInTheDocument()
+    expect(byId('medications.0.frequencyHours')).toHaveAttribute('readonly')
+    expect(byId('medications.0.durationDays')).toHaveAttribute('readonly')
+    expect(byId('medications.0.startTime')).toHaveAttribute('readonly')
+    expect(byId('medications.0.name')).not.toHaveAttribute('readonly')
+    expect(byId('medications.0.frequencyHours')).toHaveAccessibleDescription(EDIT_TEXT.ended)
   })
 
   it('a Caregiver, or a consultation that is not there, goes back to the consultation', async () => {

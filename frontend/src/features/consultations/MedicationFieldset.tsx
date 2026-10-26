@@ -2,6 +2,7 @@ import type { FieldErrors, UseFormRegister } from 'react-hook-form'
 import { errorClass, fieldMedication, labelClass } from '../../shared/ui/formStyles'
 import type { ConsultationFormValues } from './ConsultationForm'
 import { parsePositiveInt } from './parsePositiveInt'
+import { EDIT_TEXT } from './editText'
 
 const validPositive = (value: string) => parsePositiveInt(value) !== null
 
@@ -29,6 +30,11 @@ interface MedicationFieldsetProps {
   variant: 'phone' | 'desktop'
   /** A record-only consultation (specs/024) has no schedule: "Primera toma" is not drawn. */
   recordOnly?: boolean
+  /**
+   * Specs/051: a saved medication whose treatment was ended — its schedule (frequency, duration, first dose) can't change, its
+   * name can. Read-only rather than disabled, so the saved values are still sent.
+   */
+  ended?: boolean
 }
 
 /**
@@ -55,9 +61,13 @@ export function MedicationFieldset({
   suggested,
   variant,
   recordOnly = false,
+  ended = false,
 }: MedicationFieldsetProps) {
   const medErrors = errors.medications?.[index]
-  const cls = (name: string) => (suggested?.has(`medications.${index}.${name}`) ? suggestedBorder : plain)
+  const fixed = ended ? 'cursor-not-allowed bg-slate-50 text-slate-500' : ''
+  const cls = (name: string) =>
+    `${suggested?.has(`medications.${index}.${name}`) ? suggestedBorder : plain} ${name === 'name' ? '' : fixed}`
+  const endedNote = ended ? `medications.${index}.ended` : undefined
   const id = (name: string) => `medications.${index}.${name}`
   const desktop = variant === 'desktop'
 
@@ -120,6 +130,8 @@ export function MedicationFieldset({
               placeholder="c/8 h"
               size={1}
               inputMode="numeric"
+              readOnly={ended}
+              aria-describedby={endedNote}
               className={`${cls('frequencyHours')} text-[15px]`}
               {...register(`medications.${index}.frequencyHours`, { validate: validPositive })}
             />
@@ -134,6 +146,8 @@ export function MedicationFieldset({
               placeholder="7 días"
               size={1}
               inputMode="numeric"
+              readOnly={ended}
+              aria-describedby={endedNote}
               className={`${cls('durationDays')} text-[15px]`}
               {...register(`medications.${index}.durationDays`, { validate: validPositive })}
             />
@@ -150,7 +164,9 @@ export function MedicationFieldset({
                 id={id('startTime')}
                 type="time"
                 size={1}
-                className={`${plain} text-[15px]`}
+                readOnly={ended}
+                aria-describedby={endedNote}
+                className={`${plain} ${fixed} text-[15px]`}
                 {...register(`medications.${index}.startTime`, { validate: startTimeRule })}
               />
               {medErrors?.startTime && <p className={error}>{START_TIME_MESSAGE}</p>}
@@ -169,13 +185,21 @@ export function MedicationFieldset({
             id={id('startTime')}
             type="time"
             size={1}
+            readOnly={ended}
+            aria-describedby={endedNote}
             // iOS Safari draws time inputs with their own minimum width and ignores the box's: without
             // appearance-none the field ran past the card's edge on the iPhone.
-            className={`${plain} appearance-none text-[15px] [&::-webkit-date-and-time-value]:text-left`}
+            className={`${plain} ${fixed} appearance-none text-[15px] [&::-webkit-date-and-time-value]:text-left`}
             {...register(`medications.${index}.startTime`, { validate: startTimeRule })}
           />
           {medErrors?.startTime && <p className={error}>{START_TIME_MESSAGE}</p>}
         </div>
+      )}
+
+      {ended && (
+        <p id={endedNote} className="text-[13px] font-semibold text-slate-600">
+          {EDIT_TEXT.ended}
+        </p>
       )}
     </fieldset>
   )

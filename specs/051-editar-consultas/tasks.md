@@ -62,8 +62,8 @@ finales de línea, vitest con `--testTimeout=30000 --maxWorkers=4`, `DATABASE_UR
 
 **Prueba independiente**: con tomas pasadas y marcadas, cambiar la frecuencia, confirmar, y ver que solo cambian las futuras sin marcar.
 
-- [ ] T019 [US2] `ConsultationForm.tsx` en modo edición: si `hasScheduleChange`, antes de enviar abre el `ConfirmDialog` de `features/family/` (tono neutro, «Guardar cambios» / «Volver») con el texto de `editText.ts`; sin cambio de horario envía directo. Pruebas: cambio de nombre no pregunta; cambio de frecuencia y de fecha preguntan; «Volver» no envía.
-- [ ] T020 [US2] `frontend/src/features/consultations/MedicationFieldset.tsx`: prop `ended` deshabilita frecuencia, duración y primera toma con la nota de `editText.ts` («El tratamiento terminó: su horario ya no cambia.»); el nombre sigue editable. Pruebas en ambos diseños.
+- [X] T019 [US2] `ConsultationForm.tsx` en modo edición: si `hasScheduleChange`, antes de enviar abre el `ConfirmDialog` de `features/family/` (tono neutro, «Guardar cambios» / «Volver») con el texto de `editText.ts`; sin cambio de horario envía directo. Pruebas: cambio de nombre no pregunta; cambio de frecuencia y de fecha preguntan; «Volver» no envía.
+- [X] T020 [US2] `frontend/src/features/consultations/MedicationFieldset.tsx`: prop `ended` deshabilita frecuencia, duración y primera toma con la nota de `editText.ts` («El tratamiento terminó: su horario ya no cambia.»); el nombre sigue editable. Pruebas en ambos diseños.
 
 **Punto de control**: Historias 1 y 2 funcionan.
 

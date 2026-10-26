@@ -22,7 +22,8 @@ import { blobToBase64, shrinkPhoto } from './shrinkPhoto'
 import { Notice } from '../../shared/ui/Notice'
 import { createConsultation, updateConsultation, ConsultationApiError, type CreateConsultationPayload } from './api'
 import { EDIT_TEXT } from './editText'
-import { toUpdatePayload, type MedicationFlags } from './editValues'
+import { hasScheduleChange, toUpdatePayload, type MedicationFlags } from './editValues'
+import { ConfirmDialog } from '../family/ConfirmDialog'
 import { missingFieldsText } from './missingFields'
 import { SymptomPicker } from './SymptomPicker'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
@@ -239,6 +240,9 @@ export function ConsultationForm({
   const [ocrProgress, setOcrProgress] = useState<{ current: number; total: number } | null>(null)
   const [suggested, setSuggested] = useState<ReadonlySet<string>>(new Set())
   const desktop = variant === 'desktop'
+  // Specs/051: an edit that moves doses waits for the parent to confirm it (FR-012); the save button gets the focus back.
+  const [pendingSave, setPendingSave] = useState<{ values: ConsultationFormValues; photo: File | null } | null>(null)
+  const saveRef = useRef<HTMLButtonElement>(null)
 
   const {
     register,
@@ -430,7 +434,12 @@ export function ConsultationForm({
         return
       }
       if (Object.keys(apptFound).length > 0) return
-      mutation.mutate({ values, photo: photoLimit ? null : photoFile })
+      const save = { values, photo: photoLimit ? null : photoFile }
+      if (edit && hasScheduleChange(edit.values, values)) {
+        setPendingSave(save)
+        return
+      }
+      mutation.mutate(save)
     },
     () => setPhotoMissing(!edit && !photoFile && !photoLimit),
   )
@@ -673,6 +682,7 @@ export function ConsultationForm({
           suggested={suggested}
           variant={variant}
           recordOnly={recordOnly}
+          ended={edit !== undefined && field.medicationId !== undefined && edit.flags[field.medicationId]?.ended === true}
         />
       ))}
     </div>
@@ -707,6 +717,7 @@ export function ConsultationForm({
   )
   const saveButton = (
     <button
+      ref={saveRef}
       type="submit"
       disabled={mutation.isPending}
       className={`min-h-11 cursor-pointer rounded-2xl bg-confirmed text-base font-extrabold text-white transition-colors hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 ${
@@ -735,11 +746,27 @@ export function ConsultationForm({
   const planLimitModal = planLimit && (
     <FreemiumLimitModal reason={planLimit} onStayFree={closePlanLimit} onViewPlans={() => navigate('/planes')} />
   )
+  const scheduleDialog = pendingSave && (
+    <ConfirmDialog
+      title={EDIT_TEXT.scheduleConfirm.title}
+      rows={[...EDIT_TEXT.scheduleConfirm.rows]}
+      confirmLabel={EDIT_TEXT.scheduleConfirm.confirm}
+      cancelLabel={EDIT_TEXT.scheduleConfirm.cancel}
+      busyLabel={EDIT_TEXT.scheduleConfirm.busy}
+      tone="ink"
+      busy={mutation.isPending}
+      error={null}
+      onConfirm={() => mutation.mutate(pendingSave, { onSettled: () => setPendingSave(null) })}
+      onCancel={() => setPendingSave(null)}
+      opener={saveRef}
+    />
+  )
 
   if (desktop) {
     return (
       <div className="mx-auto flex max-w-4xl flex-col gap-7">
         {planLimitModal}
+        {scheduleDialog}
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             {cancelLink}
@@ -767,6 +794,7 @@ export function ConsultationForm({
   return (
     <>
       {planLimitModal}
+      {scheduleDialog}
       <header className="bg-ink px-6 pt-6 pb-7">
         <div className="flex min-h-6 items-center justify-between">
           {cancelLink}
