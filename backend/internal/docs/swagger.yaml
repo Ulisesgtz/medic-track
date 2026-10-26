@@ -439,6 +439,13 @@ definitions:
         example: Consultation not found
         type: string
     type: object
+  ConsultationPhotoResponse:
+    properties:
+      photoBase64:
+        description: PhotoBase64 is the prescription photo; empty when the consultation
+          was saved without one.
+        type: string
+    type: object
   ConsultationSessionErrorResponse:
     properties:
       error:
@@ -679,6 +686,315 @@ definitions:
         type: string
       message:
         example: Could not create account
+        type: string
+    type: object
+  ExportActiveTreatment:
+    properties:
+      doctorName:
+        example: Dra. Laura Cázares
+        type: string
+      frequencyHours:
+        example: 8
+        type: integer
+      medicationName:
+        example: Amoxicilina
+        type: string
+      since:
+        example: "2026-10-18T14:00:00Z"
+        type: string
+    type: object
+  ExportAppointment:
+    properties:
+      doctorName:
+        example: Dra. Laura Cázares
+        type: string
+      location:
+        example: Consultorio 204, Torre Médica Satélite
+        type: string
+      scheduledAt:
+        example: "2026-10-28T16:30:00Z"
+        type: string
+    type: object
+  ExportCardPhoto:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: string
+    type: object
+  ExportChild:
+    properties:
+      birthDate:
+        example: "2021-03-14"
+        type: string
+      firstName:
+        example: Mateo
+        type: string
+      height:
+        example: 112
+        type: number
+      lastName:
+        example: Morales
+        type: string
+      weight:
+        example: 19.4
+        type: number
+    type: object
+  ExportConsultation:
+    properties:
+      appointment:
+        $ref: '#/definitions/ExportAppointment'
+      consultDate:
+        example: "2026-10-18"
+        type: string
+      doctorName:
+        example: Dra. Laura Cázares
+        type: string
+      hasPhoto:
+        type: boolean
+      id:
+        type: string
+      medications:
+        items:
+          $ref: '#/definitions/ExportMedication'
+        type: array
+      notes:
+        type: string
+      recordOnly:
+        type: boolean
+      symptoms:
+        items:
+          $ref: '#/definitions/ExportSymptom'
+        type: array
+    type: object
+  ExportConsultationPhoto:
+    properties:
+      consultDate:
+        example: "2026-10-18"
+        type: string
+      consultationId:
+        type: string
+      doctorName:
+        example: Dra. Laura Cázares
+        type: string
+    type: object
+  ExportCorrected:
+    properties:
+      at:
+        type: string
+      by:
+        example: Ana
+        type: string
+    type: object
+  ExportDocument:
+    properties:
+      activeTreatment:
+        $ref: '#/definitions/ExportActiveTreatment'
+      child:
+        $ref: '#/definitions/ExportChild'
+      consultations:
+        items:
+          $ref: '#/definitions/ExportConsultation'
+        type: array
+      nextAppointment:
+        $ref: '#/definitions/ExportAppointment'
+      photos:
+        $ref: '#/definitions/ExportPhotos'
+      vaccinations:
+        items:
+          $ref: '#/definitions/ExportVaccination'
+        type: array
+    type: object
+  ExportDoseCounts:
+    properties:
+      due:
+        example: 0
+        type: integer
+      pending:
+        example: 3
+        type: integer
+      taken:
+        example: 16
+        type: integer
+      total:
+        example: 21
+        type: integer
+      unregistered:
+        example: 2
+        type: integer
+    type: object
+  ExportErrorResponse:
+    properties:
+      error:
+        example: child_not_found
+        type: string
+      message:
+        type: string
+    type: object
+  ExportExtension:
+    properties:
+      addedDoses:
+        example: 2
+        type: integer
+      createdAt:
+        type: string
+    type: object
+  ExportFiltersRequest:
+    properties:
+      doctor:
+        example: Dra. Laura Cázares
+        type: string
+      from:
+        example: "2026-07-01"
+        type: string
+      kind:
+        example: all
+        type: string
+      medication:
+        example: ""
+        type: string
+      q:
+        example: ""
+        type: string
+      symptomCodes:
+        example:
+        - fever
+        items:
+          type: string
+        type: array
+      to:
+        example: "2026-10-24"
+        type: string
+    type: object
+  ExportMark:
+    properties:
+      at:
+        type: string
+      by:
+        example: Ana
+        type: string
+    type: object
+  ExportMedication:
+    properties:
+      doses:
+        $ref: '#/definitions/ExportDoseCounts'
+      durationDays:
+        example: 7
+        type: integer
+      endedAt:
+        type: string
+      extensions:
+        items:
+          $ref: '#/definitions/ExportExtension'
+        type: array
+      firstDoseAt:
+        type: string
+      frequencyHours:
+        example: 8
+        type: integer
+      lastDoseAt:
+        type: string
+      lastMark:
+        $ref: '#/definitions/ExportMark'
+      name:
+        example: Amoxicilina
+        type: string
+      startTime:
+        example: "08:00"
+        type: string
+    type: object
+  ExportPeriodRequest:
+    properties:
+      filters:
+        $ref: '#/definitions/ExportFiltersRequest'
+      from:
+        example: "2026-01-01"
+        type: string
+      kind:
+        description: Kind is "all" (the whole history), "range" (From–To, days, both
+          included) or "filters" (the history's own criteria).
+        enum:
+        - all
+        - range
+        - filters
+        example: range
+        type: string
+      to:
+        example: "2026-10-24"
+        type: string
+    type: object
+  ExportPhotos:
+    properties:
+      card:
+        items:
+          $ref: '#/definitions/ExportCardPhoto'
+        type: array
+      consultations:
+        items:
+          $ref: '#/definitions/ExportConsultationPhoto'
+        type: array
+    type: object
+  ExportPlanLimitResponse:
+    properties:
+      error:
+        example: freemium_consultation_limit_exceeded
+        type: string
+      message:
+        type: string
+      reason:
+        example: pdf_export
+        type: string
+    type: object
+  ExportRequest:
+    properties:
+      period:
+        $ref: '#/definitions/ExportPeriodRequest'
+      sections:
+        $ref: '#/definitions/ExportSectionsRequest'
+    type: object
+  ExportSectionsRequest:
+    properties:
+      consultations:
+        example: true
+        type: boolean
+      photos:
+        example: false
+        type: boolean
+      vaccinations:
+        example: true
+        type: boolean
+    type: object
+  ExportSymptom:
+    properties:
+      code:
+        example: fever
+        type: string
+      name:
+        example: Fiebre
+        type: string
+    type: object
+  ExportVaccination:
+    properties:
+      appliedOn:
+        example: "2021-03-15"
+        type: string
+      corrected:
+        $ref: '#/definitions/ExportCorrected'
+      custom:
+        type: boolean
+      doseNumber:
+        example: 1
+        type: integer
+      id:
+        type: string
+      lot:
+        type: string
+      name:
+        example: Hepatitis B
+        type: string
+      notes:
+        type: string
+      place:
         type: string
     type: object
   ExtendTreatmentRequest:
@@ -1136,7 +1452,7 @@ definitions:
       reason:
         description: |-
           Reason is "active_treatment" (another treatment is still running), "record_only" (saving only as a record) or
-          "history_search" (searching and filtering the history, specs/031).
+          "history_search" (searching and filtering the history, specs/031) or "pdf_export" (the history's PDF, specs/050).
         example: active_treatment
         type: string
     type: object
@@ -3587,6 +3903,60 @@ paths:
       summary: Remove a phone
       tags:
       - child-device
+  /children/{childId}/export:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Everything the history's PDF shows, in one read-only answer: the child, the consultations of the period with the record
+        of their doses (only counts), the running treatment, the next appointments and the whole vaccination card (the period
+        never narrows it). Photos are only listed; each one is asked for apart. The choice travels in the body, never in the
+        address. Part of the paid plan: a free family gets 422 "freemium_consultation_limit_exceeded" with reason "pdf_export"
+        and no data, even when only the card was asked for.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: Period and sections
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/ExportRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ExportDocument'
+        "400":
+          description: Malformed body, an invalid period or no section
+          schema:
+            $ref: '#/definitions/ExportErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ExportErrorResponse'
+        "403":
+          description: The session has no access to this child
+          schema:
+            $ref: '#/definitions/ExportErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/ExportErrorResponse'
+        "422":
+          description: 'Free plan: the PDF is part of the paid plan'
+          schema:
+            $ref: '#/definitions/ExportPlanLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: The data of a child's history PDF
+      tags:
+      - history-export
   /children/{childId}/history-options:
     get:
       description: |-
@@ -4384,6 +4754,40 @@ paths:
       security:
       - ClerkSession: []
       summary: Add doses to the end of a medication's treatment
+      tags:
+      - consultations
+  /consultations/{consultationId}/photo:
+    get:
+      description: Only the photo, for the history's PDF, which asks for each photo
+        apart instead of all of them in one answer.
+      parameters:
+      - description: Consultation UUID
+        in: path
+        name: consultationId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ConsultationPhotoResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "404":
+          description: No consultation exists for this id
+          schema:
+            $ref: '#/definitions/ConsultationNotFoundResponse'
+      security:
+      - ClerkSession: []
+      summary: The prescription photo of a consultation
       tags:
       - consultations
   /family:

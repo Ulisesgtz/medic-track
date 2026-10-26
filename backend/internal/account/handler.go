@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	clerk "github.com/clerk/clerk-sdk-go/v2"
 	clerkuser "github.com/clerk/clerk-sdk-go/v2/user"
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -277,6 +278,9 @@ func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 // primary email exists but Clerk has not verified it.
 var errEmailNotVerified = errors.New("the session's primary email is not verified")
 
+// clerkRateLimitWaits are the waits before asking Clerk again after a 429 (a variable so tests can shorten them).
+var clerkRateLimitWaits = []time.Duration{500 * time.Millisecond, 1500 * time.Millisecond, 3 * time.Second}
+
 // clerkPrimaryEmail resolves the verified primary email for a Clerk user id
 // via the Backend API — the session token's own claims don't expose a
 // typed email field in this SDK version, and this is otherwise the
@@ -286,6 +290,20 @@ var errEmailNotVerified = errors.New("the session's primary email is not verifie
 // one the tutor has proven to control.
 func clerkPrimaryEmail(ctx context.Context, clerkUserID string) (string, error) {
 	clerkUser, err := clerkuser.Get(ctx, clerkUserID)
+	// Clerk limits the requests of an instance (429): a burst of signups must not end in a 500, so it is asked again a few
+	// times with growing waits (clerkRateLimitWaits), and only for that answer.
+	for _, wait := range clerkRateLimitWaits {
+		var apiErr *clerk.APIErrorResponse
+		if err == nil || !errors.As(err, &apiErr) || apiErr.HTTPStatusCode != http.StatusTooManyRequests {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case <-time.After(wait):
+		}
+		clerkUser, err = clerkuser.Get(ctx, clerkUserID)
+	}
 	if err != nil {
 		return "", fmt.Errorf("fetching clerk user: %w", err)
 	}

@@ -111,14 +111,26 @@ jobs:
         run: npx vitest run --coverage
 
   frontend-e2e:
-    name: Frontend — Playwright E2E gate
+    name: E2E ${{ matrix.name }}
     runs-on: ubuntu-latest
-    # Every E2E run signs up and deletes users in the same Clerk development instance: two at once
-    # (two quick pushes, two PRs) cleaned up each other's users. One at a time, repo-wide; a newer
-    # pending run replaces an older pending one, a running one is never cancelled.
+    # The suite is split in five jobs that run at the same time (~2 min of tests each instead of ~12 in one): Chromium, which runs
+    # every spec, in three shards, and Firefox and WebKit, which run only the CROSS_BROWSER_SPECS of playwright.config.ts. Each job
+    # has its own API and database and installs only its browser. The «Frontend — Playwright E2E gate» job below sums them up.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: 'chromium 1/3', project: chromium, shard: 1/3 }
+          - { name: 'chromium 2/3', project: chromium, shard: 2/3 }
+          - { name: 'chromium 3/3', project: chromium, shard: 3/3 }
+          - { name: firefox, project: firefox, shard: 1/1 }
+          - { name: webkit, project: webkit, shard: 1/1 }
+    # One run per branch and job: a new push to a PR cancels its own older run; runs of other branches don't wait any more (they
+    # used to queue repo-wide). The Clerk development instance is shared, but no run deletes another's users: each test deletes
+    # its own and the global cleanup only removes the marked ones older than 10 minutes (e2e/global.setup.ts).
     concurrency:
-      group: e2e-clerk-dev-instance
-      cancel-in-progress: false
+      group: e2e-${{ github.ref }}-${{ matrix.project }}-${{ matrix.shard }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
     services:
       postgres:
         image: postgres:18
@@ -190,18 +202,31 @@ jobs:
         working-directory: frontend
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
 
-      - name: Cache Playwright browsers
-        # The three browsers are ~600 MB: downloaded again on every run before. The key is the Playwright version, so a
-        # new version downloads its own. `playwright install` below still runs (it installs the system packages and skips
-        # what is already cached).
+      - name: Cache Playwright browser
+        # Only this job's browser is kept, under a key of its own (Playwright version + browser). `playwright install` below still
+        # runs: it installs the system packages and skips what is already cached.
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-${{ matrix.project }}
 
-      - name: Install Playwright browsers
+      - name: Install Playwright browser
         working-directory: frontend
-        run: npx playwright install --with-deps
+        # Only this job's browser and its system packages. The package mirrors are sometimes very slow (a run took 15 minutes here):
+        # each try is cut at 4 minutes and tried again once, instead of holding the whole gate.
+        # The system packages go first and are never cut in the middle: a `timeout` kills npx but leaves its apt-get running with
+        # the dpkg lock (PR 67: the retry then failed with «Could not get lock»). apt itself waits for the lock (the runner's own
+        # unattended upgrades can hold it at start); only the step's limit stops a mirror that hangs. The browser download is
+        # retried once.
+        timeout-minutes: 15
+        run: |
+          echo 'DPkg::Lock::Timeout "300";' | sudo tee /etc/apt/apt.conf.d/99-wait-for-lock > /dev/null
+          npx playwright install-deps ${{ matrix.project }}
+          for try in 1 2; do
+            timeout 300 npx playwright install ${{ matrix.project }} && exit 0
+            echo "Downloading the browser took too long or failed (try $try)"
+          done
+          exit 1
 
       - name: Wait for backend
         # wait-on's http:// scheme probes with HEAD by default, and chi
@@ -218,9 +243,12 @@ jobs:
         # or Playwright refuses to bind :5173 ("already used") since
         # reuseExistingServer is false in CI (process.env.CI is set). The build
         # reads VITE_CLERK_PUBLISHABLE_KEY from the env below. Several workers
-        # (E2E_WORKERS, 4 by default) share the run.
-        run: npx playwright test
+        # (E2E_WORKERS) share the job; the job runs one project and one shard.
+        run: npx playwright test --project=${{ matrix.project }} --shard=${{ matrix.shard }}
         env:
+          # Two per job, ten at once across the five: with four per job (twenty at once) the shared Clerk development instance
+          # answered 429 more than the retries could absorb (PR 67's first run).
+          E2E_WORKERS: '2'
           # Tells the suite the API was started with MAIL_DRIVER=discard (specs/040).
           MAIL_DRIVER: discard
           # The frontend throws without it (specs/008). Repository secret: the *test* (pk_test_) key of the Clerk development instance.
@@ -233,12 +261,22 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: server-logs
+          name: server-logs-${{ strategy.job-index }}
           path: /tmp/backend.log
 
       - name: Upload Playwright report on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ strategy.job-index }}
           path: frontend/playwright-report/
+
+  frontend-e2e-gate:
+    # The one check to look at (the name it always had): green only if all five E2E jobs passed.
+    name: Frontend — Playwright E2E gate
+    needs: frontend-e2e
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: All E2E jobs passed
+        run: test "${{ needs.frontend-e2e.result }}" = "success"

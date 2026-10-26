@@ -348,9 +348,18 @@ func generateDoseSchedule(consultDate time.Time, loc *time.Location, med *Medica
 // (doses ordered oldest-first). Returns ErrConsultationNotFound if no
 // consultation exists for id.
 func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Consultation, error) {
+	return r.getByID(ctx, id, true)
+}
+
+// getByID is GetByID, reading the photo only when asked (the history's PDF asks for each photo apart, specs/050).
+func (r *Repository) getByID(ctx context.Context, id uuid.UUID, withPhoto bool) (*Consultation, error) {
 	c := &Consultation{ID: id}
+	photo := "photo"
+	if !withPhoto {
+		photo = "''::bytea"
+	}
 	err := r.pool.QueryRow(ctx, `
-		SELECT child_id, doctor_name, consult_date, photo, notes, created_at, record_only
+		SELECT child_id, doctor_name, consult_date, `+photo+`, notes, created_at, record_only
 		FROM consultations WHERE id = $1
 	`, id).Scan(&c.ChildID, &c.DoctorName, &c.ConsultDate, &c.Photo, &c.Notes, &c.CreatedAt, &c.RecordOnly)
 	if err != nil {

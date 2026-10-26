@@ -2100,6 +2100,82 @@
                 }
             }
         },
+        "/children/{childId}/export": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Everything the history's PDF shows, in one read-only answer: the child, the consultations of the period with the record\nof their doses (only counts), the running treatment, the next appointments and the whole vaccination card (the period\nnever narrows it). Photos are only listed; each one is asked for apart. The choice travels in the body, never in the\naddress. Part of the paid plan: a free family gets 422 \"freemium_consultation_limit_exceeded\" with reason \"pdf_export\"\nand no data, even when only the card was asked for.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "history-export"
+                ],
+                "summary": "The data of a child's history PDF",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Period and sections",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ExportRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ExportDocument"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed body, an invalid period or no section",
+                        "schema": {
+                            "$ref": "#/definitions/ExportErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ExportErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session has no access to this child",
+                        "schema": {
+                            "$ref": "#/definitions/ExportErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ExportErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Free plan: the PDF is part of the paid plan",
+                        "schema": {
+                            "$ref": "#/definitions/ExportPlanLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/children/{childId}/history-options": {
             "get": {
                 "security": [
@@ -3271,6 +3347,58 @@
                         "description": "No such medication in this consultation",
                         "schema": {
                             "$ref": "#/definitions/MedicationNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/consultations/{consultationId}/photo": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Only the photo, for the history's PDF, which asks for each photo apart instead of all of them in one answer.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "The prescription photo of a consultation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Consultation UUID",
+                        "name": "consultationId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationPhotoResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No consultation exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationNotFoundResponse"
                         }
                     }
                 }
@@ -5223,6 +5351,15 @@
                 }
             }
         },
+        "ConsultationPhotoResponse": {
+            "type": "object",
+            "properties": {
+                "photoBase64": {
+                    "description": "PhotoBase64 is the prescription photo; empty when the consultation was saved without one.",
+                    "type": "string"
+                }
+            }
+        },
         "ConsultationSessionErrorResponse": {
             "type": "object",
             "properties": {
@@ -5550,6 +5687,453 @@
                 "message": {
                     "type": "string",
                     "example": "Could not create account"
+                }
+            }
+        },
+        "ExportActiveTreatment": {
+            "type": "object",
+            "properties": {
+                "doctorName": {
+                    "type": "string",
+                    "example": "Dra. Laura Cázares"
+                },
+                "frequencyHours": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "medicationName": {
+                    "type": "string",
+                    "example": "Amoxicilina"
+                },
+                "since": {
+                    "type": "string",
+                    "example": "2026-10-18T14:00:00Z"
+                }
+            }
+        },
+        "ExportAppointment": {
+            "type": "object",
+            "properties": {
+                "doctorName": {
+                    "type": "string",
+                    "example": "Dra. Laura Cázares"
+                },
+                "location": {
+                    "type": "string",
+                    "example": "Consultorio 204, Torre Médica Satélite"
+                },
+                "scheduledAt": {
+                    "type": "string",
+                    "example": "2026-10-28T16:30:00Z"
+                }
+            }
+        },
+        "ExportCardPhoto": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
+        "ExportChild": {
+            "type": "object",
+            "properties": {
+                "birthDate": {
+                    "type": "string",
+                    "example": "2021-03-14"
+                },
+                "firstName": {
+                    "type": "string",
+                    "example": "Mateo"
+                },
+                "height": {
+                    "type": "number",
+                    "example": 112
+                },
+                "lastName": {
+                    "type": "string",
+                    "example": "Morales"
+                },
+                "weight": {
+                    "type": "number",
+                    "example": 19.4
+                }
+            }
+        },
+        "ExportConsultation": {
+            "type": "object",
+            "properties": {
+                "appointment": {
+                    "$ref": "#/definitions/ExportAppointment"
+                },
+                "consultDate": {
+                    "type": "string",
+                    "example": "2026-10-18"
+                },
+                "doctorName": {
+                    "type": "string",
+                    "example": "Dra. Laura Cázares"
+                },
+                "hasPhoto": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "medications": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ExportMedication"
+                    }
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "recordOnly": {
+                    "type": "boolean"
+                },
+                "symptoms": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ExportSymptom"
+                    }
+                }
+            }
+        },
+        "ExportConsultationPhoto": {
+            "type": "object",
+            "properties": {
+                "consultDate": {
+                    "type": "string",
+                    "example": "2026-10-18"
+                },
+                "consultationId": {
+                    "type": "string"
+                },
+                "doctorName": {
+                    "type": "string",
+                    "example": "Dra. Laura Cázares"
+                }
+            }
+        },
+        "ExportCorrected": {
+            "type": "object",
+            "properties": {
+                "at": {
+                    "type": "string"
+                },
+                "by": {
+                    "type": "string",
+                    "example": "Ana"
+                }
+            }
+        },
+        "ExportDocument": {
+            "type": "object",
+            "properties": {
+                "activeTreatment": {
+                    "$ref": "#/definitions/ExportActiveTreatment"
+                },
+                "child": {
+                    "$ref": "#/definitions/ExportChild"
+                },
+                "consultations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ExportConsultation"
+                    }
+                },
+                "nextAppointment": {
+                    "$ref": "#/definitions/ExportAppointment"
+                },
+                "photos": {
+                    "$ref": "#/definitions/ExportPhotos"
+                },
+                "vaccinations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ExportVaccination"
+                    }
+                }
+            }
+        },
+        "ExportDoseCounts": {
+            "type": "object",
+            "properties": {
+                "due": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "pending": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "taken": {
+                    "type": "integer",
+                    "example": 16
+                },
+                "total": {
+                    "type": "integer",
+                    "example": 21
+                },
+                "unregistered": {
+                    "type": "integer",
+                    "example": 2
+                }
+            }
+        },
+        "ExportErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "child_not_found"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "ExportExtension": {
+            "type": "object",
+            "properties": {
+                "addedDoses": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "createdAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "ExportFiltersRequest": {
+            "type": "object",
+            "properties": {
+                "doctor": {
+                    "type": "string",
+                    "example": "Dra. Laura Cázares"
+                },
+                "from": {
+                    "type": "string",
+                    "example": "2026-07-01"
+                },
+                "kind": {
+                    "type": "string",
+                    "example": "all"
+                },
+                "medication": {
+                    "type": "string",
+                    "example": ""
+                },
+                "q": {
+                    "type": "string",
+                    "example": ""
+                },
+                "symptomCodes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "fever"
+                    ]
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-10-24"
+                }
+            }
+        },
+        "ExportMark": {
+            "type": "object",
+            "properties": {
+                "at": {
+                    "type": "string"
+                },
+                "by": {
+                    "type": "string",
+                    "example": "Ana"
+                }
+            }
+        },
+        "ExportMedication": {
+            "type": "object",
+            "properties": {
+                "doses": {
+                    "$ref": "#/definitions/ExportDoseCounts"
+                },
+                "durationDays": {
+                    "type": "integer",
+                    "example": 7
+                },
+                "endedAt": {
+                    "type": "string"
+                },
+                "extensions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ExportExtension"
+                    }
+                },
+                "firstDoseAt": {
+                    "type": "string"
+                },
+                "frequencyHours": {
+                    "type": "integer",
+                    "example": 8
+                },
+                "lastDoseAt": {
+                    "type": "string"
+                },
+                "lastMark": {
+                    "$ref": "#/definitions/ExportMark"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Amoxicilina"
+                },
+                "startTime": {
+                    "type": "string",
+                    "example": "08:00"
+                }
+            }
+        },
+        "ExportPeriodRequest": {
+            "type": "object",
+            "properties": {
+                "filters": {
+                    "$ref": "#/definitions/ExportFiltersRequest"
+                },
+                "from": {
+                    "type": "string",
+                    "example": "2026-01-01"
+                },
+                "kind": {
+                    "description": "Kind is \"all\" (the whole history), \"range\" (From–To, days, both included) or \"filters\" (the history's own criteria).",
+                    "type": "string",
+                    "enum": [
+                        "all",
+                        "range",
+                        "filters"
+                    ],
+                    "example": "range"
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-10-24"
+                }
+            }
+        },
+        "ExportPhotos": {
+            "type": "object",
+            "properties": {
+                "card": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ExportCardPhoto"
+                    }
+                },
+                "consultations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ExportConsultationPhoto"
+                    }
+                }
+            }
+        },
+        "ExportPlanLimitResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "freemium_consultation_limit_exceeded"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string",
+                    "example": "pdf_export"
+                }
+            }
+        },
+        "ExportRequest": {
+            "type": "object",
+            "properties": {
+                "period": {
+                    "$ref": "#/definitions/ExportPeriodRequest"
+                },
+                "sections": {
+                    "$ref": "#/definitions/ExportSectionsRequest"
+                }
+            }
+        },
+        "ExportSectionsRequest": {
+            "type": "object",
+            "properties": {
+                "consultations": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "photos": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "vaccinations": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "ExportSymptom": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string",
+                    "example": "fever"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Fiebre"
+                }
+            }
+        },
+        "ExportVaccination": {
+            "type": "object",
+            "properties": {
+                "appliedOn": {
+                    "type": "string",
+                    "example": "2021-03-15"
+                },
+                "corrected": {
+                    "$ref": "#/definitions/ExportCorrected"
+                },
+                "custom": {
+                    "type": "boolean"
+                },
+                "doseNumber": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lot": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Hepatitis B"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "place": {
+                    "type": "string"
                 }
             }
         },
@@ -6167,7 +6751,7 @@
                     "example": "The free plan includes one active treatment at a time"
                 },
                 "reason": {
-                    "description": "Reason is \"active_treatment\" (another treatment is still running), \"record_only\" (saving only as a record) or\n\"history_search\" (searching and filtering the history, specs/031).",
+                    "description": "Reason is \"active_treatment\" (another treatment is still running), \"record_only\" (saving only as a record) or\n\"history_search\" (searching and filtering the history, specs/031) or \"pdf_export\" (the history's PDF, specs/050).",
                     "type": "string",
                     "example": "active_treatment"
                 }
