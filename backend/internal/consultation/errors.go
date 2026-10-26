@@ -39,6 +39,14 @@ var (
 	// parent asked for (specs/030-reglas-plan-gratis).
 	ErrPlanLimit = errors.New("the free plan does not include this")
 
+	// ErrEditConflict is returned when an edit was made on a version of the consultation that is no longer the saved one:
+	// someone saved another edit after the form was opened (specs/051). Nothing is saved.
+	ErrEditConflict = errors.New("the consultation changed since it was opened")
+
+	// ErrMedicationHasMarks is returned when an edit takes out a medication with at least one marked dose (specs/051):
+	// what was registered is never deleted. Nothing is saved.
+	ErrMedicationHasMarks = errors.New("the medication has marked doses")
+
 	// ErrPhotoLimit is returned when the account already keeps MaxPhotosPerAccount prescription photos: the consultation can
 	// still be saved, without a photo.
 	ErrPhotoLimit = errors.New("the account reached its limit of prescription photos")

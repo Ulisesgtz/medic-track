@@ -359,9 +359,10 @@ func (r *Repository) getByID(ctx context.Context, id uuid.UUID, withPhoto bool) 
 		photo = "''::bytea"
 	}
 	err := r.pool.QueryRow(ctx, `
-		SELECT child_id, doctor_name, consult_date, `+photo+`, notes, created_at, record_only
+		SELECT child_id, doctor_name, consult_date, `+photo+`, notes, created_at, record_only, edited_at,
+		       (SELECT first_name FROM accounts WHERE id = edited_by_account_id)
 		FROM consultations WHERE id = $1
-	`, id).Scan(&c.ChildID, &c.DoctorName, &c.ConsultDate, &c.Photo, &c.Notes, &c.CreatedAt, &c.RecordOnly)
+	`, id).Scan(&c.ChildID, &c.DoctorName, &c.ConsultDate, &c.Photo, &c.Notes, &c.CreatedAt, &c.RecordOnly, &c.EditedAt, &c.EditedBy)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrConsultationNotFound
