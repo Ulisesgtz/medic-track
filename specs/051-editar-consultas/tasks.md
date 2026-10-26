@@ -15,8 +15,8 @@ finales de línea, vitest con `--testTimeout=30000 --maxWorkers=4`, `DATABASE_UR
 
 ## Fase 1: Configuración — migración
 
-- [ ] T001 Crear `backend/migrations/0030_consultation_edits.sql`: `ALTER TABLE consultations ADD COLUMN edited_at timestamptz NULL, ADD COLUMN edited_by_account_id uuid NULL REFERENCES accounts (id), ADD CONSTRAINT consultations_edit_pair CHECK ((edited_at IS NULL) = (edited_by_account_id IS NULL));` sin relleno. Aplicarla en la base local y en la de pruebas.
-- [ ] T002 Mostrar al usuario el SQL completo de la `0030` y recordarle aplicarlo en DEV **antes** de hacer merge (lección del digest del 19–26 oct). Anotar la migración en la tabla de `backend/CLAUDE.md` («`migrations/*.sql`»).
+- [X] T001 Crear `backend/migrations/0030_consultation_edits.sql`: `ALTER TABLE consultations ADD COLUMN edited_at timestamptz NULL, ADD COLUMN edited_by_account_id uuid NULL REFERENCES accounts (id), ADD CONSTRAINT consultations_edit_pair CHECK ((edited_at IS NULL) = (edited_by_account_id IS NULL));` sin relleno. Aplicarla en la base local y en la de pruebas.
+- [X] T002 Mostrar al usuario el SQL completo de la `0030` y recordarle aplicarlo en DEV **antes** de hacer merge (lección del digest del 19–26 oct). Anotar la migración en la tabla de `backend/CLAUDE.md` («`migrations/*.sql`»).
 
 **Punto de control**: la base local tiene las dos columnas y el CHECK.
 
