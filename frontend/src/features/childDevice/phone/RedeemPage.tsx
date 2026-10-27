@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { isInstalled, isIOS } from '../../reminders/deviceSupport'
 import { PHONE } from '../childText'
 import { redeemLink } from './api'
-import { tokenFromPasted, useChildManifest } from './childManifest'
+import { tokenFromPasted } from './pastedLink'
 import { readCredential, writeCredential } from './storage'
 
 const main = 'mx-auto flex min-h-screen w-full max-w-[430px] flex-col justify-center gap-4 bg-canvas px-6 py-10'
@@ -21,11 +21,10 @@ const field =
  *
  * On an iPhone outside the installed app the link is NOT spent: the app added to the home screen keeps its storage apart from Safari,
  * so a credential saved here would not be there. The page says to install first and paste the link inside the app (or to use it here
- * anyway). Without a token, an installed app with no access offers to paste the link. The page points to the child's manifest, so the
- * installed app starts here and not at the parents' login.
+ * anyway). Without a token, an installed app with no access offers to paste the link. The HTML of this route already names the child's
+ * manifest (vite.config.ts), so the installed app starts here and not at the parents' login.
  */
 export function RedeemPage() {
-  useChildManifest()
   const navigate = useNavigate()
   const started = useRef(false)
   // Read once, on the first render: the effect below takes the secret out of the address bar.

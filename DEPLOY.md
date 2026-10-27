@@ -148,7 +148,9 @@ Guárdalas **solo en Railway**. No las pegues en el repo, en un chat ni en una c
 
 `vite build` también escribe `dist/version.json` y `public/_headers` lo sirve con `Cache-Control: no-store`: con eso la
 app instalada sabe que hay una versión nueva y muestra «Hay una versión nueva · Actualizar» (spec 017). Sin un
-`404.html`, Pages sirve `index.html` para cualquier ruta (SPA) y el service worker queda en `/sw.js`.
+`404.html`, Pages sirve `index.html` para cualquier ruta (SPA) y el service worker queda en `/sw.js`. Las rutas del teléfono
+del hijo son la excepción: `/hijo` y `/hijo/hoy` salen de `hijo.html` y `hijo/hoy.html`, que el build escribe con el
+manifiesto del hijo (así la app que el niño agrega a su pantalla de inicio abre en `/hijo` y no en el login de los padres).
 
 ### 5. DNS
 > **Desde el 2026-10-11 el DNS está en Cloudflare**, no en HostGator: los registros de abajo se administran en Cloudflare (*Domains → `pedi-track.com` → DNS*). En HostGator solo quedan el registro del dominio, su renovación y los nameservers apuntando a Cloudflare (*Configurar dominio → Cambiar plataforma → Otra plataforma*). `api-dev` va en **DNS only** (nube gris), `dev` en *Proxied*. Lo que sigue es el procedimiento original en HostGator, que sirve como referencia de los valores.
@@ -299,5 +301,5 @@ El plan completo (MX$499 al año) se contrata desde `/planes`: el padre paga **e
 1. **Migración `0029`** (`child_device_links`, `taken_by_child_device_id` en `doses` y `supplement_doses`, `reminder_devices.child_link_id` con `account_id` ahora opcional, `child_dose_reminders` y `child_supplement_dose_reminders`) en la base de DEV **antes** de desplegar el backend de esta rama (script de `node`/`pg`, no `psql`; mismo método que de la `0025` a la `0028`). El backend anterior sigue funcionando sin ella; el nuevo no. No toca datos existentes.
 2. **Sin variables nuevas.** Los avisos del teléfono del niño usan las mismas llaves VAPID de los recordatorios.
 3. El aviso «Antes de empezar» cambió de versión (`2026-10-23`: nombra el acceso del hijo), así que cada cuenta lo verá una vez más.
-4. Probar con un iPhone real: abrir la liga desde Mensajes o WhatsApp, instalar la PWA, marcar una toma y activar los avisos. En Safari **sin** instalar la app el almacenamiento se limpia a los 7 días sin uso y el niño necesitaría otra liga.
+4. Probar con un iPhone real: abrir la liga desde Mensajes o WhatsApp, instalar la PWA, marcar una toma y activar los avisos. En Safari **sin** instalar la app el almacenamiento se limpia a los 7 días sin uso y el niño necesitaría otra liga. Para revisar que la app del niño abrirá en `/hijo`: `curl -s https://dev.pedi-track.com/hijo | grep manifest` debe nombrar `/manifest-hijo.webmanifest`. Un ícono agregado antes del arreglo del 2026-10-27 (bugfix 052) se queda abriendo `/home`: hay que borrarlo y volver a agregarlo desde la liga.
 5. Pendiente legal del dueño: el aviso de privacidad debe mencionar este acceso (sin datos personales del menor, quitable en cualquier momento).

@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { PHONE } from '../childText'
 import { RedeemPage } from './RedeemPage'
 import { readCredential } from './storage'
-import { tokenFromPasted } from './childManifest'
+import { tokenFromPasted } from './pastedLink'
 import userEvent from '@testing-library/user-event'
 
 function setHash(hash: string) {
@@ -139,19 +139,6 @@ describe('RedeemPage', () => {
       expect(await screen.findByText('pantalla del hijo')).toBeInTheDocument()
       expect(readCredential()).toBe('cred-1')
     })
-  })
-
-  it('points the page to the child manifest while it is open, and gives the parents one back', () => {
-    const link = document.createElement('link')
-    link.rel = 'manifest'
-    link.href = '/manifest.webmanifest'
-    document.head.appendChild(link)
-    vi.stubGlobal('fetch', vi.fn())
-    const { unmount } = show()
-    expect(link.getAttribute('href')).toBe('/manifest-hijo.webmanifest')
-    unmount()
-    expect(link.getAttribute('href')).toBe('/manifest.webmanifest')
-    link.remove()
   })
 })
 
