@@ -9,7 +9,6 @@ import { accessGone, useActivities, useDone, useMarkDose, useMe, useOverview, us
 import { NoAccess } from './NoAccess'
 import { RemindersCard } from './RemindersCard'
 import { isIOS } from '../../reminders/deviceSupport'
-import { useChildManifest } from './childManifest'
 import { clearCredential, readCredential } from './storage'
 
 const card = 'flex flex-col gap-3 rounded-[22px] bg-surface px-[22px] py-5 shadow-[0_8px_20px_rgba(4,37,43,0.07)]'
@@ -42,7 +41,6 @@ function DoseRow({ credential, dose }: { credential: string; dose: OverviewDose 
  * API with the phone's credential only; if the server says the access is gone the phone forgets it and says one sentence.
  */
 export function ChildTodayPage() {
-  useChildManifest()
   const [credential, setCredential] = useState(readCredential)
   if (!credential) return <NoAccess />
   return <Today credential={credential} onRotated={setCredential} />

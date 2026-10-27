@@ -240,7 +240,8 @@ function App() {
           />
           {/* Public on purpose: an invitation is opened before the person has a session; the page itself asks for one. */}
           <Route path="/familia/invitacion" element={<InvitationPage />} />
-          {/* A child's own phone (specs/047): no Clerk session and no parents' shell; it carries its own credential. */}
+          {/* A child's own phone (specs/047): no Clerk session and no parents' shell; it carries its own credential. Each of these
+              routes is also in CHILD_PAGES of vite.config.ts, so its HTML names the child's manifest (the installed app starts at /hijo). */}
           <Route path="/hijo" element={<RedeemPage />} />
           <Route path="/hijo/hoy" element={<ChildTodayPage />} />
           <Route path="/" element={<Navigate to="/signup" replace />} />

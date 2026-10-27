@@ -33,6 +33,19 @@ async function childPhone(browser: Browser, viewport: { width: number; height: n
 
 const device = (credential: string) => ({ Authorization: `Device ${credential}` })
 
+// What «Agregar a pantalla de inicio» uses is the manifest named in the HTML itself: Safari loads it while parsing and keeps it, so a
+// script that swaps it later is too late. The raw HTML of each child route must already name the child's (start_url /hijo).
+test('the child’s routes name the child’s manifest in their HTML, before any script runs', async ({ request }) => {
+  for (const path of ['/hijo', '/hijo/hoy']) {
+    const html = await (await request.get(path)).text()
+    expect(html, path).toContain('<link rel="manifest" href="/manifest-hijo.webmanifest"')
+    expect(html, path).not.toContain('href="/manifest.webmanifest"')
+  }
+  expect(await (await request.get('/home')).text()).toContain('<link rel="manifest" href="/manifest.webmanifest"')
+  const manifest = await (await request.get('/manifest-hijo.webmanifest')).json()
+  expect(manifest.start_url).toBe('/hijo')
+})
+
 for (const design of designs) {
   test.describe(`Dispositivo del hijo, ${design.name}`, () => {
     test.skip(({ browserName }) => browserName !== 'chromium', 'the child phone flow is checked in Chromium only')
