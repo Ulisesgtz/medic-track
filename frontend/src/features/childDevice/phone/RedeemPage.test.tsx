@@ -32,7 +32,12 @@ afterEach(() => {
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
   setHash('')
+  Reflect.deleteProperty(navigator, 'clipboard')
 })
+
+function clipboard(readText: () => Promise<string>) {
+  Object.defineProperty(navigator, 'clipboard', { value: { readText: vi.fn(readText), writeText: vi.fn() }, configurable: true })
+}
 
 describe('RedeemPage', () => {
   it('redeems the link once, even under StrictMode, takes the secret out of the address and keeps the credential', async () => {
@@ -100,6 +105,47 @@ describe('RedeemPage', () => {
     expect(screen.getByLabelText(PHONE.paste.label)).toHaveValue('vieja')
   })
 
+  describe('«Pegar mi liga»', () => {
+    it('reads the copied link with one tap and gets in', async () => {
+      setHash('')
+      const user = userEvent.setup()
+      clipboard(async () => '  https://dev.pedi-track.com/hijo#Secreto_copiado-1234567  ')
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => okBody })
+      vi.stubGlobal('fetch', fetchMock)
+      show()
+      await user.click(await screen.findByRole('button', { name: PHONE.paste.pasteButton }))
+      expect(await screen.findByText('pantalla del hijo')).toBeInTheDocument()
+      expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ token: 'Secreto_copiado-1234567' })
+      expect(readCredential()).toBe('cred-1')
+    })
+
+    it('says so when what was copied is not a link, and asks nothing of the server', async () => {
+      setHash('')
+      const user = userEvent.setup()
+      clipboard(async () => 'hola qué tal')
+      const fetchMock = vi.fn()
+      vi.stubGlobal('fetch', fetchMock)
+      show()
+      await user.click(await screen.findByRole('button', { name: PHONE.paste.pasteButton }))
+      expect(await screen.findByText(PHONE.paste.pasteEmpty)).toBeInTheDocument()
+      expect(fetchMock).not.toHaveBeenCalled()
+    })
+
+    it('says how to paste by hand when the phone does not let it read', async () => {
+      setHash('')
+      const user = userEvent.setup()
+      clipboard(async () => {
+        throw new Error('denied')
+      })
+      vi.stubGlobal('fetch', vi.fn())
+      show()
+      await user.click(await screen.findByRole('button', { name: PHONE.paste.pasteButton }))
+      expect(await screen.findByText(PHONE.paste.pasteFailed)).toBeInTheDocument()
+      expect(screen.getByText(PHONE.paste.orByHand)).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: PHONE.paste.submit })).toBeDisabled()
+    })
+  })
+
   describe('on an iPhone outside the installed app', () => {
     beforeEach(() => vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)'))
 
@@ -112,6 +158,11 @@ describe('RedeemPage', () => {
       Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true })
       show()
       expect(await screen.findByRole('heading', { name: PHONE.installFirst.title })).toBeInTheDocument()
+      // Five illustrated steps, each with its title; the drawings are hidden from screen readers.
+      const steps = screen.getAllByRole('listitem')
+      expect(steps).toHaveLength(5)
+      PHONE.installFirst.steps.forEach((step, i) => expect(steps[i]).toHaveTextContent(step.title))
+      for (const art of document.querySelectorAll('svg')) expect(art).toHaveAttribute('aria-hidden', 'true')
       expect(window.location.hash).toBe('')
       expect(fetchMock).not.toHaveBeenCalled()
       expect(screen.getByLabelText(PHONE.installFirst.linkLabel)).toHaveValue(`${window.location.origin}/hijo#secreto`)
