@@ -73,13 +73,28 @@ export const PHONE = {
   install: 'Para que no se pierda, agrega esta app a la pantalla de inicio de tu teléfono.',
   installIos: 'En iPhone, la app de la pantalla de inicio guarda tu acceso aparte: para usarla ahí, pide una liga nueva y pégala dentro de la app.',
   installFirst: {
-    title: 'Primero agrega la app a tu pantalla de inicio',
-    why: 'En iPhone, la app de la pantalla de inicio guarda tu acceso aparte de Safari. Por eso la liga se abre dentro de ella.',
+    title: 'Pon PediTrack en tu pantalla de inicio',
+    why: 'Así la abres como cualquier otra app y te pueden llegar los avisos. Son cinco pasos y solo se hace una vez.',
     steps: [
-      'Copia tu liga con el botón de abajo.',
-      'En Compartir, elige «Agregar a pantalla de inicio».',
-      'Abre PediTrack desde tu pantalla de inicio y pega la liga.',
+      { title: 'Copia tu liga', detail: 'Presiona «Copiar liga». La vas a pegar al final.' },
+      {
+        title: 'Abre el menú de Safari',
+        detail: 'Presiona los tres puntitos (···) junto a la dirección, o el botón Compartir: un cuadrito con una flecha hacia arriba.',
+      },
+      {
+        title: 'Elige «Agregar a pantalla de inicio»',
+        detail: 'Si no lo ves, entra a «Compartir» y desliza la lista hacia arriba hasta encontrarlo.',
+      },
+      {
+        title: 'Presiona «Agregar»',
+        detail: 'Deja encendido «Abrir como app web». El ícono de PediTrack aparece junto a tus otras apps.',
+      },
+      {
+        title: 'Abre PediTrack y pega tu liga',
+        detail: 'Abre el ícono nuevo y presiona «Pegar mi liga». ¡Listo! No se vuelve a pedir.',
+      },
     ],
+    stepLabel: (n: number) => `Paso ${n}`,
     copy: 'Copiar liga',
     copied: 'Liga copiada ✓',
     copyFailed: 'No se pudo copiar. Mantén presionada la liga para copiarla.',
@@ -88,7 +103,11 @@ export const PHONE = {
   },
   paste: {
     title: 'Entra con tu liga',
-    help: 'Pega aquí la liga que te mandaron, tal como llegó.',
+    help: 'Presiona «Pegar mi liga» y listo. También puedes pegarla a mano en el cuadro.',
+    pasteButton: 'Pegar mi liga',
+    pasteEmpty: 'Lo que copiaste no parece tu liga de PediTrack. Cópiala otra vez o pégala a mano en el cuadro.',
+    pasteFailed: 'No pudimos leer lo que copiaste. Mantén presionado el cuadro y elige «Pegar».',
+    orByHand: 'O pégala a mano',
     label: 'Liga',
     submit: 'Entrar',
     opening: 'Entrando…',
