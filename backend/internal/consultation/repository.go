@@ -150,10 +150,10 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, c *Consultat
 		c.Photo = []byte{} // the column is NOT NULL: "no photo" is an empty one
 	}
 	err = tx.QueryRow(ctx, `
-		INSERT INTO consultations (child_id, doctor_name, consult_date, photo, notes, record_only)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO consultations (child_id, doctor_name, consult_date, photo, notes, record_only, utc_offset_minutes)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, created_at
-	`, c.ChildID, c.DoctorName, c.ConsultDate, c.Photo, c.Notes, c.RecordOnly,
+	`, c.ChildID, c.DoctorName, c.ConsultDate, c.Photo, c.Notes, c.RecordOnly, offsetMinutes(c.ScheduleLocation, c.ConsultDate),
 	).Scan(&c.ID, &c.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("inserting consultation: %w", err)
@@ -317,6 +317,17 @@ func checkPhotoCap(ctx context.Context, tx pgx.Tx, childID uuid.UUID, c *Consult
 // apart starting at consultDate + StartTime read in loc (the parent's time
 // zone, so each dose is the real instant they meant). Returns nil if StartTime is
 // nil (FR-010).
+// offsetMinutes is the UTC offset, in minutes, that loc has on the consultation's date: what is saved with the consultation
+// so an edit reads the start times in the same zone they were created in (bugfix/054). A nil loc is UTC, as in
+// generateDoseSchedule.
+func offsetMinutes(loc *time.Location, consultDate time.Time) int {
+	if loc == nil {
+		return 0
+	}
+	_, seconds := time.Date(consultDate.Year(), consultDate.Month(), consultDate.Day(), 12, 0, 0, 0, loc).Zone()
+	return seconds / 60
+}
+
 func generateDoseSchedule(consultDate time.Time, loc *time.Location, med *Medication) []time.Time {
 	if med.StartTime == nil {
 		return nil

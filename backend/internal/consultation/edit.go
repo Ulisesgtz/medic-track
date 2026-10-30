@@ -35,6 +35,7 @@ type UpdateConsultationInput struct {
 	Notes            string
 	SymptomCodes     []string
 	Medications      []UpdateMedicationInput
+	// UTCOffsetMinutes is the editing device's offset: only for a consultation that has no zone of its own yet.
 	UTCOffsetMinutes int
 }
 
@@ -115,10 +116,11 @@ func (r *Repository) Update(ctx context.Context, id uuid.UUID, in UpdateConsulta
 
 	var savedDate, version time.Time
 	var recordOnly, hasPhoto bool
+	var savedOffset *int
 	err = tx.QueryRow(ctx, `
-		SELECT consult_date, coalesce(edited_at, created_at), record_only, octet_length(photo) > 0
+		SELECT consult_date, coalesce(edited_at, created_at), record_only, octet_length(photo) > 0, utc_offset_minutes
 		FROM consultations WHERE id = $1 FOR UPDATE
-	`, id).Scan(&savedDate, &version, &recordOnly, &hasPhoto)
+	`, id).Scan(&savedDate, &version, &recordOnly, &hasPhoto, &savedOffset)
 	if err != nil {
 		return fmt.Errorf("locking the consultation: %w", err)
 	}
@@ -135,7 +137,14 @@ func (r *Repository) Update(ctx context.Context, id uuid.UUID, in UpdateConsulta
 	}
 
 	now := r.now()
-	loc := time.FixedZone("client", in.UTCOffsetMinutes*60)
+	// The start times are read in the consultation's own zone, not in the editing device's: from another zone a new dose
+	// would land hours away from a kept one (bugfix/054). A consultation without one (record only, or edited before it was
+	// saved) takes the editor's, and keeps it from now on (saveConsultation).
+	offset := in.UTCOffsetMinutes
+	if savedOffset != nil {
+		offset = *savedOffset
+	}
+	loc := time.FixedZone("client", offset*60)
 	kept := map[uuid.UUID]bool{}
 	addedAhead := false
 	for _, m := range in.Medications {
@@ -193,7 +202,7 @@ func (r *Repository) Update(ctx context.Context, id uuid.UUID, in UpdateConsulta
 			return err
 		}
 	}
-	if err := saveConsultation(ctx, tx, id, in, editor); err != nil {
+	if err := saveConsultation(ctx, tx, id, in, offset, editor); err != nil {
 		return err
 	}
 	if err := replaceSymptoms(ctx, tx, id, childID, in.SymptomCodes); err != nil {
@@ -373,11 +382,12 @@ func removeMedication(ctx context.Context, tx pgx.Tx, medID uuid.UUID) error {
 }
 
 // saveConsultation writes the consultation's own fields and who edited it, now.
-func saveConsultation(ctx context.Context, tx pgx.Tx, id uuid.UUID, in UpdateConsultationInput, editor uuid.UUID) error {
-	query := `UPDATE consultations SET doctor_name = $2, consult_date = $3, notes = $4, edited_at = clock_timestamp(), edited_by_account_id = $5`
-	args := []any{id, in.DoctorName, in.ConsultDate, in.Notes, editor}
+func saveConsultation(ctx context.Context, tx pgx.Tx, id uuid.UUID, in UpdateConsultationInput, offset int, editor uuid.UUID) error {
+	query := `UPDATE consultations SET doctor_name = $2, consult_date = $3, notes = $4, edited_at = clock_timestamp(),
+		edited_by_account_id = $5, utc_offset_minutes = coalesce(utc_offset_minutes, $6)`
+	args := []any{id, in.DoctorName, in.ConsultDate, in.Notes, editor, offset}
 	if len(in.Photo) > 0 {
-		query += `, photo = $6`
+		query += `, photo = $7`
 		args = append(args, in.Photo)
 	}
 	if _, err := tx.Exec(ctx, query+` WHERE id = $1`, args...); err != nil {

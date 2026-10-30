@@ -29,6 +29,8 @@ dejó pendientes (2026-09-21). No se construye nada de esto hasta que se respond
   Pendiente de la revisión (2026-10-26): el horario nuevo se calcula con la zona horaria del dispositivo que edita, y las
   tomas conservadas con la de quien creó la consulta; si alguien edita desde otra zona, una toma nueva puede quedar a una
   hora de una conservada. En México no hay horario de verano, así que es raro; se arregla guardando el desfase con la consulta.
+  **Resuelto en `bugfix/054-zona-horaria-consulta` (2026-10-30)**: la consulta guarda su desfase (`utc_offset_minutes`,
+  migración `0031`, con relleno desde la primera toma) y al editar se usa ese, no el del teléfono que edita.
 
 ## Próximo a trabajar (decidido 2026-09-28)
 
