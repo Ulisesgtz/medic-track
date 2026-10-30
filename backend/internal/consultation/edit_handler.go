@@ -34,7 +34,9 @@ type updateConsultationRequest struct {
 	Notes            string                    `json:"notes" example:"La fiebre empezó el domingo"`
 	SymptomCodes     []string                  `json:"symptomCodes" example:"fever,cough"`
 	Medications      []updateMedicationRequest `json:"medications"`
-	UTCOffsetMinutes int                       `json:"utcOffsetMinutes" example:"-360"`
+	// UTCOffsetMinutes is the editing device's UTC offset. It is only used for a consultation that has no zone of its own
+	// yet; one that has keeps reading its start times in its own zone.
+	UTCOffsetMinutes int `json:"utcOffsetMinutes" example:"-360"`
 } // @name UpdateConsultationRequest
 
 // UpdateConsultation handles PUT /consultations/{consultationId} (specs/051-editar-consultas/contracts/api.md).

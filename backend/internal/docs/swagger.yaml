@@ -2025,6 +2025,9 @@ definitions:
           type: string
         type: array
       utcOffsetMinutes:
+        description: |-
+          UTCOffsetMinutes is the editing device's UTC offset. It is only used for a consultation that has no zone of its own
+          yet; one that has keeps reading its start times in its own zone.
         example: -360
         type: integer
     type: object

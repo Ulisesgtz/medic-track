@@ -7608,6 +7608,7 @@ const docTemplate = `{
                     ]
                 },
                 "utcOffsetMinutes": {
+                    "description": "UTCOffsetMinutes is the editing device's UTC offset. It is only used for a consultation that has no zone of its own\nyet; one that has keeps reading its start times in its own zone.",
                     "type": "integer",
                     "example": -360
                 }
