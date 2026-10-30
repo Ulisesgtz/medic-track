@@ -297,6 +297,18 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
      además se niega a arrancar (Railway dejaría corriendo la versión anterior) o arranca igual.
   2. **Aviso en el PR**: un paso del CI (o un comentario automático) que, cuando el PR agrega un archivo en
      `backend/migrations/`, recuerde aplicarla en DEV **antes** de hacer merge (y lo deje en la descripción del PR).
+- **E2E del CI que fallan por el límite de Clerk** (anotado 2026-10-30, tras los PR 69 y 70): las E2E corren contra la
+  instancia de desarrollo de Clerk, cuyo límite de peticiones es compartido por todos los jobs (Chromium en 3 partes,
+  Firefox y WebKit a la vez). Cuando se junta el tráfico fallan pruebas que no tienen que ver con el cambio (registro,
+  familia, consultas, recordatorios): el backend responde 500 «Could not resolve the session's email» (Clerk le contestó
+  429 al pedir el correo) y el navegador marca «[Clerk Testing] FAPI request failed» tras 4 intentos. Hoy se arregla
+  volviendo a correr los jobs fallidos. Opciones para arreglarlo de raíz (decidir una o varias):
+  1. **Backend**: `clerkPrimaryEmail` (`internal/account/handler.go`) reintenta tras un 429 solo con
+     `clerkRateLimitWaits` = 0.5 s, 1.5 s y 3 s (unos 5 s en total); alargar las esperas o respetar el `Retry-After` de
+     Clerk, y responder 503 en vez de 500 si aun así no se pudo.
+  2. **CI**: que los jobs de E2E no peguen a Clerk todos al mismo tiempo (menos trabajadores, escalonar Firefox y WebKit
+     después de Chromium, o reutilizar sesiones/cuentas de prueba entre specs en vez de crear una por prueba).
+  3. **Reintento automático** de Playwright (`retries` en CI) solo para estos fallos, sabiendo que esconde fallas reales.
 
 ## Producto / Legal
 
