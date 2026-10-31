@@ -28,7 +28,10 @@ export interface ExportPanelProps {
 
 type PeriodKind = ExportPeriod['kind']
 
-const STAGE_TEXT: Record<ExportStage, string> = { data: PANEL.stageData, document: PANEL.stageDocument }
+function stageText(stage: ExportStage, photo?: { done: number; total: number }): string {
+  if (stage === 'photos' && photo) return PANEL.stagePhotos(photo.done, photo.total)
+  return stage === 'data' ? PANEL.stageData : PANEL.stageDocument
+}
 
 const solid =
   'min-h-[52px] w-full cursor-pointer rounded-2xl bg-confirmed px-4 text-[17px] font-extrabold text-white transition-colors duration-200 hover:bg-confirmed-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-confirmed'
@@ -59,10 +62,11 @@ export function ExportPanel({ childId, child, free, filters, origin = 'history',
   const [to, setTo] = useState('')
   const [consultations, setConsultations] = useState(origin !== 'card')
   const [vaccinations, setVaccinations] = useState(true)
+  const [photos, setPhotos] = useState(false)
 
   const period: ExportPeriod =
     kind === 'range' ? { kind, from, to } : kind === 'filters' && filters ? { kind, filters } : { kind: 'all' }
-  const sections = { consultations, vaccinations, photos: false }
+  const sections = { consultations, vaccinations, photos }
   const ready = canGenerate(period, sections)
   const datesTurned = kind === 'range' && from !== '' && to !== '' && to < from
   const name = fullName(child)
@@ -164,8 +168,11 @@ export function ExportPanel({ childId, child, free, filters, origin = 'history',
             <Switch checked={consultations} onToggle={() => setConsultations((v) => !v)} rule>
               {PANEL.consultations}
             </Switch>
-            <Switch checked={vaccinations} onToggle={() => setVaccinations((v) => !v)}>
+            <Switch checked={vaccinations} onToggle={() => setVaccinations((v) => !v)} rule>
               {PANEL.vaccinations}
+            </Switch>
+            <Switch checked={photos} onToggle={() => setPhotos((v) => !v)} hint={PANEL.photosHint}>
+              {PANEL.photos}
             </Switch>
           </div>
 
@@ -195,7 +202,7 @@ export function ExportPanel({ childId, child, free, filters, origin = 'history',
               <div className="h-full rounded-full bg-action transition-[width] duration-300" style={{ width: `${(step / steps) * 100}%` }} />
             </div>
             <span aria-live="polite" className="text-[15px] text-body">
-              {STAGE_TEXT[state.stage]}
+              {stageText(state.stage, state.photo)}
             </span>
           </div>
           <p className={privacyBox}>{PANEL.privacy(child.firstName)}</p>
@@ -338,19 +345,32 @@ function Radio({ checked, onPick, children }: { checked: boolean; onPick: () => 
 }
 
 /** One part of «Qué incluir», on or off. */
-function Switch({ checked, onToggle, rule = false, children }: { checked: boolean; onToggle: () => void; rule?: boolean; children: ReactNode }) {
+function Switch(props: { checked: boolean; onToggle: () => void; rule?: boolean; hint?: string; children: ReactNode }) {
+  const { checked, onToggle, rule = false, hint, children } = props
+  const id = useId()
   return (
     <button
       type="button"
       role="switch"
       aria-checked={checked}
+      aria-labelledby={`${id}-label`}
+      aria-describedby={hint ? `${id}-hint` : undefined}
       onClick={onToggle}
-      className={`flex min-h-14 w-full cursor-pointer items-center justify-between gap-4 py-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-action ${rule ? 'border-b border-hint-edge' : ''}`}
+      className={`flex w-full cursor-pointer items-center justify-between gap-4 py-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-action ${hint ? 'min-h-16' : 'min-h-14'} ${rule ? 'border-b border-hint-edge' : ''}`}
     >
-      <span className="text-base font-bold text-ink">{children}</span>
+      <span className="flex flex-col gap-0.5">
+        <span id={`${id}-label`} className="text-base font-bold text-ink">
+          {children}
+        </span>
+        {hint && (
+          <span id={`${id}-hint`} className="text-sm font-normal text-body">
+            {hint}
+          </span>
+        )}
+      </span>
       <span
         aria-hidden="true"
-        className={`flex h-8 w-[52px] shrink-0 items-center rounded-full p-[3px] transition-colors duration-200 ${checked ? 'justify-end bg-action' : 'justify-start bg-slate-300'}`}
+        className={`flex h-8 w-[52px] shrink-0 items-center rounded-full p-[3px] transition-colors duration-200 ${checked ? 'justify-end bg-action' : 'justify-start bg-calendar-muted'}`}
       >
         <span className="h-[26px] w-[26px] rounded-full bg-surface" />
       </span>

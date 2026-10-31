@@ -2,15 +2,16 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useAuth } from '@clerk/react'
 import { ExportApiError, fetchExportData } from './api'
 import { fileName } from './document/model'
+import { NO_PHOTOS, photoCount, preparePhotos } from './photos'
 import type { ExportData, ExportRequest } from './types'
 
 // specs/050: the panel's states. «Generar PDF» asks the server for the data, then builds the document on this device (the
 // library is fetched only now, its own chunk) and hands over a file. Nothing is kept anywhere: the file lives while the panel does.
 
-/** What is being done while generating: asking for the data, then laying out the document. */
-export type ExportStage = 'data' | 'document'
+/** What is being done while generating: asking for the data, the photos (one by one), then laying out the document. */
+export type ExportStage = 'data' | 'photos' | 'document'
 
-export const STAGES: readonly ExportStage[] = ['data', 'document']
+export const STAGES: readonly ExportStage[] = ['data', 'photos', 'document']
 
 export interface ExportResult {
   file: File
@@ -22,7 +23,7 @@ export interface ExportResult {
 
 export type ExportState =
   | { status: 'options' }
-  | { status: 'generating'; stage: ExportStage }
+  | { status: 'generating'; stage: ExportStage; photo?: { done: number; total: number } }
   | ({ status: 'ready' } & ExportResult)
   | { status: 'error' }
   /** Nothing registered in the chosen period. */
@@ -64,11 +65,18 @@ export function useExport({ childId, free = false, symptomNames }: UseExportOpti
           setState({ status: 'empty', request })
           return
         }
+        let photos = NO_PHOTOS
+        if (request.sections.photos && data.photos && photoCount(data.photos) > 0) {
+          photos = await preparePhotos(childId, data.photos, await getToken(), controller.signal, (done, total) => {
+            if (still()) setState({ status: 'generating', stage: 'photos', photo: { done, total } })
+          })
+          if (!still()) return
+        }
         setState({ status: 'generating', stage: 'document' })
         const { renderHistoryPdf } = await import('./document/render')
         const now = new Date()
         const icon = new URL('/icon-192.png', window.location.origin).href
-        const { blob, pages } = await renderHistoryPdf({ request, data, now, icon, symptomNames })
+        const { blob, pages } = await renderHistoryPdf({ request, data, now, icon, symptomNames, photos })
         // The library can't be stopped halfway: a cancelled run just drops what it made.
         if (!still()) return
         const file = new File([blob], fileName(data.child, now), { type: 'application/pdf' })

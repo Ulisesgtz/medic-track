@@ -1,5 +1,6 @@
 import { Text, View } from '@react-pdf/renderer'
 import { DOC } from '../exportText'
+import { photoCount } from '../photos'
 import type { ExportData, ExportRequest } from '../types'
 import { activeTreatmentLines, ageText, appointmentWhen, coverCount, coverRows, day, fullName } from './model'
 import type { PageIndex, SectionKey } from './pageLog'
@@ -26,6 +27,7 @@ export function Cover({ request, data, now, index, symptomNames }: CoverProps) {
   const contents: { key: SectionKey; label: string }[] = []
   if (request.sections.consultations && data.consultations.length > 0) contents.push({ key: 'consultations', label: DOC.contentsConsultations })
   if (request.sections.vaccinations && data.vaccinations.length > 0) contents.push({ key: 'card', label: DOC.contentsCard })
+  if (request.sections.photos && photoCount(data.photos) > 0) contents.push({ key: 'annex', label: DOC.contentsAnnex })
 
   return (
     <View style={s.cover}>

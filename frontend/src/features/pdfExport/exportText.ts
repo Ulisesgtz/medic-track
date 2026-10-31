@@ -131,6 +131,12 @@ export const DOC = {
   empty: '—',
   familyName: 'Nombre escrito por la familia',
   correctedOn: (day: string, by: string | null) => (by ? `Corregida el ${day} por ${by}` : `Corregida el ${day}`),
+
+  annexTitle: 'Anexo: fotos',
+  cardPhoto: (sheet: number) => `Cartilla de papel, hoja ${sheet}`,
+  takenOn: (day: string) => `tomada el ${day}`,
+  prescriptionPhoto: (day: string) => `Receta de la consulta del ${day}`,
+  photoNotIncluded: 'Foto que no se pudo incluir en el PDF',
 } as const
 
 /** «19.4», «112»: a dot for decimals, as the app writes height and weight. */

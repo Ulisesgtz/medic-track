@@ -143,6 +143,35 @@ describe('the history PDF', () => {
     expect(pages[1]).toContain('cada 24 h · 1 día sin registro de tomas en la app')
   }, 120_000)
 
+  it('the photos: «Foto en p. N» beside the consultation, the annex with what each one is, a photo not included says so', async () => {
+    const jpeg = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAA0JCgsKCA0LCgsODg0PEyAVExISEyccHhcgLikxMC4pLSwzOko+MzZGNywtQFdBRkxOUlNSMj5aYVpQYEpRUk//2wBDAQ4ODhMREyYVFSZPNS01T09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT09PT0//wAARCAAEAAQDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDtqKKK3MD/2Q=='
+    const photos = { card: { p1: jpeg, p2: null }, consultations: { c1: jpeg } }
+    const { pages } = await pagesOf({ ...input(CASE_A), photos })
+    const annex = pages.length
+    expect(says(pages[annex - 1], 'Anexo: fotos')).toBe(true)
+    for (const piece of [
+      'Cartilla de papel, hoja 1 · tomada el 3 oct 2026',
+      'Cartilla de papel, hoja 2 · tomada el 3 oct 2026',
+      'Foto que no se pudo incluir en el PDF',
+      'Receta de la consulta del 18 oct 2026 · Dra. Laura Cázares',
+    ]) {
+      expect(pages[annex - 1], piece).toContain(piece)
+    }
+    expect(pages[annex - 1].match(/no se pudo incluir/g)).toHaveLength(1)
+    expect(pages[0]).toContain('Anexo: fotos de la cartilla y de recetas')
+    expect(pages[0]).toContain(`p. ${annex}`)
+    expect(pages[1]).toContain(`Foto en p. ${annex}`)
+    // Only the consultation with a photo has a thumbnail.
+    expect(pages.join(' ').match(/Foto en p\./g)).toHaveLength(1)
+  }, 120_000)
+
+  it('without the photos asked there is no annex nor thumbnail, even if the consultation has a photo', async () => {
+    const { pages } = await pagesOf({ ...input(CASE_A), request: { ...CASE_A.request, sections: { ...CASE_A.request.sections, photos: false } } })
+    expect(pages.join(' ')).not.toContain('Foto en p.')
+    expect(pages[0]).not.toContain('Anexo')
+    expect(pages[0]).toContain('No incluidas')
+  }, 120_000)
+
   it('a consultation that crosses a page says where it continues, and says «(continuación)» on the next', async () => {
     const long = 'Tuvo fiebre por las noches y tos seca que aumenta al acostarse; come menos que de costumbre. '.repeat(40)
     const consultation: ExportConsultation = { ...CASE_A.data.consultations[0], notes: long }

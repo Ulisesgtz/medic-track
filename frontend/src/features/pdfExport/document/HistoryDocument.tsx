@@ -1,6 +1,8 @@
 import type { ReactNode } from 'react'
 import { Document, Page } from '@react-pdf/renderer'
+import { photoCount, type PreparedPhotos } from '../photos'
 import type { ExportData, ExportRequest } from '../types'
+import { Annex } from './Annex'
 import { Consultations } from './Consultations'
 import { Cover } from './Cover'
 import { fullName, localDay } from './model'
@@ -18,6 +20,8 @@ export interface DocumentInput {
   icon: string
   /** Names of the history's symptom codes, for the cover's «Filtros». */
   symptomNames?: Record<string, string>
+  /** The annex's photos, already redrawn (photos.ts); a photo missing here is drawn as not included. */
+  photos?: PreparedPhotos
 }
 
 /**
@@ -28,6 +32,11 @@ export interface DocumentInput {
  */
 export function HistoryDocument({ input, index, log }: { input: DocumentInput; index: PageIndex | null; log: PageLog }) {
   const { request, data, now } = input
+  const annex = request.sections.photos && data.photos && photoCount(data.photos) > 0 ? data.photos : null
+  const prepared: PreparedPhotos = {
+    card: Object.fromEntries((annex?.card ?? []).map((p) => [p.id, input.photos?.card[p.id] ?? null])),
+    consultations: Object.fromEntries((annex?.consultations ?? []).map((p) => [p.consultationId, input.photos?.consultations[p.consultationId] ?? null])),
+  }
   const name = fullName(data.child)
   const sheet = (children: ReactNode, extra?: typeof s.consultationsPage) => (
     <Page size="LETTER" style={extra ? [s.page, extra] : s.page}>
@@ -40,8 +49,12 @@ export function HistoryDocument({ input, index, log }: { input: DocumentInput; i
       {sheet(<Cover request={request} data={data} now={now} index={index} symptomNames={input.symptomNames} />)}
       {request.sections.consultations &&
         data.consultations.length > 0 &&
-        sheet(<Consultations consultations={data.consultations} log={log} index={index} />, s.consultationsPage)}
+        sheet(
+          <Consultations consultations={data.consultations} log={log} index={index} photos={annex ? prepared.consultations : undefined} />,
+          s.consultationsPage,
+        )}
       {request.sections.vaccinations && data.vaccinations.length > 0 && sheet(<VaccinationCard vaccinations={data.vaccinations} log={log} />)}
+      {annex && sheet(<Annex photos={annex} prepared={prepared} log={log} />)}
     </Document>
   )
 }

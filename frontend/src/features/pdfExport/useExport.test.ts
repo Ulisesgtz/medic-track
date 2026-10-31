@@ -10,6 +10,12 @@ vi.mock('@clerk/react', () => ({ useAuth: () => ({ getToken: () => Promise.resol
 const fetchExportData = vi.fn()
 vi.mock('./api', async (original) => ({ ...(await original<typeof import('./api')>()), fetchExportData: (...args: unknown[]) => fetchExportData(...args) }))
 
+const preparePhotos = vi.fn()
+vi.mock('./photos', async (original) => ({
+  ...(await original<typeof import('./photos')>()),
+  preparePhotos: (...args: unknown[]) => preparePhotos(...args),
+}))
+
 const renderHistoryPdf = vi.fn()
 vi.mock('./document/render', () => ({ renderHistoryPdf: (...args: unknown[]) => renderHistoryPdf(...args) }))
 
@@ -26,6 +32,7 @@ function deferred<T>() {
 }
 
 beforeEach(() => {
+  preparePhotos.mockReset()
   fetchExportData.mockReset()
   renderHistoryPdf.mockReset()
 })
@@ -58,6 +65,45 @@ describe('useExport', () => {
     const input = renderHistoryPdf.mock.calls[0][0]
     expect(input).toMatchObject({ request, data: CASE_A.data, symptomNames: { fever: 'Fiebre' } })
     expect(input.icon).toMatch(/\/icon-192\.png$/)
+  })
+
+  it('with the photos asked, prepares them one by one, telling each, and puts them in the document', async () => {
+    fetchExportData.mockResolvedValue(CASE_A.data)
+    const prepared = { card: { p1: 'data:image/jpeg;base64,A', p2: null }, consultations: { c1: null } }
+    const gate = deferred<typeof prepared>()
+    preparePhotos.mockImplementation((_child, _photos, _token, _signal, onProgress: (n: number, total: number) => void) => {
+      onProgress(2, 3)
+      return gate.promise
+    })
+    renderHistoryPdf.mockResolvedValue({ blob: new Blob(['%PDF']), pages: 5 })
+    const { result } = renderHook(() => useExport({ childId: 'c1' }))
+    const withPhotos = { ...request, sections: { ...request.sections, photos: true } }
+    await act(async () => void result.current.generate(withPhotos))
+    expect(result.current.state).toEqual({ status: 'generating', stage: 'photos', photo: { done: 2, total: 3 } })
+    expect(preparePhotos).toHaveBeenCalledWith('c1', CASE_A.data.photos, 'tok', expect.any(AbortSignal), expect.any(Function))
+    await act(async () => gate.resolve(prepared))
+    await waitFor(() => expect(result.current.state.status).toBe('ready'))
+    expect(renderHistoryPdf.mock.calls[0][0].photos).toBe(prepared)
+  })
+
+  it('a cancel while preparing the photos leaves no file; without photos asked none are fetched', async () => {
+    fetchExportData.mockResolvedValue(CASE_A.data)
+    const gate = deferred<unknown>()
+    preparePhotos.mockReturnValue(gate.promise)
+    const { result } = renderHook(() => useExport({ childId: 'c1' }))
+    await act(async () => void result.current.generate({ ...request, sections: { ...request.sections, photos: true } }))
+    const onProgress = preparePhotos.mock.calls[0][4] as (n: number, total: number) => void
+    act(() => result.current.cancel())
+    act(() => onProgress(1, 3))
+    await act(async () => gate.resolve({ card: {}, consultations: {} }))
+    expect(result.current.state).toEqual({ status: 'options' })
+    expect(renderHistoryPdf).not.toHaveBeenCalled()
+
+    preparePhotos.mockClear()
+    renderHistoryPdf.mockResolvedValue({ blob: new Blob(['%PDF']), pages: 4 })
+    await act(async () => void result.current.generate(request))
+    await waitFor(() => expect(result.current.state.status).toBe('ready'))
+    expect(preparePhotos).not.toHaveBeenCalled()
   })
 
   it('says when the period has nothing registered, and «Cambiar periodo» goes back', async () => {

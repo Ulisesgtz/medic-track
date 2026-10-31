@@ -126,6 +126,23 @@ describe.each([
     expect(screen.getByRole('button', { name: 'Generar PDF' })).toBeDisabled()
   })
 
+  it('the photos are off by default, say the file weighs more, and go in the request when on', async () => {
+    show()
+    const photos = screen.getByRole('switch', { name: 'Fotos de recetas y de la cartilla' })
+    expect(photos).toHaveAttribute('aria-checked', 'false')
+    expect(photos).toHaveAccessibleDescription('Con fotos, el archivo pesa más.')
+    await userEvent.click(photos)
+    await userEvent.click(screen.getByRole('button', { name: 'Generar PDF' }))
+    expect(hook.generate).toHaveBeenCalledWith({ ...all, sections: { ...all.sections, photos: true } })
+  })
+
+  it('generating the photos says which one', () => {
+    hook.state = { status: 'generating', stage: 'photos', photo: { done: 3, total: 7 } }
+    show()
+    expect(screen.getByText('Preparando fotos 3 de 7.')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '2')
+  })
+
   it('from the card, the card is on and the consultations off', () => {
     show({ origin: 'card' })
     expect(screen.getByRole('switch', { name: 'Consultas' })).toHaveAttribute('aria-checked', 'false')
@@ -136,7 +153,7 @@ describe.each([
     hook.state = { status: 'generating', stage: 'document' }
     show()
     expect(screen.getByText('Generando PDF…')).toBeInTheDocument()
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '2')
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '3')
     expect(screen.getByText('Armando el documento.')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }))
     expect(hook.cancel).toHaveBeenCalled()

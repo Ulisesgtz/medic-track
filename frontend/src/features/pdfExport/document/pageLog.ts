@@ -17,6 +17,8 @@ export interface PageIndex {
   sections: Partial<Record<SectionKey, PageSpan>>
   /** The pages of each consultation, by id. */
   consultations: Record<string, PageSpan>
+  /** The page of each photo of the annex, by `card:<id>` / `consultation:<id>`. */
+  photos: Record<string, number>
 }
 
 type Edge = 'start' | 'end'
@@ -49,12 +51,15 @@ export class PageLog {
       if (span) sections[key] = span
     }
     const consultations: PageIndex['consultations'] = {}
-    for (const mark of this.marks.keys()) {
+    const photos: PageIndex['photos'] = {}
+    for (const [mark, page] of this.marks) {
       const id = /^consultation:(.+)\|start$/.exec(mark)?.[1]
       const span = id === undefined ? undefined : this.span(`consultation:${id}`)
       if (id !== undefined && span) consultations[id] = span
+      const photo = /^photo:(.+)\|start$/.exec(mark)?.[1]
+      if (photo !== undefined) photos[photo] = page
     }
-    return { sections, consultations }
+    return { sections, consultations, photos }
   }
 }
 
