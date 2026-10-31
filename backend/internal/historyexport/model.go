@@ -64,7 +64,18 @@ type Mark struct {
 // ended early) are not part of Total.
 type DoseCounts struct {
 	Taken, Unregistered, Due, Pending, Total int
+	// Sequence is each counted dose's status in schedule order, one letter per dose (SequenceTaken…), so the document draws
+	// the record as it happened and not grouped by status.
+	Sequence string
 }
+
+// The letters of DoseCounts.Sequence.
+const (
+	SequenceTaken        = 't'
+	SequenceUnregistered = 'u'
+	SequenceDue          = 'd'
+	SequencePending      = 'p'
+)
 
 // Medication is one medication of a consultation as the document shows it.
 type Medication struct {

@@ -844,6 +844,11 @@ definitions:
       pending:
         example: 3
         type: integer
+      sequence:
+        description: 'Sequence is each counted dose''s status in schedule order, one
+          letter per dose: t taken, u unregistered, d due, p pending.'
+        example: tttttuttttttutttttppp
+        type: string
       taken:
         example: 16
         type: integer

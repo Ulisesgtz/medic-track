@@ -147,18 +147,23 @@ func medicationOf(m consultation.Medication) Medication {
 	for _, e := range m.Extensions {
 		out.Extensions = append(out.Extensions, Extension{CreatedAt: e.CreatedAt, AddedDoses: e.AddedDoses})
 	}
+	var sequence []byte
 	for _, d := range m.Doses {
 		switch d.Status {
 		case consultation.DoseStatusCanceled:
 			continue
 		case consultation.DoseStatusTaken:
 			out.Doses.Taken++
+			sequence = append(sequence, SequenceTaken)
 		case consultation.DoseStatusUnregistered:
 			out.Doses.Unregistered++
+			sequence = append(sequence, SequenceUnregistered)
 		case consultation.DoseStatusDue:
 			out.Doses.Due++
+			sequence = append(sequence, SequenceDue)
 		default:
 			out.Doses.Pending++
+			sequence = append(sequence, SequencePending)
 		}
 		out.Doses.Total++
 		at := d.ScheduledAt
@@ -170,6 +175,7 @@ func medicationOf(m consultation.Medication) Medication {
 			out.LastMark = &Mark{At: d.TakenBy.At, By: d.TakenBy.Name}
 		}
 	}
+	out.Doses.Sequence = string(sequence)
 	return out
 }
 

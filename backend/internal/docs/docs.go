@@ -6003,6 +6003,11 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 3
                 },
+                "sequence": {
+                    "description": "Sequence is each counted dose's status in schedule order, one letter per dose: t taken, u unregistered, d due, p pending.",
+                    "type": "string",
+                    "example": "tttttuttttttutttttppp"
+                },
                 "taken": {
                     "type": "integer",
                     "example": 16

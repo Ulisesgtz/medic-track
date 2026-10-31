@@ -1,4 +1,5 @@
 import figtree400 from '@fontsource/figtree/files/figtree-latin-400-normal.woff?url'
+import figtree400Italic from '@fontsource/figtree/files/figtree-latin-400-italic.woff?url'
 import figtree600 from '@fontsource/figtree/files/figtree-latin-600-normal.woff?url'
 import figtree700 from '@fontsource/figtree/files/figtree-latin-700-normal.woff?url'
 import figtree800 from '@fontsource/figtree/files/figtree-latin-800-normal.woff?url'
@@ -14,7 +15,7 @@ let loading: Promise<Renderer> | null = null
 export function loadRenderer(): Promise<Renderer> {
   if (!loading) {
     loading = import('@react-pdf/renderer').then((renderer) => {
-      registerFonts(renderer.Font, { 400: figtree400, 600: figtree600, 700: figtree700, 800: figtree800, 900: figtree900 })
+      registerFonts(renderer.Font, { 400: figtree400, 600: figtree600, 700: figtree700, 800: figtree800, 900: figtree900 }, figtree400Italic)
       return renderer
     })
     // A failed download can be tried again later.

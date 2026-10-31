@@ -10,11 +10,15 @@ export type FontSources = Record<FontWeight, string>
 
 export const FONT_FAMILY = 'Figtree'
 
-/** Registers Figtree with the PDF library and turns word hyphenation off (Spanish words must never be split with a dash). */
-export function registerFonts(Font: typeof FontApi, sources: FontSources) {
-  Font.register({
-    family: FONT_FAMILY,
-    fonts: (Object.entries(sources) as [string, string][]).map(([weight, src]) => ({ src, fontWeight: Number(weight) })),
-  })
+/**
+ * Registers Figtree with the PDF library and turns word hyphenation off (Spanish words must never be split with a dash). `italic` is
+ * the 400 italic, the one the card's «Corregida el …» uses.
+ */
+export function registerFonts(Font: typeof FontApi, sources: FontSources, italic?: string) {
+  const fonts: { src: string; fontWeight: number; fontStyle?: 'italic' }[] = (Object.entries(sources) as [string, string][]).map(
+    ([weight, src]) => ({ src, fontWeight: Number(weight) }),
+  )
+  if (italic) fonts.push({ src: italic, fontWeight: 400, fontStyle: 'italic' })
+  Font.register({ family: FONT_FAMILY, fonts })
   Font.registerHyphenationCallback((word) => [word])
 }

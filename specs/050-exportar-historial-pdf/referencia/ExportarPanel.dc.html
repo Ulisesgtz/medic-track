@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<div style="display: flex; flex-direction: column; gap: 20px; font-family: 'Figtree', system-ui, sans-serif; color: #04252b;">
+  <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+    <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0;">
+      <h2 style="margin: 0; font-size: 22px; font-weight: 900; letter-spacing: -0.02em; color: #04252b;">Exportar a PDF</h2>
+      <span style="font-size: 15px; color: #1f3d44;">Historial de Mateo Morales</span>
+    </div>
+    <button type="button" aria-label="Cerrar" style="flex: none; width: 44px; height: 44px; border: none; border-radius: 999px; background: #ecfeff; color: #0e7490; font-family: inherit; font-size: 22px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">×</button>
+  </div>
+
+  <sc-if value="{{ isOpciones }}" hint-placeholder-val="{{ true }}">
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <p style="margin: 0; font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #0e7490;">Periodo</p>
+      <div role="radiogroup" style="display: flex; flex-direction: column; gap: 8px;">
+        <button type="button" onClick="{{ pickTodo }}" style="min-height: 56px; padding: 12px 16px; border: 1.5px solid #a5f3fc; border-radius: 16px; background: #ffffff; font-family: inherit; text-align: left; display: flex; align-items: center; gap: 12px; cursor: pointer;">
+          <sc-if value="{{ pTodo }}"><span style="flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #0e7490; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #0e7490;"></span></span></sc-if>
+          <sc-if value="{{ pTodoOff }}"><span style="flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #64748b; box-sizing: border-box;"></span></sc-if>
+          <span style="font-size: 16px; font-weight: 700; color: #04252b;">Todo el historial</span>
+        </button>
+        <div style="border: 1.5px solid #a5f3fc; border-radius: 16px; background: #ffffff; display: flex; flex-direction: column;">
+          <button type="button" onClick="{{ pickRango }}" style="min-height: 56px; padding: 12px 16px; border: none; background: transparent; font-family: inherit; text-align: left; display: flex; align-items: center; gap: 12px; cursor: pointer;">
+            <sc-if value="{{ pRango }}" hint-placeholder-val="{{ true }}"><span style="flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #0e7490; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #0e7490;"></span></span></sc-if>
+            <sc-if value="{{ pRangoOff }}"><span style="flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #64748b; box-sizing: border-box;"></span></sc-if>
+            <span style="font-size: 16px; font-weight: 700; color: #04252b;">Un rango de fechas</span>
+          </button>
+          <sc-if value="{{ pRango }}" hint-placeholder-val="{{ true }}">
+            <div style="padding: 0 16px 16px 50px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;">
+              <label style="display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Desde</span><span style="min-height: 48px; padding: 0 12px; border: 1.5px solid #a5f3fc; border-radius: 12px; display: flex; align-items: center; font-size: 16px; font-weight: 600; color: #04252b;">1 ene 2026</span></label>
+              <label style="display: flex; flex-direction: column; gap: 6px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Hasta</span><span style="min-height: 48px; padding: 0 12px; border: 1.5px solid #a5f3fc; border-radius: 12px; display: flex; align-items: center; font-size: 16px; font-weight: 600; color: #04252b;">24 oct 2026</span></label>
+            </div>
+          </sc-if>
+        </div>
+        <div style="border: 1.5px solid #a5f3fc; border-radius: 16px; background: #ffffff; display: flex; flex-direction: column;">
+          <button type="button" onClick="{{ pickFiltros }}" style="min-height: 56px; padding: 12px 16px; border: none; background: transparent; font-family: inherit; text-align: left; display: flex; align-items: center; gap: 12px; cursor: pointer;">
+            <sc-if value="{{ pFiltros }}"><span style="flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #0e7490; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #0e7490;"></span></span></sc-if>
+            <sc-if value="{{ pFiltrosOff }}" hint-placeholder-val="{{ true }}"><span style="flex: none; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #64748b; box-sizing: border-box;"></span></sc-if>
+            <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 16px; font-weight: 700; color: #04252b;">Usar los filtros del historial</span><span style="font-size: 14px; color: #1f3d44;">Dra. Laura Cázares · Fiebre</span></span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 4px;">
+      <p style="margin: 0 0 6px; font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #0e7490;">Qué incluir</p>
+      <button type="button" onClick="{{ tConsultas }}" style="min-height: 56px; padding: 8px 0; border: none; border-bottom: 1px solid #cffafe; background: transparent; font-family: inherit; text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 16px; cursor: pointer;">
+        <span style="font-size: 16px; font-weight: 700; color: #04252b;">Consultas</span>
+        <sc-if value="{{ consultas }}" hint-placeholder-val="{{ true }}"><span style="flex: none; width: 52px; height: 32px; border-radius: 999px; background: #0e7490; display: flex; align-items: center; justify-content: flex-end; padding: 3px; box-sizing: border-box;"><span style="width: 26px; height: 26px; border-radius: 50%; background: #ffffff;"></span></span></sc-if>
+        <sc-if value="{{ consultasOff }}"><span style="flex: none; width: 52px; height: 32px; border-radius: 999px; background: #cbd5e1; display: flex; align-items: center; padding: 3px; box-sizing: border-box;"><span style="width: 26px; height: 26px; border-radius: 50%; background: #ffffff;"></span></span></sc-if>
+      </button>
+      <button type="button" onClick="{{ tCartilla }}" style="min-height: 56px; padding: 8px 0; border: none; border-bottom: 1px solid #cffafe; background: transparent; font-family: inherit; text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 16px; cursor: pointer;">
+        <span style="font-size: 16px; font-weight: 700; color: #04252b;">Cartilla de vacunación</span>
+        <sc-if value="{{ cartilla }}" hint-placeholder-val="{{ true }}"><span style="flex: none; width: 52px; height: 32px; border-radius: 999px; background: #0e7490; display: flex; align-items: center; justify-content: flex-end; padding: 3px; box-sizing: border-box;"><span style="width: 26px; height: 26px; border-radius: 50%; background: #ffffff;"></span></span></sc-if>
+        <sc-if value="{{ cartillaOff }}"><span style="flex: none; width: 52px; height: 32px; border-radius: 999px; background: #cbd5e1; display: flex; align-items: center; padding: 3px; box-sizing: border-box;"><span style="width: 26px; height: 26px; border-radius: 50%; background: #ffffff;"></span></span></sc-if>
+      </button>
+      <button type="button" onClick="{{ tFotos }}" style="min-height: 64px; padding: 8px 0; border: none; background: transparent; font-family: inherit; text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 16px; cursor: pointer;">
+        <span style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 16px; font-weight: 700; color: #04252b;">Fotos de recetas y de la cartilla</span><span style="font-size: 14px; color: #1f3d44;">Con fotos, el archivo pesa más.</span></span>
+        <sc-if value="{{ fotos }}"><span style="flex: none; width: 52px; height: 32px; border-radius: 999px; background: #0e7490; display: flex; align-items: center; justify-content: flex-end; padding: 3px; box-sizing: border-box;"><span style="width: 26px; height: 26px; border-radius: 50%; background: #ffffff;"></span></span></sc-if>
+        <sc-if value="{{ fotosOff }}" hint-placeholder-val="{{ true }}"><span style="flex: none; width: 52px; height: 32px; border-radius: 999px; background: #cbd5e1; display: flex; align-items: center; padding: 3px; box-sizing: border-box;"><span style="width: 26px; height: 26px; border-radius: 50%; background: #ffffff;"></span></span></sc-if>
+      </button>
+    </div>
+
+    <div style="padding: 14px 16px; border: 1.5px solid #a5f3fc; border-radius: 16px; background: #ecfeff; font-size: 15px; line-height: 1.5; color: #04252b;">Este PDF contiene datos de salud de Mateo. Compártelo solo con quien lo necesite.</div>
+    <button type="button" style="min-height: 52px; border: none; border-radius: 16px; background: #047857; color: #ffffff; font-family: inherit; font-size: 17px; font-weight: 800; cursor: pointer;" style-hover="background: #065f46">Generar PDF</button>
+  </sc-if>
+
+  <sc-if value="{{ isGenerando }}">
+    <div style="padding: 8px 0 4px; display: flex; flex-direction: column; gap: 14px;">
+      <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+        <span style="font-size: 17px; font-weight: 800; color: #04252b;">Generando PDF…</span>
+        <span style="font-size: 15px; font-weight: 700; color: #0e7490;">Página 4 de 5</span>
+      </div>
+      <div role="progressbar" aria-valuenow="4" aria-valuemin="0" aria-valuemax="5" style="height: 10px; border-radius: 999px; background: #ecfeff; border: 1px solid #a5f3fc; overflow: hidden;"><div style="width: 80%; height: 100%; background: #0e7490; border-radius: 999px;"></div></div>
+      <span style="font-size: 15px; color: #1f3d44;">Preparando la cartilla de vacunación.</span>
+    </div>
+    <div style="padding: 14px 16px; border: 1.5px solid #a5f3fc; border-radius: 16px; background: #ecfeff; font-size: 15px; line-height: 1.5; color: #04252b;">Este PDF contiene datos de salud de Mateo. Compártelo solo con quien lo necesite.</div>
+    <button type="button" style="min-height: 52px; border: 2px solid #0e7490; border-radius: 16px; background: transparent; color: #0e7490; font-family: inherit; font-size: 17px; font-weight: 800; cursor: pointer;">Cancelar</button>
+  </sc-if>
+
+  <sc-if value="{{ isListo }}">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <span style="flex: none; width: 44px; height: 44px; border-radius: 50%; background: #d1fae5; color: #047857; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900;">✓</span>
+      <span style="font-size: 18px; font-weight: 800; color: #04252b;">Tu PDF está listo</span>
+    </div>
+    <div style="padding: 14px 16px; border: 1.5px solid #a5f3fc; border-radius: 16px; background: #ffffff; display: flex; align-items: center; gap: 14px;">
+      <span style="flex: none; width: 44px; height: 54px; border-radius: 8px; border: 1.5px solid #0e7490; color: #0e7490; display: inline-flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; box-sizing: border-box; font-size: 12px; font-weight: 900;">PDF</span>
+      <span style="min-width: 0; display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 15px; font-weight: 800; color: #04252b; overflow-wrap: anywhere;">Mateo-Morales-historial-24-oct-2026.pdf</span><span style="font-size: 14px; color: #1f3d44;">5 páginas · 1.2 MB · del 1 ene al 24 oct 2026</span></span>
+    </div>
+    <span style="font-size: 14px; line-height: 1.5; color: #1f3d44;">Este PDF contiene datos de salud de Mateo. Compártelo solo con quien lo necesite.</span>
+    <sc-if value="{{ web }}">
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button type="button" style="flex: 1 1 180px; min-height: 52px; border: none; border-radius: 16px; background: #047857; color: #ffffff; font-family: inherit; font-size: 17px; font-weight: 800; cursor: pointer;">Descargar</button>
+        <button type="button" style="flex: 1 1 180px; min-height: 52px; border: 2px solid #0e7490; border-radius: 16px; background: transparent; color: #0e7490; font-family: inherit; font-size: 17px; font-weight: 800; cursor: pointer;">Compartir</button>
+      </div>
+    </sc-if>
+    <sc-if value="{{ movil }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <button type="button" style="min-height: 52px; border: none; border-radius: 16px; background: #047857; color: #ffffff; font-family: inherit; font-size: 17px; font-weight: 800; cursor: pointer;">Compartir</button>
+        <button type="button" style="min-height: 52px; border: 2px solid #0e7490; border-radius: 16px; background: transparent; color: #0e7490; font-family: inherit; font-size: 17px; font-weight: 800; cursor: pointer;">Descargar</button>
+      </div>
+    </sc-if>
+  </sc-if>
+
+  <sc-if value="{{ isError }}">
+    <div style="padding: 18px; border: 1.5px solid #cbd5e1; border-radius: 16px; background: #ffffff; display: flex; gap: 14px; align-items: flex-start;">
+      <span style="flex: none; width: 36px; height: 36px; border-radius: 50%; border: 2px solid #04252b; color: #04252b; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 900; box-sizing: border-box;">!</span>
+      <div style="display: flex; flex-direction: column; gap: 4px;">
+        <span style="font-size: 17px; font-weight: 800; color: #04252b;">No se pudo generar el PDF.</span>
+        <span style="font-size: 15px; line-height: 1.5; color: #1f3d44;">Inténtalo de nuevo. Tus registros no cambiaron.</span>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <button type="button" style="min-height: 52px; border: none; border-radius: 16px; background: #047857; color: #ffffff; font-family: inherit; font-size: 17px; font-weight: 800; cursor: pointer;">Intentar de nuevo</button>
+      <button type="button" style="min-height: 52px; border: 2px solid #0e7490; border-radius: 16px; background: transparent; color: #0e7490; font-family: inherit; font-size: 17px; font-weight: 800; cursor: pointer;">Cerrar</button>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isVacio }}">
+    <div style="padding: 22px 20px; border: 2px dashed #a5f3fc; border-radius: 22px; display: flex; flex-direction: column; gap: 8px;">
+      <span style="font-size: 18px; font-weight: 900; letter-spacing: -0.02em; color: #04252b;">No hay registros en este periodo</span>
+      <span style="font-size: 15px; line-height: 1.55; color: #1f3d44;">Del 1 sep al 30 sep 2026 no hay consultas ni vacunas registradas de Mateo. Elige otro periodo para generar el PDF.</span>
+    </div>
+    <button type="button" style="min-height: 52px; border: none; border-radius: 16px; background: #047857; color: #ffffff; font-family: inherit; font-size: 17px; font-weight: 800; cursor: pointer;">Cambiar periodo</button>
+  </sc-if>
+
+  <sc-if value="{{ isPlan }}">
+    <dc-import name="PlanAvisoCompacto" a="{{ planAviso }}" hint-size="100%,210px"></dc-import>
+    <button type="button" style="min-height: 52px; border: 2px solid #0e7490; border-radius: 16px; background: transparent; color: #0e7490; font-family: inherit; font-size: 17px; font-weight: 800; cursor: pointer;">Ahora no</button>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:420,&quot;height&quot;:860},&quot;estado&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;opciones&quot;,&quot;generando&quot;,&quot;listo&quot;,&quot;error&quot;,&quot;vacio&quot;,&quot;plan&quot;],&quot;default&quot;:&quot;opciones&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;web&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = { periodo: 'rango', consultas: true, cartilla: true, fotos: false };
+  renderVals() {
+    const e = this.props.estado ?? 'opciones';
+    const web = !!this.props.web;
+    const s = this.state;
+    const pick = (p) => () => this.setState({ periodo: p });
+    const tog = (k) => () => this.setState((st) => ({ [k]: !st[k] }));
+    return {
+      isOpciones: e === 'opciones', isGenerando: e === 'generando', isListo: e === 'listo',
+      isError: e === 'error', isVacio: e === 'vacio', isPlan: e === 'plan',
+      web, movil: !web,
+      pTodo: s.periodo === 'todo', pTodoOff: s.periodo !== 'todo',
+      pRango: s.periodo === 'rango', pRangoOff: s.periodo !== 'rango',
+      pFiltros: s.periodo === 'filtros', pFiltrosOff: s.periodo !== 'filtros',
+      pickTodo: pick('todo'), pickRango: pick('rango'), pickFiltros: pick('filtros'),
+      consultas: s.consultas, consultasOff: !s.consultas,
+      cartilla: s.cartilla, cartillaOff: !s.cartilla,
+      fotos: s.fotos, fotosOff: !s.fotos,
+      tConsultas: tog('consultas'), tCartilla: tog('cartilla'), tFotos: tog('fotos'),
+      planAviso: { title: 'Exportar a PDF es parte del plan completo', text: 'Genera un PDF con las consultas, tomas y cartilla de vacunación de Mateo para llevarlo al pediatra.' }
+    };
+  }
+}
+</script>
+</body>
+</html>
