@@ -3,8 +3,8 @@ import { PANEL } from './exportText'
 import { ExportPanel, type ExportPanelProps } from './ExportPanel'
 
 interface ExportEntryProps extends Omit<ExportPanelProps, 'onClose' | 'opener'> {
-  /** The phone or the web design (mock M1/M3 and W1). */
-  variant: 'phone' | 'desktop'
+  /** The phone or the web design (mock M1/M3 and W1); `phone-row` shares the row with another button (mock M2, the card). */
+  variant: 'phone' | 'phone-row' | 'desktop'
 }
 
 const badge =
@@ -17,16 +17,18 @@ const badge =
 export function ExportEntry({ variant, ...panel }: ExportEntryProps) {
   const [open, setOpen] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
-  const phone = variant === 'phone'
+  const phone = variant !== 'desktop'
   const base =
     'cursor-pointer rounded-2xl border-2 border-action bg-surface font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2'
   const size = panel.free
     ? phone
       ? 'flex min-h-[52px] w-full items-center justify-between gap-3 px-4 text-base'
       : 'inline-flex min-h-12 items-center gap-2.5 px-4 text-base'
-    : phone
-      ? 'min-h-11 shrink-0 px-3.5 text-[15px]'
-      : 'min-h-12 shrink-0 px-[18px] text-base'
+    : variant === 'phone-row'
+      ? 'min-h-[52px] flex-1 px-3 text-base'
+      : phone
+        ? 'min-h-11 shrink-0 px-3.5 text-[15px]'
+        : 'min-h-12 shrink-0 px-[18px] text-base'
 
   return (
     <>

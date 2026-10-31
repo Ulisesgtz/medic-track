@@ -65,7 +65,7 @@
 - [X] T023 [US2] `frontend/src/features/pdfExport/photos.ts` (+ prueba): pedir las fotos una por una con avance («Preparando fotos 3 de 7»), convertir cada una a JPEG (lado largo 1600 px, calidad 0.8, como `shrinkPhoto`) y, si el navegador no la decodifica (HEIC), devolver «no incluida» para dibujar el recuadro «Foto que no se pudo incluir en el PDF».
 - [X] T024 [US2] Documento: `document/Annex.tsx` («Anexo: fotos» con leyendas del mock), «Receta · Foto en p. N» en cada consulta con foto, el índice incluye el anexo; la portada dice periodo, filtros, secciones, «Fotos: No incluidas» y «Todas las vacunas registradas, sin filtro de periodo». Pruebas con el caso C (filtros) y con fotos.
 - [X] T025 [US2] Estado «sin datos» en `useExport`/`ExportPanel` («No hay registros en este periodo» con el rango y el nombre + «Cambiar periodo» que vuelve a las opciones).
-- [ ] T026 [US2] Montar `ExportEntry` en `frontend/src/features/vaccinations/VaccinationCardPage.tsx` en ambos diseños (junto a «Registrar vacuna»/«+ Agregar vacuna»), abriendo el panel con la cartilla encendida y las consultas apagadas; pasar los filtros actuales desde `HistoryPage`.
+- [X] T026 [US2] Montar `ExportEntry` en `frontend/src/features/vaccinations/VaccinationCardPage.tsx` en ambos diseños (junto a «Registrar vacuna»/«+ Agregar vacuna»), abriendo el panel con la cartilla encendida y las consultas apagadas; pasar los filtros actuales desde `HistoryPage`.
 
 **Punto de control**: periodo, secciones y fotos funcionan. **Commit**: «feat(050): periodo, secciones y fotos del PDF».
 
@@ -73,7 +73,7 @@
 
 ## Fase 5: Historia de Usuario 3 — plan gratuito (P3)
 
-- [ ] T027 [US3] `ExportEntry.tsx`: con el plan gratuito de la familia del hijo (`useChildAccess(...).isFree`), el botón «Exportar a PDF» con la marca «Plan completo» (móvil a todo el ancho); al tocarlo, el estado «plan» del panel con `PlanAvisoCompacto` («Exportar a PDF es parte del plan completo» / «Genera un PDF con las consultas, tomas y cartilla de vacunación de <nombre> para llevarlo al pediatra.») y «Ahora no»; si el servidor responde 422 `pdf_export` al generar, el mismo estado. Agregar el motivo a `frontend/src/features/plans/planCopy.ts` solo si se usa `FreemiumLimitModal`. Pruebas en ambos diseños, también para una persona invitada a una familia de pago (puede exportar).
+- [X] T027 [US3] `ExportEntry.tsx`: con el plan gratuito de la familia del hijo (`useChildAccess(...).isFree`), el botón «Exportar a PDF» con la marca «Plan completo» (móvil a todo el ancho); al tocarlo, el estado «plan» del panel con `PlanAvisoCompacto` («Exportar a PDF es parte del plan completo» / «Genera un PDF con las consultas, tomas y cartilla de vacunación de <nombre> para llevarlo al pediatra.») y «Ahora no»; si el servidor responde 422 `pdf_export` al generar, el mismo estado. Agregar el motivo a `frontend/src/features/plans/planCopy.ts` solo si se usa `FreemiumLimitModal`. Pruebas en ambos diseños, también para una persona invitada a una familia de pago (puede exportar).
 
 **Commit**: «feat(050): exportar a PDF en el plan gratuito».
 
