@@ -7,11 +7,12 @@ import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { useChildAccess } from '../family/useChildAccess'
 import { AppShell } from '../home/AppShell'
 import { useSidebarSession } from '../home/useSidebarSession'
+import { ExportEntry } from '../pdfExport/ExportEntry'
 import { ActiveCriteria } from './ActiveCriteria'
 import { ConsultationApiError } from './api'
 import { ConsultationCard } from './ConsultationCard'
 import { HistoryFilterFields, HistorySearchField } from './HistoryFilters'
-import { filterCount, isEmpty, rangeInverted } from './historyCriteria'
+import { filterCount, isEmpty, rangeInverted, toRequest } from './historyCriteria'
 import { useHistoryCriteria, useHistoryOptions, useHistorySearch } from './useHistory'
 
 const isPlanLimit = (error: unknown) => error instanceof ConsultationApiError && error.kind === 'plan_limit_history_search'
@@ -138,6 +139,17 @@ function HistoryScreen({ childId }: { childId: string }) {
   )
 
   const active = <ActiveCriteria criteria={criteria} onChange={update} onClear={clear} />
+  // specs/050: «Exportar a PDF», once the account (and so the child's name and plan) is known; it offers the filters on screen.
+  const exportEntry = (v: 'phone' | 'desktop') =>
+    child && (
+      <ExportEntry
+        variant={v}
+        childId={childId}
+        child={child}
+        free={free}
+        filters={hasCriteria && !invalidRange ? toRequest(criteria) : null}
+      />
+    )
   const fields = (
     <HistoryFilterFields
       variant={variant}
@@ -158,8 +170,13 @@ function HistoryScreen({ childId }: { childId: string }) {
               <Link to={childPath} className="-my-3 inline-flex min-h-11 items-center text-sm font-bold text-action">
                 ← {childLabel ? `Consultas de ${child?.firstName}` : 'Consultas'}
               </Link>
-              <h1 className="text-[38px] leading-[1.1] font-black tracking-[-0.035em] text-ink">Historial</h1>
-              {child && <p className="text-sm font-bold text-action">{`${childLabel} · ${formatAgeLong(child.birthDate)}`}</p>}
+              <div className="flex items-end justify-between gap-4">
+                <div className="flex min-w-0 flex-col gap-2">
+                  <h1 className="text-[38px] leading-[1.1] font-black tracking-[-0.035em] text-ink">Historial</h1>
+                  {child && <p className="text-sm font-bold text-action">{`${childLabel} · ${formatAgeLong(child.birthDate)}`}</p>}
+                </div>
+                {exportEntry('desktop')}
+              </div>
             </div>
 
             <div className="grid grid-cols-[minmax(280px,340px)_minmax(0,1fr)] items-start gap-[22px]">
@@ -187,8 +204,13 @@ function HistoryScreen({ childId }: { childId: string }) {
           <Link to={childPath} className="-my-3 inline-flex min-h-11 items-center text-sm font-bold text-bright-soft hover:text-white">
             ← Consultas
           </Link>
-          <h1 className="mt-5 text-2xl font-black tracking-tight text-white">Historial</h1>
-          {child && <p className="mt-1 text-sm font-semibold text-hint-border">{`${childLabel} · ${formatAgeLong(child.birthDate)}`}</p>}
+          <div className="mt-5 flex items-end justify-between gap-3">
+            <div className="flex min-w-0 flex-col gap-1">
+              <h1 className="text-2xl font-black tracking-tight text-white">Historial</h1>
+              {child && <p className="text-sm font-semibold text-hint-border">{`${childLabel} · ${formatAgeLong(child.birthDate)}`}</p>}
+            </div>
+            {exportEntry('phone')}
+          </div>
         </header>
 
         <div className="flex flex-col gap-4 px-6 pt-6">

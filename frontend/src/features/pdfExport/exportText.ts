@@ -16,6 +16,7 @@ export const PANEL = {
   from: 'Desde',
   to: 'Hasta',
   periodFilters: 'Usar los filtros del historial',
+  fixDates: 'Corrige las fechas: «Desde» va antes de «Hasta».',
   include: 'Qué incluir',
   consultations: 'Consultas',
   vaccinations: 'Cartilla de vacunación',
@@ -31,6 +32,8 @@ export const PANEL = {
   stageDocument: 'Armando el documento.',
   ready: 'Tu PDF está listo',
   readyMeta: (pages: number, size: string, period: string) => `${plural(pages, 'página', 'páginas')} · ${size} · ${period}`,
+  readyAll: 'todo el historial',
+  readyFilters: 'con los filtros del historial',
   share: 'Compartir',
   download: 'Descargar',
   errorTitle: 'No se pudo generar el PDF.',
@@ -39,6 +42,8 @@ export const PANEL = {
   emptyTitle: 'No hay registros en este periodo',
   emptyBody: (period: string, firstName: string) =>
     `${period} no hay consultas ni vacunas registradas de ${firstName}. Elige otro periodo para generar el PDF.`,
+  emptyAll: 'En el historial',
+  emptyFilters: 'Con los filtros del historial',
   changePeriod: 'Cambiar periodo',
   planTitle: 'Exportar a PDF es parte del plan completo',
   planBody: (firstName: string) =>

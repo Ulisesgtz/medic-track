@@ -15,5 +15,9 @@ Mock: Claude Design, proyecto `f4e28757-d885-471d-b5b9-6e6ca094449a` — «Expor
 | 8 | Dosis sin número: «Única» | «—» | La cartilla no guarda si una dosis es única; solo su número cuando el padre lo escribe. |
 | 9 | Filtros del caso C: «Tipo: Consultas» | El tipo se escribe como en el Historial: «Con tratamiento» o «Solo registro»; «todas» no se escribe | No existe el tipo «Consultas» en la búsqueda (spec 031). |
 | 10 | En el caso A la consulta del 12 sep cruza de la página 2 a la 3 | Cabe completa en la página 2 | El documento queda un poco más compacto que el mock (sin la foto de la receta, que es de la US2). El cruce se prueba con una consulta de notas largas (`HistoryDocument.test.tsx`). |
+| 11 | Historial móvil claro, con «Exportar a PDF» a la derecha del título (M1) | El botón va a la derecha del título dentro del encabezado oscuro que ya tiene el Historial (spec 031) | Como la desviación 4: el mock dibuja el Historial como contexto; solo se agrega el botón. |
+| 12 | Interruptor apagado en `#cbd5e1` sobre blanco | Igual que el mock (`slate-300`) | **Accesibilidad, para decidir**: el riel apagado contra el blanco queda debajo de 3:1 (WCAG 1.4.11). El estado también lo dicen la posición del círculo y `aria-checked`. |
+| 13 | El rango de fechas no dice qué pasa si «Desde» va después de «Hasta» | «Corrige las fechas: «Desde» va antes de «Hasta».» bajo las fechas y «Generar PDF» inactivo | Un botón inactivo sin explicación no se entiende. |
+| 14 | «Listo» siempre con los dos botones | Sin la hoja de compartir del navegador (p. ej. Firefox o Chrome en Windows), solo «Descargar», sólido | `navigator.canShare` no acepta archivos ahí (research R6); un solo botón sólido por pantalla. |
 
 Se agregará a esta tabla cualquier otra diferencia que salga al medir la app contra el mock.
