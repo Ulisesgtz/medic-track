@@ -85,6 +85,9 @@ describe.each([
     expect(within(dialog).getByText('Historial de Mateo Morales')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cerrar' })).toHaveFocus()
     expect(screen.getByRole('radio', { name: 'Todo el historial' })).toHaveAttribute('aria-checked', 'true')
+    // The chosen period is outlined in action, the others in hint-border (ExportarPanel: bTodo/bRango/bFiltros).
+    expect(screen.getByRole('radio', { name: 'Todo el historial' }).parentElement).toHaveClass('border-action')
+    expect(screen.getByRole('radio', { name: 'Un rango de fechas' }).parentElement).toHaveClass('border-hint-border')
     expect(screen.getByRole('radio', { name: /Usar los filtros del historial.*Dra\. Laura Cázares · Fiebre/ })).toBeInTheDocument()
     expect(screen.getByRole('switch', { name: 'Consultas' })).toHaveAttribute('aria-checked', 'true')
     expect(screen.getByRole('switch', { name: 'Cartilla de vacunación' })).toHaveAttribute('aria-checked', 'true')
@@ -104,12 +107,12 @@ describe.each([
     const toField = screen.getByLabelText('Hasta')
     await userEvent.type(fromField, '2026-09-30')
     await userEvent.type(toField, '2026-09-01')
-    expect(screen.getByRole('alert')).toHaveTextContent('Corrige las fechas')
+    expect(screen.getByRole('status')).toHaveTextContent('Corrige las fechas')
     expect(fromField).toHaveAttribute('aria-invalid', 'true')
     expect(generateButton).toBeDisabled()
     await userEvent.clear(toField)
     await userEvent.type(toField, '2026-10-24')
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
     await userEvent.click(generateButton)
     expect(hook.generate).toHaveBeenCalledWith({ ...all, period: { kind: 'range', from: '2026-09-30', to: '2026-10-24' } })
   })
@@ -140,7 +143,8 @@ describe.each([
     hook.state = { status: 'generating', stage: 'photos', photo: { done: 3, total: 7 } }
     show()
     expect(screen.getByText('Preparando fotos 3 de 7.')).toBeInTheDocument()
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '2')
+    expect(screen.getByRole('progressbar', { name: 'Generando PDF…' })).toHaveAttribute('aria-valuenow', '2')
+    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuetext', 'Preparando fotos 3 de 7.')
   })
 
   it('from the card, the card is on and the consultations off', () => {

@@ -39,6 +39,8 @@ const solid =
 const outline =
   'min-h-[52px] w-full cursor-pointer rounded-2xl border-2 border-action bg-transparent px-4 text-[17px] font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2'
 const eyebrow = 'text-xs font-extrabold tracking-[0.1em] text-action uppercase'
+/** A choice of «Periodo»: the chosen one is outlined in action. */
+const card = (chosen: boolean) => `rounded-2xl border-[1.5px] bg-surface ${chosen ? 'border-action' : 'border-hint-border'}`
 const privacyBox = 'rounded-2xl border-[1.5px] border-hint-border bg-hint px-4 py-3.5 text-[15px] leading-normal text-ink'
 
 /**
@@ -128,12 +130,12 @@ export function ExportPanel({ childId, child, free, filters, origin = 'history',
               {PANEL.period}
             </p>
             <div role="radiogroup" aria-labelledby={`${id}-period`} className="flex flex-col gap-2">
-              <div className="rounded-2xl border-[1.5px] border-hint-border bg-surface">
+              <div className={card(kind === 'all')}>
                 <Radio checked={kind === 'all'} onPick={() => setKind('all')}>
                   <span className="text-base font-bold text-ink">{PANEL.periodAll}</span>
                 </Radio>
               </div>
-              <div className="flex flex-col rounded-2xl border-[1.5px] border-hint-border bg-surface">
+              <div className={`flex flex-col ${card(kind === 'range')}`}>
                 <Radio checked={kind === 'range'} onPick={() => setKind('range')}>
                   <span className="text-base font-bold text-ink">{PANEL.periodRange}</span>
                 </Radio>
@@ -144,7 +146,7 @@ export function ExportPanel({ childId, child, free, filters, origin = 'history',
                       <DateField id={`${id}-to`} label={PANEL.to} value={to} max={today} onChange={setTo} invalid={datesTurned} />
                     </div>
                     {datesTurned && (
-                      <p role="alert" className="text-[13px] font-semibold text-ink-soft">
+                      <p role="status" className="text-[13px] leading-[1.45] font-semibold text-ink-soft">
                         {PANEL.fixDates}
                       </p>
                     )}
@@ -152,7 +154,7 @@ export function ExportPanel({ childId, child, free, filters, origin = 'history',
                 )}
               </div>
               {summary && (
-                <div className="rounded-2xl border-[1.5px] border-hint-border bg-surface">
+                <div className={card(kind === 'filters')}>
                   <Radio checked={kind === 'filters'} onPick={() => setKind('filters')}>
                     <span className="flex flex-col gap-0.5">
                       <span className="text-base font-bold text-ink">{PANEL.periodFilters}</span>
@@ -191,10 +193,13 @@ export function ExportPanel({ childId, child, free, filters, origin = 'history',
       body = (
         <>
           <div className="flex flex-col gap-3.5 pt-2 pb-1">
-            <span className="text-[17px] font-extrabold text-ink">{PANEL.generating}</span>
+            <span id={`${id}-progress`} className="text-[17px] font-extrabold text-ink">
+              {PANEL.generating}
+            </span>
             <div
               role="progressbar"
-              aria-label={PANEL.generating}
+              aria-labelledby={`${id}-progress`}
+              aria-valuetext={stageText(state.stage, state.photo)}
               aria-valuemin={0}
               aria-valuemax={steps}
               aria-valuenow={step}
@@ -327,7 +332,7 @@ function Radio({ checked, onPick, children }: { checked: boolean; onPick: () => 
       role="radio"
       aria-checked={checked}
       onClick={onPick}
-      className="flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-2xl px-4 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-action"
+      className="flex min-h-14 w-full cursor-pointer items-center gap-3 rounded-[15px] px-4 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-action"
     >
       <span
         aria-hidden="true"
@@ -385,7 +390,7 @@ function DateField(props: { id: string; label: string; value: string; max: strin
         max={props.max}
         aria-invalid={props.invalid || undefined}
         onChange={(e) => props.onChange(e.target.value)}
-        className={`min-h-12 w-full min-w-0 rounded-xl border-[1.5px] bg-surface px-3 text-base font-semibold text-ink focus:border-2 focus:border-ink focus:outline-none ${props.invalid ? 'border-ink' : 'border-hint-border'}`}
+        className={`min-h-12 w-full min-w-0 rounded-xl border-[1.5px] bg-surface px-2.5 text-base font-semibold text-ink focus:border-2 focus:border-ink focus:outline-none ${props.invalid ? 'border-ink' : 'border-hint-border'}`}
       />
     </label>
   )
