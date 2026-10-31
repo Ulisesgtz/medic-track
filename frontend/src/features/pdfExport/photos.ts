@@ -58,16 +58,17 @@ const isAbort = (error: unknown) => error instanceof DOMException && error.name 
 export async function preparePhotos(
   childId: string,
   photos: ExportPhotos,
-  token: string | null,
+  /** Asked before every photo: a session token lasts about a minute and a long run of photos outlives it. */
+  token: () => Promise<string | null>,
   signal: AbortSignal,
   onProgress: (done: number, total: number) => void,
 ): Promise<PreparedPhotos> {
   const prepared: PreparedPhotos = { card: {}, consultations: {} }
   const jobs: { save: (url: string | null) => void; fetch: () => Promise<string> }[] = [
-    ...photos.card.map((p) => ({ save: (url: string | null) => (prepared.card[p.id] = url), fetch: () => fetchCardPhoto(childId, p.id, token, signal) })),
+    ...photos.card.map((p) => ({ save: (url: string | null) => (prepared.card[p.id] = url), fetch: async () => fetchCardPhoto(childId, p.id, await token(), signal) })),
     ...photos.consultations.map((p) => ({
       save: (url: string | null) => (prepared.consultations[p.consultationId] = url),
-      fetch: () => fetchConsultationPhoto(p.consultationId, token, signal),
+      fetch: async () => fetchConsultationPhoto(p.consultationId, await token(), signal),
     })),
   ]
   for (const [i, job] of jobs.entries()) {

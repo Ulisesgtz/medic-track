@@ -67,7 +67,7 @@ export function useExport({ childId, free = false, symptomNames }: UseExportOpti
         }
         let photos = NO_PHOTOS
         if (request.sections.photos && data.photos && photoCount(data.photos) > 0) {
-          photos = await preparePhotos(childId, data.photos, await getToken(), controller.signal, (done, total) => {
+          photos = await preparePhotos(childId, data.photos, () => getToken(), controller.signal, (done, total) => {
             if (still()) setState({ status: 'generating', stage: 'photos', photo: { done, total } })
           })
           if (!still()) return

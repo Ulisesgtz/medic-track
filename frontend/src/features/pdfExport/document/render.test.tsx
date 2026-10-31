@@ -12,4 +12,13 @@ describe('renderHistoryPdf', () => {
     expect(pdf).toHaveBeenCalledTimes(2)
     expect(blob.type).toBe('application/pdf')
   })
+
+  it('the first layout goes without the photos (their boxes have a fixed size), the second one with them', async () => {
+    pdf.mockClear()
+    const { renderHistoryPdf } = await import('./render')
+    const photos = { card: {}, consultations: { c1: 'data:image/jpeg;base64,AAA' } }
+    await renderHistoryPdf({ ...CASE_B, now: NOW, icon: '/icon-192.png', photos })
+    const inputs = (pdf.mock.calls as unknown as [{ props: { input: { photos?: unknown } } }][]).map(([doc]) => doc.props.input.photos)
+    expect(inputs).toEqual([undefined, photos])
+  })
 })

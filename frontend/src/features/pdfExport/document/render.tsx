@@ -13,7 +13,8 @@ import { PageLog } from './pageLog'
  */
 export async function layOut<T>(input: DocumentInput, draw: (document: ReactElement<DocumentProps>) => Promise<T>): Promise<{ file: T; pages: number }> {
   const first = new PageLog()
-  await draw(<HistoryDocument input={input} index={null} log={first} />)
+  // The photos sit in boxes of a fixed size: the first layout draws the boxes empty, so the images are decoded and embedded once.
+  await draw(<HistoryDocument input={{ ...input, photos: undefined }} index={null} log={first} />)
   const second = new PageLog()
   const file = await draw(<HistoryDocument input={input} index={first.index()} log={second} />)
   return { file, pages: second.total }

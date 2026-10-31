@@ -5,6 +5,7 @@ import { useBodyScrollLock } from '../../shared/ui/useBodyScrollLock'
 import { useIsDesktop } from '../../shared/ui/useIsDesktop'
 import type { HistorySearchRequest } from '../consultations/historyCriteria'
 import { PlanAvisoCompacto } from '../plans/PlanAvisoCompacto'
+import { localToday } from '../vaccinations/vaccineForm'
 import { fullName } from './document/model'
 import { PANEL } from './exportText'
 import { canGenerate, emptyPeriod, filtersSummary, fileSize, readyPeriod } from './panelModel'
@@ -316,11 +317,6 @@ export function ExportPanel({ childId, child, free, filters, origin = 'history',
     </div>,
     document.body,
   )
-}
-
-function localToday(): string {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 /** One choice of «Periodo»: the whole row is the radio. */

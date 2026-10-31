@@ -76,11 +76,13 @@ describe('preparePhotos', () => {
     fetchConsultationPhoto.mockRejectedValueOnce(new Error('500'))
     const progress: string[] = []
     const signal = new AbortController().signal
-    const prepared = await preparePhotos('c1', photos, 'tok', signal, (n, total) => progress.push(`${n}/${total}`))
+    const token = vi.fn().mockResolvedValue('tok')
+    const prepared = await preparePhotos('c1', photos, token, signal, (n, total) => progress.push(`${n}/${total}`))
     expect(progress).toEqual(['1/3', '2/3', '3/3'])
     expect(prepared).toEqual({ card: { p1: 'data:image/jpeg;base64,AAA', p2: null }, consultations: { k1: null } })
     expect(fetchCardPhoto).toHaveBeenCalledWith('c1', 'p1', 'tok', signal)
     expect(fetchConsultationPhoto).toHaveBeenCalledWith('k1', 'tok', signal)
+    expect(token).toHaveBeenCalledTimes(3)
   })
 
   it('«Cancelar» stops it', async () => {
@@ -89,7 +91,7 @@ describe('preparePhotos', () => {
       controller.abort()
       throw new DOMException('aborted', 'AbortError')
     })
-    await expect(preparePhotos('c1', photos, null, controller.signal, () => {})).rejects.toThrow('aborted')
+    await expect(preparePhotos('c1', photos, async () => null, controller.signal, () => {})).rejects.toThrow('aborted')
     expect(fetchConsultationPhoto).not.toHaveBeenCalled()
   })
 

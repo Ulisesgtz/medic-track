@@ -202,7 +202,8 @@ export const s = StyleSheet.create({
   // The prescription's thumbnail beside a consultation's head, and the annex.
   consultationTop: { flexDirection: 'row', justifyContent: 'space-between' },
   consultationTopMain: { flex: 1, marginRight: px(20) },
-  thumb: { alignItems: 'center' },
+  // A fixed width: the caption's page number («p. 0» in the first layout, «p. 12» in the second) must never move the head.
+  thumb: { width: px(84), alignItems: 'center' },
   thumbBox: {
     width: px(84),
     height: px(104),
@@ -216,7 +217,7 @@ export const s = StyleSheet.create({
   },
   thumbImage: { width: px(84), height: px(104), objectFit: 'cover' },
   thumbLabel: { fontSize: px(11), fontWeight: 700, color: COLOR.placeholder, textAlign: 'center' },
-  thumbCaption: { fontSize: px(12.5), color: COLOR.body, marginTop: px(4) },
+  thumbCaption: { width: px(84), fontSize: px(12.5), color: COLOR.body, marginTop: px(4), textAlign: 'center' },
   annexTitle: { fontSize: px(26), fontWeight: 900, letterSpacing: px(26 * -0.02), marginBottom: px(16) },
   annexRow: { flexDirection: 'row', marginBottom: px(16) },
   annexHalf: { flex: 1 },

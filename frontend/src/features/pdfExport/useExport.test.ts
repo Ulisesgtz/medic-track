@@ -80,7 +80,8 @@ describe('useExport', () => {
     const withPhotos = { ...request, sections: { ...request.sections, photos: true } }
     await act(async () => void result.current.generate(withPhotos))
     expect(result.current.state).toEqual({ status: 'generating', stage: 'photos', photo: { done: 2, total: 3 } })
-    expect(preparePhotos).toHaveBeenCalledWith('c1', CASE_A.data.photos, 'tok', expect.any(AbortSignal), expect.any(Function))
+    expect(preparePhotos).toHaveBeenCalledWith('c1', CASE_A.data.photos, expect.any(Function), expect.any(AbortSignal), expect.any(Function))
+    await expect(preparePhotos.mock.calls[0][2]()).resolves.toBe('tok')
     await act(async () => gate.resolve(prepared))
     await waitFor(() => expect(result.current.state.status).toBe('ready'))
     expect(renderHistoryPdf.mock.calls[0][0].photos).toBe(prepared)
