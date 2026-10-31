@@ -8,6 +8,12 @@ import figtree600 from '@fontsource/figtree/files/figtree-latin-600-normal.woff?
 import figtree700 from '@fontsource/figtree/files/figtree-latin-700-normal.woff?inline'
 import figtree800 from '@fontsource/figtree/files/figtree-latin-800-normal.woff?inline'
 import figtree900 from '@fontsource/figtree/files/figtree-latin-900-normal.woff?inline'
+import ext400 from '@fontsource/figtree/files/figtree-latin-ext-400-normal.woff?inline'
+import ext400Italic from '@fontsource/figtree/files/figtree-latin-ext-400-italic.woff?inline'
+import ext600 from '@fontsource/figtree/files/figtree-latin-ext-600-normal.woff?inline'
+import ext700 from '@fontsource/figtree/files/figtree-latin-ext-700-normal.woff?inline'
+import ext800 from '@fontsource/figtree/files/figtree-latin-ext-800-normal.woff?inline'
+import ext900 from '@fontsource/figtree/files/figtree-latin-ext-900-normal.woff?inline'
 import icon from '../../../../public/icon-192.png?inline'
 import type { ExportConsultation } from '../types'
 import { CASE_A, CASE_B, CASE_C, NOW } from './fixtures'
@@ -17,7 +23,10 @@ import { layOut } from './render'
 
 // specs/050 (T017): the three cases of the mock, laid out for real and read back page by page.
 
-registerFonts(Font, { 400: figtree400, 600: figtree600, 700: figtree700, 800: figtree800, 900: figtree900 }, figtree400Italic)
+registerFonts(Font, { 400: figtree400, 600: figtree600, 700: figtree700, 800: figtree800, 900: figtree900 }, figtree400Italic, {
+  sources: { 400: ext400, 600: ext600, 700: ext700, 800: ext800, 900: ext900 },
+  italic: ext400Italic,
+})
 
 async function pagesOf(input: DocumentInput): Promise<{ pages: string[]; count: number }> {
   const { file, pages: count } = await layOut(input, (document) => renderToBuffer(document))
@@ -170,6 +179,16 @@ describe('the history PDF', () => {
     expect(pages.join(' ')).not.toContain('Foto en p.')
     expect(pages[0]).not.toContain('Anexo')
     expect(pages[0]).toContain('No incluidas')
+  }, 120_000)
+
+  it('a name or a note with «ł», «ő» or «ş» is written with Figtree’s latin-ext, not swapped for other letters', async () => {
+    const child = { ...CASE_A.data.child, firstName: 'Łukasz', lastName: 'Kőváry' }
+    const consultation: ExportConsultation = { ...CASE_A.data.consultations[0], notes: 'Vino de Eskişehir con su tía Małgorzata.' }
+    const { pages } = await pagesOf({ ...input(CASE_A), data: { ...CASE_A.data, child, consultations: [consultation], vaccinations: [] } })
+    // pdf.js reads each font's run apart («Ł ukasz»): compared without spaces.
+    const squash = (t: string) => t.replace(/\s+/g, '')
+    expect(squash(pages[0])).toContain('ŁukaszKőváry')
+    expect(squash(pages[1])).toContain(squash('Vino de Eskişehir con su tía Małgorzata.'))
   }, 120_000)
 
   it('a consultation that crosses a page says where it continues, and says «(continuación)» on the next', async () => {

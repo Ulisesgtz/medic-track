@@ -1,5 +1,5 @@
 import { StyleSheet } from '@react-pdf/renderer'
-import { FONT_FAMILY } from './fonts'
+import { FONT_FAMILY, FONT_FAMILY_EXT } from './fonts'
 
 // specs/050: the document's measures, taken from the mock (Exportar PDF - Documento.dc.html), which draws a Letter page at 96 ppi
 // (816 × 1056 px). The PDF measures in points (72 per inch), so every px of the mock is `px(n)` = n × 0.75 pt.
@@ -55,7 +55,7 @@ const caps = (size: number, spacing: number) => ({
 
 export const s = StyleSheet.create({
   page: {
-    fontFamily: FONT_FAMILY,
+    fontFamily: [FONT_FAMILY, FONT_FAMILY_EXT],
     color: COLOR.ink,
     backgroundColor: COLOR.white,
     paddingTop: MARGIN.top + HEADER_HEIGHT + px(24),

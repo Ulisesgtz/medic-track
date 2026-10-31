@@ -88,11 +88,12 @@ func (s *Service) addConsultations(ctx context.Context, childID uuid.UUID, req R
 			byConsultation[a.consultationID] = a.Appointment
 		}
 	}
-	for _, summary := range found {
-		c, err := s.consultations.GetByIDWithoutPhoto(ctx, summary.ID)
-		if err != nil {
-			return err
-		}
+	// One batch for every consultation found (specs/050 T034), in the history's order.
+	consultations, err := s.consultations.ListWithoutPhoto(ctx, ids)
+	if err != nil {
+		return err
+	}
+	for _, c := range consultations {
 		out := Consultation{
 			ID: c.ID, ConsultDate: c.ConsultDate, DoctorName: c.DoctorName, RecordOnly: c.RecordOnly, Notes: c.Notes,
 			HasPhoto: photos[c.ID], Symptoms: []Symptom{}, Medications: []Medication{},
