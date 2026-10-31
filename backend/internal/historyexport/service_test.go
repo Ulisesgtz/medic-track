@@ -1,6 +1,7 @@
 package historyexport_test
 
 import (
+	"strings"
 	"context"
 	"errors"
 	"fmt"
@@ -146,6 +147,14 @@ func TestBuild_TheWholeHistory(t *testing.T) {
 	require.Equal(t, 90, amoxOut.Doses.Total)
 	require.Equal(t, 1, amoxOut.Doses.Taken)
 	require.Equal(t, amoxOut.Doses.Total, amoxOut.Doses.Taken+amoxOut.Doses.Unregistered+amoxOut.Doses.Due+amoxOut.Doses.Pending)
+	// The sequence is the same record dose by dose, in schedule order: the doses ahead come last.
+	seq := amoxOut.Doses.Sequence
+	require.Len(t, seq, amoxOut.Doses.Total)
+	require.Equal(t, amoxOut.Doses.Taken, strings.Count(seq, "t"))
+	require.Equal(t, amoxOut.Doses.Unregistered, strings.Count(seq, "u"))
+	require.Equal(t, amoxOut.Doses.Due, strings.Count(seq, "d"))
+	require.Equal(t, amoxOut.Doses.Pending, strings.Count(seq, "p"))
+	require.NotContains(t, strings.TrimRight(seq, "p"), "p", "nothing that has come is after a dose ahead")
 	require.NotNil(t, amoxOut.LastMark)
 	require.Equal(t, "Ana", amoxOut.LastMark.By)
 	require.NotNil(t, amoxOut.FirstDoseAt)
@@ -154,6 +163,7 @@ func TestBuild_TheWholeHistory(t *testing.T) {
 	require.NotNil(t, ibu.EndedAt)
 	require.Less(t, ibu.Doses.Total, 90, "the doses canceled by ending the treatment are not counted")
 	require.Zero(t, ibu.Doses.Pending)
+	require.Len(t, ibu.Doses.Sequence, ibu.Doses.Total, "the canceled doses are not in the sequence either")
 
 	require.Len(t, doc.Vaccinations, 2)
 	var custom *historyexport.Vaccination

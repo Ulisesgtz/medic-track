@@ -2,7 +2,7 @@
 
 **Rama de la Funcionalidad**: `feature/050-exportar-historial-pdf`
 **Creado**: 2026-10-25
-**Estado**: Borrador
+**Estado**: Implementada (2026-10-31; pendiente el rediseño del panel en Claude Design)
 **Entrada**: Exportar el historial de un hijo (consultas, tomas y cartilla de vacunación) a un PDF para llevarlo al pediatra. Función del plan completo. Hecha del mock entregado por Claude Design: «Exportar PDF - Pantallas» (con el componente «ExportarPanel») y «Exportar PDF - Documento» (`referencia/`).
 
 ## Escenarios de Usuario y Pruebas *(obligatorio)*

@@ -77,7 +77,8 @@ describe('VaccinationCardPage', () => {
       if (canWrite) expect(found).toBeInTheDocument()
       else expect(found).not.toBeInTheDocument()
     }
-    expect(screen.queryByText(/plan completo/i)).not.toBeInTheDocument()
+    // The only plan mark is the PDF export's (specs/050): writing the card is never the plan's.
+    for (const mark of screen.queryAllByText(/plan completo/i)) expect(mark.closest('button')).toHaveTextContent(/^Exportar a PDF/)
   })
 
   it('offers nothing while the account has not loaded', async () => {
@@ -278,6 +279,48 @@ describe('VaccinationCardPage', () => {
     expect(await screen.findByText(/Corregida el 05 nov 2026 por Luis/)).toBeInTheDocument()
     expect(screen.getByText('Lote L9')).toBeInTheDocument()
     expect(screen.getByText('sin reacción')).toBeInTheDocument()
+  })
+})
+
+describe('VaccinationCardPage: «Exportar a PDF» (specs/050)', () => {
+  const paid = (children = [child()]) => ({ ...account(children), plan: 'paid' as const })
+
+  it.each([
+    ['phone', false],
+    ['web', true],
+  ])('sits beside «Agregar vacuna» and opens with the card on and the consultations off (%s)', async (_design, web) => {
+    stubMatchMedia(web)
+    stubApi({ account: paid(), doses: [dose()] })
+    page()
+    const user = userEvent.setup()
+    const add = await screen.findByRole('button', { name: TEXT.add })
+    const entry = screen.getByRole('button', { name: 'Exportar a PDF' })
+    expect(add.parentElement).toBe(entry.parentElement)
+    expect(add.className.includes('flex-1')).toBe(!web)
+    expect(entry.className.includes('flex-1')).toBe(!web)
+    await user.click(entry)
+    const dialog = screen.getByRole('dialog', { name: 'Exportar a PDF' })
+    expect(within(dialog).getByRole('switch', { name: 'Consultas' })).toHaveAttribute('aria-checked', 'false')
+    expect(within(dialog).getByRole('switch', { name: 'Cartilla de vacunación' })).toHaveAttribute('aria-checked', 'true')
+  })
+
+  it('a caregiver of a paid family can export, without adding', async () => {
+    stubApi({ account: account([child({ role: 'caregiver', plan: 'paid' })]), doses: [dose()] })
+    page()
+    expect(await screen.findByRole('button', { name: 'Exportar a PDF' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: TEXT.add })).not.toBeInTheDocument()
+  })
+
+  it('on the free plan it carries the mark, takes the whole width on the phone and opens on the plan notice', async () => {
+    stubApi({ account: account(), doses: [dose()] })
+    page()
+    const user = userEvent.setup()
+    const entry = await screen.findByRole('button', { name: /^Exportar a PDF/ })
+    expect(entry).toHaveTextContent('Plan completo')
+    expect(entry).toHaveClass('w-full')
+    expect(entry.parentElement).toHaveClass('flex-col')
+    await user.click(entry)
+    expect(screen.getByText('Exportar a PDF es parte del plan completo')).toBeInTheDocument()
   })
 })
 

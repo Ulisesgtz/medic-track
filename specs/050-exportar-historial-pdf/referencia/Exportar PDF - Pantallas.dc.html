@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; background: #e6eef0; }
+  body { font-family: 'Figtree', system-ui, sans-serif; }
+  a { color: #0e7490; }
+  a:hover { color: #04252b; }
+</style>
+</helmet>
+
+<section data-screen-label="Móvil" style="padding: 56px 48px; display: flex; flex-direction: column; gap: 28px; font-family: 'Figtree', system-ui, sans-serif;">
+  <div style="display: flex; flex-direction: column; gap: 8px; max-width: 900px;">
+    <span style="font-size: 13px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #0e7490;">Exportar historial a PDF · B. Pantallas</span>
+    <h1 style="margin: 0; font-size: 40px; font-weight: 900; letter-spacing: -0.03em; color: #04252b;">Móvil · 390 px</h1>
+    <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #1f3d44; text-wrap: pretty;">Hoja inferior: radio superior 22 px, relleno 24/20 px, botones de 52 px de alto, zonas táctiles de 44 px como mínimo. Un solo botón sólido verde por pantalla. Las opciones de la hoja (periodo e interruptores) funcionan al tocarlas.</p>
+  </div>
+  <div style="display: flex; flex-wrap: wrap; gap: 36px; align-items: flex-start;">
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <span style="font-size: 15px; font-weight: 800; color: #04252b;">M1 · Historial: entrada</span>
+      <div data-screen-label="M1 Historial" style="width: 390px; height: 844px; border-radius: 36px; overflow: hidden; background: #f8feff; box-shadow: 0 20px 50px rgba(4,37,43,0.18); display: flex; flex-direction: column;">
+        <div style="height: 44px; flex: none; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 700; color: #04252b;"><span>9:41</span><span>●●● ▮</span></div>
+        <div style="padding: 12px 20px 20px; display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 12px;">
+            <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #0e7490;">Mateo Morales</span><h2 style="margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -0.03em; color: #04252b;">Historial</h2></div>
+            <button type="button" style="min-height: 44px; padding: 0 14px; border: 2px solid #0e7490; border-radius: 16px; background: #ffffff; color: #0e7490; font-family: inherit; font-size: 15px; font-weight: 800; cursor: pointer;">Exportar a PDF</button>
+          </div>
+          <div style="min-height: 48px; padding: 0 16px; border: 1.5px solid #a5f3fc; border-radius: 16px; background: #ffffff; display: flex; align-items: center; font-size: 16px; color: #475569;">Buscar en el historial</div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <span style="min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1.5px solid #a5f3fc; background: #ffffff; display: inline-flex; align-items: center; font-size: 14px; font-weight: 700; color: #04252b;">Fechas</span>
+            <span style="min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1.5px solid #0e7490; background: #ecfeff; display: inline-flex; align-items: center; font-size: 14px; font-weight: 800; color: #0e7490;">Dra. Laura Cázares ×</span>
+            <span style="min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1.5px solid #0e7490; background: #ecfeff; display: inline-flex; align-items: center; font-size: 14px; font-weight: 800; color: #0e7490;">Fiebre ×</span>
+            <span style="min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1.5px solid #a5f3fc; background: #ffffff; display: inline-flex; align-items: center; font-size: 14px; font-weight: 700; color: #04252b;">Medicamento</span>
+            <span style="min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1.5px solid #a5f3fc; background: #ffffff; display: inline-flex; align-items: center; font-size: 14px; font-weight: 700; color: #04252b;">Tipo</span>
+          </div>
+          <div style="background: #ffffff; border-radius: 22px; box-shadow: 0 8px 20px rgba(4,37,43,0.07); padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;">
+            <span style="font-size: 17px; font-weight: 800; color: #04252b;">18 oct 2026</span>
+            <span style="font-size: 15px; color: #1f3d44;">Dra. Laura Cázares</span>
+            <span style="font-size: 14px; font-weight: 600; color: #475569;">Fiebre · Tos · Amoxicilina, Paracetamol</span>
+          </div>
+          <div style="background: #ffffff; border-radius: 22px; box-shadow: 0 8px 20px rgba(4,37,43,0.07); padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;">
+            <span style="font-size: 17px; font-weight: 800; color: #04252b;">20 feb 2026</span>
+            <span style="font-size: 15px; color: #1f3d44;">Dra. Laura Cázares</span>
+            <span style="font-size: 14px; font-weight: 600; color: #475569;">Fiebre · Tos · Amoxicilina</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <span style="font-size: 15px; font-weight: 800; color: #04252b;">M2 · Cartilla de vacunación: entrada</span>
+      <div data-screen-label="M2 Cartilla" style="width: 390px; height: 844px; border-radius: 36px; overflow: hidden; background: #f8feff; box-shadow: 0 20px 50px rgba(4,37,43,0.18); display: flex; flex-direction: column;">
+        <div style="height: 44px; flex: none; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 700; color: #04252b;"><span>9:41</span><span>●●● ▮</span></div>
+        <div style="padding: 12px 20px 20px; display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #0e7490;">Mateo Morales</span><h2 style="margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -0.03em; color: #04252b;">Cartilla de vacunación</h2></div>
+          <div style="display: flex; gap: 10px;">
+            <button type="button" style="flex: 1; min-height: 52px; border: none; border-radius: 16px; background: #047857; color: #ffffff; font-family: inherit; font-size: 16px; font-weight: 800; cursor: pointer;">Registrar vacuna</button>
+            <button type="button" style="flex: 1; min-height: 52px; border: 2px solid #0e7490; border-radius: 16px; background: #ffffff; color: #0e7490; font-family: inherit; font-size: 16px; font-weight: 800; cursor: pointer;">Exportar a PDF</button>
+          </div>
+          <div style="background: #ffffff; border-radius: 22px; box-shadow: 0 8px 20px rgba(4,37,43,0.07); padding: 4px 20px;">
+            <div style="padding: 14px 0; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 16px; font-weight: 800; color: #04252b;">Influenza</span><span style="font-size: 14px; color: #1f3d44;">1.ª dosis · 10 nov 2025</span></div>
+            <div style="padding: 14px 0; border-top: 1px solid #cffafe; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 16px; font-weight: 800; color: #04252b;">Triple viral (SRP)</span><span style="font-size: 14px; color: #1f3d44;">1.ª dosis · 16 mar 2022</span></div>
+            <div style="padding: 14px 0; border-top: 1px solid #cffafe; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 16px; font-weight: 800; color: #04252b;">Neumococo</span><span style="font-size: 14px; color: #1f3d44;">2.ª dosis · 16 sep 2021</span></div>
+            <div style="padding: 14px 0; border-top: 1px solid #cffafe; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 16px; font-weight: 800; color: #04252b;">Hexavalente</span><span style="font-size: 14px; color: #1f3d44;">2.ª dosis · 17 jul 2021</span></div>
+            <div style="padding: 14px 0; border-top: 1px solid #cffafe; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 16px; font-weight: 800; color: #04252b;">Hepatitis B</span><span style="font-size: 14px; color: #1f3d44;">3.ª dosis · 16 sep 2021</span></div>
+          </div>
+          <span style="font-size: 14px; line-height: 1.5; color: #1f3d44;">Desde aquí, el PDF abre con la cartilla activada y las consultas desactivadas.</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <span style="font-size: 15px; font-weight: 800; color: #04252b;">M3 · Plan gratuito: botón con marca</span>
+      <div data-screen-label="M3 Plan gratuito" style="width: 390px; height: 844px; border-radius: 36px; overflow: hidden; background: #f8feff; box-shadow: 0 20px 50px rgba(4,37,43,0.18); display: flex; flex-direction: column;">
+        <div style="height: 44px; flex: none; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 700; color: #04252b;"><span>9:41</span><span>●●● ▮</span></div>
+        <div style="padding: 12px 20px 20px; display: flex; flex-direction: column; gap: 16px;">
+          <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #0e7490;">Mateo Morales</span><h2 style="margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -0.03em; color: #04252b;">Historial</h2></div>
+          <button type="button" style="min-height: 52px; padding: 0 16px; border: 2px solid #0e7490; border-radius: 16px; background: #ffffff; font-family: inherit; display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer;">
+            <span style="font-size: 16px; font-weight: 800; color: #0e7490;">Exportar a PDF</span>
+            <span style="padding: 3px 10px; border-radius: 999px; border: 1.5px solid #a5f3fc; background: #ecfeff; font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #0e7490;">Plan completo</span>
+          </button>
+          <div style="min-height: 48px; padding: 0 16px; border: 1.5px solid #a5f3fc; border-radius: 16px; background: #ffffff; display: flex; align-items: center; font-size: 16px; color: #475569;">Buscar en el historial</div>
+          <div style="background: #ffffff; border-radius: 22px; box-shadow: 0 8px 20px rgba(4,37,43,0.07); padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;">
+            <span style="font-size: 17px; font-weight: 800; color: #04252b;">18 oct 2026</span>
+            <span style="font-size: 15px; color: #1f3d44;">Dra. Laura Cázares</span>
+            <span style="font-size: 14px; font-weight: 600; color: #475569;">Fiebre · Tos · Amoxicilina, Paracetamol</span>
+          </div>
+          <span style="font-size: 14px; line-height: 1.5; color: #1f3d44;">En móvil, el botón ocupa todo el ancho para que quepa la marca. Al tocarlo se abre el aviso del plan (M9).</span>
+        </div>
+      </div>
+    </div>
+
+    <sc-for list="{{ hojas }}" as="h" hint-placeholder-count="6">
+      <div style="display: flex; flex-direction: column; gap: 12px;">
+        <span style="font-size: 15px; font-weight: 800; color: #04252b;">{{ h.label }}</span>
+        <div data-screen-label="{{ h.label }}" style="width: 390px; height: 844px; border-radius: 36px; overflow: hidden; background: #f8feff; box-shadow: 0 20px 50px rgba(4,37,43,0.18); position: relative;">
+          <div style="height: 44px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; font-size: 15px; font-weight: 700; color: #04252b;"><span>9:41</span><span>●●● ▮</span></div>
+          <div style="padding: 12px 20px; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #0e7490;">Mateo Morales</span><span style="font-size: 28px; font-weight: 900; letter-spacing: -0.03em; color: #04252b;">Historial</span></div>
+          <div style="position: absolute; inset: 0; background: rgba(4,37,43,0.5);"></div>
+          <div style="position: absolute; left: 0; right: 0; bottom: 0; max-height: 790px; overflow: auto; background: #ffffff; border-radius: 22px 22px 0 0; padding: 10px 20px 28px; box-sizing: border-box; display: flex; flex-direction: column; gap: 12px;">
+            <div style="align-self: center; width: 40px; height: 5px; border-radius: 999px; background: #cbd5e1;"></div>
+            <dc-import name="ExportarPanel" estado="{{ h.estado }}" hint-size="350px,420px"></dc-import>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+
+  </div>
+</section>
+
+<section data-screen-label="Web" style="padding: 24px 48px 72px; display: flex; flex-direction: column; gap: 28px; font-family: 'Figtree', system-ui, sans-serif;">
+  <div style="display: flex; flex-direction: column; gap: 8px; max-width: 900px;">
+    <h1 style="margin: 0; font-size: 40px; font-weight: 900; letter-spacing: -0.03em; color: #04252b;">Web · 1280 px</h1>
+    <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #1f3d44; text-wrap: pretty;">Diálogo centrado de 560 px, radio 22 px, relleno 32 px, fondo atenuado de la página. Contenido de la app a 1040 px de ancho máximo. En el estado "listo", Descargar es la acción principal y Compartir usa la opción del navegador cuando existe.</p>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 40px;">
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <span style="font-size: 15px; font-weight: 800; color: #04252b;">W1 · Historial: entrada (y variante del plan gratuito)</span>
+      <div data-screen-label="W1 Historial" style="width: 1280px; height: 800px; border-radius: 16px; overflow: hidden; background: #f8feff; box-shadow: 0 20px 50px rgba(4,37,43,0.16); display: flex; flex-direction: column;">
+        <div style="height: 68px; flex: none; padding: 0 40px; background: #ffffff; border-bottom: 1px solid #cffafe; display: flex; align-items: center; gap: 36px;">
+          <span style="display: flex; align-items: center; gap: 10px;"><img src="correo/peditrack-icono.png" alt="" width="32" height="32" style="border-radius: 8px;"><span style="font-size: 20px; font-weight: 800; letter-spacing: -0.03em; color: #04252b;">PediTrack</span></span>
+          <nav style="display: flex; gap: 28px; font-size: 15px; font-weight: 700;"><span style="color: #1f3d44;">Hoy</span><span style="color: #0e7490; border-bottom: 3px solid #0e7490; padding: 22px 0 19px;">Historial</span><span style="color: #1f3d44;">Cartilla</span><span style="color: #1f3d44;">Familia</span></nav>
+          <span style="margin-left: auto; min-height: 40px; padding: 0 14px; border-radius: 999px; border: 1.5px solid #a5f3fc; display: inline-flex; align-items: center; font-size: 15px; font-weight: 700; color: #04252b;">Mateo ▾</span>
+        </div>
+        <div style="width: 1040px; margin: 0 auto; padding: 36px 0; display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 32px;">
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <span style="font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #0e7490;">Filtros</span>
+            <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Fechas</span><span style="min-height: 44px; padding: 0 12px; border: 1.5px solid #a5f3fc; border-radius: 12px; background: #ffffff; display: flex; align-items: center; font-size: 15px; color: #475569;">Todas</span></div>
+            <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Doctor</span><span style="min-height: 44px; padding: 0 12px; border: 1.5px solid #0e7490; border-radius: 12px; background: #ecfeff; display: flex; align-items: center; font-size: 15px; font-weight: 700; color: #0e7490;">Dra. Laura Cázares</span></div>
+            <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Síntomas</span><span style="min-height: 44px; padding: 0 12px; border: 1.5px solid #0e7490; border-radius: 12px; background: #ecfeff; display: flex; align-items: center; font-size: 15px; font-weight: 700; color: #0e7490;">Fiebre</span></div>
+            <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Medicamento</span><span style="min-height: 44px; padding: 0 12px; border: 1.5px solid #a5f3fc; border-radius: 12px; background: #ffffff; display: flex; align-items: center; font-size: 15px; color: #475569;">Todos</span></div>
+            <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 13px; font-weight: 700; color: #1f3d44;">Tipo</span><span style="min-height: 44px; padding: 0 12px; border: 1.5px solid #a5f3fc; border-radius: 12px; background: #ffffff; display: flex; align-items: center; font-size: 15px; color: #475569;">Todos</span></div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 18px;">
+            <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 16px;">
+              <div style="display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #0e7490;">Mateo Morales</span><h2 style="margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -0.03em; color: #04252b;">Historial</h2></div>
+              <div style="display: flex; gap: 12px; align-items: center;">
+                <button type="button" style="min-height: 48px; padding: 0 18px; border: 2px solid #0e7490; border-radius: 16px; background: #ffffff; color: #0e7490; font-family: inherit; font-size: 16px; font-weight: 800; cursor: pointer;">Exportar a PDF</button>
+                <button type="button" style="min-height: 48px; padding: 0 16px; border: 2px solid #0e7490; border-radius: 16px; background: #ffffff; font-family: inherit; display: inline-flex; align-items: center; gap: 10px; cursor: pointer;"><span style="font-size: 16px; font-weight: 800; color: #0e7490;">Exportar a PDF</span><span style="padding: 3px 10px; border-radius: 999px; border: 1.5px solid #a5f3fc; background: #ecfeff; font-size: 12px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: #0e7490;">Plan completo</span></button>
+              </div>
+            </div>
+            <span style="font-size: 14px; color: #475569;">Comparación: a la izquierda, plan completo; a la derecha, el mismo botón en el plan gratuito.</span>
+            <div style="min-height: 48px; padding: 0 16px; border: 1.5px solid #a5f3fc; border-radius: 16px; background: #ffffff; display: flex; align-items: center; font-size: 16px; color: #475569;">Buscar en el historial</div>
+            <div style="background: #ffffff; border-radius: 22px; box-shadow: 0 8px 20px rgba(4,37,43,0.07); padding: 4px 24px;">
+              <div style="padding: 18px 0; display: grid; grid-template-columns: 160px minmax(0, 1fr) auto; gap: 16px; align-items: center;"><span style="font-size: 17px; font-weight: 800; color: #04252b;">18 oct 2026</span><span style="font-size: 15px; color: #1f3d44;">Dra. Laura Cázares · Fiebre · Tos · Amoxicilina, Paracetamol</span><span style="font-size: 14px; font-weight: 700; color: #0e7490;">Ver consulta</span></div>
+              <div style="padding: 18px 0; border-top: 1px solid #cffafe; display: grid; grid-template-columns: 160px minmax(0, 1fr) auto; gap: 16px; align-items: center;"><span style="font-size: 17px; font-weight: 800; color: #04252b;">20 feb 2026</span><span style="font-size: 15px; color: #1f3d44;">Dra. Laura Cázares · Fiebre · Tos · Amoxicilina</span><span style="font-size: 14px; font-weight: 700; color: #0e7490;">Ver consulta</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 40px;">
+      <sc-for list="{{ dialogos }}" as="d" hint-placeholder-count="6">
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <span style="font-size: 15px; font-weight: 800; color: #04252b;">{{ d.label }}</span>
+          <div data-screen-label="{{ d.label }}" style="width: 1280px; height: 940px; border-radius: 16px; overflow: hidden; background: #f8feff; box-shadow: 0 20px 50px rgba(4,37,43,0.16); position: relative;">
+            <div style="height: 68px; padding: 0 40px; background: #ffffff; border-bottom: 1px solid #cffafe; display: flex; align-items: center; gap: 36px;">
+              <span style="display: flex; align-items: center; gap: 10px;"><img src="correo/peditrack-icono.png" alt="" width="32" height="32" style="border-radius: 8px;"><span style="font-size: 20px; font-weight: 800; letter-spacing: -0.03em; color: #04252b;">PediTrack</span></span>
+              <nav style="display: flex; gap: 28px; font-size: 15px; font-weight: 700;"><span style="color: #1f3d44;">Hoy</span><span style="color: #0e7490;">Historial</span><span style="color: #1f3d44;">Cartilla</span><span style="color: #1f3d44;">Familia</span></nav>
+            </div>
+            <div style="width: 1040px; margin: 0 auto; padding: 36px 0 0 292px; box-sizing: border-box;"><span style="font-size: 32px; font-weight: 900; letter-spacing: -0.03em; color: #04252b;">Historial</span></div>
+            <div style="position: absolute; inset: 0; background: rgba(4,37,43,0.5);"></div>
+            <div role="dialog" aria-label="Exportar a PDF" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 560px; max-height: 880px; overflow: auto; background: #ffffff; border-radius: 22px; padding: 32px; box-sizing: border-box; box-shadow: 0 24px 60px rgba(4,37,43,0.3);">
+              <dc-import name="ExportarPanel" estado="{{ d.estado }}" web="{{ true }}" hint-size="496px,420px"></dc-import>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const hojas = [
+      { label: 'M4 · Opciones', estado: 'opciones' },
+      { label: 'M5 · Generando', estado: 'generando' },
+      { label: 'M6 · Listo', estado: 'listo' },
+      { label: 'M7 · Error', estado: 'error' },
+      { label: 'M8 · Sin datos en el periodo', estado: 'vacio' },
+      { label: 'M9 · Aviso del plan completo', estado: 'plan' }
+    ];
+    const dialogos = hojas.map((h, i) => ({ label: 'W' + (i + 2) + h.label.slice(2), estado: h.estado }));
+    return { hojas, dialogos };
+  }
+}
+</script>
+</body>
+</html>

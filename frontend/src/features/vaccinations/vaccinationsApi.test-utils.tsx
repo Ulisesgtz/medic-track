@@ -59,6 +59,7 @@ export function stubApi(state: ApiState) {
       calls.push({ method, path, body: init?.body ? JSON.parse(String(init.body)) : undefined })
       const ok = (json: unknown, status = 200) => ({ ok: status < 300, status, json: async () => json }) as Response
       if (path === '/accounts/me') return ok(state.account)
+      if (path === '/catalog/symptoms') return ok([{ code: 'fever', name: 'Fiebre', category: 'General' }])
       if (path === '/catalog/vaccines') {
         await state.catalogGate
         return ok([
