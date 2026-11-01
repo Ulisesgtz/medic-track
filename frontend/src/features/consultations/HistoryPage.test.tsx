@@ -126,6 +126,17 @@ describe.each([
     expect(screen.getByText(`Mateo Morales · ${formatAgeLong('2021-03-14')}`, { exact: false })).toBeInTheDocument()
   })
 
+  it('offers «Exportar a PDF» next to the title, with the filters on screen (specs/050)', async () => {
+    window.sessionStorage.setItem('historial:child-1', JSON.stringify({ doctor: 'Dra. López', symptomCodes: ['fever'] }))
+    stubApi()
+    renderPage()
+    const user = userEvent.setup()
+    await user.click(await screen.findByRole('button', { name: 'Exportar a PDF' }))
+    const dialog = screen.getByRole('dialog', { name: 'Exportar a PDF' })
+    expect(within(dialog).getByText('Historial de Mateo Morales')).toBeInTheDocument()
+    expect(within(dialog).getByRole('radio', { name: /Usar los filtros del historial.*Dra\. López · Fiebre/ })).toBeInTheDocument()
+  })
+
   it('says "1 consulta" in the singular', async () => {
     stubApi({ list: [consultations[0]] })
     renderPage()

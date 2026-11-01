@@ -17,8 +17,7 @@ describe('loadRenderer', () => {
     const first = await loadRenderer()
     const second = await loadRenderer()
     expect(second).toBe(first)
-    expect(register).toHaveBeenCalledTimes(1)
-    expect(register.mock.calls[0][0].family).toBe('Figtree')
+    expect(register.mock.calls.map(([font]) => font.family)).toEqual(['Figtree', 'FigtreeExt'])
   })
 
   it('tries again after a failed download', async () => {
@@ -31,6 +30,6 @@ describe('loadRenderer', () => {
     vi.resetModules()
     vi.doMock('@react-pdf/renderer', () => renderer)
     await expect(loadRenderer()).resolves.toBeDefined()
-    expect(register).toHaveBeenCalledTimes(1)
+    expect(register).toHaveBeenCalledTimes(2)
   })
 })

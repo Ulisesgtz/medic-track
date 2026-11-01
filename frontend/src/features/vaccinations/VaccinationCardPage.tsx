@@ -4,6 +4,7 @@ import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { ConfirmDialog } from '../family/ConfirmDialog'
 import { useChildAccess } from '../family/useChildAccess'
 import { useSidebarSession } from '../home/useSidebarSession'
+import { ExportEntry } from '../pdfExport/ExportEntry'
 import { RoutinePageFrame } from '../supplements/RoutineFormPage'
 import { useDeleteVaccination, useVaccinations } from './hooks'
 import { CardPhotos } from './CardPhotos'
@@ -14,6 +15,9 @@ import type { Vaccination } from './types'
 
 const solid =
   'inline-flex min-h-[52px] w-full cursor-pointer items-center justify-center rounded-2xl bg-confirmed px-5 text-[17px] font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-confirmed focus-visible:ring-offset-2 sm:w-auto'
+/** «Agregar vacuna» sharing the phone's row with «Exportar a PDF» (mock M2): half the width each, 52 px, 16 px text. */
+const solidHalf =
+  'inline-flex min-h-[52px] flex-1 cursor-pointer items-center justify-center rounded-2xl bg-confirmed px-3 text-base font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-confirmed focus-visible:ring-offset-2'
 const outline =
   'inline-flex min-h-12 cursor-pointer items-center justify-center rounded-2xl border-2 border-action px-5 text-base font-extrabold text-action hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2'
 const card = 'flex flex-col gap-3 rounded-[22px] bg-surface px-[22px] py-5 shadow-[0_8px_20px_rgba(4,37,43,0.07)]'
@@ -92,19 +96,30 @@ export function VaccinationCardPage() {
       title={TEXT.title}
     >
       <p className="text-[15px] leading-normal text-body">{TEXT.note}</p>
-      {canEdit && (
-        <div>
-          <button
-            ref={addRef}
-            type="button"
-            className={solid}
-            onClick={() => {
-              openerRef.current = addRef.current
-              setOpen({ kind: 'add' })
-            }}
-          >
-            {TEXT.add}
-          </button>
+      {/* specs/050 (mock M2): «Exportar a PDF» beside «Agregar vacuna», opening with the card on and the consultations off. Anyone who
+          sees the child may export (the server decides the plan); on the free plan the button takes the whole width on the phone. */}
+      {account && child && childId && (
+        <div className={isDesktop ? 'flex flex-wrap items-center gap-3' : access.isFree ? 'flex flex-col gap-2.5' : 'flex gap-2.5'}>
+          {canEdit && (
+            <button
+              ref={addRef}
+              type="button"
+              className={isDesktop || access.isFree ? solid : solidHalf}
+              onClick={() => {
+                openerRef.current = addRef.current
+                setOpen({ kind: 'add' })
+              }}
+            >
+              {TEXT.add}
+            </button>
+          )}
+          <ExportEntry
+            variant={isDesktop ? 'desktop' : access.isFree ? 'phone' : 'phone-row'}
+            childId={childId}
+            child={child}
+            free={access.isFree}
+            origin="card"
+          />
         </div>
       )}
       <div className={isDesktop ? 'grid grid-cols-[minmax(0,1fr)_340px] items-start gap-8' : 'flex flex-col gap-7'}>

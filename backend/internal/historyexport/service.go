@@ -88,11 +88,12 @@ func (s *Service) addConsultations(ctx context.Context, childID uuid.UUID, req R
 			byConsultation[a.consultationID] = a.Appointment
 		}
 	}
-	for _, summary := range found {
-		c, err := s.consultations.GetByIDWithoutPhoto(ctx, summary.ID)
-		if err != nil {
-			return err
-		}
+	// One batch for every consultation found (specs/050 T034), in the history's order.
+	consultations, err := s.consultations.ListWithoutPhoto(ctx, ids)
+	if err != nil {
+		return err
+	}
+	for _, c := range consultations {
 		out := Consultation{
 			ID: c.ID, ConsultDate: c.ConsultDate, DoctorName: c.DoctorName, RecordOnly: c.RecordOnly, Notes: c.Notes,
 			HasPhoto: photos[c.ID], Symptoms: []Symptom{}, Medications: []Medication{},
@@ -147,18 +148,23 @@ func medicationOf(m consultation.Medication) Medication {
 	for _, e := range m.Extensions {
 		out.Extensions = append(out.Extensions, Extension{CreatedAt: e.CreatedAt, AddedDoses: e.AddedDoses})
 	}
+	var sequence []byte
 	for _, d := range m.Doses {
 		switch d.Status {
 		case consultation.DoseStatusCanceled:
 			continue
 		case consultation.DoseStatusTaken:
 			out.Doses.Taken++
+			sequence = append(sequence, SequenceTaken)
 		case consultation.DoseStatusUnregistered:
 			out.Doses.Unregistered++
+			sequence = append(sequence, SequenceUnregistered)
 		case consultation.DoseStatusDue:
 			out.Doses.Due++
+			sequence = append(sequence, SequenceDue)
 		default:
 			out.Doses.Pending++
+			sequence = append(sequence, SequencePending)
 		}
 		out.Doses.Total++
 		at := d.ScheduledAt
@@ -170,6 +176,7 @@ func medicationOf(m consultation.Medication) Medication {
 			out.LastMark = &Mark{At: d.TakenBy.At, By: d.TakenBy.Name}
 		}
 	}
+	out.Doses.Sequence = string(sequence)
 	return out
 }
 

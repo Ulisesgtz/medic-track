@@ -36,7 +36,7 @@ Petición:
         {
           "name": "Amoxicilina", "frequencyHours": 8, "durationDays": 7, "startTime": "08:00",
           "endedAt": null, "extensions": [{ "createdAt": "…", "addedDoses": 2 }],
-          "doses": { "taken": 16, "unregistered": 2, "pending": 3, "total": 21 },
+          "doses": { "taken": 16, "unregistered": 2, "due": 0, "pending": 3, "total": 21, "sequence": "tttttuttttttutttttppp" },
           "firstDoseAt": "…", "lastDoseAt": "…",
           "lastMark": { "at": "2026-10-24T14:05:00Z", "by": "Ana" }
         }
@@ -56,7 +56,8 @@ Petición:
 ```
 
 - `consultations` y `vaccinations` son `[]` si su sección no se pidió. `photos` es `null` si no se pidieron.
-- `doses.total` no cuenta las tomas canceladas al finalizar un tratamiento; `pending` = por venir; `unregistered` = sin registrar (spec 013).
+- `doses.total` no cuenta las tomas canceladas al finalizar un tratamiento; `pending` = por venir; `unregistered` = sin registrar (spec 013); `due` = ya llegó su hora y nadie la marcó («por marcar»).
+- `doses.sequence`: el estado de cada toma contada **en el orden del horario**, una letra por toma (`t` marcada, `u` sin registrar, `d` por marcar, `p` por venir), para que el documento dibuje las fichas en el orden en que pasaron y no agrupadas por estado (el mock las dibuja en orden: las «sin registrar» entre las marcadas). Agregado el 2026-10-30 al construir el documento.
 - La cartilla es **siempre completa** (no la filtra el periodo).
 
 Errores:

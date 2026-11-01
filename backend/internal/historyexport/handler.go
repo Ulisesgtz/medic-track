@@ -136,6 +136,8 @@ type dosesResponse struct {
 	Due          int `json:"due" example:"0"`
 	Pending      int `json:"pending" example:"3"`
 	Total        int `json:"total" example:"21"`
+	// Sequence is each counted dose's status in schedule order, one letter per dose: t taken, u unregistered, d due, p pending.
+	Sequence string `json:"sequence" example:"tttttuttttttutttttppp"`
 } // @name ExportDoseCounts
 
 type markResponse struct {
