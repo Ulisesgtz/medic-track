@@ -42,7 +42,7 @@ for (const design of designs) {
 
       // FR-003: a successful signup navigates straight to the home page.
       await expect(page).toHaveURL(/\/home/)
-      await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
+      await expect(page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' })).toBeVisible()
     })
 
     test('la cuenta nueva ve el aviso "Antes de empezar"; "Entendido" queda registrado y no vuelve, ni al reiniciar sesión', async ({ page }) => {
@@ -66,7 +66,7 @@ for (const design of designs) {
       await expect.poll(async () => (await (await me()).json()).disclaimerAccepted).toBe(true)
 
       await page.reload()
-      await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
+      await expect(page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' })).toBeVisible()
       await expect(notice).toHaveCount(0)
 
       // Another session of the same tutor doesn't ask again.
@@ -76,7 +76,7 @@ for (const design of designs) {
       await page.getByLabel('Contraseña', { exact: true }).fill(E2E_PASSWORD)
       await page.getByRole('button', { name: 'Iniciar sesión' }).click()
       await expect(page).toHaveURL(/\/home/, { timeout: 15_000 })
-      await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
+      await expect(page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' })).toBeVisible()
       await expect(notice).toHaveCount(0)
     })
 

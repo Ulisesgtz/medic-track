@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { useLogout } from '../auth/useLogout'
 import { MeApiError } from '../auth/api'
-import { ChildCard } from './ChildCard'
+import { ChildrenSection, ReadOnlyNote } from './ChildrenSection'
 import { AddChildDialogs } from './AddChildDialogs'
 import { addChildTarget, atFreePlanLimit } from './plan'
 import { AppHeader } from '../../shared/ui/AppHeader'
@@ -133,12 +133,19 @@ export function HomePage() {
     />
   )
 
-  const emptyState = (
-    <div className="rounded-3xl bg-surface p-8 text-center shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
-      <p className="text-lg font-bold tracking-tight text-ink">Todavía no tienes hijos dados de alta</p>
-      <p className="mt-2 text-base text-slate-600">Agrega al primero para empezar.</p>
-    </div>
-  )
+  // Specs/055: a Tutor of a family that stopped paying sees the note; marking keeps working.
+  const readOnly = children.some((c) => c.readOnly)
+  const childrenSection = (variant: 'phone' | 'desktop') =>
+    account && (
+      <ChildrenSection
+        account={account}
+        variant={variant}
+        canAddChild={canAddChild}
+        planNote={atLimit}
+        onAddChild={() => setShowAddChild(true)}
+        addChildButton={addChildButton}
+      />
+    )
 
   if (isDesktop) {
     return (
@@ -158,35 +165,13 @@ export function HomePage() {
                 >
                   Cerrar sesión
                 </button>
-                {canAddChild && (
-                  <button
-                    ref={addChildButton}
-                    type="button"
-                    onClick={() => setShowAddChild(true)}
-                    className="min-h-11 cursor-pointer rounded-2xl bg-confirmed px-6 py-3.5 text-[15px] font-extrabold text-white transition-colors hover:bg-emerald-800"
-                  >
-                    Agregar hijo
-                  </button>
-                )}
               </div>
             </div>
 
             <WelcomeDisclaimer account={account} />
+            {readOnly && <ReadOnlyNote variant="desktop" />}
 
-            {children.length === 0 ? (
-              emptyState
-            ) : (
-              <div className="grid grid-cols-2 gap-5">
-                {children.map((child) => (
-                  <ChildCard key={child.id} child={child} variant="desktop" />
-                ))}
-                {atLimit && (
-                  <div className="flex min-w-0 items-center justify-center rounded-3xl border-2 border-dashed border-hint-border p-6 text-center text-[15px] font-extrabold text-action">
-                    Tu plan incluye un hijo
-                  </div>
-                )}
-              </div>
-            )}
+            {childrenSection('desktop')}
 
             {account && <FamilyEntry variant="desktop" />}
             <PersonalHomeBlock account={account} variant="desktop" />
@@ -230,29 +215,12 @@ export function HomePage() {
           <div className="empty:hidden [&:not(:empty)]:mb-4">
             <WelcomeDisclaimer account={account} />
           </div>
-          {children.length === 0 ? (
-            emptyState
-          ) : (
-            <div className="flex flex-col gap-4">
-              {children.map((child, index) => (
-                <ChildCard key={child.id} child={child} variant="phone" index={index} />
-              ))}
+          {readOnly && (
+            <div className="mb-4">
+              <ReadOnlyNote variant="phone" />
             </div>
           )}
-
-          {canAddChild && (
-            <button
-              ref={addChildButton}
-              type="button"
-              onClick={() => setShowAddChild(true)}
-              className="mt-4 min-h-11 w-full cursor-pointer rounded-3xl border-2 border-dashed border-bright-soft py-5 text-base font-extrabold text-action transition-colors hover:bg-hint"
-            >
-              + Agregar hijo
-            </button>
-          )}
-          {canAddChild && target?.plan === 'free' && (
-            <p className="mt-4 text-center text-[13px] text-slate-500">El plan gratuito incluye un hijo.</p>
-          )}
+          {childrenSection('phone')}
           {account && (
             <div className="mt-6">
               <FamilyEntry variant="phone" />

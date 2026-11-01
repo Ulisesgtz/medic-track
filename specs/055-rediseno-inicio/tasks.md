@@ -76,34 +76,34 @@ dos diseños con `useIsDesktop`, nunca clases `lg:` que mezclen; overlays con `c
 **Prueba independiente**: un hijo con medicamento, suplemento y actividad hoy muestra las tres filas; «Marcar» la marca
 («por …» en el detalle) y el conteo cambia sin recargar.
 
-- [ ] T010 [US1] Crear `frontend/src/features/home/useChildDay.ts`: junta `['overview', childId, day.from.toISOString()]`
+- [x] T010 [US1] Crear `frontend/src/features/home/useChildDay.ts`: junta `['overview', childId, day.from.toISOString()]`
   (la misma llave y la misma función que el detalle del hijo) y `useRoutines(childId, 'activity', day)` con `useLocalDay()`,
   refresco cada 60 s (`DOSE_REFETCH_MS`), y devuelve `{ day: ChildDay | undefined, isPending, isError, refetch }`
-- [ ] T011 [US1] Crear `frontend/src/features/home/ChildDayCard.tsx` (contrato `contracts/ui.md`, medidas de `medidas.md`):
+- [x] T011 [US1] Crear `frontend/src/features/home/ChildDayCard.tsx` (contrato `contracts/ui.md`, medidas de `medidas.md`):
   un enlace a `/children/{id}` con inicial, nombre, «· edad» (`formatAgeLong`), el chip o «✓ Todo marcado hasta ahora» y «›»,
   las filas `DayRow` que no son `null`, el estado `vacio` («Hoy no hay tomas ni actividades», sin pie), el borde punteado y
   la línea de `sinreg`; y **fuera del enlace** el pie «Próxima» + «{nombre} · {HH:MM}» + «Marcar» (44 px, contorno,
   `aria-label` «Marcar {nombre} {HH:MM} de {hijo}») que llama `useOverviewDoseToggle` (`consultations/useDoseToggle.ts`, marca
   por consulta o por rutina según `kind`); ya marcada muestra «✓ HH:MM» con `aria-pressed="true"` y se desmarca solo si
   `canUnmarkDose`; dos variantes (`phone` / `desktop`) con las medidas de cada diseño
-- [ ] T012 [US1] Mientras `isPending`, `ChildDayCard` dibuja su esqueleto con la altura final (`bg-skel`); si `isError`, la
+- [x] T012 [US1] Mientras `isPending`, `ChildDayCard` dibuja su esqueleto con la altura final (`bg-skel`); si `isError`, la
   línea «No pudimos cargar el día de {nombre}» + «Reintentar» dentro de la tarjeta (las demás siguen)
-- [ ] T013 [US1] Crear `frontend/src/features/home/ChildDayCard.test.tsx` (con `stubMatchMedia` para la web): los cuatro
+- [x] T013 [US1] Crear `frontend/src/features/home/ChildDayCard.test.tsx` (con `stubMatchMedia` para la web): los cuatro
   estados, filas que no aparecen, «Marcar» de un medicamento llama `PATCH /consultations/{cid}/doses/{id}` y de un suplemento
   `PATCH /routines/{rid}/doses/{id}`, el resto de la tarjeta navega, «✓ HH:MM» tras marcar, una marca ajena no se desmarca,
   esqueleto y falla con «Reintentar»
-- [ ] T014 [US1] Rehacer la sección de hijos de `frontend/src/features/home/HomePage.tsx` con el orden del diseño: título
+- [x] T014 [US1] Rehacer la sección de hijos de `frontend/src/features/home/HomePage.tsx` con el orden del diseño: título
   («Tus hijos», o «Hijos compartidos contigo» + «{Familia} · puedes ver y marcar» cuando todos los hijos son compartidos como
   Cuidador), una `ChildDayCard` por hijo (teléfono en columna; web en rejilla de 2 columnas), «+ Agregar hijo» punteado solo
   si `addChildTarget(account).allowed`, «Tu plan incluye un hijo» en el plan gratuito, la cuenta sin hijos («Aún no registras
   a tus hijos» + «Agregar hijo» sólido, el único sólido de la pantalla) y la nota «Solo lectura» arriba cuando algún hijo
   tiene `readOnly` (`useChildAccess`); conservar `AddChildDialogs`, el regreso a una invitación pendiente y los estados de
   error de la cuenta
-- [ ] T015 [US1] Borrar `frontend/src/features/home/ChildCard.tsx` (y su prueba) si ya nadie lo importa, junto con
+- [x] T015 [US1] Borrar `frontend/src/features/home/ChildCard.tsx` (y su prueba) si ya nadie lo importa, junto con
   `ChildStatusChips`
-- [ ] T016 [US1] Actualizar `frontend/src/features/home/HomePage.test.tsx`: orden de las secciones, roles (dueña, Tutor,
+- [x] T016 [US1] Actualizar `frontend/src/features/home/HomePage.test.tsx`: orden de las secciones, roles (dueña, Tutor,
   Cuidador, Tutor en solo lectura), plan gratuito, cuenta sin hijos, ambos diseños
-- [ ] T017 [US1] Crear `frontend/e2e/inicio.spec.ts` (Chromium, `designs` de `e2e/helpers.ts`, 390 y 1280 px): dueña con un
+- [x] T017 [US1] Crear `frontend/e2e/inicio.spec.ts` (Chromium, `designs` de `e2e/helpers.ts`, 390 y 1280 px): dueña con un
   hijo con medicamento + suplemento (`routineViaApi`) + actividad (`activityViaApi`) hoy → las tres filas; «Marcar» →
   «✓ HH:MM» y el detalle del hijo dice «por …»; un hijo con una toma sin registrar → borde punteado y «sin registrar»;
   plan gratuito con un hijo → «Tu plan incluye un hijo»; Cuidador con dos sesiones (`secondPerson`) → «Hijos compartidos

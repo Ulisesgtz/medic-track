@@ -7,6 +7,7 @@ import {
   doneLine,
   dosesToday,
   familyMembers,
+  familyOf,
   greeting,
   loadFailed,
   markLabel,
@@ -46,6 +47,7 @@ describe('the words of the home (Principio I)', () => {
     familyMembers(1),
     familyMembers(3),
     caregiverOf('Familia Morales', 'Cuidador'),
+    familyOf('Ana'),
   ]
 
   it('never advises, evaluates, praises or says what is late or missing', () => {

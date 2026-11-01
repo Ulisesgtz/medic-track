@@ -19,7 +19,7 @@ for (const design of designs) {
     test('cerrar sesión y volver a entrar con correo y contraseña lleva al home', async ({ page }) => {
       const { email } = await seedAccount(page, [{ firstName: 'Luis', lastName: 'Gómez', birthDate: '2020-01-15' }])
       await page.goto('/home')
-      await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
+      await expect(page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' })).toBeVisible()
 
       await page.getByRole('button', { name: 'Cerrar sesión' }).first().click()
       await expect(page).toHaveURL(/\/login/)
@@ -33,7 +33,7 @@ for (const design of designs) {
       await page.getByRole('button', { name: 'Iniciar sesión' }).click()
 
       await expect(page).toHaveURL(/\/home/, { timeout: 15_000 })
-      await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
+      await expect(page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' })).toBeVisible()
     })
 
     test('contraseña incorrecta y correo sin cuenta muestran el mismo mensaje (FR-009)', async ({ page }) => {
@@ -57,7 +57,7 @@ for (const design of designs) {
       await seedAccount(page, [{ firstName: 'Luis', lastName: 'Gómez', birthDate: '2020-01-15' }], { acknowledgeDisclaimer: false })
       await page.goto('/home')
 
-      await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
+      await expect(page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' })).toBeVisible()
       await expect(page.getByRole('region', { name: 'Antes de empezar' })).toBeVisible()
     })
 

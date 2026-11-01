@@ -58,7 +58,7 @@ for (const design of designs) {
 
       // Back home with the shared child, and the Tutor can add a consultation.
       await expect(guest.page).toHaveURL(/\/home/)
-      await expect(guest.page.getByRole('main').getByText('Mateo Morales')).toBeVisible()
+      await expect(guest.page.getByRole('main').getByRole('link', { name: 'Ver detalle de Mateo' })).toBeVisible()
       await guest.page.goto(`/children/${owner.childId}`)
       await expect(guest.page.getByText('Dra. Laura Cázares')).toBeVisible()
       await expect(guest.page.getByRole('link', { name: design.isWeb ? 'Nueva consulta' : '+ Nueva' })).toBeVisible()

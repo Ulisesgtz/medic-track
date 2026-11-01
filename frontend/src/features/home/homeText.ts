@@ -43,6 +43,8 @@ export const HOME = {
 } as const
 
 export const greeting = (name: string) => `Hola, ${name}`
+/** «Familia de Ana»: the family the session was invited to (the API gives the owner's first name, not a surname). */
+export const familyOf = (ownerName: string) => `Familia de ${ownerName}`
 /** «Familia Morales · puedes ver y marcar». */
 export const sharedSubtitle = (family: string) => `${family} · puedes ver y marcar`
 /** «Próxima: Vitamina D · 14:00». */
