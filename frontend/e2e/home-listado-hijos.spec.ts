@@ -1,7 +1,7 @@
 import { test, expect, designs, seedAccount, signUp } from './helpers'
 
 // Covers specs/003-home-listado-hijos in both designs: the phone home (mock 02
-// list) and the web home (mock 15 "Hola, Ana / Tus hijos", with the sidebar).
+// list) and the web home, redesigned in specs/055 («Hola, Ana», «Tu día», the children), with the sidebar.
 // Requires the backend running locally.
 
 for (const design of designs) {
@@ -147,7 +147,7 @@ test.describe('barra lateral (solo web)', () => {
     // The sidebar's logo goes "home" — the list of children (web mock 15), not the detail.
     await page.locator('aside').getByRole('link', { name: /ir a mi home/ }).click()
     await expect(page).toHaveURL(/\/home/)
-    await expect(page.getByRole('heading', { level: 1, name: 'Tus hijos' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 2, name: 'Tus hijos' })).toBeVisible()
   })
 })
 

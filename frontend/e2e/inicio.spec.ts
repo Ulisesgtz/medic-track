@@ -110,6 +110,28 @@ for (const design of designs) {
       await expect(page.getByRole('dialog')).toBeVisible()
     })
 
+    test('«Lo demás» is at the bottom with its values, and «Cerrar sesión» is in it and in the account menu, not in the header', async ({ page }) => {
+      await allowClerkOn(page)
+      await seedChild(page, { withConsultation: false })
+      await page.goto('/home')
+      const more = page.getByRole('navigation', { name: 'Más opciones' })
+      await expect(more.getByRole('link', { name: /^Familia/ })).toContainText('Solo tú')
+      await expect(more.getByRole('link', { name: /^Planes/ })).toContainText('Plan completo')
+      await expect(more.getByRole('button', { name: /^Recordatorios/ })).toBeVisible()
+      // Until the menu opens, the only «Cerrar sesión» is the one at the bottom.
+      await expect(page.getByRole('button', { name: 'Cerrar sesión' })).toHaveCount(1)
+
+      const menu = page.getByRole('button', { name: 'Menú de cuenta' })
+      await menu.click()
+      await expect(menu).toHaveAttribute('aria-expanded', 'true')
+      await page.keyboard.press('Escape')
+      await expect(menu).toHaveAttribute('aria-expanded', 'false')
+      await expect(menu).toBeFocused()
+
+      await more.getByRole('button', { name: 'Cerrar sesión' }).click()
+      await expect(page).toHaveURL(/\/login/)
+    })
+
     test('a Caregiver sees «Hijos compartidos contigo», cannot add a child and marks like the owner', async ({ page, browser }) => {
       await allowClerkOn(page)
       const owner = await seedChild(page)

@@ -152,21 +152,21 @@ dos diseños con `useIsDesktop`, nunca clases `lg:` que mezclen; overlays con `c
 **Objetivo**: Familia, Planes, Recordatorios y Cerrar sesión al final; «Cerrar sesión» fuera del encabezado.
 **Prueba independiente**: el encabezado no tiene «Cerrar sesión»; la lista del final lleva a cada lugar y cierra sesión.
 
-- [ ] T024 [US3] Crear `frontend/src/features/home/MoreLinks.tsx`: teléfono = filas de 52 px con valor a la derecha
+- [x] T024 [US3] Crear `frontend/src/features/home/MoreLinks.tsx`: teléfono = filas de 52 px con valor a la derecha
   (Familia «N personas» / «Solo tú» / «{Familia} · cuidadora», Planes con `planStanding(account)`, Recordatorios
   «Activados» / «Desactivados» según `useReminders`, Cerrar sesión en `action`); web = franja de 4 accesos; un Cuidador sin
   Planes; Recordatorios lleva a la tarjeta de recordatorios (`RemindersCard`, que se conserva donde lo diga el diseño)
-- [ ] T025 [US3] Agregar a `frontend/src/features/home/Greeting.tsx` el menú de la cuenta: el botón de las iniciales
+- [x] T025 [US3] Agregar a `frontend/src/features/home/Greeting.tsx` el menú de la cuenta: el botón de las iniciales
   (`aria-haspopup="menu"`, `aria-expanded`) abre un panel con nombre, plan y «Cerrar sesión» (`useLogout`); Escape y clic fuera
   lo cierran y el foco vuelve al botón; con `createPortal` y `useBodyScrollLock` si se dibuja como overlay
-- [ ] T026 [US3] En `frontend/src/features/home/HomePage.tsx`: quitar «Cerrar sesión» del encabezado (teléfono y web),
+- [x] T026 [US3] En `frontend/src/features/home/HomePage.tsx`: quitar «Cerrar sesión» del encabezado (teléfono y web),
   reemplazar `FamilyEntry`, `PlanEntry` y la posición de `RemindersCard` por `MoreLinks` al final; borrar lo que quede sin uso
-- [ ] T027 [P] [US3] Ajustar `frontend/src/features/home/ChildrenSidebar.tsx` a la barra lateral del diseño («Inicio», los
+- [x] T027 [P] [US3] Ajustar `frontend/src/features/home/ChildrenSidebar.tsx` a la barra lateral del diseño («Inicio», los
   hijos o el nombre de la familia para un Cuidador, «+ Agregar hijo», «Personal» con Mis suplementos y Mis actividades, la
   cuenta con su plan) y su prueba
-- [ ] T028 [US3] Pruebas: `MoreLinks.test.tsx`, el menú en `Greeting.test.tsx` (abre, Escape, clic fuera, foco, cierra
+- [x] T028 [US3] Pruebas: `MoreLinks.test.tsx`, el menú en `Greeting.test.tsx` (abre, Escape, clic fuera, foco, cierra
   sesión) y `HomePage.test.tsx` (sin «Cerrar sesión» en el encabezado)
-- [ ] T029 [US3] Ajustar los E2E que cierran sesión desde el encabezado o buscan «Tus hijos» como título
+- [x] T029 [US3] Ajustar los E2E que cierran sesión desde el encabezado o buscan «Tus hijos» como título
   (`e2e/autenticacion.spec.ts`, `e2e/account-signup.spec.ts`, `e2e/helpers.ts` y los de `grep -rn "Cerrar sesión\|Tus
   hijos" e2e`); agregar a `inicio.spec.ts` el menú y «Lo demás»
 

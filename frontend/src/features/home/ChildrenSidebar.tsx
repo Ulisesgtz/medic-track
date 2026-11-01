@@ -2,9 +2,10 @@ import { useRef, useState } from 'react'
 import { Link, useMatch } from 'react-router-dom'
 import { formatAgeShort } from '../../shared/age'
 import { Logo } from '../../shared/ui/Logo'
-import { useLogout } from '../auth/useLogout'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
+import { AccountMenu } from './AccountMenu'
 import { AddChildDialogs } from './AddChildDialogs'
+import { HOME, familyOf } from './homeText'
 import { addChildTarget } from './plan'
 import { usePersonalRoutines } from '../supplements/hooks'
 import { useLocalDay } from '../../shared/useLocalDay'
@@ -24,7 +25,6 @@ interface ChildrenSidebarProps {
 export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
   const [showAddChild, setShowAddChild] = useState(false)
   const addChildButton = useRef<HTMLButtonElement>(null)
-  const logout = useLogout()
   const query = useCurrentAccount()
   const account = query.data
   const onHome = useMatch('/home') !== null
@@ -36,6 +36,9 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
   const day = useLocalDay()
   const supplementCount = usePersonalRoutines(account?.id, 'supplement', day, { poll: false }).data?.activeCount ?? 0
   const activityCount = usePersonalRoutines(account?.id, 'activity', day, { poll: false }).data?.activeCount ?? 0
+  // Every child is shared with the session (none of its own): the group is named after the family.
+  const sharedOnly = !!account?.family && !!account.children.length && account.children.every((c) => c.role !== undefined && c.role !== 'owner')
+  const groupLabel = sharedOnly && account?.family ? familyOf(account.family.ownerName) : HOME.childrenTitle
 
   return (
     <aside className="sticky top-0 flex h-screen w-[280px] shrink-0 flex-col gap-8 overflow-y-auto bg-ink px-6 py-7">
@@ -56,6 +59,8 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
       </Link>
 
       <nav aria-label="Tus hijos" className="flex flex-col gap-2.5">
+        {/* Specs/055: the group's name, as in the design («Tus hijos», or the family whose children the session only sees). */}
+        <p className="px-4 pt-1 text-xs font-extrabold tracking-[0.08em] text-bright-soft uppercase">{groupLabel}</p>
         {account?.children.map((child) => {
           const isActive = child.id === activeChildId
           return (
@@ -138,25 +143,8 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
       )}
 
       {account && (
-        <div className="mt-auto flex flex-col gap-3 border-t border-ink-soft pt-5">
-          <div className="flex items-center gap-3">
-            <span
-              aria-hidden="true"
-              className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-action text-sm font-extrabold text-white"
-            >
-              {account.firstName.charAt(0)}
-              {account.lastName.charAt(0)}
-            </span>
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-bold text-white">
-                {account.firstName} {account.lastName}
-              </span>
-              <span className="block text-xs text-bright-soft">
-                {(account.family?.plan ?? account.plan) === 'free' ? 'Plan gratuito' : 'Plan completo'}
-              </span>
-            </span>
-          </div>
-          {/* Specs/034: a fixed way to the plans. */}
+        <div className="mt-auto flex flex-col gap-3">
+          {/* Specs/034: a fixed way to the plans (the sidebar is on every screen, not only on the home). */}
           <Link
             to="/planes"
             aria-current={onPlansPage ? 'page' : undefined}
@@ -166,13 +154,8 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
           >
             Planes
           </Link>
-          <button
-            type="button"
-            onClick={logout}
-            className="cursor-pointer self-start text-xs font-bold text-bright-soft hover:underline"
-          >
-            Cerrar sesión
-          </button>
+          {/* Specs/055: the account opens its menu, where «Cerrar sesión» is. */}
+          <AccountMenu account={account} variant="sidebar" />
         </div>
       )}
 

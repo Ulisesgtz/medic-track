@@ -10,12 +10,11 @@ import { AppShell } from './AppShell'
 import { useSidebarSession } from './useSidebarSession'
 import { Logo } from '../../shared/ui/Logo'
 import { WelcomeDisclaimer } from './WelcomeDisclaimer'
-import { RemindersCard } from '../reminders/RemindersCard'
 import { readPendingInvitation } from '../family/pendingInvitation'
-import { FamilyEntry } from '../family/FamilyEntry'
-import { PlanEntry } from '../plans/PlanEntry'
 import { Greeting } from './Greeting'
 import { TuDia } from './TuDia'
+import { AccountMenu } from './AccountMenu'
+import { MoreLinks } from './MoreLinks'
 
 /**
  * The parent's home page: lists their children (FR-001), or an invitation to
@@ -147,12 +146,6 @@ export function HomePage() {
       />
     )
 
-  const logoutLink = (
-    <button type="button" onClick={logout} className="min-h-11 cursor-pointer self-start text-[15px] font-bold text-action hover:underline">
-      Cerrar sesión
-    </button>
-  )
-
   if (isDesktop) {
     return (
       <AppShell>
@@ -163,10 +156,7 @@ export function HomePage() {
             {account && <Greeting account={account} variant="desktop" />}
             {account && <TuDia account={account} variant="desktop" />}
             {childrenSection('desktop')}
-
-            {account && <FamilyEntry variant="desktop" />}
-            <RemindersCard account={account} />
-            {logoutLink}
+            {account && <MoreLinks account={account} variant="desktop" />}
           </div>
           {dialogs}
         </main>
@@ -188,23 +178,12 @@ export function HomePage() {
           <Greeting
             account={account}
             variant="phone"
-            accountSlot={
-              <span
-                aria-hidden="true"
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ink text-[15px] font-extrabold text-white"
-              >
-                {account.firstName.charAt(0)}
-                {account.lastName.charAt(0)}
-              </span>
-            }
+            accountSlot={<AccountMenu account={account} variant="phone" />}
           />
         )}
         {account && <TuDia account={account} variant="phone" />}
         {childrenSection('phone')}
-        {account && <FamilyEntry variant="phone" />}
-        {account && <PlanEntry account={account} />}
-        <RemindersCard account={account} />
-        {logoutLink}
+        {account && <MoreLinks account={account} variant="phone" />}
         {dialogs}
       </main>
     </AppShell>

@@ -1,6 +1,9 @@
 // specs/055 (research R4): every sentence of the home lives here, so one test (homeText.test.ts) can read them all. They count
 // what was registered and never evaluate it: no «debes», «atrasado», «falta», percentages, praise or scolding (Principio I).
 
+import { planStanding } from '../plans/planCopy'
+import type { Account } from './types'
+
 const n = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`
 
 export const HOME = {
@@ -80,3 +83,5 @@ export const loadFailed = (child: string) => `No pudimos cargar el día de ${chi
 export const familyMembers = (count: number) => (count <= 1 ? HOME.onlyYou : n(count, 'persona', 'personas'))
 /** «Familia Morales · Cuidador»: the role's own label (the design wrote «cuidadora»; the app doesn't guess anyone's gender). */
 export const caregiverOf = (family: string, role: string) => `${family} · ${role}`
+/** «Plan completo» / «Plan gratuito» (the plan the person uses: their own or the paid family's, `planStanding`). */
+export const planLabel = (account: Pick<Account, 'plan' | 'family'>) => (planStanding(account).plan === 'full' ? 'Plan completo' : 'Plan gratuito')

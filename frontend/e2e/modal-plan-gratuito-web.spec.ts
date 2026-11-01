@@ -1,10 +1,9 @@
 import type { Page } from '@playwright/test'
 import { test, expect, seedChild } from './helpers'
 
-// Web design, mock 15: the home ("Hola, Ana / Tus hijos", the child's card, the dashed plan
-// tile and the sidebar) and the free-plan pop-up opened by "Agregar hijo" — from the button
-// in the page or from the sidebar. The positions were measured on the mock at each width
-// (Chromium; other engines draw fonts with other metrics, so heights are asserted there only).
+// Web design of the home (specs/055, `Inicio PediTrack.dc.html`: «Hola, Ana», the children in two columns with the dashed
+// «+ Agregar hijo» and its plan note, and the sidebar) and the free-plan pop-up opened by «+ Agregar hijo» — from the page or
+// from the sidebar. The pop-up's positions were measured on its mock at each width.
 // Requires the backend running locally.
 
 const box = async (locator: ReturnType<Page['locator']>) => {
@@ -19,63 +18,54 @@ async function open(page: Page, width: number) {
   await page.evaluate(() => document.fonts.ready)
 }
 
-const pageButton = (page: Page) => page.getByRole('main').getByRole('button', { name: 'Agregar hijo' })
+const pageButton = (page: Page) => page.getByRole('main').getByRole('button', { name: /Agregar hijo/ })
 const sidebarButton = (page: Page) => page.getByRole('navigation', { name: 'Tus hijos' }).getByRole('button', { name: '+ Agregar hijo' })
 const dialog = (page: Page) => page.getByRole('dialog', { name: 'Tu plan incluye un hijo' })
 
 test.describe('Home web y pop-up del plan gratuito (mock 15)', () => {
-  for (const { width, titleX, buttonX, tileX, tileW, dialogX } of [
-    { width: 1440, titleX: 412, buttonX: 1173, tileX: 870, tileW: 438, dialogX: 430 },
-    { width: 1280, titleX: 332, buttonX: 1093, tileX: 790, tileW: 438, dialogX: 350 },
-    { width: 1024, titleX: 328, buttonX: 841, tileX: 662, tileW: 314, dialogX: 222 },
+  for (const { width, dialogX } of [
+    { width: 1440, dialogX: 430 },
+    { width: 1280, dialogX: 350 },
+    { width: 1024, dialogX: 222 },
   ]) {
-    test(`a ${width} px: home, tarjeta, recuadro del plan y pop-up en la posición del mock`, async ({ page, browserName }) => {
+    test(`a ${width} px: la tarjeta y «+ Agregar hijo» en dos columnas y el pop-up centrado`, async ({ page }) => {
       await open(page, width)
 
       expect(await box(page.locator('aside').first())).toMatchObject({ x: 0, w: 280 })
-      expect(await box(page.getByRole('heading', { level: 1, name: 'Tus hijos' }))).toMatchObject({ x: titleX })
-      await expect(page.getByRole('heading', { level: 1 })).toHaveCSS('font-size', '36px')
-      // Text-button width/x is font-rendering-dependent: CI's Chromium measures "Agregar hijo"
-      // 1px wider than this suite was authored against, so allow a 1px tolerance here.
-      const btn = await box(pageButton(page))
-      expect(Math.abs(btn.x - buttonX)).toBeLessThanOrEqual(1)
-      expect(Math.abs(btn.w - 135)).toBeLessThanOrEqual(1)
-      const tile = await box(page.getByText('Tu plan incluye un hijo'))
-      expect(tile).toMatchObject({ x: tileX, w: tileW })
-      if (browserName === 'chromium') expect(tile.h).toBe(104)
+      await expect(page.getByRole('heading', { level: 1, name: 'Hola, Ana' })).toHaveCSS('font-size', '34px')
+      const card = await box(page.getByRole('main').locator('article').first())
+      const tile = await box(pageButton(page))
+      expect(tile.y).toBe(card.y)
+      expect(tile.x).toBeGreaterThan(card.x + card.w)
+      expect(Math.abs(tile.w - card.w)).toBeLessThanOrEqual(1)
+      await expect(pageButton(page)).toContainText('Tu plan incluye un hijo')
 
       await pageButton(page).click()
       const dlg = await box(dialog(page))
       expect(dlg).toMatchObject({ x: dialogX, w: 580 })
-      // Centered in the window.
       expect(Math.abs(dlg.y + dlg.h / 2 - 450)).toBeLessThan(2)
     })
   }
 
-  test('bajo 1024 px no hay barra lateral y los márgenes son de 24 px, como el mock', async ({ page }) => {
+  test('bajo 1024 px no hay barra lateral y la página no se sale de lado', async ({ page }) => {
     await open(page, 1000)
 
     await expect(page.getByRole('navigation', { name: 'Tus hijos' })).toHaveCount(0)
     expect(await box(page.getByRole('main'))).toMatchObject({ x: 0, w: 1000 })
-    expect(await box(page.getByRole('heading', { level: 1, name: 'Tus hijos' }))).toMatchObject({ x: 52 })
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false)
-    // The pop-up still works without the sidebar.
     await pageButton(page).click()
     await expect(dialog(page)).toBeVisible()
   })
 
-  test('la página lleva "Hola, Ana / Tus hijos", la tarjeta del hijo, el recuadro del plan y la barra lateral', async ({ page }) => {
+  test('la página lleva «Hola, Ana», «Tu día», la tarjeta del hijo con su día, «+ Agregar hijo» y la barra lateral', async ({ page }) => {
     await open(page, 1280)
 
-    await expect(page.getByText('Hola, Ana')).toBeVisible()
-    await expect(page.getByRole('heading', { level: 1, name: 'Tus hijos' })).toBeVisible()
-    await expect(pageButton(page)).toBeVisible()
-    const card = page.getByRole('main').getByRole('link', { name: /Mateo Morales/ })
+    await expect(page.getByRole('heading', { level: 1, name: 'Hola, Ana' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 2, name: 'Tus hijos' })).toBeVisible()
+    const card = page.getByRole('main').getByRole('link', { name: 'Ver detalle de Mateo' })
     await expect(card).toContainText(/\d+ años( \d+ meses?)?/) // the age moves with the calendar
-    await expect(page.getByText('Tu plan incluye un hijo')).toBeVisible()
-    // The web card is plain (the phone one carries status chips), and the plan note is the tile, not the phone's line.
+    await expect(card).toContainText('Hoy no hay tomas ni actividades')
     await expect(page.getByText('0 consultas')).toHaveCount(0)
-    await expect(page.getByText('El plan gratuito incluye un hijo.')).toHaveCount(0)
     const sidebar = page.getByRole('navigation', { name: 'Tus hijos' })
     await expect(sidebar.getByRole('link', { name: /^Mateo/ })).not.toHaveAttribute('aria-current', 'page')
     await expect(sidebarButton(page)).toBeVisible()
@@ -116,7 +106,7 @@ test.describe('Home web y pop-up del plan gratuito (mock 15)', () => {
   })
 
   for (const [name, opener] of [
-    ['el botón "Agregar hijo" de la página', pageButton],
+    ['el «+ Agregar hijo» de la página', pageButton],
     ['el "+ Agregar hijo" de la barra lateral', sidebarButton],
   ] as const) {
     test(`abierto con ${name}: «Ahora no», Escape y un clic en el fondo lo cierran y el foco vuelve a ese botón`, async ({ page }) => {
