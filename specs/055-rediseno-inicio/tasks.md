@@ -179,18 +179,18 @@ dos diseños con `useIsDesktop`, nunca clases `lg:` que mezclen; overlays con `c
 **Objetivo**: `/hijo/hoy` con el estado 7 del diseño, mismos datos.
 **Prueba independiente**: las tres variantes (por marcar, todo marcado, sin nada) y marcar como hoy.
 
-- [ ] T030 [P] [US4] Agregar a `frontend/src/features/childDevice/childText.ts` (`PHONE`) las frases nuevas del estado 7
+- [x] T030 [P] [US4] Agregar a `frontend/src/features/childDevice/childText.ts` (`PHONE`) las frases nuevas del estado 7
   («Tus tomas», «{N} hoy · {M} por marcar», «Tus actividades», «{N} de {M} hechas», «✓ Todo marcado hasta ahora», «Hoy no
   tienes tomas ni actividades», «Avisos», «Te llega un aviso a la hora de cada toma.», «Activar», «✓ Activados») sin palabras
   que evalúan (su prueba de redacción las cubre)
-- [ ] T031 [US4] Rehacer la presentación de `frontend/src/features/childDevice/phone/ChildTodayPage.tsx` con el estado 7:
+- [x] T031 [US4] Rehacer la presentación de `frontend/src/features/childDevice/phone/ChildTodayPage.tsx` con el estado 7:
   encabezado «Hola, {nombre}» + `formatWeekdayLong` + chip; «Tus tomas» agrupadas con `groupByPeriod`
   (`consultations/dayPeriods.ts`, si `isolation.test.ts` lo permite; si no, moverlo a `shared/`) con `DayRow` y «Marcar»;
   lo marcado por otra persona como texto «✓ por Ana, 08:05» (menta, sin botón); «Tus actividades» con «✓ Realizado»;
   «Avisos» al final (`RemindersCard` de `phone/`); vacío. **Mismas llamadas de `phone/api.ts`, sin datos nuevos**
-- [ ] T032 [US4] Actualizar `frontend/src/features/childDevice/phone/ChildTodayPage.test.tsx` con las tres variantes y
+- [x] T032 [US4] Actualizar `frontend/src/features/childDevice/phone/ChildTodayPage.test.tsx` con las tres variantes y
   confirmar que `frontend/src/features/childDevice/isolation.test.ts` sigue verde
-- [ ] T033 [US4] Ajustar `frontend/e2e/hijo.spec.ts` (390 y 1280 px) a los textos nuevos de `/hijo/hoy`
+- [x] T033 [US4] Ajustar `frontend/e2e/hijo.spec.ts` (390 y 1280 px) a los textos nuevos de `/hijo/hoy`
 
 **Commit**: «feat(055): la pantalla Hoy del teléfono del hijo (US4)»
 

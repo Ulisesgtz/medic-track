@@ -92,10 +92,13 @@ describe('ChildTodayPage', () => {
     const today = await screen.findByRole('region', { name: PHONE.today })
     expect(within(today).getByText('Amoxicilina')).toBeInTheDocument()
     expect(within(today).getByText('Vitamina D')).toBeInTheDocument()
-    expect(within(today).getByText(PHONE.supplement)).toBeInTheDocument()
+    expect(within(today).getByText(/^Suplemento · /)).toBeInTheDocument()
+    expect(within(today).getByRole('group', { name: 'Mañana' })).toBeInTheDocument()
+    expect(within(today).getByText(PHONE.dosesCount(2, 2))).toBeInTheDocument()
+    expect(screen.getByText(PHONE.toMark(2))).toBeInTheDocument()
     const activities = await screen.findByRole('region', { name: PHONE.activities })
     expect(within(activities).getByText('Tomar agua')).toBeInTheDocument()
-    expect(within(activities).getByText(PHONE.doneOf(1, 2))).toBeInTheDocument()
+    expect(within(activities).getAllByText(PHONE.activitiesCount(1, 2))).toHaveLength(2)
     expect(calls.length).toBeGreaterThan(2)
     for (const call of calls) {
       expect(call.auth).toBe('Device cred-del-hijo')
@@ -109,7 +112,7 @@ describe('ChildTodayPage', () => {
     const calls = stubApi({ doses: [medication(), supplement({ scheduledAt: at(9) })], activities: [] })
     show()
     const today = await screen.findByRole('region', { name: PHONE.today })
-    const chips = within(today).getAllByRole('button', { name: /^Toma de/ })
+    const chips = within(today).getAllByRole('button', { name: /^Marcar / })
     expect(chips).toHaveLength(2)
     await user.click(chips[0])
     await user.click(chips[1])
@@ -123,16 +126,18 @@ describe('ChildTodayPage', () => {
   it("does not offer to take back a mark that is not the child's", async () => {
     stubApi({ doses: [medication({ taken: true, status: 'taken', takenBy: { name: 'Ana', at: at(8), mine: false } })], activities: [] })
     show()
-    const chip = await screen.findByRole('button', { name: /^Toma de/ })
+    const chip = await screen.findByRole('button', { name: /^Marcar / })
     expect(chip).toBeDisabled()
     expect(chip).toHaveAttribute('aria-pressed', 'true')
+    expect(chip).toHaveTextContent(/^✓ por Ana, \d\d:\d\d$/)
+    expect(screen.getByText(PHONE.allMarked)).toBeInTheDocument()
   })
 
   it("lets the child take back its own mark", async () => {
     const user = userEvent.setup()
     const calls = stubApi({ doses: [medication({ taken: true, status: 'taken', takenBy: { name: 'Mateo', at: at(8), mine: true } })], activities: [] })
     show()
-    const chip = await screen.findByRole('button', { name: /^Toma de/ })
+    const chip = await screen.findByRole('button', { name: /^Marcar / })
     expect(chip).toBeEnabled()
     await user.click(chip)
     await waitFor(() => expect(calls.some((c) => c.method === 'PATCH')).toBe(true))
@@ -153,13 +158,13 @@ describe('ChildTodayPage', () => {
   it('says there are no doses today', async () => {
     stubApi({ doses: [], activities: [] })
     show()
-    expect(await screen.findByText(PHONE.noDoses)).toBeInTheDocument()
+    expect(await screen.findByText(PHONE.nothingToday)).toBeInTheDocument()
   })
 
   it('leaves out paused activities', async () => {
     stubApi({ doses: [], activities: [activity({ status: 'paused', name: 'Pausada' })] })
     show()
-    await screen.findByText(PHONE.noDoses)
+    await screen.findByText(PHONE.nothingToday)
     expect(screen.queryByText('Pausada')).not.toBeInTheDocument()
   })
 
@@ -189,7 +194,7 @@ describe('ChildTodayPage', () => {
     unmount()
     vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('standalone'), media: query, addEventListener: vi.fn(), removeEventListener: vi.fn() }))
     show()
-    await screen.findByText(PHONE.noDoses)
+    await screen.findByText(PHONE.nothingToday)
     expect(screen.queryByText(PHONE.install)).not.toBeInTheDocument()
   })
 
@@ -214,7 +219,7 @@ describe('ChildTodayPage', () => {
   it('does not renew before its time', async () => {
     const calls = stubApi({ doses: [], activities: [] })
     show()
-    await screen.findByText(PHONE.noDoses)
+    await screen.findByText(PHONE.nothingToday)
     expect(calls.some((c) => c.path === '/child-device/rotate')).toBe(false)
     expect(window.localStorage.getItem('hijo-credencial')).toBe('cred-del-hijo')
   })
@@ -222,7 +227,7 @@ describe('ChildTodayPage', () => {
   it('keeps the old credential if the renewal fails', async () => {
     stubApi({ doses: [], activities: [], rotateAfter: new Date(Date.now() - 1000).toISOString(), status: { 'POST /child-device/rotate': 500 } })
     show()
-    await screen.findByText(PHONE.noDoses)
+    await screen.findByText(PHONE.nothingToday)
     expect(window.localStorage.getItem('hijo-credencial')).toBe('cred-del-hijo')
   })
 })
