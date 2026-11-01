@@ -5,7 +5,6 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MisRegistroSeccion } from './MisRegistroSeccion'
 import { PersonalActivitiesPanel, personalActivitiesToday } from './PersonalActivitiesPanel'
-import { PersonalHomeBlock } from './PersonalHomeBlock'
 import { PersonalRoutinesPage } from './PersonalRoutinesPage'
 import { PersonalTodayPanel, personalTodayItems, personalTodaySummary } from './PersonalTodayPanel'
 import { TODAY, account, activity, at, callsOf, dose, list, routine, stubApi, stubWeb } from './supplements.test-utils'
@@ -263,53 +262,6 @@ describe('PersonalActivitiesPanel', () => {
     expect(screen.queryByRole('button', { name: /Realizado/ })).not.toBeInTheDocument()
     renderIn(<PersonalActivitiesPanel routines={[myActivity({ doses: [] })]} />)
     expect(screen.getByText('No hay actividades programadas para hoy.')).toBeInTheDocument()
-  })
-})
-
-describe('PersonalHomeBlock', () => {
-  const home = (variant: 'phone' | 'desktop') => <PersonalHomeBlock account={ana as never} variant={variant} />
-
-  it.each(['phone', 'desktop'] as const)('%s: with both shows «Personal · solo lo ves tú», each panel and each way in', async (variant) => {
-    api([mine()], {}, ana, {}, [myActivity()])
-    renderIn(home(variant), '/mis-suplementos')
-    expect(await screen.findByText('Personal · solo lo ves tú')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Mis suplementos' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Mis actividades' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Tus tomas de hoy' })).toBeInTheDocument()
-    expect(await screen.findByRole('heading', { name: 'Tus actividades de hoy' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Ver mis suplementos →' })).toHaveAttribute('href', '/mis-suplementos')
-    expect(screen.getByRole('link', { name: 'Ver mis actividades →' })).toHaveAttribute('href', '/mis-actividades')
-  })
-
-  it.each(['phone', 'desktop'] as const)('%s: with none shows the two dashed entries', async (variant) => {
-    api([], {}, ana, {}, [])
-    renderIn(home(variant))
-    expect(await screen.findByText('Para lo que tomas tú a horas fijas.')).toBeInTheDocument()
-    expect(await screen.findByText('Para lo que haces tú varias veces al día.')).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Tus tomas de hoy' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Tus actividades de hoy' })).not.toBeInTheDocument()
-  })
-
-  it('shows what it could read when only one list loads', async () => {
-    stubApi({
-      'GET /accounts/me': { body: ana },
-      'GET /accounts/a1/routines': (url: URL) =>
-        url.searchParams.get('kind') === 'activity' ? { status: 500, body: { error: 'x' } } : { body: personalList([mine()]) },
-    })
-    renderIn(home('phone'))
-    expect(await screen.findByRole('heading', { name: 'Mis suplementos' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Mis actividades' })).not.toBeInTheDocument()
-  })
-
-  it('draws nothing while loading, with no account or when neither list can be read (the home never breaks for it)', async () => {
-    stubApi({ 'GET /accounts/me': { body: ana }, 'GET /accounts/a1/routines': { status: 500, body: { error: 'x' } } })
-    const { container } = renderIn(home('phone'))
-    expect(container).toBeEmptyDOMElement()
-    await waitFor(() => expect(callsOf(vi.mocked(fetch) as never)).toContain('GET /accounts/a1/routines'))
-    expect(screen.queryByText('Mis suplementos')).not.toBeInTheDocument()
-
-    const none = renderIn(<PersonalHomeBlock account={undefined} variant="phone" />)
-    expect(none.container.querySelector('section')).toBeNull()
   })
 })
 

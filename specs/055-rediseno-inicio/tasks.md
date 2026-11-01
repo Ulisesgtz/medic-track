@@ -123,22 +123,22 @@ dos diseños con `useIsDesktop`, nunca clases `lg:` que mezclen; overlays con `c
 **Prueba independiente**: con suplementos y actividades personales, «Tu día» va arriba con conteos y próxima, y
 «✓ Realizado» marca sin salir.
 
-- [ ] T019 [P] [US2] Crear `frontend/src/features/home/Greeting.tsx`: «Hola, {nombre}», `formatWeekdayLong` de
+- [x] T019 [P] [US2] Crear `frontend/src/features/home/Greeting.tsx`: «Hola, {nombre}», `formatWeekdayLong` de
   `useLocalDay().from` (cambia a medianoche) y el círculo de iniciales; en el teléfono sobre el fondo de la página (el diseño no tiene
   banda oscura: reemplaza el `AppHeader` «Tus hijos»), en la web como encabezado sin iniciales (la cuenta está en la barra)
-- [ ] T020 [US2] Crear `frontend/src/features/home/TuDia.tsx`: lee `usePersonalRoutines(account.id, 'supplement' |
+- [x] T020 [US2] Crear `frontend/src/features/home/TuDia.tsx`: lee `usePersonalRoutines(account.id, 'supplement' |
   'activity', day)` y `personalDay(...)`; modo `card` (título «Tu día» + «Ver todo» a `/mis-suplementos`; «Mis tomas» con
   valor, `DayProgress` y próxima; «Mis actividades» con valor, próxima y `RealizadoButton` con contorno que llama
   `useMarkDone` de la actividad de la próxima toma → «✓ {nombre} · HH:MM»), `todo` («✓ Todo marcado hasta ahora»), `vacio`
   (enlace «Agrega tus propios suplementos o actividades» a `/mis-suplementos`, sin botón sólido), `plan` (línea «Tu día · tus
   suplementos y actividades» + marca «Plan completo» que abre `FreemiumLimitModal reason="supplements"`); en la web dos
   columnas; esqueleto de altura fija y falla con «Reintentar»; no dibuja nada si la cuenta no ha cargado
-- [ ] T021 [US2] Crear `frontend/src/features/home/TuDia.test.tsx`: los cuatro modos, «✓ Realizado» llama `POST
+- [x] T021 [US2] Crear `frontend/src/features/home/TuDia.test.tsx`: los cuatro modos, «✓ Realizado» llama `POST
   /routines/{id}/done`, «Ver todo», el aviso del plan, ambos diseños
-- [ ] T022 [US2] Montar `Greeting` y `TuDia` en `frontend/src/features/home/HomePage.tsx` antes de la sección de hijos (después
+- [x] T022 [US2] Montar `Greeting` y `TuDia` en `frontend/src/features/home/HomePage.tsx` antes de la sección de hijos (después
   del aviso «Antes de empezar» y de la nota «Solo lectura»), y quitar `PersonalHomeBlock` del inicio; borrar
   `frontend/src/features/supplements/PersonalHomeBlock.tsx` (y su prueba) si ya nadie lo importa
-- [ ] T023 [US2] Agregar a `frontend/e2e/inicio.spec.ts`: dueña con un suplemento y una actividad personales
+- [x] T023 [US2] Agregar a `frontend/e2e/inicio.spec.ts`: dueña con un suplemento y una actividad personales
   (`personalRoutineViaApi`, `personalActivityViaApi`) → «Hola, …» y «Tu día» antes de los hijos, «✓ Realizado» marca; plan
   gratuito → la línea con «Plan completo» abre el aviso; ajustar `e2e/suplementos-personales.spec.ts` y `e2e/actividades.spec.ts`
   donde buscaban «Personal · Mis suplementos» en el inicio

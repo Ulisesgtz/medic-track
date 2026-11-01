@@ -40,6 +40,7 @@ export const HOME = {
   readOnlyLead: 'Solo lectura.',
   readOnlyRest: 'La familia no tiene un plan activo. Puedes seguir marcando tomas y actividades.',
   retry: 'Reintentar',
+  loadFailedMine: 'no pudimos cargar tus suplementos y actividades',
 } as const
 
 export const greeting = (name: string) => `Hola, ${name}`

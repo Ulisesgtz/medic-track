@@ -6,7 +6,6 @@ import { MeApiError } from '../auth/api'
 import { ChildrenSection, ReadOnlyNote } from './ChildrenSection'
 import { AddChildDialogs } from './AddChildDialogs'
 import { addChildTarget, atFreePlanLimit } from './plan'
-import { AppHeader } from '../../shared/ui/AppHeader'
 import { AppShell } from './AppShell'
 import { useSidebarSession } from './useSidebarSession'
 import { Logo } from '../../shared/ui/Logo'
@@ -15,7 +14,8 @@ import { RemindersCard } from '../reminders/RemindersCard'
 import { readPendingInvitation } from '../family/pendingInvitation'
 import { FamilyEntry } from '../family/FamilyEntry'
 import { PlanEntry } from '../plans/PlanEntry'
-import { PersonalHomeBlock } from '../supplements/PersonalHomeBlock'
+import { Greeting } from './Greeting'
+import { TuDia } from './TuDia'
 
 /**
  * The parent's home page: lists their children (FR-001), or an invitation to
@@ -147,35 +147,26 @@ export function HomePage() {
       />
     )
 
+  const logoutLink = (
+    <button type="button" onClick={logout} className="min-h-11 cursor-pointer self-start text-[15px] font-bold text-action hover:underline">
+      Cerrar sesión
+    </button>
+  )
+
   if (isDesktop) {
     return (
       <AppShell>
-        <main className="min-h-screen min-w-0 bg-canvas px-6 py-8 lg:px-12 lg:py-11">
-          <div className="mx-auto flex max-w-4xl flex-col gap-8">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                {account && <p className="text-sm font-bold text-action">Hola, {account.firstName}</p>}
-                <h1 className="mt-1 text-4xl font-black tracking-tight text-ink">Tus hijos</h1>
-              </div>
-              <div className="flex items-center gap-5">
-                <button
-                  type="button"
-                  onClick={logout}
-                  className="cursor-pointer text-sm font-bold text-action hover:underline"
-                >
-                  Cerrar sesión
-                </button>
-              </div>
-            </div>
-
+        <main className="min-h-screen min-w-0 bg-canvas px-6 py-8 lg:px-12 lg:pt-11 lg:pb-14">
+          <div className="mx-auto flex max-w-[904px] flex-col gap-7">
             <WelcomeDisclaimer account={account} />
             {readOnly && <ReadOnlyNote variant="desktop" />}
-
+            {account && <Greeting account={account} variant="desktop" />}
+            {account && <TuDia account={account} variant="desktop" />}
             {childrenSection('desktop')}
 
             {account && <FamilyEntry variant="desktop" />}
-            <PersonalHomeBlock account={account} variant="desktop" />
             <RemindersCard account={account} />
+            {logoutLink}
           </div>
           {dialogs}
         </main>
@@ -185,57 +176,35 @@ export function HomePage() {
 
   return (
     <AppShell>
-      <main className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas pb-16">
-        <AppHeader
-          eyebrow={account ? `Hola, ${account.firstName}` : undefined}
-          title="Tus hijos"
-          action={
-            account && (
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={logout}
-                  className="cursor-pointer text-[13px] font-bold text-bright-soft hover:underline"
-                >
-                  Cerrar sesión
-                </button>
-                <span
-                  aria-hidden="true"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-action text-sm font-extrabold text-white"
-                >
-                  {account.firstName.charAt(0)}
-                  {account.lastName.charAt(0)}
-                </span>
-              </div>
-            )
-          }
-        />
-
-        <div className="px-6 pt-6">
-          <div className="empty:hidden [&:not(:empty)]:mb-4">
-            <WelcomeDisclaimer account={account} />
-          </div>
-          {readOnly && (
-            <div className="mb-4">
-              <ReadOnlyNote variant="phone" />
-            </div>
-          )}
-          {childrenSection('phone')}
-          {account && (
-            <div className="mt-6">
-              <FamilyEntry variant="phone" />
-            </div>
-          )}
-          {account && (
-            <div className="mt-4">
-              <PlanEntry account={account} />
-            </div>
-          )}
-          <PersonalHomeBlock account={account} variant="phone" />
-          <div className="mt-4">
-            <RemindersCard account={account} />
-          </div>
+      <main
+        className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col gap-5 bg-canvas px-5 pb-8"
+        style={{ paddingTop: 'calc(0.5rem + env(safe-area-inset-top))' }}
+      >
+        <div className="empty:hidden">
+          <WelcomeDisclaimer account={account} />
         </div>
+        {readOnly && <ReadOnlyNote variant="phone" />}
+        {account && (
+          <Greeting
+            account={account}
+            variant="phone"
+            accountSlot={
+              <span
+                aria-hidden="true"
+                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ink text-[15px] font-extrabold text-white"
+              >
+                {account.firstName.charAt(0)}
+                {account.lastName.charAt(0)}
+              </span>
+            }
+          />
+        )}
+        {account && <TuDia account={account} variant="phone" />}
+        {childrenSection('phone')}
+        {account && <FamilyEntry variant="phone" />}
+        {account && <PlanEntry account={account} />}
+        <RemindersCard account={account} />
+        {logoutLink}
         {dialogs}
       </main>
     </AppShell>

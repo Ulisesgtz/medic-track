@@ -237,13 +237,15 @@ describe('HomePage', () => {
       expect(screen.getByRole('main')).toHaveClass('mx-auto', 'max-w-[430px]')
     })
 
-    it('greets the tutor and shows their initials in the header', async () => {
+    it('greets the tutor first, with the date and their initials, then «Tu día», then the children (specs/055)', async () => {
       stubApi(account)
       renderHome()
 
-      expect(await screen.findByText('Hola, Ana')).toBeInTheDocument()
-      expect(screen.getByRole('heading', { level: 1, name: 'Tus hijos' })).toBeInTheDocument()
+      const hello = await screen.findByRole('heading', { level: 1, name: 'Hola, Ana' })
+      expect(screen.getByText(/^(lunes|martes|miércoles|jueves|viernes|sábado|domingo) \d+ de /)).toBeInTheDocument()
       expect(screen.getByText('AM')).toBeInTheDocument()
+      const children = screen.getByRole('heading', { level: 2, name: 'Tus hijos' })
+      expect(hello.compareDocumentPosition(children) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     })
 
     it('shows the day of each child: a row per kind with something today, and the next dose to mark (specs/055)', async () => {
@@ -341,7 +343,7 @@ describe('HomePage', () => {
       renderDesktopHome()
 
       await screen.findByText('Hola, Ana')
-      expect(screen.getByRole('main')).toHaveClass('px-6', 'py-8', 'lg:px-12', 'lg:py-11')
+      expect(screen.getByRole('main')).toHaveClass('px-6', 'py-8', 'lg:px-12', 'lg:pt-11')
       expect(screen.queryByRole('navigation', { name: 'Tus hijos' })).not.toBeInTheDocument()
     })
 
@@ -349,8 +351,8 @@ describe('HomePage', () => {
       stubApi(account([kid('k1', 'Luis')]))
       renderDesktopHome()
 
-      expect(await screen.findByText('Hola, Ana')).toBeInTheDocument()
-      expect(screen.getByRole('heading', { level: 1, name: 'Tus hijos' })).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { level: 1, name: 'Hola, Ana' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { level: 2, name: 'Tus hijos' })).toBeInTheDocument()
       const main = screen.getByRole('main')
       expect(within(main).getByRole('button', { name: /Agregar hijo/ })).toHaveTextContent('Tu plan incluye un hijo')
       expect(await within(main).findByRole('link', { name: 'Ver detalle de Luis' })).toHaveAttribute('href', '/children/k1')

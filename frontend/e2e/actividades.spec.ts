@@ -313,12 +313,10 @@ for (const design of designs) {
       await page.goto('/home')
       const main = page.getByRole('main')
 
-      // The home has one block with both ways in; the activities' is an invitation until there is one.
-      await expect(main.getByText('Personal · solo lo ves tú')).toBeVisible()
-      await expect(main.getByRole('heading', { name: 'Mis actividades' })).toBeVisible()
-      await expect(main.getByText('Para lo que haces tú varias veces al día.')).toBeVisible()
-      if (design.isWeb) await expect(page.getByRole('navigation', { name: 'Personal' }).getByRole('link', { name: 'Mis actividades' })).toBeVisible()
-      await main.getByRole('link', { name: 'Ver mis actividades →' }).click()
+      // specs/055: with nothing created «Tu día» is one line with the way in (to «Mis suplementos»); the web sidebar has both.
+      await expect(main.getByRole('link', { name: 'Agrega tus propios suplementos o actividades' })).toBeVisible()
+      if (design.isWeb) await page.getByRole('navigation', { name: 'Personal' }).getByRole('link', { name: 'Mis actividades' }).click()
+      else await page.goto('/mis-actividades')
 
       await expect(page).toHaveURL(/\/mis-actividades$/)
       await expect(page.getByRole('heading', { name: 'Mis actividades', level: 1 })).toBeVisible()
@@ -345,12 +343,12 @@ for (const design of designs) {
       await expect(page.getByText(/^por /)).toHaveCount(0)
       await expectNoHorizontalScroll(page)
 
-      // The home shows «Tus actividades de hoy» and marks in place.
+      // «Tu día» on the home counts it and marks in place.
       await page.goto('/home')
-      await expect(page.getByRole('main').getByRole('heading', { name: 'Tus actividades de hoy' })).toBeVisible()
-      await expect(page.getByRole('main').getByText(/^1 de 24 hechas hoy · /)).toBeVisible()
-      await page.getByRole('main').getByRole('button', { name: 'Realizado: Pararse a estirar' }).click()
-      await expect(page.getByRole('main').getByText(/^2 de 24 hechas hoy · /)).toBeVisible()
+      const tuDia = page.getByRole('region', { name: 'Tu día' })
+      await expect(tuDia.getByText('1 de 24 hechas')).toBeVisible()
+      await tuDia.getByRole('button', { name: 'Realizado: Pararse a estirar' }).click()
+      await expect(tuDia.getByText('2 de 24 hechas')).toBeVisible()
       await expectNoHorizontalScroll(page)
 
       // A caregiver of the same family sees nothing of it, not by its address nor through the API.

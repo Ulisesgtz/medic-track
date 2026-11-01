@@ -44,14 +44,12 @@ for (const design of designs) {
       await page.goto('/home')
       const main = page.getByRole('main')
 
-      // The home has its own block, apart from the children, with the privacy sentence and a way in.
-      await expect(main.getByRole('heading', { name: 'Mis suplementos' })).toBeVisible()
-      await expect(main.getByText('Personal · solo lo ves tú')).toBeVisible()
-      await expect(main.getByText('Para lo que tomas tú a horas fijas.')).toBeVisible()
-      await expect(main.getByText('Para lo que haces tú varias veces al día.')).toBeVisible()
+      // specs/055: «Tu día» comes first; with nothing created it is one line with the way in.
+      const addOwn = main.getByRole('link', { name: 'Agrega tus propios suplementos o actividades' })
+      await expect(addOwn).toBeVisible()
       if (design.isWeb) await expect(page.getByRole('navigation', { name: 'Personal' }).getByRole('link', { name: 'Mis suplementos' })).toBeVisible()
       await expectNoHorizontalScroll(page)
-      await main.getByRole('link', { name: 'Ver mis suplementos →' }).click()
+      await addOwn.click()
 
       // First time: the notice sits in the page; «Entendido» is kept for the account, so a reload doesn't bring it back.
       await expect(page).toHaveURL(/\/mis-suplementos$/)
@@ -91,14 +89,14 @@ for (const design of designs) {
       await expect(page.getByText(/^a las \d\d:\d\d$/).first()).toBeVisible()
       await expect(page.getByText(/por Ana/)).toHaveCount(0)
 
-      // The home now shows «Tus tomas de hoy» in its own panel.
+      // The home now counts it in «Tu día».
       await page.goto('/home')
-      await expect(page.getByRole('main').getByRole('heading', { name: 'Tus tomas de hoy' })).toBeVisible()
-      await expect(page.getByRole('main').getByText('todo marcado hasta ahora')).toBeVisible()
+      const tuDia = page.getByRole('region', { name: 'Tu día' })
+      await expect(tuDia.getByText(/^1 de \d+ hoy$/)).toBeVisible()
       await expectNoHorizontalScroll(page)
 
       // Pausing needs no confirmation; finishing asks first, in its own words, and is for good.
-      await page.getByRole('main').getByRole('link', { name: 'Ver mis suplementos →' }).click()
+      await tuDia.getByRole('link', { name: 'Ver todo' }).click()
       await page.getByRole('link', { name: 'Ver suplemento Omega 3' }).click()
       await page.getByRole('button', { name: 'Pausar' }).click()
       await expect(page.getByText('Pausado', { exact: true })).toBeVisible()

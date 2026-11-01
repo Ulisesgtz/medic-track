@@ -1,4 +1,18 @@
-import { acceptViaApi, activityViaApi, allowClerkOn, designs, expect, inviteViaApi, routineViaApi, secondPerson, seedAccount, seedChild, test } from './helpers'
+import {
+  acceptViaApi,
+  activityViaApi,
+  allowClerkOn,
+  designs,
+  expect,
+  inviteViaApi,
+  personalActivityViaApi,
+  personalRoutineViaApi,
+  routineViaApi,
+  secondPerson,
+  seedAccount,
+  seedChild,
+  test,
+} from './helpers'
 
 // specs/055 (rediseño del inicio): the home with the design of Claude Design, at 390 and 1280 px. The setup goes through the API;
 // what the person sees and does is the real thing. Doses depend on the hour the test runs, so the assertions say only what is
@@ -63,6 +77,37 @@ for (const design of designs) {
       await seedChild(page, { withConsultation: false, plan: 'free' })
       await page.goto('/home')
       await expect(page.getByRole('main').getByRole('button', { name: /Agregar hijo/ })).toContainText('Tu plan incluye un hijo')
+    })
+
+    test('«Tu día» comes first, with the person’s own doses and activities, and «✓ Realizado» marks in place', async ({ page }) => {
+      await allowClerkOn(page)
+      const owner = await seedChild(page, { withConsultation: false })
+      const request = page.context().request
+      await personalRoutineViaApi(request, owner.token, owner.accountId, { times: ['23:55'] })
+      await personalActivityViaApi(request, owner.token, owner.accountId)
+
+      await page.goto('/home')
+      const hello = page.getByRole('heading', { level: 1, name: 'Hola, Ana' })
+      await expect(hello).toBeVisible()
+      const tuDia = page.getByRole('region', { name: 'Tu día' })
+      await expect(tuDia.getByText('0 de 1 hoy')).toBeVisible()
+      await expect(tuDia.getByText('Próxima: Omega 3 · 23:55')).toBeVisible()
+      const before = await tuDia.getByText(/^\d+ de 24 hechas$/).textContent()
+      await tuDia.getByRole('button', { name: 'Realizado: Pararse a estirar' }).click()
+      await expect(tuDia.getByText(/^✓ /)).toBeVisible()
+      await expect(tuDia.getByText(/^\d+ de 24 hechas$/)).not.toHaveText(before!)
+      // «Tu día» is above the children.
+      const tuDiaBox = (await tuDia.boundingBox())!
+      const childrenBox = (await page.getByRole('heading', { name: 'Tus hijos' }).boundingBox())!
+      expect(tuDiaBox.y).toBeLessThan(childrenBox.y)
+    })
+
+    test('on the free plan «Tu día» is one line with «Plan completo» that opens the plan notice', async ({ page }) => {
+      await allowClerkOn(page)
+      await seedChild(page, { withConsultation: false, plan: 'free' })
+      await page.goto('/home')
+      await page.getByRole('button', { name: /tus suplementos y actividades/ }).click()
+      await expect(page.getByRole('dialog')).toBeVisible()
     })
 
     test('a Caregiver sees «Hijos compartidos contigo», cannot add a child and marks like the owner', async ({ page, browser }) => {
