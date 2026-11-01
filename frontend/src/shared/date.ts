@@ -42,6 +42,13 @@ export const LONG_MONTHS = [
   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
 ]
 
+const WEEKDAYS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+
+/** A local day as "jueves 1 de noviembre" (the home's greeting, specs/055). */
+export function formatWeekdayLong(date: Date): string {
+  return `${WEEKDAYS[date.getDay()]} ${date.getDate()} de ${LONG_MONTHS[date.getMonth()]}`
+}
+
 /** A plain YYYY-MM-DD date as "12 septiembre 2026" (consultation detail header). */
 export function formatDateLong(isoDate: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(isoDate)

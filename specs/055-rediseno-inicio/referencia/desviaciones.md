@@ -5,3 +5,4 @@ Lo que la app hace distinto de `Inicio PediTrack.dc.html`, con su motivo. Se lle
 
 | # | Qué | Diseño | App | Motivo | Estado |
 |---|---|---|---|---|---|
+| 1 | Familia de un Cuidador en «Lo demás» | «Familia Morales · cuidadora» | «Familia Morales · Cuidador» (la etiqueta del rol de `family/roles.ts`) | La app no sabe ni supone el género de la persona | Abierta |

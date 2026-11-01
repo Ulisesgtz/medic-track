@@ -34,10 +34,10 @@ dos diseños con `useIsDesktop`, nunca clases `lg:` que mezclen; overlays con `c
 
 ## Fase 2: Fundamental (bloquea todas las historias)
 
-- [ ] T004 [P] Agregar `formatWeekdayLong(date: Date)` → «jueves 1 de noviembre» (día de la semana y mes en minúsculas,
+- [x] T004 [P] Agregar `formatWeekdayLong(date: Date)` → «jueves 1 de noviembre» (día de la semana y mes en minúsculas,
   nombres fijos, sin `Intl`, en hora local) en `frontend/src/shared/date.ts` y sus casos en `frontend/src/shared/date.test.ts`
   (los siete días, cambio de mes, 1 y 31)
-- [ ] T005 [P] Crear `frontend/src/features/home/homeText.ts` con **todas** las frases del inicio del diseño: saludo
+- [x] T005 [P] Crear `frontend/src/features/home/homeText.ts` con **todas** las frases del inicio del diseño: saludo
   («Hola, {nombre}»), «Tu día», «Ver todo», «Mis tomas», «Mis actividades», «Próxima: {nombre} · {HH:MM}», «✓ Todo marcado
   hasta ahora», «Agrega tus propios suplementos o actividades», «Tu día · tus suplementos y actividades», «Plan completo»,
   «Tus hijos», «Hijos compartidos contigo», «{Familia} · puedes ver y marcar», las filas («Medicamentos», «Suplementos»,
@@ -47,10 +47,10 @@ dos diseños con `useIsDesktop`, nunca clases `lg:` que mezclen; overlays con `c
   actividades.», «Agregar hijo», «+ Agregar hijo», «Tu plan incluye un hijo», «Familia», «Planes», «Recordatorios»,
   «Cerrar sesión», «Solo lectura. La familia no tiene un plan activo. Puedes seguir marcando tomas y actividades.», «No pudimos
   cargar el día de {nombre}», «Reintentar» (singular/plural con funciones, como `vaccineText.ts`)
-- [ ] T006 [P] Crear `frontend/src/features/home/homeText.test.ts` que recorra todas las frases de `homeText.ts` (con valores
+- [x] T006 [P] Crear `frontend/src/features/home/homeText.test.ts` que recorra todas las frases de `homeText.ts` (con valores
   de ejemplo) y falle con `debes`, `atras`, `falta`, `toca`, `%`, `felicid`, `bien hecho`, `excelente`, `cuidado`, `alerta`,
   `no tomada` (Principio I, como `vaccineText.test.ts`)
-- [ ] T007 Crear `frontend/src/features/home/daySummary.ts` (funciones puras, `data-model.md`): `childDay(overview,
+- [x] T007 Crear `frontend/src/features/home/daySummary.ts` (funciones puras, `data-model.md`): `childDay(overview,
   activities)` → `ChildDay` { `medications: {total, toMark, unregistered, marked} | null` (tomas con `kind !== 'supplement'`
   y `status !== 'canceled'`), `supplements: {marked, total} | null` (`kind === 'supplement'`, sin canceladas), `activities:
   {done, total} | null` (tomas de hoy de rutinas `kind=activity` con `status === 'active'`), `next` (la toma de medicamento o
@@ -58,10 +58,10 @@ dos diseños con `useIsDesktop`, nunca clases `lg:` que mezclen; overlays con `c
   `toMark > 0`; si no `ok` si hay algo hoy; si no `vacio`), `unregisteredText` }; y `personalDay(supplements, activities,
   paidPlan)` → `PersonalDay` { `doses`, `activities` (con `next.routineId`), `allMarked`, `mode` `'card' | 'todo' | 'vacio' |
   'plan'` }. **Nunca** usa el reloj del teléfono para el estado de una toma (lo dice `status`)
-- [ ] T008 Crear `frontend/src/features/home/daySummary.test.ts`: cada estado, canceladas y «solo registro» fuera, sin
+- [x] T008 Crear `frontend/src/features/home/daySummary.test.ts`: cada estado, canceladas y «solo registro» fuera, sin
   registrar gana a por marcar, actividades pausadas o terminadas fuera, `next` elige la más temprana entre medicamento y
   suplemento, filas `null` cuando no hay nada, `personalDay` en sus cuatro modos
-- [ ] T009 [P] Crear `frontend/src/shared/ui/DayRow.tsx` (icono de medicamento / suplemento / actividad dibujado en SVG con
+- [x] T009 [P] Crear `frontend/src/shared/ui/DayRow.tsx` (icono de medicamento / suplemento / actividad dibujado en SVG con
   `aria-hidden`, título y valor, medidas de `medidas.md`) y su prueba `DayRow.test.tsx`; vive en `shared/ui` porque la usan el
   inicio y la pantalla del hijo (`childDevice/isolation.test.ts` prohíbe que `phone/` importe de `features/home`)
 
