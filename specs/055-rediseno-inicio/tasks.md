@@ -215,7 +215,7 @@ dos diseños con `useIsDesktop`, nunca clases `lg:` que mezclen; overlays con `c
   --maxWorkers=4` (> 90 %), `npm run build`, `npx playwright test --list` (y `npx playwright test e2e/inicio.spec.ts
   e2e/hijo.spec.ts --project=chromium` si `VITE_CLERK_PUBLISHABLE_KEY` está en el equipo; si no, las corre el CI)
 - [x] T039 `/code-review` del diff de la rama y aplicar lo que salga
-- [ ] T040 Push y PR a `develop` **solo cuando el dueño lo pida**
+- [x] T040 Push y PR a `develop` **solo cuando el dueño lo pida**
 
 **Commit**: «feat(055): esqueletos, medidas, desviaciones y docs»
 
