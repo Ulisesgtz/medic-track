@@ -125,7 +125,7 @@ export function TuDia({ account, variant }: { account: Account; variant: Variant
           <span className="text-[15px] text-body">
             <strong className="text-ink">{HOME.dayTitle}</strong> · {HOME.planLine}
           </span>
-          <span className="shrink-0 rounded-full border border-hint-border bg-hint px-2.5 py-1 text-xs font-extrabold text-action">
+          <span className="shrink-0 rounded-full border border-hint-border bg-hint px-2.5 py-1 text-[12px] font-extrabold text-action">
             {HOME.planBadge}
           </span>
         </button>
@@ -133,15 +133,15 @@ export function TuDia({ account, variant }: { account: Account; variant: Variant
       </>
     )
 
-  const title = desktop ? 'text-[19px]' : 'text-lg'
+  const title = desktop ? 'text-[19px]' : 'text-[18px]'
   const allChip = (
-    <span className={`self-start rounded-full bg-confirmed-soft text-sm font-extrabold text-confirmed-strong ${desktop ? 'px-3 py-[5px]' : 'px-3 py-1.5'}`}>
+    <span className={`self-start rounded-full bg-confirmed-soft text-[14px] font-extrabold text-confirmed-strong ${desktop ? 'px-3 py-[5px]' : 'px-3 py-1.5'}`}>
       {HOME.allMarked}
     </span>
   )
-  const label = `font-bold text-muted ${desktop ? 'text-sm' : 'text-[13px]'}`
-  const value = `font-extrabold text-ink ${desktop ? 'text-base' : 'text-[15px]'}`
-  const line = `text-body ${desktop ? 'text-[15px]' : 'text-sm'}`
+  const label = `font-bold text-muted ${desktop ? 'text-[14px]' : 'text-[13px]'}`
+  const value = `font-extrabold text-ink ${desktop ? 'text-[16px]' : 'text-[15px]'}`
+  const line = `text-body ${desktop ? 'text-[15px]' : 'text-[14px]'}`
 
   const dosesBlock = mine.doses && (
     <div className={`flex items-start ${desktop ? 'gap-3.5' : 'gap-3'}`}>
@@ -191,7 +191,7 @@ export function TuDia({ account, variant }: { account: Account; variant: Variant
           {HOME.dayTitle}
         </h2>
         {desktop && mine.mode === 'todo' && allChip}
-        <Link to="/mis-suplementos" className={`inline-flex min-h-11 items-center text-sm font-bold text-action hover:underline ${desktop ? 'ml-auto' : ''}`}>
+        <Link to="/mis-suplementos" className={`inline-flex min-h-11 items-center text-[14px] font-bold text-action hover:underline ${desktop ? 'ml-auto' : ''}`}>
           {HOME.seeAll}
         </Link>
       </div>

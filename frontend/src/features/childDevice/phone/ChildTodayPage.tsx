@@ -41,8 +41,8 @@ function DoseRow({ credential, dose }: { credential: string; dose: OverviewDose 
     <li className={row}>
       <DayIcon kind={dose.kind === 'supplement' ? 'sup' : 'med'} />
       <span className="flex min-w-0 flex-1 flex-col gap-px">
-        <span className="text-base font-extrabold text-ink [overflow-wrap:anywhere]">{dose.medicationName}</span>
-        <span className="text-sm text-body">
+        <span className="text-[16px] font-extrabold text-ink [overflow-wrap:anywhere]">{dose.medicationName}</span>
+        <span className="text-[14px] text-body">
           {dose.kind === 'supplement' ? `${PHONE.supplement} · ${time}` : time}
           {dose.status === 'unregistered' && ` · ${PHONE.unregistered}`}
         </span>
@@ -53,7 +53,7 @@ function DoseRow({ credential, dose }: { credential: string; dose: OverviewDose 
         aria-pressed={dose.taken}
         disabled={mark.isPending || others}
         onClick={() => mark.mutate({ dose, taken: !dose.taken })}
-        className={dose.taken ? `${mint} ${others ? 'px-3 text-sm' : 'cursor-pointer px-3.5 text-[15px]'}` : `${outline} min-w-24 px-[18px]`}
+        className={dose.taken ? `${mint} ${others ? 'px-3 text-[14px]' : 'cursor-pointer px-3.5 text-[15px]'}` : `${outline} min-w-24 px-[18px]`}
       >
         {!dose.taken ? PHONE.mark : others ? `✓ ${takenByText(dose.takenBy)}` : `✓ ${formatTime(dose.takenBy?.at ?? dose.scheduledAt)}`}
       </button>
@@ -71,8 +71,8 @@ function ActivityRow({ activity, onDone, busy }: { activity: Routine; onDone: ()
     <li className={row}>
       <DayIcon kind="act" />
       <span className="flex min-w-0 flex-1 flex-col gap-px">
-        <span className="text-base font-extrabold text-ink [overflow-wrap:anywhere]">{activity.name}</span>
-        <span className="text-sm text-body">{detail}</span>
+        <span className="text-[16px] font-extrabold text-ink [overflow-wrap:anywhere]">{activity.name}</span>
+        <span className="text-[14px] text-body">{detail}</span>
       </span>
       {done.length < doses.length ? (
         <button type="button" aria-label={`Realizado: ${activity.name}`} disabled={busy} onClick={onDone} className={`${outline} px-4`}>
@@ -80,7 +80,7 @@ function ActivityRow({ activity, onDone, busy }: { activity: Routine; onDone: ()
         </button>
       ) : (
         last && (
-          <span className={`${mint} px-3 text-sm`}>
+          <span className={`${mint} px-3 text-[14px]`}>
             ✓ {last.takenBy?.mine === false ? takenByText(last.takenBy) : formatTime(last.takenBy?.at ?? last.scheduledAt)}
           </span>
         )
@@ -132,7 +132,7 @@ function Today({ credential, onRotated }: { credential: string; onRotated: (cred
 
   return (
     <main
-      className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col gap-5 bg-canvas px-5 pb-8"
+      className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col gap-5 bg-canvas px-5 pb-8 leading-[normal]"
       style={{ paddingTop: 'calc(0.5rem + env(safe-area-inset-top))' }}
     >
       <header className="flex items-center gap-3.5">
@@ -149,13 +149,13 @@ function Today({ credential, onRotated }: { credential: string; onRotated: (cred
 
       {!isInstalled() && <p className="text-[13px] leading-relaxed text-body">{isIOS() ? PHONE.installIos : PHONE.install}</p>}
       {loading && !failed && (
-        <p role="status" className="text-base font-semibold text-action">
+        <p role="status" className="text-[16px] font-semibold text-action">
           {PHONE.loading}
         </p>
       )}
       {failed && (
         <div className={`${card} gap-3`} role="status">
-          <p className="text-base font-bold text-ink">{PHONE.loadError}</p>
+          <p className="text-[16px] font-bold text-ink">{PHONE.loadError}</p>
           <button
             type="button"
             className={`${outline} self-start px-5`}
@@ -171,16 +171,16 @@ function Today({ credential, onRotated }: { credential: string; onRotated: (cred
       )}
 
       {ready && !nothing && toMark > 0 && (
-        <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-pending-soft px-3 py-[5px] text-sm font-extrabold text-on-pending-chip">
+        <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-pending-soft px-3 py-[5px] text-[14px] font-extrabold text-on-pending-chip">
           <span aria-hidden="true" className="h-[9px] w-[9px] rounded-full border-2 border-pending-dot" />
           {PHONE.toMark(toMark)}
         </span>
       )}
       {ready && !nothing && toMark === 0 && (
-        <span className="self-start rounded-full bg-confirmed-soft px-3 py-[5px] text-sm font-extrabold text-confirmed-strong">{PHONE.allMarked}</span>
+        <span className="self-start rounded-full bg-confirmed-soft px-3 py-[5px] text-[14px] font-extrabold text-confirmed-strong">{PHONE.allMarked}</span>
       )}
       {nothing && (
-        <div className="rounded-[22px] border-2 border-dashed border-hint-border px-5 py-7 text-center text-base leading-normal text-muted">
+        <div className="rounded-[22px] border-2 border-dashed border-hint-border px-5 py-7 text-center text-[16px] leading-normal text-muted">
           {PHONE.nothingToday}
         </div>
       )}
@@ -188,12 +188,12 @@ function Today({ credential, onRotated }: { credential: string; onRotated: (cred
       {ready && doses.length > 0 && (
         <section aria-label={PHONE.today} className={`${card} gap-1.5`}>
           <div className="flex items-baseline justify-between gap-2 pb-1">
-            <h2 className="text-lg font-extrabold text-ink">{PHONE.dosesTitle}</h2>
+            <h2 className="text-[18px] font-extrabold text-ink">{PHONE.dosesTitle}</h2>
             <span className="text-[15px] font-bold text-ink">{PHONE.dosesCount(doses.length, toMark)}</span>
           </div>
           {groupByPeriod(doses).map((group) => (
             <div key={group.key} role="group" aria-label={group.label} className="flex flex-col gap-0.5 pt-2">
-              <span className="text-xs font-extrabold tracking-[0.08em] text-action uppercase">{group.label}</span>
+              <span className="text-[12px] font-extrabold tracking-[0.08em] text-action uppercase">{group.label}</span>
               <ul className="flex flex-col">
                 {group.doses.map((dose) => (
                   <DoseRow key={`${dose.kind ?? 'medication'}-${dose.id}`} credential={credential} dose={dose} />
@@ -207,7 +207,7 @@ function Today({ credential, onRotated }: { credential: string; onRotated: (cred
       {ready && activeActivities.length > 0 && (
         <section aria-label={PHONE.activities} className={`${card} gap-0.5`}>
           <div className="flex items-baseline justify-between gap-2 pb-1">
-            <h2 className="text-lg font-extrabold text-ink">{PHONE.activities}</h2>
+            <h2 className="text-[18px] font-extrabold text-ink">{PHONE.activities}</h2>
             <span className="text-[15px] font-bold text-ink">
               {PHONE.activitiesCount(actDoses.filter((d) => d.taken).length, actDoses.length)}
             </span>

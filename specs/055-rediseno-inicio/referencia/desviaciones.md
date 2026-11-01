@@ -15,3 +15,15 @@ Lo que la app hace distinto de `Inicio PediTrack.dc.html`, con su motivo. Se lle
 | 8 | Detalle de una toma en «Hoy» del hijo | «5 ml · 08:00» | «08:00» o «Suplemento · 08:00» | El API no guarda la cantidad de cada toma | Abierta |
 | 9 | Una actividad que se repite en el día, en «Hoy» del hijo | Una hora por actividad | Su conteo («2 de 24 hechas») y «✓ Realizado» marca la más temprana sin marcar | Una actividad «varias veces al día» (spec 035) no tiene una sola hora; el diseño solo dibujó actividades de una vez al día | Abierta |
 | 10 | «Avisos» en «Hoy» del hijo | «Te llega un aviso a la hora de cada toma.» + «Activar» / «✓ Activados» | El estilo del diseño con las frases y los botones de la spec 047 (activar, apagar, «Es una ayuda, no una alarma garantizada») | La frase de la ayuda es obligatoria (spec 011, FR-014) y apagar los avisos debe seguir siendo posible | Abierta |
+| 11 | Aviso «Antes de empezar» (estado 3) | Un texto corto de ejemplo | El texto completo y vigente de las specs 009/010 (`WelcomeDisclaimer`) | Es el aviso legal que la cuenta confirma por versión; no se cambia por diseño | Abierta |
+| 12 | Nota para instalar la app en «Hoy» del hijo | No aparece | «Para que no se pierda, agrega esta app…» mientras no corre instalada | Ya existía (spec 047): sin la app instalada se pierde el acceso en iPhone | Abierta |
+| 13 | Barra lateral web | «Inicio» a 90 px del borde y la cuenta abajo | Unos 8 px más arriba (el logo y los espacios de la barra de siempre) | La barra es la misma en todas las pantallas; se ajustó lo que pide el diseño (grupo, cuenta con menú) sin mover el resto | Abierta |
+| 14 | «Marcar» que falla (sin red) | No dibujado | El botón vuelve a «Marcar» sin mensaje | El diseño no tiene el estado; queda pendiente decidir el texto | Abierta |
+
+## Medido (2026-11-01)
+
+Arnés temporal (Clerk sustituido, API falsa) contra el diseño servido con su `support.js`, estado 1:
+
+- **Teléfono 390 px**: saludo, «Tu día» (82 / 273 px), «Tus hijos», las dos tarjetas (409 / 308 y 729 / 297), la fila de medicamentos, «+ Agregar hijo», «Lo demás», «✓ Realizado» y «Marcar» en **la misma posición y tamaño** que el diseño (el ancho del saludo cambia con la fecha).
+- **Web 1280 px**: «Tu día», «Tus hijos», tarjetas, «+ Agregar hijo», «Lo demás», «✓ Realizado» y «Marcar» iguales; el ancho de la columna difiere en 15 px por la barra de desplazamiento de la ventana.
+- Estados 3, 4, 5, 7a y 7c revisados a la vista. Para igualar el diseño, el inicio y la pantalla del hijo usan alto de línea `normal` y tamaños exactos (`text-[14px]`…), como el diseño.

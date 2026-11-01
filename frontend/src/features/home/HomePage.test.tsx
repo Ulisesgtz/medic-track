@@ -104,6 +104,13 @@ describe('HomePage', () => {
     expect(signOut).toHaveBeenCalledOnce()
   })
 
+  it('shows skeletons of the final height while the account loads (specs/055, estado 6)', () => {
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
+    renderHome()
+    expect(screen.getByLabelText('Cargando el inicio')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.queryByText('Cargando…')).not.toBeInTheDocument()
+  })
+
   it('shows an empty state when the account has no children yet (FR-006)', async () => {
     window.localStorage.setItem('peditrack.accountId', 'account-empty')
     vi.stubGlobal(
@@ -381,6 +388,12 @@ describe('HomePage', () => {
       await user.click(within(screen.getByRole('main')).getByRole('button', { name: /Agregar hijo/ }))
 
       expect(await screen.findByText('Intentaste agregar a otro hijo. El plan gratuito incluye uno.')).toBeInTheDocument()
+    })
+
+    it('shows the web skeletons while the account loads', () => {
+      vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
+      renderDesktopHome()
+      expect(screen.getByLabelText('Cargando el inicio').querySelector('.h-\\[196px\\]')).not.toBeNull()
     })
 
     it('shows the empty state (with the sidebar) when there are no children yet', async () => {

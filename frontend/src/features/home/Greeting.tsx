@@ -13,10 +13,10 @@ export function Greeting({ account, variant, accountSlot }: { account: Account; 
   const today = useLocalDay()
   const desktop = variant === 'desktop'
   return (
-    <header className={desktop ? 'flex flex-col gap-1' : 'flex items-center justify-between gap-3'}>
-      <div className="flex min-w-0 flex-col gap-0.5">
+    <header className={desktop ? 'flex flex-col' : 'flex items-center justify-between gap-3'}>
+      <div className={`flex min-w-0 flex-col ${desktop ? 'gap-1' : 'gap-0.5'}`}>
         <h1 className={`font-black tracking-[-0.03em] text-ink ${desktop ? 'text-[34px]' : 'text-[28px]'}`}>{greeting(account.firstName)}</h1>
-        <span className={`text-body ${desktop ? 'text-base' : 'text-[15px]'}`}>{formatWeekdayLong(today.from)}</span>
+        <span className={`text-body ${desktop ? 'text-[16px]' : 'text-[15px]'}`}>{formatWeekdayLong(today.from)}</span>
       </div>
       {!desktop && accountSlot}
     </header>

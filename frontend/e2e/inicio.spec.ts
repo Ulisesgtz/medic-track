@@ -152,3 +152,22 @@ for (const design of designs) {
     })
   })
 }
+
+// SC-003: with the 10 children of the paid plan, every card shows its day. Each card asks its own two requests in parallel (the
+// same two the home asked before the redesign), so the time grows little with the number of children; the log keeps the number.
+test.describe('Inicio con 10 hijos', () => {
+  test.use({ viewport: designs[1].viewport })
+
+  test('las 10 tarjetas muestran su día', async ({ page }) => {
+    await allowClerkOn(page)
+    const names = ['Ana', 'Beto', 'Carla', 'Diego', 'Elena', 'Fer', 'Gabi', 'Hugo', 'Iris', 'Juan']
+    await seedAccount(page, names.map((firstName) => ({ firstName, lastName: 'Morales', birthDate: '2020-01-15' })))
+    const started = Date.now()
+    await page.goto('/home')
+    const cards = page.getByRole('main').locator('article')
+    await expect(cards).toHaveCount(10)
+    await expect(page.getByRole('main').getByText('Hoy no hay tomas ni actividades')).toHaveCount(10)
+    console.log(`inicio con 10 hijos: ${Date.now() - started} ms`)
+  })
+})
+

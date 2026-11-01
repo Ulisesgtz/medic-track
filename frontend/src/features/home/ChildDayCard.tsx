@@ -146,12 +146,12 @@ export function ChildDayCard({ child, variant, index }: { child: Child; variant:
         <span className={`flex items-center ${desktop ? 'gap-3.5' : 'gap-3'}`}>
           <span
             aria-hidden="true"
-            className={`flex shrink-0 items-center justify-center rounded-full font-black text-white ${avatar} ${desktop ? 'h-12 w-12 text-[19px]' : 'h-11 w-11 text-lg'}`}
+            className={`flex shrink-0 items-center justify-center rounded-full font-black text-white ${avatar} ${desktop ? 'h-12 w-12 text-[19px]' : 'h-11 w-11 text-[18px]'}`}
           >
             {child.firstName.charAt(0)}
           </span>
           <span className={`flex min-w-0 flex-1 flex-col ${desktop ? 'gap-[5px]' : 'gap-1'}`}>
-            <span className={`font-extrabold text-ink ${desktop ? 'text-lg' : 'text-[17px]'}`}>
+            <span className={`font-extrabold text-ink ${desktop ? 'text-[18px]' : 'text-[17px]'}`}>
               {child.firstName} <span className="font-medium text-body">· {formatAgeLong(child.birthDate)}</span>
             </span>
             {day && <Chip day={day} />}
@@ -173,7 +173,7 @@ export function ChildDayCard({ child, variant, index }: { child: Child; variant:
           <DayRow kind="act" title={HOME.activities} value={activitiesDone(day.activities.done, day.activities.total)} variant={variant} />
         )}
         {day?.unregistered && (
-          <span className="ml-12 self-start rounded-[10px] border-[1.5px] border-dashed border-calendar-muted px-2.5 py-1.5 text-sm text-body">
+          <span className="ml-12 self-start rounded-[10px] border-[1.5px] border-dashed border-calendar-muted px-2.5 py-1.5 text-[14px] text-body">
             {unregisteredLine(day.unregistered.medicationName, formatTime(day.unregistered.scheduledAt))}
           </span>
         )}

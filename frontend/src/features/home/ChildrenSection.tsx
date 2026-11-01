@@ -32,7 +32,7 @@ export function ChildrenSection({ account, variant, canAddChild, planNote, onAdd
       ref={addChildButton}
       type="button"
       onClick={onAddChild}
-      className={`flex cursor-pointer flex-col items-center justify-center rounded-[22px] border-2 border-dashed border-hint-border text-base font-extrabold text-action hover:bg-hint ${desktop ? 'min-h-[120px] gap-1' : 'min-h-14 gap-0.5 p-2'}`}
+      className={`flex cursor-pointer flex-col items-center justify-center rounded-[22px] border-2 border-dashed border-hint-border text-[16px] font-extrabold text-action hover:bg-hint ${desktop ? 'min-h-[120px] gap-1' : 'min-h-14 gap-0.5 p-2'}`}
     >
       {HOME.addChildMore}
       {planNote && <span className="text-[13px] font-semibold text-body">{HOME.planIncludesOne}</span>}
@@ -44,7 +44,7 @@ export function ChildrenSection({ account, variant, canAddChild, planNote, onAdd
       className={`rounded-[22px] border-2 border-dashed border-hint-border ${desktop ? 'col-span-2 flex items-center gap-6 p-7' : 'flex flex-col gap-3 px-5 py-[22px]'}`}
     >
       <span className="flex flex-1 flex-col gap-1.5">
-        <span className={`font-extrabold text-ink ${desktop ? 'text-lg' : 'text-[17px]'}`}>{HOME.noChildrenTitle}</span>
+        <span className={`font-extrabold text-ink ${desktop ? 'text-[18px]' : 'text-[17px]'}`}>{HOME.noChildrenTitle}</span>
         <span className="text-[15px] leading-normal text-body">{HOME.noChildrenBody}</span>
       </span>
       {canAddChild && (
@@ -63,11 +63,11 @@ export function ChildrenSection({ account, variant, canAddChild, planNote, onAdd
   return (
     <section aria-labelledby="home-children-title" className={`flex flex-col ${desktop ? 'gap-3.5' : 'gap-3'}`}>
       <div className={desktop ? 'flex items-baseline gap-3' : 'flex flex-col gap-0.5'}>
-        <h2 id="home-children-title" className={`font-extrabold text-ink ${desktop ? 'text-[19px]' : 'text-lg'}`}>
+        <h2 id="home-children-title" className={`font-extrabold text-ink ${desktop ? 'text-[19px]' : 'text-[18px]'}`}>
           {title}
         </h2>
         {caregiver && account.family && (
-          <span className={`text-body ${desktop ? 'text-[15px]' : 'text-sm'}`}>{sharedSubtitle(familyOf(account.family.ownerName))}</span>
+          <span className={`text-body ${desktop ? 'text-[15px]' : 'text-[14px]'}`}>{sharedSubtitle(familyOf(account.family.ownerName))}</span>
         )}
       </div>
       <div className={desktop ? 'grid grid-cols-2 items-start gap-5' : 'flex flex-col gap-3'}>
@@ -86,7 +86,7 @@ export function ReadOnlyNote({ variant }: { variant: Variant }) {
   return (
     <div
       role="note"
-      className={`rounded-2xl border-[1.5px] border-hint-border bg-surface text-body ${variant === 'desktop' ? 'px-[18px] py-3.5 text-[15px]' : 'px-4 py-3.5 text-sm leading-normal'}`}
+      className={`rounded-2xl border-[1.5px] border-hint-border bg-surface text-body ${variant === 'desktop' ? 'px-[18px] py-3.5 text-[15px]' : 'px-4 py-3.5 text-[14px] leading-normal'}`}
     >
       <strong className="text-ink">{HOME.readOnlyLead}</strong> {HOME.readOnlyRest}
     </div>

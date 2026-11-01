@@ -53,14 +53,14 @@ export function AccountMenu({ account, variant }: { account: Account; variant: '
       >
         {sidebar ? (
           <>
-            <span aria-hidden="true" className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-action text-sm font-extrabold text-white">
+            <span aria-hidden="true" className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full bg-action text-[14px] font-extrabold text-white">
               {initials}
             </span>
             <span className="flex min-w-0 flex-col">
-              <span className="truncate text-sm font-bold text-white">
+              <span className="truncate text-[14px] font-bold text-white">
                 {account.firstName} {account.lastName}
               </span>
-              <span className="text-xs text-bright-soft">{plan}</span>
+              <span className="text-[12px] text-bright-soft">{plan}</span>
             </span>
           </>
         ) : (
@@ -76,7 +76,7 @@ export function AccountMenu({ account, variant }: { account: Account; variant: '
             <span className="text-[15px] font-extrabold text-ink">
               {account.firstName} {account.lastName}
             </span>
-            <span className="text-sm text-body">{plan}</span>
+            <span className="text-[14px] text-body">{plan}</span>
           </span>
           <button
             type="button"

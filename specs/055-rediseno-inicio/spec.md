@@ -4,7 +4,7 @@
 
 **Creado**: 2026-11-01
 
-**Estado**: Borrador
+**Estado**: Implementada (2026-11-01; desviaciones del diseño en `referencia/desviaciones.md`)
 
 **Entrada**: Descripción del usuario: "Rediseño del home: en primer plano mi nombre con mis tomas, suplementos y actividades en
 forma de resumen en mi recuadro; cada recuadro de hijo/hija con el resumen de lo que tiene ese día por tomar, actividad o

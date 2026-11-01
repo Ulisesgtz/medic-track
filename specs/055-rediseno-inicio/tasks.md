@@ -108,7 +108,7 @@ dos diseños con `useIsDesktop`, nunca clases `lg:` que mezclen; overlays con `c
   «✓ HH:MM» y el detalle del hijo dice «por …»; un hijo con una toma sin registrar → borde punteado y «sin registrar»;
   plan gratuito con un hijo → «Tu plan incluye un hijo»; Cuidador con dos sesiones (`secondPerson`) → «Hijos compartidos
   contigo», sin «+ Agregar hijo», «Marcar» funciona
-- [ ] T018 [US1] Ajustar los E2E que buscan «N consultas», «N tomas hoy» o «Sin tomas pendientes» en el inicio
+- [x] T018 [US1] Ajustar los E2E que buscan «N consultas», «N tomas hoy» o «Sin tomas pendientes» en el inicio
   (`e2e/home-listado-hijos.spec.ts`, `e2e/tomas-sin-registrar.spec.ts`, `e2e/detalle-hijo-movil.spec.ts` y los que salgan de
   `grep -rn "tomas hoy\|Sin tomas pendientes\|consultas'" e2e`)
 
@@ -198,23 +198,23 @@ dos diseños con `useIsDesktop`, nunca clases `lg:` que mezclen; overlays con `c
 
 ## Fase 7: Pulido y aspectos transversales
 
-- [ ] T034 Esqueleto de toda la pantalla mientras carga la cuenta (`frontend/src/features/home/HomeSkeleton.tsx`, estado 6:
+- [x] T034 Esqueleto de toda la pantalla mientras carga la cuenta (`frontend/src/features/home/HomeSkeleton.tsx`, estado 6:
   la altura de «Tu día» y de dos tarjetas) en vez de «Cargando…»; prueba de que el esqueleto y la pantalla con datos ponen
   «Tu día» y la primera tarjeta en la misma posición (SC-004, ±4 px, medido en E2E con `boundingBox`)
-- [ ] T035 SC-003: en `frontend/e2e/inicio.spec.ts`, una cuenta con 10 hijos (plan de pago) mide el tiempo hasta ver las 10
+- [x] T035 SC-003: en `frontend/e2e/inicio.spec.ts`, una cuenta con 10 hijos (plan de pago) mide el tiempo hasta ver las 10
   tarjetas con datos; correr la misma medida en `develop` y anotar ambas en `research.md` R1 (si es más lento, abrir la
   entrada del BACKLOG «Resumen del día de todos los hijos en una sola respuesta»)
-- [ ] T036 Comparar lado a lado el diseño y la app a 390 y 1280 px, sección por sección y estado por estado (1–7 y solo
+- [x] T036 Comparar lado a lado el diseño y la app a 390 y 1280 px, sección por sección y estado por estado (1–7 y solo
   lectura), con el navegador del panel; corregir lo que se pueda y anotar el resto en
   `specs/055-rediseno-inicio/referencia/desviaciones.md` con su motivo
-- [ ] T037 [P] Documentar: entrada de la spec 055 en `CLAUDE.md` (raíz) como implementada; `frontend/CLAUDE.md` (sección de
+- [x] T037 [P] Documentar: entrada de la spec 055 en `CLAUDE.md` (raíz) como implementada; `frontend/CLAUDE.md` (sección de
   `features/home/`: `HomePage`, `Greeting`, `TuDia`, `ChildDayCard`, `useChildDay`, `daySummary`, `homeText`, `MoreLinks`,
   `HomeSkeleton`; quitar `ChildCard`/`PersonalHomeBlock`/`FamilyEntry`/`PlanEntry` si se borraron; `shared/ui/DayRow`;
   `formatWeekdayLong`; la pantalla del hijo); estado de `spec.md` → «Implementada»
-- [ ] T038 Verificación completa: `npx tsc --noEmit`, `npx eslint .`, `npx vitest run --coverage --testTimeout=30000
+- [x] T038 Verificación completa: `npx tsc --noEmit`, `npx eslint .`, `npx vitest run --coverage --testTimeout=30000
   --maxWorkers=4` (> 90 %), `npm run build`, `npx playwright test --list` (y `npx playwright test e2e/inicio.spec.ts
   e2e/hijo.spec.ts --project=chromium` si `VITE_CLERK_PUBLISHABLE_KEY` está en el equipo; si no, las corre el CI)
-- [ ] T039 `/code-review` del diff de la rama y aplicar lo que salga
+- [x] T039 `/code-review` del diff de la rama y aplicar lo que salga
 - [ ] T040 Push y PR a `develop` **solo cuando el dueño lo pida**
 
 **Commit**: «feat(055): esqueletos, medidas, desviaciones y docs»

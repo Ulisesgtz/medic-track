@@ -17,7 +17,7 @@ describe('DayRow', () => {
         <DayIcon kind="act" size="md" />
       </>,
     )
-    expect(screen.getByText('Suplementos')).toHaveClass('text-sm')
+    expect(screen.getByText('Suplementos')).toHaveClass('text-[14px]')
     expect(container.querySelectorAll('svg path')).toHaveLength(2)
     expect(container.querySelector('svg circle')).not.toBeNull()
     expect(container.querySelector('.h-10.w-10')).not.toBeNull()

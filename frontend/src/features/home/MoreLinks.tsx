@@ -33,7 +33,7 @@ export function MoreLinks({ account, variant }: { account: Account; variant: Var
     ? 'flex min-h-16 cursor-pointer flex-col justify-center gap-0.5 px-4 py-2.5 text-left hover:bg-hint'
     : 'flex min-h-[52px] cursor-pointer items-center justify-between gap-3 border-b border-hint-edge text-left'
   const title = (color: string) => `text-[15px] font-bold ${color}`
-  const value = `text-body ${desktop ? 'text-[13px]' : 'text-sm'}`
+  const value = `text-body ${desktop ? 'text-[13px]' : 'text-[14px]'}`
 
   return (
     <div className="flex flex-col gap-4">

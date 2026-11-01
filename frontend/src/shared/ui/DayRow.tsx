@@ -49,7 +49,7 @@ export function DayRow({ kind, title, value, variant = 'phone' }: { kind: DayKin
   return (
     <span className="flex min-h-11 items-center gap-3">
       <DayIcon kind={kind} />
-      <span className={`flex-1 font-bold text-muted ${variant === 'desktop' ? 'text-sm' : 'text-[13px]'}`}>{title}</span>
+      <span className={`flex-1 font-bold text-muted ${variant === 'desktop' ? 'text-[14px]' : 'text-[13px]'}`}>{title}</span>
       <span className="text-right text-[15px] font-bold text-ink">{value}</span>
     </span>
   )

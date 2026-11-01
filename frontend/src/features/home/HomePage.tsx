@@ -13,6 +13,7 @@ import { WelcomeDisclaimer } from './WelcomeDisclaimer'
 import { readPendingInvitation } from '../family/pendingInvitation'
 import { Greeting } from './Greeting'
 import { TuDia } from './TuDia'
+import { HomeSkeleton } from './HomeSkeleton'
 import { AccountMenu } from './AccountMenu'
 import { MoreLinks } from './MoreLinks'
 
@@ -109,10 +110,21 @@ export function HomePage() {
   }
 
   if (query.isPending) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-canvas px-5 py-10">
-        <p className="text-base font-semibold text-action">Cargando…</p>
-      </main>
+    // Specs/055 (estado 6): skeletons of the final height, in the same frame as the loaded page.
+    return isDesktop ? (
+      <AppShell>
+        <main className="min-h-screen min-w-0 bg-canvas px-6 py-8 leading-[normal] lg:px-12 lg:pt-11 lg:pb-14">
+          <div className="mx-auto max-w-[904px]">
+            <HomeSkeleton variant="desktop" />
+          </div>
+        </main>
+      </AppShell>
+    ) : (
+      <AppShell>
+        <main className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas px-5 pb-8" style={{ paddingTop: 'calc(0.5rem + env(safe-area-inset-top))' }}>
+          <HomeSkeleton variant="phone" />
+        </main>
+      </AppShell>
     )
   }
 
@@ -149,7 +161,7 @@ export function HomePage() {
   if (isDesktop) {
     return (
       <AppShell>
-        <main className="min-h-screen min-w-0 bg-canvas px-6 py-8 lg:px-12 lg:pt-11 lg:pb-14">
+        <main className="min-h-screen min-w-0 bg-canvas px-6 py-8 leading-[normal] lg:px-12 lg:pt-11 lg:pb-14">
           <div className="mx-auto flex max-w-[904px] flex-col gap-7">
             <WelcomeDisclaimer account={account} />
             {readOnly && <ReadOnlyNote variant="desktop" />}
@@ -167,7 +179,7 @@ export function HomePage() {
   return (
     <AppShell>
       <main
-        className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col gap-5 bg-canvas px-5 pb-8"
+        className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col gap-5 bg-canvas px-5 pb-8 leading-[normal]"
         style={{ paddingTop: 'calc(0.5rem + env(safe-area-inset-top))' }}
       >
         <div className="empty:hidden">
