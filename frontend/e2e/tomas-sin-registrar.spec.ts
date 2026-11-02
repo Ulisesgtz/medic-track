@@ -35,20 +35,22 @@ for (const design of designs) {
       await page.goto(`/consultations/${consultationId}`)
 
       const old = page.getByRole('button', { name: 'Toma de 00:00' })
+      // specs/056: each dose is a row — «sin registrar» dashed (never amber), «por marcar» amber, and the toggle «Marcar».
       await expect(old).toHaveAccessibleDescription('Sin registrar')
-      await expect(old).toContainText('sin registrar')
-      await expect(old).toHaveClass(/border-dashed/)
-      await expect(page.getByRole('button', { name: 'Toma de 08:00' })).toHaveClass(/bg-pending-soft/)
-      await expect(page.getByRole('button', { name: 'Toma de 16:00' })).toHaveClass(/bg-slate-100/)
+      await expect(old).toHaveText('Marcar')
+      const rows = page.getByRole('listitem')
+      await expect(rows.filter({ has: old }).getByText('sin registrar', { exact: true })).toHaveClass(/border-dashed/)
+      await expect(rows.filter({ has: page.getByRole('button', { name: 'Toma de 08:00' }) }).getByText('por marcar', { exact: true })).toHaveClass(/bg-pending-soft/)
+      await expect(rows.filter({ has: page.getByRole('button', { name: 'Toma de 16:00' }) }).getByText('por marcar', { exact: true })).toHaveCount(0)
 
       // specs/014: the dose "sin registrar" is told apart in the progress and does not count.
-      await expect(page.getByText('0 / 3 tomas · 1 sin registrar')).toBeVisible()
+      await expect(page.getByText('0 de 3 tomas · 1 sin registrar')).toBeVisible()
       await expect(page.getByRole('progressbar', { name: 'Progreso de las tomas' })).toHaveAttribute('aria-valuenow', '0')
 
       await old.click()
-      await expect(page.getByText('1 / 3 tomas', { exact: true })).toBeVisible()
+      await expect(page.getByText('1 de 3 tomas', { exact: true })).toBeVisible()
       await expect(old).toHaveAttribute('aria-pressed', 'true')
-      await expect(old).toContainText('00:00 ✓')
+      await expect(old).toHaveText(/^✓ \d\d:\d\d · por /)
 
       await old.click()
       await expect(old).toHaveAttribute('aria-pressed', 'false')
@@ -59,20 +61,14 @@ for (const design of designs) {
       const { childId } = await seedNoonConsultation(page)
       await page.goto(`/children/${childId}`)
 
-      if (design.isWeb) {
-        await expect(page.getByRole('main')).toContainText('sin marcar · 1 sin registrar')
-        const panel = page.getByRole('region', { name: 'Tomas de hoy' })
-        await expect(panel.getByRole('button', { name: /Toma de 00:00/ })).toHaveAccessibleDescription('Sin registrar')
-        return
-      }
-      const block = page.getByRole('region', { name: 'Tomas de hoy' })
-      await expect(block).toContainText('2 sin marcar · 1 sin registrar · Amoxicilina')
-
-      // "Marcar tomas" marks 08:00 and 16:00, never the dose that stayed "sin registrar".
-      await block.getByRole('button', { name: 'Marcar tomas' }).click()
-      await expect(block).toContainText('Sin tomas pendientes')
-      await expect(block).toContainText('1 sin registrar')
-      await expect(block.getByRole('button', { name: 'Marcar tomas' })).toHaveCount(0)
+      // specs/056: «Hoy» counts the unregistered dose apart (dashed, never amber) and it can still be marked from there.
+      const today = page.getByRole('main').getByRole('region', { name: 'Hoy' })
+      await expect(today.getByText('1 sin registrar')).toBeVisible()
+      const old = today.getByRole('button', { name: 'Marcar Amoxicilina de las 00:00' })
+      await expect(old).toHaveAttribute('aria-pressed', 'false')
+      await old.click()
+      await expect(old).toHaveAttribute('aria-pressed', 'true')
+      await expect(today.getByText('1 sin registrar')).toHaveCount(0)
     })
   })
 }

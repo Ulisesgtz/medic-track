@@ -26,9 +26,9 @@ describe('medicationProgress (specs/014)', () => {
   it('handles none, all and a single dose', () => {
     expect(medicationProgress([])).toEqual({ taken: 0, total: 0, unregistered: 0 })
     expect(medicationProgress([dose(true), dose(true)])).toEqual({ taken: 2, total: 2, unregistered: 0 })
-    expect(progressText({ taken: 0, total: 1 })).toBe('0 / 1 toma')
-    expect(progressText({ taken: 1, total: 1 })).toBe('1 / 1 toma')
-    expect(progressText({ taken: 3, total: 9 })).toBe('3 / 9 tomas')
+    expect(progressText({ taken: 0, total: 1 })).toBe('0 de 1 toma')
+    expect(progressText({ taken: 1, total: 1 })).toBe('1 de 1 toma')
+    expect(progressText({ taken: 3, total: 9 })).toBe('3 de 9 tomas')
   })
 
   it('leaves the doses canceled by ending the treatment out of the total (specs/016)', () => {

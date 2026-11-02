@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useAuth } from '@clerk/react'
 import { useLocation, useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { formatDateLong, formatDayMonth } from '../../shared/date'
+import { formatDateShort } from '../../shared/date'
+import { PageHeader } from '../../shared/ui/PageHeader'
+import { pageHeaderButton } from '../../shared/ui/pageHeaderButton'
 import { useLocalDay } from '../../shared/useLocalDay'
 import { AppShell } from '../home/AppShell'
 import { useSidebarSession } from '../home/useSidebarSession'
@@ -17,23 +19,106 @@ import { ConsultationAppointmentSection } from '../appointments/AppointmentSecti
 import { PhotoViewer } from './PhotoViewer'
 import { SymptomChips } from './SymptomChips'
 import { CalendarLegendCard } from './CalendarLegendCard'
-import { RecordOnlyBadge } from './RecordOnlyBadge'
 import { TreatmentCalendar } from './TreatmentCalendar'
-import { dayKey, firstDoseDay, initialDay, numbered } from './treatmentDays'
+import { dayKey, dosesOfDay, firstDoseDay, initialDay, longDay, numbered, shortDay, treatmentSpan } from './treatmentDays'
 import { DOSE_REFETCH_MS } from './doseStatus'
 import { EDIT_TEXT, editedLine } from './editText'
+import { DETAIL, dataSummary, dayTitle, finished, inProgress, toMarkChip, unregisteredChip } from './consultationDetailText'
+import type { ConsultationDetail } from './types'
 
-/** Said where the photo would be when the consultation was saved after the account reached its photo limit (specs/043). */
-const NO_PHOTO_TEXT = 'Esta consulta se guardó sin foto.'
+const card = 'rounded-[22px] bg-surface shadow-[0_8px_20px_rgba(4,37,43,0.07)]'
+const chip = 'rounded-full text-[13px] font-extrabold'
 
-const overline = 'text-xs font-extrabold uppercase tracking-[0.1em] text-ink-soft'
+/** A receipt: the sheet of the design's thumbnail. */
+function ReceiptIcon() {
+  return (
+    <svg aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" className="stroke-action" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="5" y="3.5" width="14" height="17" rx="2.5" />
+      <path d="M8.5 8.5h7M8.5 12h7M8.5 15.5h4" />
+    </svg>
+  )
+}
 
 /**
- * Detail of a single consultation (FR-013), built from the delivered
- * mockups: on the phone (03) the dark header, the prescription photo card,
- * the marked symptoms, the "notas previas a la consulta" (specs/012) and the medications with their dose
- * chips; with the desktop web design (13, with the sidebar when there is an account) the header row with
- * "Nueva consulta", medications, symptoms and notes on the left, the photo and the active treatment on the right.
+ * «Datos de la consulta» (design C): folded on the phone with its summary («Foto · 3 síntomas · notas»), open on the web, and open
+ * from the start for a «solo registro» consultation. The photo opens in the viewer inside the app.
+ */
+function ConsultationData({
+  consultation,
+  desktop,
+  onPhoto,
+}: {
+  consultation: ConsultationDetail
+  desktop: boolean
+  onPhoto: () => void
+}) {
+  const [open, setOpen] = useState(desktop || consultation.recordOnly === true)
+  const hasPhoto = consultation.photoBase64 !== ''
+  const hasNotes = consultation.notes.trim() !== ''
+  return (
+    <section aria-label={DETAIL.data} className={`${card} overflow-hidden`}>
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        className={`flex w-full cursor-pointer items-center gap-3 text-left ${desktop ? 'min-h-14 px-[18px] py-2.5' : 'min-h-[60px] px-4 py-2.5'}`}
+      >
+        <span className="flex flex-1 flex-col gap-0.5">
+          <span className={`font-extrabold text-ink ${desktop ? 'text-[16px]' : 'text-[17px]'}`}>{DETAIL.data}</span>
+          {!desktop && <span className="text-[14px] text-body">{dataSummary(hasPhoto, consultation.symptoms.length, hasNotes)}</span>}
+        </span>
+        <span aria-hidden="true" className={`text-[20px] font-extrabold text-action transition-transform ${open ? 'rotate-90' : ''}`}>
+          ›
+        </span>
+      </button>
+      {open && (
+        <div className={`flex flex-col gap-4 border-t border-hint-edge pt-1 pb-[18px] ${desktop ? 'px-[18px]' : 'px-4'}`}>
+          {hasPhoto ? (
+            <div className="flex items-start gap-3.5 pt-3">
+              <button
+                type="button"
+                onClick={onPhoto}
+                aria-label={DETAIL.seeReceipt}
+                className={`flex shrink-0 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-hint-border bg-hint ${desktop ? 'h-[98px] w-[76px]' : 'h-[108px] w-[84px]'}`}
+              >
+                <ReceiptIcon />
+                <span className="text-[11px] font-extrabold text-action">{DETAIL.receipt}</span>
+              </button>
+              <span className="flex flex-1 flex-col gap-1">
+                <button type="button" onClick={onPhoto} className="inline-flex min-h-11 cursor-pointer items-center self-start text-[15px] font-extrabold text-action hover:underline">
+                  {DETAIL.seeReceipt}
+                </button>
+                <span className="text-[13px] leading-normal text-body">{DETAIL.photoNote}</span>
+              </span>
+            </div>
+          ) : (
+            <p className="pt-3 text-[15px] text-muted">{DETAIL.noPhoto}</p>
+          )}
+          {consultation.symptoms.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <h3 className="text-[13px] font-bold text-muted">{DETAIL.symptoms}</h3>
+              <SymptomChips symptoms={consultation.symptoms} />
+            </div>
+          )}
+          {hasNotes && (
+            <div className="flex flex-col gap-1.5">
+              <h3 className="text-[13px] font-bold text-muted">{DETAIL.notes}</h3>
+              <p className="text-[15px] leading-[1.55] whitespace-pre-line text-ink">{consultation.notes}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
+
+/**
+ * Detail of a single consultation (specs/056, design «Detalle de la consulta PediTrack.dc.html»; deviations in
+ * `specs/056-rediseno-detalles/referencia/desviaciones.md`). The treatment first, on both designs: the common header (the date,
+ * the doctor, «Editada el … por Ana», «Solo registro», «Editar consulta» with outline), «Tratamiento» with its summary and the
+ * chips of the chosen day, the calendar (a week on the phone), «Tomas de …» and a card per medication; then the next appointment
+ * and «Datos de la consulta». The web puts the appointment, the data and «Cómo leer el calendario» in a right column and has
+ * «Nueva consulta», its only solid button; the phone has none (the frequent action is marking).
  */
 export function ConsultationDetailPage() {
   // specs/033, part 2: «Nueva consulta» saved the consultation but not its next appointment.
@@ -44,6 +129,7 @@ export function ConsultationDetailPage() {
   // when the route changes to another consultation); until then, the calendar's own first day (today when it is inside).
   const [picked, setPicked] = useState<{ consultationId: string; day: string } | null>(null)
   const { isDesktop } = useSidebarSession()
+  const variant = isDesktop ? 'desktop' : 'phone'
 
   const { getToken } = useAuth()
   const query = useQuery({
@@ -55,15 +141,12 @@ export function ConsultationDetailPage() {
     refetchInterval: DOSE_REFETCH_MS,
   })
   const childId = query.data?.childId
-
-  // The back link names the child, and the desktop "Tratamiento activo" card
-  // comes from the overview — both share the same account query as the
-  // sidebar (`useCurrentAccount`, `GET /accounts/me`).
   const accountQuery = useCurrentAccount()
   const child = accountQuery.data?.children.find((c) => c.id === childId)
-  // Specs/032: the plan is the child's family's, and only who can do everything adds consultations or ends treatments.
+  // Specs/032: the plan is the child's family's, and only who can do everything edits, adds consultations or ends treatments.
   const access = useChildAccess(accountQuery.data, childId)
   const today = useLocalDay()
+  // Only the web's «Nueva consulta» needs it (specs/030: the free plan with a treatment running gets the plan notice).
   const overviewQuery = useQuery({
     queryKey: ['overview', childId, today.from.toISOString()],
     queryFn: async () => fetchChildOverview(childId!, today.from, today.to, await getToken()),
@@ -72,294 +155,163 @@ export function ConsultationDetailPage() {
     refetchInterval: DOSE_REFETCH_MS,
   })
 
-  if (query.isPending) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-canvas px-5 py-10">
-        <p className="text-base font-semibold text-action">Cargando…</p>
-      </main>
-    )
-  }
+  const childPath = childId ? `/children/${childId}` : '/home'
+  const back = { label: child ? `← ${child.firstName}` : '← Volver', to: childPath }
+  const shell = (content: ReactNode) => (
+    <AppShell activeChildId={childId}>
+      {isDesktop ? (
+        <main className="min-w-0 bg-canvas px-6 pt-7 pb-14 leading-[normal] lg:px-12">
+          <div className="mx-auto flex max-w-[904px] flex-col gap-6">{content}</div>
+        </main>
+      ) : (
+        <main className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas pb-10 leading-[normal]">{content}</main>
+      )}
+    </AppShell>
+  )
 
+  if (query.isPending) return shell(<PageHeader variant={variant} back={back} state="loading" />)
   if (query.isError) {
-    const notFound =
-      query.error instanceof ConsultationApiError && query.error.kind === 'consultation_not_found'
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-canvas px-5 py-10">
-        <div className="w-full max-w-md rounded-3xl bg-surface p-8 text-center shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
-          <p className="text-lg font-bold tracking-tight text-ink">
-            {notFound ? 'No se encontró esta consulta.' : 'Ocurrió un error al cargar la consulta.'}
-          </p>
-        </div>
-      </main>
-    )
+    const notFound = query.error instanceof ConsultationApiError && query.error.kind === 'consultation_not_found'
+    if (notFound) return shell(<PageHeader variant={variant} back={back} title={DETAIL.notFound} />)
+    return shell(<PageHeader variant={variant} back={back} state="error" errorWhat={DETAIL.loadFailed} onRetry={() => void query.refetch()} />)
   }
 
   const consultation = query.data!
-  // A consultation saved after the account reached its photo limit (specs/043) has none.
   const hasPhoto = consultation.photoBase64 !== ''
   const photoSrc = `data:${sniffImageMimeType(consultation.photoBase64)};base64,${consultation.photoBase64}`
-  const childPath = `/children/${consultation.childId}`
-  const backLabel = child ? `← ${child.firstName} ${child.lastName}` : '← Volver al reporte de consultas'
-  const date = formatDateLong(consultation.consultDate)
   const treatment = overviewQuery.data?.activeTreatment
-  const hasSymptoms = consultation.symptoms.length > 0
-  // Notes made only of spaces or line breaks count as none, as in the list card.
-  const hasNotes = consultation.notes.trim() !== ''
-  // specs/051: who can do everything edits the consultation; the last edit is said under its title.
-  const editPath = `/consultations/${consultation.id}/editar`
   const edited = consultation.edited ? editedLine(consultation.edited) : null
+  const recordOnly = consultation.recordOnly
 
-  const photoImage = (className: string) => (
-    <button
-      type="button"
-      onClick={() => setViewerOpen(true)}
-      aria-label="Abrir la foto de la receta en tamaño completo"
-      className={`block cursor-zoom-in overflow-hidden border-[1.5px] border-slate-300 bg-slate-200 ${className}`}
-    >
-      <img src={photoSrc} alt="Foto de la receta médica" className="h-full w-full object-cover" />
-    </button>
-  )
-  const seeFull = (className: string) => (
-    <button
-      type="button"
-      onClick={() => setViewerOpen(true)}
-      className={`min-h-11 cursor-pointer text-[13px] font-bold text-action ${className}`}
-    >
-      Ver completa
-    </button>
-  )
-  // specs/019 and 023: one calendar for the whole consultation, before the medications; the day it chooses is the one every
-  // medication card shows. `todayKey` is the parent's local day.
+  // specs/019 and 023: one calendar for the whole consultation; the day it chooses is the one every medication card shows.
   const todayKey = dayKey(today.from)
   const meds = numbered(consultation.medications)
-  const selectedDay = (picked?.consultationId === consultation.id ? picked.day : null) ??
+  const selectedDay =
+    (picked?.consultationId === consultation.id ? picked.day : null) ??
     initialDay(meds, todayKey) ??
     // No calendar day (every dose canceled): the cards still show the first day with doses.
     firstDoseDay(consultation.medications)
-  const chooseDay = (day: string) => {
-    setPicked({ consultationId: consultation.id, day })
-    // On the phone the cards sit below the tall calendar: bring the first one into view, the least it takes (nothing if it is).
-    if (!isDesktop) {
-      const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
-      document.querySelector('[data-medication-card]')?.scrollIntoView?.({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' })
-    }
-  }
-  const calendar = (variant: 'phone' | 'desktop', className?: string) => (
-    <TreatmentCalendar
-      key={consultation.id}
-      meds={meds}
-      selected={selectedDay}
-      onSelect={chooseDay}
-      today={todayKey}
+  const chooseDay = (day: string) => setPicked({ consultationId: consultation.id, day })
+
+  // «En curso · termina el 4 nov» while a medication still has a dose ahead; «Terminado el 21 oct» once none has.
+  const span = treatmentSpan(meds)
+  const running = consultation.medications.some((m) => !m.endedAt && m.doses.some((d) => d.status === 'pending' || d.status === 'due'))
+  const summary = recordOnly ? DETAIL.recordOnly : span ? (running ? inProgress(shortDay(span.end)) : finished(shortDay(span.end))) : null
+  // The chips of the chosen day, across every medication (only the server's `status`; canceled ones left out).
+  const dayDoses = selectedDay ? consultation.medications.flatMap((m) => dosesOfDay(m, selectedDay)).filter((d) => d.status !== 'canceled') : []
+  const dueCount = dayDoses.filter((d) => !d.taken && d.status === 'due').length
+  const unregisteredCount = dayDoses.filter((d) => !d.taken && d.status === 'unregistered').length
+  const allMarked = dueCount === 0 && unregisteredCount === 0 && dayDoses.some((d) => d.taken)
+  const isToday = selectedDay === todayKey
+
+  const chips = !recordOnly && (
+    <>
+      {dueCount > 0 && (
+        <span className={`${chip} inline-flex items-center gap-1.5 bg-pending-soft px-[11px] py-1 text-on-pending-chip`}>
+          <span aria-hidden="true" className="h-[9px] w-[9px] rounded-full border-2 border-pending-dot" />
+          {toMarkChip(dueCount)}
+        </span>
+      )}
+      {allMarked && (
+        <span className={`${chip} bg-confirmed-soft px-[11px] py-1 text-confirmed-strong`}>{isToday ? DETAIL.allMarkedToday : DETAIL.allMarked}</span>
+      )}
+      {unregisteredCount > 0 && (
+        <span className={`${chip} border-[1.5px] border-dashed border-calendar-muted px-2.5 py-[3px] text-body`}>{unregisteredChip(unregisteredCount)}</span>
+      )}
+    </>
+  )
+  const hasCalendar = !recordOnly && span !== null
+
+  const actions = access.canAdd && (
+    <>
+      <Link to={`/consultations/${consultation.id}/editar`} className={`${pageHeaderButton('edit', variant)} px-[18px]`}>
+        {EDIT_TEXT.open}
+      </Link>
+      {isDesktop && (
+        <NewConsultationEntry
+          to={`${childPath}/consultations/new`}
+          blocked={access.isFree && treatment !== undefined && treatment !== null}
+          className="min-h-[52px] cursor-pointer rounded-2xl bg-confirmed px-6 text-[16px] font-extrabold text-white transition-colors hover:bg-emerald-800"
+        >
+          {DETAIL.newConsultation}
+        </NewConsultationEntry>
+      )}
+    </>
+  )
+  const header = (
+    <PageHeader
       variant={variant}
-      className={className}
+      back={back}
+      eyebrow={formatDateShort(consultation.consultDate)}
+      title={consultation.doctorName}
+      subtitle={edited ?? undefined}
+      chip={recordOnly ? { label: 'Solo registro', tone: 'line' } : undefined}
+      actions={actions || undefined}
+      readOnly={access.readOnly}
     />
   )
-  const medications = consultation.medications.map((med) => (
-    <MedicationCard
-      key={med.id}
-      consultationId={consultation.id}
-      medication={med}
-      variant={isDesktop ? 'desktop' : 'phone'}
-      day={selectedDay}
-      today={todayKey}
-      canManage={access.canAdd}
-    />
-  ))
 
-  // ---- Web (mock 13).
-  if (isDesktop) {
-    return (
-      <AppShell activeChildId={consultation.childId}>
-        <main className="min-w-0 bg-canvas px-6 py-8 lg:px-12 lg:py-11">
-          <div className="mx-auto flex max-w-4xl flex-col gap-8">
-            <div className="flex flex-wrap items-end justify-between gap-5">
-              <div>
-                <Link
-                  to={childPath}
-                  className="-my-3 inline-flex min-h-11 items-center text-sm font-bold text-action"
-                >
-                  {backLabel}
-                </Link>
-                <p className="mt-3 flex flex-wrap items-center gap-2 text-sm font-bold text-action">
-                  {date}
-                  {consultation.recordOnly && <RecordOnlyBadge />}
-                </p>
-                <h1 className="mt-1 text-4xl font-black tracking-tight text-ink">{consultation.doctorName}</h1>
-                {edited && <p className="mt-2 text-sm font-semibold text-slate-600">{edited}</p>}
-              </div>
-              {access.canAdd && (
-                <div className="flex flex-wrap items-center gap-3">
-                <Link
-                  to={editPath}
-                  className="inline-flex min-h-11 items-center rounded-2xl border-2 border-action px-6 py-3 text-[15px] font-extrabold text-action transition-colors hover:bg-hint"
-                >
-                  {EDIT_TEXT.open}
-                </Link>
-                <NewConsultationEntry
-                  to={`${childPath}/consultations/new`}
-                  // specs/030: the free plan with a treatment still running gets the plan pop-up, not a form it can't save.
-                  blocked={access.isFree && treatment !== undefined && treatment !== null}
-                  className="min-h-11 cursor-pointer rounded-2xl bg-confirmed px-6 py-3.5 text-[15px] font-extrabold text-white transition-colors hover:bg-emerald-800"
-                >
-                  Nueva consulta
-                </NewConsultationEntry>
-                </div>
-              )}
-            </div>
-
-            {appointmentFailed && (
-              <Notice tone="info">La consulta se guardó, pero no se pudo guardar la próxima cita. Agrégala desde aquí.</Notice>
-            )}
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] lg:items-start">
-              <div className="flex min-w-0 flex-col gap-4">
-                {calendar('desktop')}
-                <h2 className={overline}>Medicamentos</h2>
-                {medications}
-                {(hasSymptoms || hasNotes) && (
-                  <div className="flex min-w-0 flex-col gap-5 rounded-3xl bg-surface p-6 shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
-                    {hasSymptoms && (
-                      <div>
-                        <h2 className={overline}>Síntomas</h2>
-                        <div className="mt-3">
-                          <SymptomChips symptoms={consultation.symptoms} />
-                        </div>
-                      </div>
-                    )}
-                    {hasNotes && (
-                      <div>
-                        <h2 className={overline}>Notas previas a la consulta</h2>
-                        <p className="mt-3 text-base leading-relaxed whitespace-pre-line text-body">{consultation.notes}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <aside className="flex min-w-0 flex-col gap-4">
-                <ConsultationAppointmentSection consultationId={consultation.id} childId={consultation.childId} />
-                <div className="min-w-0 rounded-3xl bg-surface p-6 shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
-                  <h2 className={overline}>Foto de la receta</h2>
-                  {hasPhoto ? (
-                    <>
-                      {photoImage('mt-4 h-[200px] w-full rounded-2xl')}
-                      <p className="mt-4 text-[13px] leading-relaxed text-slate-500">
-                        El texto se leyó en tu equipo; la foto se guarda solo en tu cuenta.
-                      </p>
-                      {seeFull('-mb-[11px] block w-fit')}
-                    </>
-                  ) : (
-                    <p className="mt-4 text-[13px] leading-relaxed text-slate-500">{NO_PHOTO_TEXT}</p>
-                  )}
-                </div>
-
-                {/* A record-only consultation has no treatment to show (specs/024). */}
-                {!consultation.recordOnly && (
-                  <div className="min-w-0 rounded-3xl bg-ink p-6">
-                    <p className="text-xs font-extrabold uppercase tracking-[0.1em] text-bright-soft">
-                      Tratamiento activo
-                    </p>
-                    <p className="mt-2.5 text-xl font-black tracking-tight text-white">
-                      {treatment ? treatment.medicationName : 'Ninguno'}
-                    </p>
-                    <p className="mt-1 text-sm font-semibold text-hint-border">
-                      {treatment ? `termina el ${formatDayMonth(treatment.endsAt)}` : 'sin tomas pendientes'}
-                    </p>
-                  </div>
-                )}
-
-                {/* specs/022: the key of the treatment calendar, only in the web design (as the mock). */}
-                {consultation.medications.some((m) => m.doses.length > 0) && <CalendarLegendCard />}
-              </aside>
-            </div>
-          </div>
-        </main>
-        {viewerOpen && <PhotoViewer src={photoSrc} onClose={() => setViewerOpen(false)} />}
-      </AppShell>
-    )
-  }
-
-  // ---- Phone (mock 03).
-  return (
-    <AppShell activeChildId={consultation.childId}>
-      <main className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas pb-10">
-        <header className="bg-ink px-6 pt-6 pb-7">
-          <Link
-            to={childPath}
-            className="-my-3 inline-flex min-h-11 items-center text-sm font-bold text-bright-soft hover:text-white"
-          >
-            {backLabel}
-          </Link>
-          <p className="mt-5 flex flex-wrap items-center gap-2 text-sm font-bold text-bright">
-            {date}
-            {consultation.recordOnly && <RecordOnlyBadge />}
-          </p>
-          <h1 className="mt-1.5 text-2xl font-black tracking-tight text-white">{consultation.doctorName}</h1>
-          {edited && <p className="mt-1.5 text-[13px] font-semibold text-hint-border">{edited}</p>}
-          {access.canAdd && (
-            <Link
-              to={editPath}
-              className="mt-4 inline-flex min-h-11 items-center rounded-2xl border-2 border-bright px-5 py-2.5 text-[15px] font-extrabold text-bright transition-colors hover:bg-white/10"
-            >
-              {EDIT_TEXT.open}
-            </Link>
-          )}
-        </header>
-
-        <section className="px-6 pt-6">
-          <div className="flex items-center gap-4 rounded-3xl bg-surface p-4 shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
-            {hasPhoto ? (
-              <>
-                {photoImage('h-[78px] w-16 shrink-0 rounded-xl')}
-                <div>
-                  <p className="text-[15px] font-extrabold text-ink">Foto de la receta</p>
-                  <p className="mt-1 text-[13px] text-slate-500">Leída en tu equipo</p>
-                  {seeFull('-mt-1.5 -mb-3 inline-block')}
-                </div>
-              </>
-            ) : (
-              <div>
-                <p className="text-[15px] font-extrabold text-ink">Foto de la receta</p>
-                <p className="mt-1 text-[13px] text-slate-500">{NO_PHOTO_TEXT}</p>
-              </div>
-            )}
-          </div>
-        </section>
-
-        {appointmentFailed && (
-          <div className="px-6 pt-6">
-            <Notice tone="info">La consulta se guardó, pero no se pudo guardar la próxima cita. Agrégala desde aquí.</Notice>
-          </div>
-        )}
-
-        <div className="px-6 pt-7">
-          <ConsultationAppointmentSection consultationId={consultation.id} childId={consultation.childId} />
+  const treatmentSection = (
+    <section aria-label={DETAIL.treatment} className={`flex min-w-0 flex-col ${isDesktop ? 'gap-3.5' : 'gap-3'}`}>
+      <div className={isDesktop ? 'flex flex-wrap items-center gap-x-3 gap-y-2' : 'flex flex-col gap-1.5'}>
+        <h2 className={`font-extrabold text-ink ${isDesktop ? 'text-[21px]' : 'text-[20px]'}`}>{DETAIL.treatment}</h2>
+        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5">
+          {summary && <span className={`font-bold text-ink ${isDesktop ? 'text-[16px]' : 'text-[15px]'}`}>{summary}</span>}
+          {chips}
         </div>
+      </div>
+      {hasCalendar && <TreatmentCalendar key={consultation.id} meds={meds} selected={selectedDay} onSelect={chooseDay} today={todayKey} variant={variant} />}
+      {!recordOnly && selectedDay && (
+        <h3 className={`mt-1 font-black text-ink ${isDesktop ? 'text-[19px]' : 'text-[18px]'}`}>{dayTitle(isToday, longDay(selectedDay))}</h3>
+      )}
+      {meds.map(({ number, medication }) => (
+        <MedicationCard
+          key={medication.id}
+          consultationId={consultation.id}
+          medication={medication}
+          number={number}
+          variant={variant}
+          day={selectedDay}
+          today={todayKey}
+          recordOnly={recordOnly}
+          canManage={access.canAdd}
+        />
+      ))}
+    </section>
+  )
+  const appointment = <ConsultationAppointmentSection consultationId={consultation.id} childId={consultation.childId} />
+  const data = <ConsultationData key={consultation.id} consultation={consultation} desktop={isDesktop} onPhoto={() => setViewerOpen(true)} />
+  const failed = appointmentFailed && <Notice tone="info">{DETAIL.appointmentFailed}</Notice>
+  const viewer = viewerOpen && hasPhoto && <PhotoViewer src={photoSrc} onClose={() => setViewerOpen(false)} />
 
-        {hasSymptoms && (
-          <section className="px-6 pt-7">
-            <h2 className={overline}>Síntomas</h2>
-            <div className="mt-2.5">
-              <SymptomChips symptoms={consultation.symptoms} />
-            </div>
-          </section>
-        )}
+  if (isDesktop)
+    return shell(
+      <>
+        {header}
+        {failed}
+        <div className="grid grid-cols-[minmax(0,1fr)_300px] items-start gap-7">
+          {treatmentSection}
+          <aside className="sticky top-6 flex min-w-0 flex-col gap-4">
+            {appointment}
+            {data}
+            {/* specs/022: the key of the treatment calendar, only in the web design. */}
+            {hasCalendar && <CalendarLegendCard />}
+          </aside>
+        </div>
+        {viewer}
+      </>,
+    )
 
-        {hasNotes && (
-          <section className="px-6 pt-7">
-            <h2 className={overline}>Notas previas a la consulta</h2>
-            <p className="mt-2.5 text-base leading-relaxed whitespace-pre-line text-body">{consultation.notes}</p>
-          </section>
-        )}
-
-        {calendar('phone', 'px-6 pt-7')}
-
-        <section className="px-6 pt-7">
-          <h2 className={overline}>Medicamentos</h2>
-          <div className="mt-3.5 flex flex-col gap-3.5">{medications}</div>
-        </section>
-      </main>
-      {viewerOpen && <PhotoViewer src={photoSrc} onClose={() => setViewerOpen(false)} />}
-    </AppShell>
+  return shell(
+    <>
+      {header}
+      <div className="flex flex-col gap-5 px-5">
+        {failed}
+        {treatmentSection}
+        {appointment}
+        {data}
+      </div>
+      {viewer}
+    </>,
   )
 }

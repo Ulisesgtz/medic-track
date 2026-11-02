@@ -25,6 +25,9 @@ export function useChildDay(childId: string) {
   const data = overview.data && activities.data ? childDay(overview.data, activities.data.routines) : undefined
   return {
     day: data,
+    // The answers themselves, for the child's detail (specs/056), which lists the doses and not just their counts.
+    overview: overview.data,
+    activities: activities.data?.routines,
     isPending: overview.isPending || activities.isPending,
     isError: overview.isError || activities.isError,
     refetch: () => {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { errorClass, fieldMultiline, fieldProposed, labelClass } from '../../shared/ui/formStyles'
 import { useAuth } from '@clerk/react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Controller, useForm, useFieldArray, useWatch, type Path } from 'react-hook-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { fetchSymptoms, type Symptom } from '../../shared/catalog/api'
@@ -21,6 +21,9 @@ import {
 import { blobToBase64, shrinkPhoto } from './shrinkPhoto'
 import { Notice } from '../../shared/ui/Notice'
 import { createConsultation, updateConsultation, ConsultationApiError, type CreateConsultationPayload } from './api'
+import { PageHeader } from '../../shared/ui/PageHeader'
+import { pageHeaderButton } from '../../shared/ui/pageHeaderButton'
+import { StickyActionBar } from '../../shared/ui/StickyActionBar'
 import { EDIT_TEXT } from './editText'
 import { hasScheduleChange, toUpdatePayload, type MedicationFlags } from './editValues'
 import { ConfirmDialog } from '../family/ConfirmDialog'
@@ -459,8 +462,9 @@ export function ConsultationForm({
   // "Cambiar foto" moves to the top row, next to "← Cancelar" (phone) or the header's right end (web).
   const showChooser = !photoFile
   const gapTop = desktop ? 'mt-4' : 'mt-3.5'
-  const panelBox = desktop ? 'rounded-3xl bg-ink p-6 lg:p-7' : 'mt-5 rounded-3xl bg-ink-soft p-5'
-  const track = desktop ? 'bg-ink-soft' : 'bg-ink'
+  // specs/056: no dark band any more — on the phone too the panel is a card of its own on the page.
+  const panelBox = desktop ? 'rounded-3xl bg-ink p-6 lg:p-7' : 'rounded-3xl bg-ink p-5'
+  const track = 'bg-ink-soft'
   const ocrPanel = (
     <div className={`min-w-0 ${panelBox}`}>
       {/* Not a real <label htmlFor>: the file input is `hidden` (display:none),
@@ -528,33 +532,27 @@ export function ConsultationForm({
   )
 
   const changePhoto = (
-    <button
-      type="button"
-      onClick={() => fileInputRef.current?.click()}
-      className={
-        desktop
-          ? '-my-3 inline-flex min-h-11 cursor-pointer items-center self-start text-sm font-bold text-action'
-          : '-my-3 inline-flex min-h-11 cursor-pointer items-center text-sm font-bold text-bright-soft hover:text-white'
-      }
-    >
+    <button type="button" onClick={() => fileInputRef.current?.click()} className={pageHeaderButton('edit', desktop ? 'desktop' : 'phone')}>
       Cambiar foto
     </button>
   )
 
-  const cancelLink = (
-    <Link
-      to={cancelTo}
-      onClick={(event) => {
-        if (confirmLeave && !confirmLeave()) event.preventDefault()
+  // specs/056 (design H4): the common header of a form — «← Cancelar» (asking first when something was typed), the title,
+  // «Para Mateo» and «Cambiar foto» once a photo is chosen. Saving is never in the header.
+  const header = (
+    <PageHeader
+      variant={desktop ? 'desktop' : 'phone'}
+      back={{
+        label: '← Cancelar',
+        to: cancelTo,
+        onClick: (event) => {
+          if (confirmLeave && !confirmLeave()) event.preventDefault()
+        },
       }}
-      className={
-        desktop
-          ? '-my-3 inline-flex min-h-11 items-center text-sm font-bold text-action'
-          : '-my-3 inline-flex min-h-11 items-center text-sm font-bold text-bright-soft hover:text-white'
-      }
-    >
-      ← Cancelar
-    </Link>
+      title={edit ? EDIT_TEXT.title : 'Nueva consulta'}
+      subtitle={childLabel ? `Para ${childLabel}` : undefined}
+      actions={photoFile ? changePhoto : undefined}
+    />
   )
 
   const missing = submitCount > 0 && (Object.keys(errors).length > 0 || (photoMissing && !photoFile && !photoLimit))
@@ -725,8 +723,8 @@ export function ConsultationForm({
       ref={saveRef}
       type="submit"
       disabled={mutation.isPending}
-      className={`min-h-11 cursor-pointer rounded-2xl bg-confirmed text-base font-extrabold text-white transition-colors hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 ${
-        desktop ? 'px-8 py-3.5' : 'py-4'
+      className={`min-h-[52px] cursor-pointer rounded-2xl bg-confirmed text-[17px] font-extrabold text-white transition-colors hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 ${
+        desktop ? 'px-8' : ''
       }`}
     >
       {mutation.isPending ? 'Guardando…' : edit ? EDIT_TEXT.save : 'Guardar consulta'}
@@ -772,14 +770,7 @@ export function ConsultationForm({
       <div className="mx-auto flex max-w-4xl flex-col gap-7">
         {planLimitModal}
         {scheduleDialog}
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            {cancelLink}
-            <h1 className="mt-3 text-4xl font-black tracking-tight text-ink">{edit ? EDIT_TEXT.title : 'Nueva consulta'}</h1>
-            {childLabel && <p className="mt-2 text-base text-slate-600">Para {childLabel}</p>}
-          </div>
-          {photoFile && changePhoto}
-        </div>
+        {header}
         {ocrPanel}
         <form onSubmit={onSubmit} noValidate className="flex min-w-0 flex-col gap-5">
           {ocrGroup}
@@ -789,7 +780,7 @@ export function ConsultationForm({
           <div className="flex flex-wrap items-center gap-4">{addButton}</div>
           {!edit && appointmentSection}
           {photoLimitNotice}
-          <div className="flex flex-wrap items-center justify-end gap-4">{saveButton}</div>
+          <StickyActionBar variant="desktop">{saveButton}</StickyActionBar>
           {status}
         </form>
       </div>
@@ -800,15 +791,9 @@ export function ConsultationForm({
     <>
       {planLimitModal}
       {scheduleDialog}
-      <header className="bg-ink px-6 pt-6 pb-7">
-        <div className="flex min-h-6 items-center justify-between">
-          {cancelLink}
-          {photoFile && changePhoto}
-        </div>
-        <h1 className="mt-5 text-2xl font-black tracking-tight text-white">{edit ? EDIT_TEXT.title : 'Nueva consulta'}</h1>
+      {header}
+      <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5 px-5 pt-1 leading-[normal]">
         {ocrPanel}
-      </header>
-      <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5 px-6 pt-6">
         {ocrGroup}
         {recordOnlyField}
         {symptomsSection}
@@ -816,8 +801,8 @@ export function ConsultationForm({
         {addButton}
         {!edit && appointmentSection}
         {photoLimitNotice}
-        {saveButton}
         {status}
+        <StickyActionBar variant="phone">{saveButton}</StickyActionBar>
       </form>
     </>
   )

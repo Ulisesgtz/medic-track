@@ -21,7 +21,7 @@ function renderAt(path: string) {
           <Route path="/actividades/:routineId" element={<RoutineDetailPage />} />
           <Route path="/suplementos/:routineId/editar" element={<RoutineFormPage />} />
           <Route path="/mis-suplementos/nueva" element={<RoutineFormPage kind="supplement" personal />} />
-          <Route path="/mis-suplementos" element={<div>MIS SUPLEMENTOS</div>} />
+          <Route path="/mi-dia" element={<div>MI DÍA</div>} />
           <Route path="/planes" element={<div>PLANES</div>} />
         </Routes>
       </MemoryRouter>
@@ -73,8 +73,8 @@ describe('RoutineDetailPage — a personal supplement', () => {
     api(mine())
     renderAt('/suplementos/r1')
     expect(await screen.findByRole('heading', { name: 'Omega 3', level: 1 })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '← Mis suplementos' })).toHaveAttribute('href', '/mis-suplementos')
-    expect(screen.getByText('Mis suplementos', { selector: 'p' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '← Mi día' })).toHaveAttribute('href', '/mi-dia#suplementos')
+    expect(within(screen.getByRole('main')).getByText('Mis suplementos', { selector: 'span' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Tus avisos' })).toBeInTheDocument()
     expect(screen.getByText('Se activan en cada dispositivo por separado.')).toBeInTheDocument()
     expect(screen.getByRole('switch', { name: 'Tus avisos de este suplemento' })).toHaveAttribute('aria-checked', 'true')
@@ -138,8 +138,8 @@ describe('RoutineDetailPage — a personal activity', () => {
     api(activity({ id: 'a1', childId: null }))
     renderAt('/actividades/a1')
     expect(await screen.findByRole('heading', { name: 'Tomar agua', level: 1 })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '← Mis actividades' })).toHaveAttribute('href', '/mis-actividades')
-    expect(screen.getByText('Mis actividades', { selector: 'p' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '← Mi día' })).toHaveAttribute('href', '/mi-dia#actividades')
+    expect(screen.getByText('Mis actividades', { selector: 'span' })).toBeInTheDocument()
     expect(screen.getByRole('switch', { name: 'Tus avisos de esta actividad' })).toBeInTheDocument()
     expect(screen.getByText('A cada hora programada, en este dispositivo.')).toBeInTheDocument()
     expect(screen.getByText('Se activan en cada dispositivo por separado.')).toBeInTheDocument()
@@ -175,7 +175,7 @@ describe('RoutineFormPage — a personal supplement', () => {
     expect(await screen.findByRole('heading', { name: 'Agregar suplemento' })).toBeInTheDocument()
     expect(screen.getByText('Es un suplemento personal: solo tú lo ves y solo a ti te llegan sus avisos.')).toBeInTheDocument()
     expect(screen.getByText('Solo la ves tú.')).toBeInTheDocument()
-    expect(screen.getByText('Mis suplementos', { selector: 'p' })).toBeInTheDocument()
+    expect(screen.getByText('Mis suplementos', { selector: 'span' })).toBeInTheDocument()
     await user.type(screen.getByLabelText('Nombre'), 'Omega 3')
     await pickTime(user, 'Hora', '08:00')
     await user.click(screen.getByRole('button', { name: 'Guardar suplemento' }))
@@ -203,7 +203,7 @@ describe('RoutineFormPage — a personal supplement', () => {
     const user = setup()
     expect(await screen.findByRole('heading', { name: 'Editar suplemento' })).toBeInTheDocument()
     expect(await screen.findByRole('note')).toHaveTextContent('Es un suplemento personal: solo tú lo ves y solo a ti te llegan sus avisos. Los cambios cuentan desde la siguiente toma.')
-    expect(screen.getByRole('link', { name: '← Omega 3' })).toHaveAttribute('href', '/suplementos/r1')
+    expect(screen.getByRole('link', { name: '← Cancelar' })).toHaveAttribute('href', '/suplementos/r1')
     await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
     await waitFor(() => expect(callsOf(mock)).toContain('PATCH /routines/r1'))
   })
@@ -212,6 +212,6 @@ describe('RoutineFormPage — a personal supplement', () => {
     api(mine())
     renderAt('/mis-suplementos/nueva')
     await setup().click(await screen.findByRole('button', { name: 'Cancelar' }))
-    expect(await screen.findByText('MIS SUPLEMENTOS')).toBeInTheDocument()
+    expect(await screen.findByText('MI DÍA')).toBeInTheDocument()
   })
 })

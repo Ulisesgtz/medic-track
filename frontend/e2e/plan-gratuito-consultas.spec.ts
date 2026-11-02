@@ -19,7 +19,7 @@ for (const design of designs) {
     test.use({ viewport: design.viewport })
 
     // The entry to "Nueva consulta" in each design: the web header button, the phone's "+ Nueva".
-    const entryName = design.isWeb ? 'Nueva consulta' : '+ Nueva'
+    const entryName = 'Nueva consulta'
     const main = (page: import('@playwright/test').Page) => page.getByRole('main')
 
     test('con un tratamiento activo «Nueva consulta» abre el aviso del plan, sin formulario; al finalizarlo se puede registrar la siguiente', async ({ page }) => {

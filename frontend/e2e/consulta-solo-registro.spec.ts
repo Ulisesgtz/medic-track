@@ -53,9 +53,9 @@ for (const design of designs) {
 
       // The detail: the tag, the medication as information, and nothing to mark.
       await expect(page).toHaveURL(/\/consultations\/(?!new)/)
-      await expect(page.getByText('Solo registro')).toBeVisible()
+      await expect(page.getByText('Solo registro', { exact: true })).toBeVisible()
       await expect(page.getByRole('heading', { name: 'Amoxicilina' })).toBeVisible()
-      await expect(page.getByText('Cada 8 horas · 7 días', { exact: true })).toBeVisible()
+      await expect(page.getByText('c/8 h · 7 días', { exact: true })).toBeVisible()
       await expect(page.getByRole('region', { name: 'Calendario del tratamiento' })).toHaveCount(0)
       await expect(page.getByRole('button', { name: /^Toma de / })).toHaveCount(0)
       await expect(page.getByRole('button', { name: 'Finalizar tratamiento' })).toHaveCount(0)

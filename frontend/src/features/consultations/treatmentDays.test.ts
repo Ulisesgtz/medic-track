@@ -1,6 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import {
   dayKey,
+  shiftDay,
+  shortDay,
+  weekDays,
+  weekStart,
   dosesOfDay,
   firstDoseDay,
   MAX_EXTENSION_DOSES,
@@ -285,5 +289,18 @@ describe('dosesOfDay (specs/023)', () => {
 
   it('is empty on a day the medication has no doses', () => {
     expect(dosesOfDay(med('A', [['2026-09-30', '08:00']]), '2026-12-25')).toEqual([])
+  })
+})
+
+describe('the week of the phone calendar (specs/056)', () => {
+  it('starts on Monday, steps by days across months and names the days short', () => {
+    expect(weekStart('2026-10-01')).toBe('2026-09-28')
+    expect(weekStart('2026-09-28')).toBe('2026-09-28')
+    expect(weekStart('2026-10-04')).toBe('2026-09-28')
+    expect(shiftDay('2026-09-28', 6)).toBe('2026-10-04')
+    expect(shiftDay('2026-10-01', -7)).toBe('2026-09-24')
+    expect(weekDays('2026-09-28').map((d) => d.day)).toEqual([28, 29, 30, 1, 2, 3, 4])
+    expect(weekDays('2026-09-28').every((d) => d.inMonth)).toBe(true)
+    expect(shortDay('2026-10-04')).toBe('4 oct')
   })
 })

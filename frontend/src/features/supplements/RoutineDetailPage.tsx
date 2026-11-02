@@ -6,6 +6,7 @@ import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { dayKey } from '../consultations/treatmentDays'
 import { useChildAccess } from '../family/useChildAccess'
 import { useSidebarSession } from '../home/useSidebarSession'
+import { pageHeaderButton } from '../../shared/ui/pageHeaderButton'
 import { SupplementApiError } from './api'
 import { DayProgress } from './DayProgress'
 import { FinishRoutineDialog } from './FinishRoutineDialog'
@@ -13,9 +14,9 @@ import { useFinishRoutine, usePauseRoutine, useResumeRoutine, useRoutine, useRou
 import { MyRemindersToggle } from './MyRemindersToggle'
 import { RealizadoButton } from './RealizadoButton'
 import { RoutineDoseChip } from './RoutineDoseChip'
+import { MY_DAY } from './myDayText'
 import { RoutinePageFrame } from './RoutineFormPage'
-import { RoutineStatusChip } from './RoutineStatusChip'
-import { dayCount, detailRows, endedNote, fixedLast, fixedNext, isFixedActivity, lastMarked, lastMarkedDose, nextUnmarked, noTodayText, pausedNote, todayLabel } from './scheduleText'
+import { activityRule, dayCount, detailRows, endedNote, fixedLast, fixedNext, isFixedActivity, lastMarked, lastMarkedDose, nextUnmarked, noTodayText, pausedNote, routineStatusLabel, supplementPeriodText, todayLabel } from './scheduleText'
 import type { Routine } from './types'
 
 const card = 'rounded-[22px] bg-surface shadow-[0_8px_20px_rgba(4,37,43,0.07)]'
@@ -192,22 +193,25 @@ export function RoutineDetailPage() {
   const activity = kind === 'activity'
   const noun = activity ? 'Actividad' : 'Suplemento'
   const base = activity ? '/actividades' : '/suplementos'
-  const personalHome = activity ? '/mis-actividades' : '/mis-suplementos'
+  const personalHome = activity ? '/mi-dia#actividades' : '/mi-dia#suplementos'
   const backTo = personal ? personalHome : childId ? `/children/${childId}` : '/home'
-  const frameFor = (title: string, content: ReactNode) => (
+  // specs/056: the common header H2 — «Suplemento de Mateo», the routine's name, its schedule, its status as a neutral chip and
+  // «Editar» with an outline.
+  const frameFor = (title: string, content: ReactNode, header: Pick<Parameters<typeof RoutinePageFrame>[0], 'subtitle' | 'chip' | 'actions' | 'state'> = {}) => (
     <RoutinePageFrame
       isDesktop={isDesktop}
       childId={childId}
-      backLabel={personal ? (activity ? '← Mis actividades' : '← Mis suplementos') : child ? `← ${child.firstName}` : '← Inicio'}
+      backLabel={personal ? MY_DAY.back : child ? `← ${child.firstName}` : '← Inicio'}
       backTo={backTo}
-      eyebrow={personal ? (activity ? 'Mis actividades' : 'Mis suplementos') : child ? `${noun} · ${child.firstName} ${child.lastName}` : noun}
+      eyebrow={personal ? (activity ? 'Mis actividades' : 'Mis suplementos') : child ? `${noun} de ${child.firstName}` : noun}
       title={title}
+      {...header}
     >
       {content}
     </RoutinePageFrame>
   )
 
-  if (query.isPending) return frameFor(noun, <p className="text-base font-semibold text-action">Cargando…</p>)
+  if (query.isPending) return frameFor(noun, null, { state: 'loading' })
   if (query.isError || !routine) {
     const missing = query.error instanceof SupplementApiError && (query.error.kind === 'routine_not_found' || query.error.kind === 'forbidden')
     return frameFor(
@@ -265,7 +269,6 @@ export function RoutineDetailPage() {
     <div className={`${card} flex flex-col gap-3.5 p-[22px]`}>
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-extrabold tracking-[0.1em] text-action uppercase">{todayLabel(day.from)}</p>
-        <RoutineStatusChip kind={kind} status={routine.status} />
       </div>
       {activity ? (
         <ActivityToday routine={routine} canManage={canManage} own={personal} today={today} />
@@ -323,11 +326,6 @@ export function RoutineDetailPage() {
               {pause.isPending ? 'Pausando…' : 'Pausar'}
             </button>
           )}
-          {routine.canEdit && (
-            <Link to={`${base}/${routine.id}/editar`} className={outlineButton}>
-              Editar
-            </Link>
-          )}
           <button ref={finishButtonRef} type="button" onClick={() => setFinishOpen(true)} className={`flex-[1_1_100%] ${linkButton}`}>
             {finishLabel}
           </button>
@@ -366,6 +364,16 @@ export function RoutineDetailPage() {
             {dataCard}
           </>
         ),
+        {
+          subtitle: activity ? activityRule(routine) : supplementPeriodText(routine),
+          chip: { label: routineStatusLabel(kind, routine.status), tone: routine.status === 'active' ? 'hint' : 'line' },
+          actions:
+            routine.canEdit && !ended && canManage ? (
+              <Link to={`${base}/${routine.id}/editar`} className={pageHeaderButton('edit', isDesktop ? 'desktop' : 'phone')}>
+                Editar
+              </Link>
+            ) : undefined,
+        },
       )}
       {finishOpen && (
         <FinishRoutineDialog

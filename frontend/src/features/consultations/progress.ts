@@ -19,9 +19,9 @@ export function medicationProgress(doses: Dose[]): MedicationProgress {
   }
 }
 
-/** "3 / 9 tomas", "0 / 1 toma". */
+/** «3 de 9 tomas», «0 de 1 toma» (specs/056: the design's words). */
 export function progressText({ taken, total }: Pick<MedicationProgress, 'taken' | 'total'>): string {
-  return `${taken} / ${total} ${total === 1 ? 'toma' : 'tomas'}`
+  return `${taken} de ${total} ${total === 1 ? 'toma' : 'tomas'}`
 }
 
 /** " · 2 sin registrar", or nothing when there are none. */

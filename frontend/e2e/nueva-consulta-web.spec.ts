@@ -48,7 +48,7 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
 
       expect(await box(page.locator('aside').first())).toMatchObject({ x: 0, w: 280 })
       expect(await box(page.getByRole('heading', { level: 1, name: 'Nueva consulta' }))).toMatchObject({ x: titleX })
-      await expect(page.getByRole('heading', { level: 1 })).toHaveCSS('font-size', '36px')
+      await expect(page.getByRole('heading', { level: 1 })).toHaveCSS('font-size', '34px')
       const ocr = await box(page.getByText('Foto de la receta', { exact: true }).locator('..').locator('..'))
       expect(ocr).toMatchObject({ x: titleX, w: panelW })
       expect(await box(page.getByText('Nombre y dosis', { exact: true }))).toMatchObject({ x: titleX + 24, w: nameW })
@@ -178,7 +178,7 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     // specs/012: the marked symptoms as pills in catalog order, then the notes.
     const symptoms = page.getByRole('main').getByRole('list').filter({ hasText: 'Fiebre' })
     await expect(symptoms.getByRole('listitem')).toHaveText(['Fiebre', 'Tos'])
-    await expect(page.getByRole('heading', { level: 2, name: 'Notas previas a la consulta' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 3, name: 'Notas' })).toBeVisible()
     await expect(page.getByText('Comió poco desde el domingo')).toBeVisible()
 
     // And the child's list sums them up.

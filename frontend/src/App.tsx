@@ -12,7 +12,7 @@ import { AppointmentHistoryPage } from './features/appointments/AppointmentHisto
 import { FakeCheckoutPage } from './features/plans/FakeCheckoutPage'
 import { PaymentReturnPage } from './features/plans/PaymentReturnPage'
 import { PlansPage } from './features/plans/PlansPage'
-import { PersonalRoutinesPage } from './features/supplements/PersonalRoutinesPage'
+import { MyDayPage } from './features/supplements/MyDayPage'
 import { RoutineDetailPage } from './features/supplements/RoutineDetailPage'
 import { RoutineFormPage } from './features/supplements/RoutineFormPage'
 import { FamilyPage } from './features/family/FamilyPage'
@@ -135,21 +135,16 @@ function App() {
             }
           />
           <Route
-            path="/mis-suplementos"
+            path="/mi-dia"
             element={
               <RequireSession>
-                <PersonalRoutinesPage kind="supplement" />
+                <MyDayPage />
               </RequireSession>
             }
           />
-          <Route
-            path="/mis-actividades"
-            element={
-              <RequireSession>
-                <PersonalRoutinesPage kind="activity" />
-              </RequireSession>
-            }
-          />
+          {/* specs/056: «Mis suplementos» and «Mis actividades» are sections of «Mi día» now; old links and reminders still land. */}
+          <Route path="/mis-suplementos" element={<Navigate to="/mi-dia#suplementos" replace />} />
+          <Route path="/mis-actividades" element={<Navigate to="/mi-dia#actividades" replace />} />
           <Route
             path="/mis-suplementos/nueva"
             element={

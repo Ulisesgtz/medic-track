@@ -98,15 +98,15 @@ for (const design of designs) {
 
       await page.goto(`/children/${owner.childId}`)
       const main = page.getByRole('main')
-      await expect(main.getByRole('heading', { name: 'Suplementos', level: 3 })).toBeVisible()
-      await expect(main.getByRole('heading', { name: 'Actividades', level: 3 })).toBeVisible()
-      await expect(main.getByText(/MX\$499 al año/).first()).toBeVisible()
+      // specs/056: on the child's detail the notice is the compact row with the «Plan completo» mark.
+      await expect(main.getByRole('heading', { name: 'Suplementos', level: 2 })).toBeVisible()
+      await expect(main.getByRole('heading', { name: 'Actividades', level: 2 })).toBeVisible()
+      await expect(main.getByRole('button', { name: /Agregar suplementos/ })).toContainText('Plan completo')
       await expect(main.getByRole('button', { name: 'Ver el plan completo' })).toHaveCount(0)
 
-      await page.goto('/mis-suplementos')
-      await expect(page.getByRole('heading', { name: 'Tus suplementos' })).toBeVisible()
-      await page.goto('/mis-actividades')
-      await expect(page.getByRole('heading', { name: 'Tus actividades' })).toBeVisible()
+      // specs/056: «Mi día» with nothing created, on the free plan, shows the compact notice in «Hoy».
+      await page.goto('/mi-dia')
+      await expect(page.getByRole('region', { name: 'Plan completo: Suplementos y actividades' })).toBeVisible()
       await expect(page.getByText(/MX\$499 al año/).first()).toBeVisible()
 
       await page.goto('/familia')

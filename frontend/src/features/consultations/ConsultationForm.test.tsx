@@ -283,7 +283,7 @@ describe('ConsultationForm', () => {
       expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100')
     })
 
-    it("phone: once a photo is chosen the panel is the mock's (no chooser row, no file name) and Cambiar foto sits next to Cancelar", async () => {
+    it("phone: once a photo is chosen the panel is the mock's (no chooser row, no file name) and Cambiar foto is the header's action, under the title", async () => {
       const user = userEvent.setup()
       renderForm('phone')
       expect(screen.queryByRole('button', { name: 'Cambiar foto' })).not.toBeInTheDocument()
@@ -293,7 +293,7 @@ describe('ConsultationForm', () => {
       expect(screen.queryByRole('button', { name: 'Seleccionar archivo' })).not.toBeInTheDocument()
       expect(screen.queryByText('receta.jpg')).not.toBeInTheDocument()
       const change = screen.getByRole('button', { name: 'Cambiar foto' })
-      expect(change.parentElement).toContainElement(screen.getByRole('link', { name: '← Cancelar' }))
+      expect(change.closest('header')).toContainElement(screen.getByRole('link', { name: '← Cancelar' }))
     })
 
     it('phone: "Cambiar foto" opens the file picker, and a second photo is read in its place', async () => {
@@ -310,7 +310,7 @@ describe('ConsultationForm', () => {
       expect(clickSpy).toHaveBeenCalled()
     })
 
-    it("web: once a photo is chosen the panel is the mock's (no chooser row, no file name) and Cambiar foto sits at the header's right end", async () => {
+    it("web: once a photo is chosen the panel is the mock's (no chooser row, no file name) and Cambiar foto is the header's action, at the title's right", async () => {
       const user = userEvent.setup()
       renderForm('desktop')
       expect(screen.getByRole('button', { name: 'Seleccionar archivo' })).toBeInTheDocument()
@@ -322,8 +322,8 @@ describe('ConsultationForm', () => {
       expect(screen.queryByText('receta.jpg')).not.toBeInTheDocument()
       const change = screen.getByRole('button', { name: 'Cambiar foto' })
       // The header row of mock 14: the "← Cancelar / title" block on the left, "Cambiar foto" free on the right.
-      expect(change.parentElement).toContainElement(screen.getByRole('heading', { level: 1, name: 'Nueva consulta' }))
-      expect(change.parentElement).toHaveClass('justify-between')
+      expect(change.parentElement?.parentElement).toContainElement(screen.getByRole('heading', { level: 1, name: 'Nueva consulta' }))
+      expect(change.parentElement).toHaveClass('shrink-0')
     })
 
     it('web: "Cambiar foto" opens the file picker', async () => {

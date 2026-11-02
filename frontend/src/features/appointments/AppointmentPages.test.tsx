@@ -63,7 +63,7 @@ describe('AppointmentFormPage — edit', () => {
     expect(await screen.findByLabelText('Fecha de la cita')).toHaveValue('2026-10-09')
     expect(screen.getByLabelText('Hora de la cita')).toHaveTextContent('10:30')
     expect(screen.getByText('Los cambios los ve toda la familia y los avisos se vuelven a programar.')).toBeInTheDocument()
-    expect(await screen.findByText('Próxima cita · Mateo Morales')).toBeInTheDocument()
+    expect(await screen.findByText('Para Mateo')).toBeInTheDocument()
 
     const user = setup()
     const note = screen.getByLabelText('Nota', { exact: false })
@@ -169,7 +169,8 @@ describe('AppointmentFormPage — edit', () => {
     stubWeb(true)
     api()
     renderAt('/citas/ap1/editar')
-    expect(await screen.findByRole('link', { name: '← Mateo' })).toHaveAttribute('href', '/children/child-1')
+    await screen.findByLabelText('Fecha de la cita')
+    expect(screen.getByRole('link', { name: '← Cancelar' })).toHaveAttribute('href', '/children/child-1')
   })
 
   it('says it is loading', async () => {

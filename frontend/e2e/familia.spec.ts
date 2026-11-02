@@ -61,7 +61,7 @@ for (const design of designs) {
       await expect(guest.page.getByRole('main').getByRole('link', { name: 'Ver detalle de Mateo' })).toBeVisible()
       await guest.page.goto(`/children/${owner.childId}`)
       await expect(guest.page.getByText('Dra. Laura Cázares')).toBeVisible()
-      await expect(guest.page.getByRole('link', { name: design.isWeb ? 'Nueva consulta' : '+ Nueva' })).toBeVisible()
+      await expect(guest.page.getByRole('link', { name: 'Nueva consulta' })).toBeVisible()
 
       // The owner's list now has the person and no way to remove a Tutor.
       await page.reload()
@@ -136,7 +136,7 @@ for (const design of designs) {
       const guestChip = guest.page.getByRole('button', { name: 'Toma de 08:00', exact: true })
       await guestChip.click()
       await expect(guestChip).toHaveAttribute('aria-pressed', 'true')
-      await expect(guestChip).toContainText(/por Luis, \d{2}:\d{2}/)
+      await expect(guestChip).toContainText(/\d{2}:\d{2} · por Luis/)
 
       // The owner sees it marked, and by whom.
       await page.goto(`/consultations/${owner.consultationId}`)
@@ -207,7 +207,7 @@ for (const design of designs) {
       const owner = await seedChild(page)
       const guest = await secondPerson(browser, design)
       await acceptViaApi(guest.context.request, guest.token, await inviteViaApi(page.context().request, owner.token, guest.email))
-      const newConsultation = guest.page.getByRole('link', { name: design.isWeb ? 'Nueva consulta' : '+ Nueva' })
+      const newConsultation = guest.page.getByRole('link', { name: 'Nueva consulta' })
 
       await guest.page.goto(`/children/${owner.childId}`)
       await expect(newConsultation).toBeVisible()

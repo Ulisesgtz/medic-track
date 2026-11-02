@@ -20,593 +20,385 @@ function renderPage(childId = 'child-1') {
   )
 }
 
+const own = { id: 'child-1', firstName: 'Mateo', lastName: 'Morales', birthDate: '2021-03-14', height: null, weight: null }
 const account = {
-  id: 'a1', firstName: 'Ana', lastName: 'Morales', email: 'ana@example.com',
-  countryCode: null, stateCode: null, plan: 'free' as string,
-  children: [{ id: 'child-1', firstName: 'Mateo', lastName: 'Morales', birthDate: '2021-03-14', height: null, weight: null }],
+  id: 'a1',
+  firstName: 'Ana',
+  lastName: 'Morales',
+  email: 'ana@example.com',
+  countryCode: null,
+  stateCode: null,
+  plan: 'paid' as string,
+  children: [own] as Record<string, unknown>[],
 }
 
 const consultations = [
-  { id: 'c2', doctorName: 'Dra. Laura Cázares', consultDate: '2026-09-12', notes: 'Fiebre y tos', symptomNames: [], medicationCount: 2 },
-  { id: 'c0', doctorName: 'Dr. Iván Robles', consultDate: '2024-08-02', notes: 'Control de peso', symptomNames: [], medicationCount: 0 },
+  { id: 'c2', doctorName: 'Dra. Laura Cázares', consultDate: '2026-09-12', notes: '', symptomNames: ['Fiebre', 'Tos'], medicationCount: 2 },
+  { id: 'c0', doctorName: 'Dr. Iván Robles', consultDate: '2024-08-02', notes: 'Control de peso', symptomNames: [], medicationCount: 0, recordOnly: true },
 ]
 
-const dose = (
-  id: string,
-  hour: number,
-  name: string,
-  taken: boolean,
-  consultationId = 'c2',
-  status: DoseStatus = taken ? 'taken' : 'due',
-) => ({
-  id, consultationId, medicationName: name, scheduledAt: new Date(2026, 8, 16, hour).toISOString(), taken, status,
+const dose = (id: string, hour: number, name: string, status: DoseStatus, extra: Record<string, unknown> = {}) => ({
+  id,
+  consultationId: 'c2',
+  medicationName: name,
+  scheduledAt: new Date(2026, 8, 16, hour).toISOString(),
+  taken: status === 'taken',
+  status,
+  ...extra,
 })
 
-const emptyOverview = { childId: 'child-1', doses: [], activeTreatment: null }
-const emptyRoutines = { routines: [], activeCount: 0, limit: 10, paidPlan: true }
+const day = {
+  childId: 'child-1',
+  doses: [
+    dose('d1', 6, 'Ibuprofeno', 'taken', { takenBy: { name: 'Ana', at: new Date(2026, 8, 16, 6, 10).toISOString(), mine: true } }),
+    dose('d2', 8, 'Amoxicilina', 'taken', { takenBy: { name: 'Rosa', at: new Date(2026, 8, 16, 8, 5).toISOString(), mine: false } }),
+    dose('d3', 8, 'Vitamina D', 'unregistered', { kind: 'supplement', routineId: 'r1', consultationId: '' }),
+    dose('d4', 11, 'Amoxicilina', 'due'),
+    dose('d5', 14, 'Amoxicilina', 'pending'),
+    dose('d6', 20, 'Amoxicilina', 'pending'),
+  ],
+  activeTreatment: { medicationName: 'Amoxicilina', endsAt: new Date(2026, 10, 4, 8).toISOString(), otherCount: 1 },
+}
+const emptyDay = { childId: 'child-1', doses: [], activeTreatment: null }
+
+const routine = (kind: 'supplement' | 'activity', name: string, doses: unknown[] = [], extra: Record<string, unknown> = {}) => ({
+  id: `${kind}-${name}`,
+  childId: 'child-1',
+  kind,
+  name,
+  note: '',
+  period: kind === 'activity' ? 'window' : 'daily',
+  times: kind === 'activity' ? [] : ['08:00'],
+  weekdays: [],
+  windowStart: kind === 'activity' ? '08:00' : null,
+  windowEnd: kind === 'activity' ? '20:00' : null,
+  intervalMinutes: kind === 'activity' ? 180 : null,
+  firstDate: '2026-09-01',
+  endDate: null,
+  status: 'active',
+  pausedAt: null,
+  endedAt: null,
+  createdBy: 'Ana',
+  createdAt: '2026-09-01T00:00:00Z',
+  myReminders: true,
+  canEdit: true,
+  progress: { marked: 0, total: 0 },
+  doses,
+  nextDose: null,
+  ...extra,
+})
+const actDose = (id: string, hour: number, taken: boolean, status: DoseStatus) => ({
+  id,
+  scheduledAt: new Date(2026, 8, 16, hour).toISOString(),
+  taken,
+  status,
+  takenBy: taken ? { name: 'Ana', at: new Date(2026, 8, 16, hour, 2).toISOString(), mine: true } : null,
+})
+
+interface Api {
+  list?: unknown[]
+  listStatus?: number
+  overview?: unknown
+  overviewOk?: boolean
+  supplements?: unknown[]
+  activities?: unknown[]
+  paidPlan?: boolean
+}
 
 /** Routes every fetch of the page by URL. */
-function stubApi({
-  list = consultations,
-  overview = emptyOverview as unknown,
-  overviewOk = true,
-  listStatus = 200,
-}: { list?: unknown[]; overview?: unknown; overviewOk?: boolean; listStatus?: number } = {}) {
+function stubApi({ list = consultations, listStatus = 200, overview = day, overviewOk = true, supplements = [], activities = [], paidPlan = true }: Api = {}) {
   const fetchMock = vi.fn().mockImplementation(async (input: string, init?: RequestInit) => {
     const url = String(input)
-    if (init?.method === 'PATCH') return { ok: true, json: async () => ({ id: 'd', scheduledAt: '', taken: true, status: 'taken' }) }
-    if (url.includes('/routines')) return { ok: true, json: async () => emptyRoutines }
-    if (url.includes('/appointments')) return { ok: true, json: async () => ({ next: null, history: [], paidPlan: true }) }
-    if (url.includes('/overview')) return { ok: overviewOk, status: overviewOk ? 200 : 500, json: async () => overview }
-    if (url.includes('/accounts/')) return { ok: true, json: async () => account }
-    if (listStatus !== 200) return { ok: false, status: listStatus, json: async () => ({ message: 'nope' }) }
-    return { ok: true, json: async () => ({ childId: 'child-1', consultations: list }) }
+    const json = (body: unknown, status = 200) => ({ ok: status < 400, status, json: async () => body })
+    if (init?.method === 'PATCH') return json({ id: 'd', scheduledAt: '', taken: true, status: 'taken' })
+    if (init?.method === 'POST' && url.includes('/done')) return json({})
+    if (url.includes('/routines')) {
+      const kind = url.includes('kind=activity') ? 'activity' : 'supplement'
+      const routines = kind === 'activity' ? activities : supplements
+      return json({ routines, activeCount: routines.length, limit: 10, paidPlan })
+    }
+    if (url.includes('/appointments')) return json({ next: null, history: [], paidPlan })
+    if (url.includes('/device-links')) return json({ links: [] })
+    if (url.includes('/family')) return json({ members: [{ id: 'm1' }, { id: 'm2' }], invitations: [] })
+    if (url.includes('/vaccinations')) return json({ vaccinations: [] })
+    if (url.includes('/vaccine-card-photos')) return json({ photos: [] })
+    if (url.includes('/overview')) return json(overview, overviewOk ? 200 : 500)
+    if (url.includes('/accounts/')) return json(account)
+    if (listStatus !== 200) return json({ message: 'nope' }, listStatus)
+    return json({ childId: 'child-1', consultations: list })
   })
   vi.stubGlobal('fetch', fetchMock)
   return fetchMock
 }
 
-function useSession() {
-  window.localStorage.setItem('peditrack.accountId', 'a1')
-}
 function useWeb() {
   vi.stubGlobal(
     'matchMedia',
     vi.fn().mockImplementation(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })),
   )
 }
+const share = (extra: Record<string, unknown>) => {
+  account.children[0] = { ...own, accountId: 'owner-1', ...extra }
+}
 
-describe('ChildDetailPage', () => {
-  beforeEach(() => {
-    vi.useFakeTimers({ toFake: ['Date'] })
-    vi.setSystemTime(new Date(2026, 8, 16, 12)) // 16 sep 2026: Mateo is 5 años 6 meses
-  })
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date(2026, 8, 16, 12)) // 16 sep 2026: Mateo is 5 años 6 meses
+})
+afterEach(() => {
+  account.plan = 'paid'
+  account.children[0] = own
+  vi.unstubAllGlobals()
+  vi.useRealTimers()
+  window.localStorage.clear()
+})
 
-  afterEach(() => {
-    vi.unstubAllGlobals()
-    vi.useRealTimers()
-    window.localStorage.clear()
-  })
-
-  it('shows "no encontrado" with a way home when the child does not exist', async () => {
+describe('ChildDetailPage — phone (design A)', () => {
+  it('says the child was not found, with a way home', async () => {
     stubApi({ listStatus: 404 })
     renderPage('missing')
-
     expect(await screen.findByText('No se encontró este hijo.')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Volver a mi home' })).toHaveAttribute('href', '/home')
+    expect(screen.getByRole('link', { name: '← Inicio' })).toHaveAttribute('href', '/home')
   })
 
-  it('shows a generic error when the consultations fail to load', async () => {
-    stubApi({ listStatus: 500 })
+  it('opens with the header and «Hoy», then the treatment, the index, the sections and «Lo demás», in that order', async () => {
+    stubApi({ supplements: [routine('supplement', 'Vitamina D')], activities: [routine('activity', 'Lavarse las manos')] })
     renderPage()
 
-    expect(await screen.findByText('Ocurrió un error al cargar sus consultas.')).toBeInTheDocument()
+    const title = await screen.findByRole('heading', { level: 1, name: 'Mateo' })
+    expect(screen.getByText(/^5 años 6 meses · nació el 14 mar 2021$/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: '← Inicio' })).toHaveAttribute('href', '/home')
+    const today = await screen.findByRole('region', { name: 'Hoy' })
+    const treatment = screen.getByRole('region', { name: 'Tratamiento activo' })
+    const index = screen.getByRole('navigation', { name: 'Secciones' })
+    const consult = screen.getByRole('region', { name: 'Consultas' })
+    const sups = screen.getByRole('region', { name: 'Suplementos' })
+    const acts = screen.getByRole('region', { name: 'Actividades' })
+    const card = screen.getByRole('region', { name: 'Cartilla de vacunación' })
+    const more = screen.getByRole('navigation', { name: 'Lo demás' })
+    const order = [title, today, treatment, index, consult, sups, acts, card, more]
+    for (let i = 1; i < order.length; i++) expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    expect(within(index).getAllByRole('link').map((a) => a.textContent)).toEqual(['Consultas', 'Suplementos', 'Actividades', 'Cartilla'])
+    expect(treatment).toHaveTextContent('Amoxicilina +1 · termina el 04 nov')
   })
 
-  describe('on the phone (mock 02)', () => {
-    it("shows the child's avatar, name, age and birth date, with a way back to their list", async () => {
-      useSession()
-      stubApi()
-      renderPage()
-
-      expect(await screen.findByRole('heading', { level: 1, name: 'Mateo Morales' })).toBeInTheDocument()
-      expect(screen.getByText('5 años 6 meses · 14 mar 2021')).toBeInTheDocument()
-      expect(screen.getByText('M')).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: '← Inicio' })).toHaveAttribute('href', '/home')
-    })
-
-    it('is a centered column of at most 430px, as the mock', async () => {
-      useSession()
-      stubApi()
-      renderPage()
-
-      await screen.findByRole('heading', { level: 1, name: 'Mateo Morales' })
-      expect(screen.getByRole('main')).toHaveClass('mx-auto', 'max-w-[430px]')
-    })
-
-    it('falls back to a generic title when the session has no linked account yet', async () => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockImplementation(async (input: string) => {
-          const url = String(input)
-          if (url.includes('/appointments')) return { ok: true, json: async () => ({ next: null, history: [], paidPlan: true }) }
-          if (url.includes('/overview')) return { ok: true, json: async () => emptyOverview }
-          if (url.includes('/accounts/')) return { ok: false, status: 404, json: async () => ({ message: 'no account' }) }
-          return { ok: true, json: async () => ({ childId: 'child-1', consultations }) }
-        }),
-      )
-      renderPage()
-
-      expect(await screen.findByRole('heading', { level: 1, name: 'Consultas médicas' })).toBeInTheDocument()
-    })
-
-    it('lists the consultations with date, doctor and "síntomas · N medicamentos", and no "Ver →"', async () => {
-      stubApi()
-      renderPage()
-
-      const card = await screen.findByRole('link', { name: /Dra. Laura Cázares/ })
-      expect(card).toHaveAttribute('href', '/consultations/c2')
-      expect(within(card).getByText('12 sep 2026')).toBeInTheDocument()
-      expect(within(card).getByText('Fiebre y tos · 2 medicamentos')).toBeInTheDocument()
-      expect(within(card).queryByText('Ver →')).not.toBeInTheDocument()
-      expect(screen.getByText('Control de peso · sin receta')).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: '+ Nueva' })).toHaveAttribute('href', '/children/child-1/consultations/new')
-    })
-
-    it('shows the empty state when there are no consultations yet (FR-002)', async () => {
-      stubApi({ list: [] })
-      renderPage()
-
-      expect(await screen.findByText(/todavía no hay consultas/i)).toBeInTheDocument()
-    })
-
-    it('shows the amber "Tomas de hoy" block: how many are unmarked and which medication', async () => {
-      stubApi({ overview: { childId: 'child-1', doses: [dose('d1', 8, 'Amoxicilina', true), dose('d2', 16, 'Amoxicilina', false), dose('d3', 21, 'Amoxicilina', false)], activeTreatment: null } })
-      renderPage()
-
-      const block = (await screen.findByText('2 sin marcar · Amoxicilina')).closest('div')!
-      expect(block).toHaveClass('bg-pending')
-      expect(within(block).getByText('Tomas de hoy')).toBeInTheDocument()
-      expect(within(block).getByRole('button', { name: 'Marcar tomas' })).toBeInTheDocument()
-    })
-
-    it('counts doses "sin registrar" apart, and "Marcar tomas" leaves them alone (specs/013)', async () => {
-      const user = userEvent.setup()
-      const fetchMock = stubApi({
-        overview: {
-          childId: 'child-1',
-          doses: [dose('d1', 0, 'Amoxicilina', false, 'c2', 'unregistered'), dose('d2', 16, 'Amoxicilina', false)],
-          activeTreatment: null,
-        },
-      })
-      renderPage()
-
-      const block = (await screen.findByText('1 sin marcar · 1 sin registrar · Amoxicilina')).closest('div')!
-      expect(block).toHaveClass('bg-pending')
-      await user.click(within(block).getByRole('button', { name: 'Marcar tomas' }))
-
-      await waitFor(() => {
-        const patches = fetchMock.mock.calls.filter(([, init]) => init?.method === 'PATCH')
-        expect(patches.map(([url]) => String(url))).toEqual([expect.stringContaining('/doses/d2')])
-      })
-    })
-
-    it('with only doses "sin registrar" left: nothing to mark, how many, and no button', async () => {
-      stubApi({
-        overview: {
-          childId: 'child-1',
-          doses: [
-            dose('d1', 0, 'Amoxicilina', false, 'c2', 'unregistered'),
-            dose('d2', 8, 'Amoxicilina', false, 'c2', 'unregistered'),
-            dose('d3', 16, 'Amoxicilina', true),
-          ],
-          activeTreatment: null,
-        },
-      })
-      renderPage()
-
-      const block = (await screen.findByText('Sin tomas pendientes')).closest('div')!
-      expect(block).toHaveClass('bg-confirmed-soft')
-      expect(within(block).getByText('2 sin registrar')).toBeInTheDocument()
-      expect(within(block).queryByRole('button', { name: 'Marcar tomas' })).not.toBeInTheDocument()
-    })
-
-    it('lists every unmarked medication in the block', async () => {
-      stubApi({ overview: { childId: 'child-1', doses: [dose('d2', 16, 'Amoxicilina', false), dose('d3', 21, 'Paracetamol', false)], activeTreatment: null } })
-      renderPage()
-
-      expect(await screen.findByText('2 sin marcar · Amoxicilina, Paracetamol')).toBeInTheDocument()
-    })
-
-    it('"Marcar tomas" marks all of today\'s unmarked doses at once', async () => {
-      const user = userEvent.setup()
-      const fetchMock = stubApi({ overview: { childId: 'child-1', doses: [dose('d1', 8, 'Amoxicilina', true), dose('d2', 16, 'Amoxicilina', false), dose('d3', 21, 'Paracetamol', false, 'c3')], activeTreatment: null } })
-      renderPage()
-
-      await user.click(await screen.findByRole('button', { name: 'Marcar tomas' }))
-
-      await waitFor(() => {
-        const patches = fetchMock.mock.calls.filter(([, init]) => init?.method === 'PATCH')
-        expect(patches.map(([url]) => String(url))).toEqual([
-          expect.stringContaining('/consultations/c2/doses/d2'),
-          expect.stringContaining('/consultations/c3/doses/d3'),
-        ])
-        for (const [, init] of patches) expect(JSON.parse(init.body)).toEqual({ taken: true })
-      })
-      await waitFor(() =>
-        expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/overview')).length).toBeGreaterThan(1),
-      )
-    })
-
-    it('turns soft green with no button once every dose is marked', async () => {
-      stubApi({ overview: { childId: 'child-1', doses: [dose('d1', 8, 'Amoxicilina', true)], activeTreatment: null } })
-      renderPage()
-
-      const summary = await screen.findByText('0 sin marcar · Amoxicilina')
-      expect(summary.closest('div')).toHaveClass('bg-confirmed-soft')
-      expect(screen.queryByRole('button', { name: 'Marcar tomas' })).not.toBeInTheDocument()
-    })
-
-    it('says "Sin tomas hoy" when nothing is scheduled today', async () => {
-      stubApi()
-      renderPage()
-
-      expect(await screen.findByText('Sin tomas hoy')).toBeInTheDocument()
-      expect(screen.queryByRole('button', { name: 'Marcar tomas' })).not.toBeInTheDocument()
-    })
-
-    it('says so, without breaking the list, when the overview fails', async () => {
-      stubApi({ overviewOk: false })
-      renderPage()
-
-      expect(await screen.findByText('No se pudieron cargar las tomas de hoy.')).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: /Dra. Laura Cázares/ })).toBeInTheDocument()
-    })
-  })
-
-  describe('on the web (board screen 6, with the sidebar)', () => {
-    beforeEach(() => {
-      useSession()
-      useWeb()
-    })
-
-    it('shows the header row: name and birth date, the age as the title, and "Nueva consulta"', async () => {
-      stubApi()
-      renderPage()
-
-      expect(await screen.findByRole('heading', { level: 1, name: '5 años 6 meses' })).toBeInTheDocument()
-      expect(screen.getByText('Mateo Morales · 14 mar 2021')).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: 'Nueva consulta' })).toHaveAttribute('href', '/children/child-1/consultations/new')
-      expect(screen.queryByRole('link', { name: '← Inicio' })).not.toBeInTheDocument()
-      expect(screen.getByRole('navigation', { name: 'Tus hijos' })).toBeInTheDocument()
-    })
-
-    it('the web summary and panel tell doses "sin registrar" apart (specs/013)', async () => {
-      useWeb()
-      useSession()
-      stubApi({ overview: {
-        childId: 'child-1',
-        doses: [dose('d1', 0, 'Amoxicilina', false, 'c2', 'unregistered'), dose('d2', 16, 'Amoxicilina', false)],
-        activeTreatment: null,
-      } })
-      const { unmount } = renderPage()
-
-      expect(await screen.findByText('sin marcar · 1 sin registrar')).toBeInTheDocument()
-      const panel = screen.getByRole('region', { name: 'Tomas de hoy' })
-      const old = within(panel).getByRole('button', { name: /Toma de 00:00/ })
-      expect(old).toHaveTextContent('Sin registrar')
-      expect(old).toHaveAccessibleDescription('Sin registrar')
-      expect(old.firstElementChild).toHaveClass('border-dashed')
-      expect(within(panel).getByRole('button', { name: /Toma de 16:00/ })).toHaveTextContent('Marcar')
-      unmount()
-
-      stubApi({ overview: { childId: 'child-1', doses: [dose('d1', 0, 'Amoxicilina', false, 'c2', 'unregistered')], activeTreatment: null } })
-      renderPage()
-      expect(await screen.findByText('nada por marcar · 1 sin registrar')).toBeInTheDocument()
-    })
-
-    it("shows today's unmarked doses, the consultation count since the first one, and the running treatment", async () => {
-      stubApi({
-        overview: {
-          childId: 'child-1',
-          doses: [dose('d1', 8, 'Amoxicilina', true), dose('d2', 16, 'Amoxicilina', false), dose('d3', 21, 'Paracetamol', false)],
-          activeTreatment: { medicationName: 'Amoxicilina', endsAt: new Date(2026, 8, 19, 8).toISOString(), otherCount: 0 },
-        },
-      })
-      renderPage()
-
-      const tomas = (await screen.findByText('Tomas de hoy', { selector: 'p' })).parentElement!
-      expect(within(tomas).getByText('2')).toBeInTheDocument()
-      expect(within(tomas).getByText('sin marcar')).toBeInTheDocument()
-      const consultas = screen.getByText('Consultas', { selector: 'p' }).parentElement!
-      expect(within(consultas).getByText('2')).toBeInTheDocument()
-      expect(within(consultas).getByText('desde 2024')).toBeInTheDocument()
-      const tratamiento = screen.getByText('Tratamiento activo').parentElement!
-      expect(within(tratamiento).getByText('Amoxicilina')).toBeInTheDocument()
-      expect(within(tratamiento).getByText('termina el 19 sep')).toBeInTheDocument()
-    })
-
-    it('lists the consultations with the "Ver →" affordance next to the "Tomas de hoy" panel', async () => {
-      stubApi({ overview: { childId: 'child-1', doses: [dose('d1', 8, 'Amoxicilina', true), dose('d2', 16, 'Amoxicilina', false)], activeTreatment: null } })
-      renderPage()
-
-      const card = await screen.findByRole('link', { name: /Dra. Laura Cázares/ })
-      expect(within(card).getByText('Ver →')).toBeInTheDocument()
-      expect(screen.getByText('Fiebre y tos · 2 medicamentos')).toBeInTheDocument()
-
-      const panel = screen.getByRole('heading', { name: 'Tomas de hoy' }).closest('section')!
-      expect(within(panel).getByText('08:00 Amoxicilina')).toBeInTheDocument()
-      // A toggle: the name is fixed and only aria-pressed carries the state.
-      expect(within(panel).getByRole('button', { name: 'Toma de 08:00 Amoxicilina' })).toHaveAttribute('aria-pressed', 'true')
-      expect(within(panel).getByRole('button', { name: 'Toma de 16:00 Amoxicilina' })).toHaveAttribute('aria-pressed', 'false')
-      expect(within(panel).getByText('Tomada')).toBeInTheDocument()
-      expect(within(panel).getByText('Marcar')).toBeInTheDocument()
-    })
-
-    it('marks a dose from the panel and reloads the overview, and unmarks one that is already taken', async () => {
-      const user = userEvent.setup()
-      const fetchMock = stubApi({ overview: { childId: 'child-1', doses: [dose('d1', 8, 'Amoxicilina', true), dose('d2', 16, 'Amoxicilina', false)], activeTreatment: null } })
-      renderPage()
-
-      await user.click(await screen.findByRole('button', { name: 'Toma de 16:00 Amoxicilina' }))
-      await user.click(screen.getByRole('button', { name: 'Toma de 08:00 Amoxicilina' }))
-
-      await waitFor(() => {
-        const patches = fetchMock.mock.calls.filter(([, init]) => init?.method === 'PATCH')
-        expect(patches).toHaveLength(2)
-        expect(patches[0][0]).toContain('/consultations/c2/doses/d2')
-        expect(JSON.parse(patches[0][1].body)).toEqual({ taken: true })
-        expect(JSON.parse(patches[1][1].body)).toEqual({ taken: false })
-      })
-      await waitFor(() =>
-        expect(fetchMock.mock.calls.filter(([url]) => String(url).includes('/overview')).length).toBeGreaterThan(1),
-      )
-    })
-
-    it("sends the parent's local day as the overview window", async () => {
-      const fetchMock = stubApi()
-      renderPage()
-
-      await screen.findByText('No hay tomas programadas para hoy.')
-      const url = new URL(String(fetchMock.mock.calls.find(([u]) => String(u).includes('/overview'))![0]))
-      const from = new Date(url.searchParams.get('from')!)
-      const to = new Date(url.searchParams.get('to')!)
-      expect(from.getHours()).toBe(0)
-      expect(to.getTime() - from.getTime()).toBeGreaterThanOrEqual(23 * 3600 * 1000)
-    })
-
-    it('says so when there are no doses today, and when every dose is already marked', async () => {
-      stubApi()
-      const first = renderPage()
-
-      expect(await screen.findByText('sin tomas hoy')).toBeInTheDocument()
-      expect(screen.getByText('Ninguno')).toBeInTheDocument()
-      expect(screen.getByText('sin tomas pendientes')).toBeInTheDocument()
-      first.unmount()
-
-      stubApi({ overview: { childId: 'child-1', doses: [dose('d1', 8, 'Amoxicilina', true)], activeTreatment: null } })
-      renderPage()
-      expect(await screen.findByText('todas marcadas')).toBeInTheDocument()
-    })
-
-    it('adds "+N" to the running treatment when more medications still have doses ahead', async () => {
-      stubApi({ overview: { childId: 'child-1', doses: [], activeTreatment: { medicationName: 'Amoxicilina', endsAt: new Date(2026, 8, 23, 8).toISOString(), otherCount: 2 } } })
-      renderPage()
-
-      expect(await screen.findByText('Amoxicilina +2')).toBeInTheDocument()
-    })
-
-    it('shows placeholders, without breaking the page, when the overview fails to load', async () => {
-      stubApi({ overviewOk: false })
-      renderPage()
-
-      expect(await screen.findByText('No se pudieron cargar las tomas de hoy.')).toBeInTheDocument()
-      expect(screen.getAllByText('no disponible')).toHaveLength(2)
-      expect(screen.getByRole('link', { name: /Dra. Laura Cázares/ })).toBeInTheDocument()
-    })
-
-    it('shows the empty state and "sin consultas" when there are no consultations yet', async () => {
-      stubApi({ list: [] })
-      renderPage()
-
-      await screen.findByText(/todavía no hay consultas/i)
-      expect(screen.getByText('sin consultas')).toBeInTheDocument()
-    })
-
-    it('falls back to a generic title when the child is not in the saved account', async () => {
-      stubApi()
-      renderPage('someone-else')
-
-      expect(await screen.findAllByText('Consultas médicas')).toHaveLength(2)
-    })
-  })
-})
-
-// specs/030: on the free plan a treatment still running means the next consultation waits; the pop-up opens right away.
-describe('ChildDetailPage, "Nueva consulta" and the free plan (specs/030)', () => {
-  const running = {
-    childId: 'child-1',
-    doses: [],
-    activeTreatment: { medicationName: 'Amoxicilina', endsAt: new Date(2026, 8, 18, 8).toISOString(), otherCount: 0 },
-  }
-
-  beforeEach(() => {
-    vi.useFakeTimers({ toFake: ['Date'] })
-    vi.setSystemTime(new Date(2026, 8, 16, 12))
-    useSession()
-  })
-  afterEach(() => {
-    account.plan = 'free'
-    vi.unstubAllGlobals()
-    vi.useRealTimers()
-    window.localStorage.clear()
-  })
-
-  it.each([
-    ['phone', '+ Nueva', () => {}],
-    ['web', 'Nueva consulta', useWeb],
-  ] as const)('on the %s it opens the plan pop-up instead of the form', async (_design, name, setup) => {
-    const user = userEvent.setup({ advanceTimers: () => {} })
-    setup()
-    stubApi({ overview: running })
+  it('lists the day by Mañana / Tarde / Noche, each dose markable here; the owner takes back somebody else’s mark', async () => {
+    const fetchMock = stubApi()
     renderPage()
 
-    const button = await screen.findByRole('button', { name })
-    expect(screen.queryByRole('link', { name })).not.toBeInTheDocument()
-    await user.click(button)
+    const today = await screen.findByRole('region', { name: 'Hoy' })
+    expect(await within(today).findByText('6 tomas hoy')).toBeInTheDocument()
+    expect(within(today).getByText('1 por marcar')).toBeInTheDocument()
+    expect(within(today).getByText('1 sin registrar')).toBeInTheDocument()
+    expect(within(today).getAllByRole('group').map((g) => g.getAttribute('aria-label'))).toEqual(['Mañana', 'Tarde', 'Noche'])
 
-    expect(await screen.findByRole('dialog', { name: 'Ya hay un tratamiento activo' })).toBeInTheDocument()
+    const mine = within(today).getByRole('button', { name: 'Marcar Ibuprofeno de las 06:00' })
+    expect(mine).toHaveAttribute('aria-pressed', 'true')
+    expect(mine).toHaveTextContent('✓ 06:10')
+    expect(mine).toBeEnabled()
+    const rosa = within(today).getByRole('button', { name: 'Marcar Amoxicilina de las 08:00' })
+    expect(rosa).toHaveTextContent('✓ por Rosa, 08:05')
+    // Who can do everything takes back anybody's mark (specs/032), as on the consultation detail.
+    expect(rosa).toBeEnabled()
+    expect(within(today).getByText('Suplemento · 08:00')).toBeInTheDocument()
+
+    await userEvent.click(within(today).getByRole('button', { name: 'Marcar Amoxicilina de las 11:00' }))
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/consultations/c2/doses/d4'), expect.objectContaining({ method: 'PATCH' })),
+    )
   })
 
-  it('stays a link when nothing is running', async () => {
-    useWeb()
+  it('counts the activities in one row and «✓ Realizado» marks the earliest unmarked one', async () => {
+    const fetchMock = stubApi({
+      overview: emptyDay,
+      activities: [routine('activity', 'Lavarse las manos', [actDose('a1', 8, true, 'taken'), actDose('a2', 11, false, 'due'), actDose('a3', 14, false, 'pending')])],
+    })
+    renderPage()
+
+    const today = await screen.findByRole('region', { name: 'Hoy' })
+    expect(await within(today).findByText('1 de 3 hechas')).toBeInTheDocument()
+    expect(within(today).getByText('Próxima: Lavarse las manos · 14:00')).toBeInTheDocument()
+    await userEvent.click(within(today).getByRole('button', { name: 'Realizado: Lavarse las manos' }))
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining('/routines/activity-Lavarse las manos/done'), expect.objectContaining({ method: 'POST' })),
+    )
+    expect(await within(today).findByText(/^✓ Lavarse las manos · \d\d:\d\d$/)).toBeInTheDocument()
+  })
+
+  it('says when the day has nothing, and «✓ Todo marcado hasta ahora» when everything that came is marked', async () => {
+    stubApi({ overview: emptyDay })
+    const { unmount } = renderPage()
+    expect(await screen.findByText('Hoy no hay tomas ni actividades')).toBeInTheDocument()
+    unmount()
+
+    stubApi({ overview: { ...emptyDay, doses: [dose('d1', 8, 'Amoxicilina', 'taken'), dose('d2', 20, 'Amoxicilina', 'pending')] } })
+    renderPage()
+    expect(await screen.findByText('✓ Todo marcado hasta ahora')).toBeInTheDocument()
+  })
+
+  it('says it couldn’t load the day, with «Reintentar», without breaking the page', async () => {
+    stubApi({ overviewOk: false })
+    renderPage()
+    expect(await screen.findByText('No pudimos cargar el día de Mateo')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+    expect(await screen.findByText(/Dra\. Laura Cázares/)).toBeInTheDocument()
+  })
+
+  it('lists the consultations compactly, with «Solo registro», «Buscar en el historial» and «Exportar a PDF»', async () => {
     stubApi()
     renderPage()
-
-    expect(await screen.findByRole('link', { name: 'Nueva consulta' })).toHaveAttribute('href', '/children/child-1/consultations/new')
+    const section = await screen.findByRole('region', { name: 'Consultas' })
+    await within(section).findByText(/Dra\. Laura Cázares/)
+    const rows = within(section).getAllByRole('link').filter((a) => a.getAttribute('href')?.startsWith('/consultations/'))
+    expect(rows[0]).toHaveAttribute('href', '/consultations/c2')
+    expect(rows[0]).toHaveTextContent('12 sep 2026 · Dra. Laura Cázares')
+    expect(rows[0]).toHaveTextContent('Fiebre, Tos · 2 medicamentos')
+    expect(rows[1]).toHaveTextContent('Solo registro')
+    expect(within(section).getByRole('link', { name: 'Buscar en el historial' })).toHaveAttribute('href', '/children/child-1/historial')
+    expect(within(section).getByRole('button', { name: /Exportar a PDF/ })).toBeInTheDocument()
   })
 
-  it('stays a link on the paid plan, even with a treatment running', async () => {
-    account.plan = 'paid'
-    useWeb()
-    stubApi({ overview: running })
+  it('explains «Nueva consulta» when there are no consultations, and has no search for an empty list', async () => {
+    stubApi({ list: [] })
     renderPage()
-
-    expect(await screen.findByRole('link', { name: 'Nueva consulta' })).toHaveAttribute('href', '/children/child-1/consultations/new')
-  })
-})
-
-// specs/031: "Buscar en el historial" is the paid plan's; the list itself is the same for every plan.
-describe('ChildDetailPage, the history entry (specs/031)', () => {
-  beforeEach(() => {
-    vi.useFakeTimers({ toFake: ['Date'] })
-    vi.setSystemTime(new Date(2026, 8, 16, 12))
-    useSession()
-  })
-  afterEach(() => {
-    account.plan = 'free'
-    vi.unstubAllGlobals()
-    vi.useRealTimers()
-    window.localStorage.clear()
-  })
-
-  it.each([
-    ['phone', () => {}],
-    ['web', useWeb],
-  ] as const)('on the %s it is a link to the history on the paid plan', async (_design, setup) => {
-    account.plan = 'paid'
-    setup()
-    stubApi()
-    renderPage()
-
-    const link = await screen.findByRole('link', { name: 'Buscar en el historial' })
-    expect(link).toHaveAttribute('href', '/children/child-1/historial')
-    expect(screen.queryByRole('button', { name: /Buscar en el historial/ })).not.toBeInTheDocument() // (the web sidebar also says "Plan completo")
-  })
-
-  it.each([
-    ['phone', () => {}],
-    ['web', useWeb],
-  ] as const)('on the %s it is a button marked "Plan completo" that opens the plan notice on the free plan, and the list is whole', async (_design, setup) => {
-    const user = userEvent.setup({ advanceTimers: () => {} })
-    setup()
-    stubApi()
-    renderPage()
-
-    const button = await screen.findByRole('button', { name: /Buscar en el historial/ })
+    expect(await screen.findByText('Aún no hay consultas')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Buscar en el historial' })).not.toBeInTheDocument()
-    expect(within(button).getByText('Plan completo')).toBeInTheDocument()
-    // Every consultation is still listed.
-    expect(screen.getByRole('link', { name: /Dra. Laura Cázares/ })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Dr. Iván Robles/ })).toBeInTheDocument()
-
-    await user.click(button)
-
-    expect(await screen.findByRole('dialog', { name: 'Búsqueda en el historial' })).toBeInTheDocument()
-  })
-})
-
-// specs/032: the web panel of today's doses says who marked a dose.
-describe('ChildDetailPage, who marked the doses of the day (specs/032)', () => {
-  beforeEach(() => {
-    vi.useFakeTimers({ toFake: ['Date'] })
-    vi.setSystemTime(new Date(2026, 8, 16, 12))
-    useSession()
-    useWeb()
-  })
-  afterEach(() => {
-    vi.unstubAllGlobals()
-    vi.useRealTimers()
-    window.localStorage.clear()
   })
 
-  it('shows "por Ana, 08:05" under a marked dose and nothing under the others', async () => {
-    const marked = { ...dose('d1', 8, 'Amoxicilina', true), takenBy: { name: 'Ana', at: new Date(2026, 8, 16, 8, 5).toISOString() } }
-    const open = dose('d2', 16, 'Amoxicilina', false)
-    stubApi({ overview: { childId: 'child-1', doses: [marked, open], activeTreatment: null } })
+  it('shows supplements and activities as compact rows to their detail, with «+ Agregar …»', async () => {
+    stubApi({ supplements: [routine('supplement', 'Vitamina D')], activities: [routine('activity', 'Leer', [], { status: 'paused' })] })
     renderPage()
-
-    expect(await screen.findByText('por Ana, 08:05')).toBeInTheDocument()
-    expect(screen.getAllByText(/^por /)).toHaveLength(1)
+    const sups = await screen.findByRole('region', { name: 'Suplementos' })
+    const row = await within(sups).findByRole('link', { name: /Vitamina D/ })
+    expect(row).toHaveAttribute('href', '/suplementos/supplement-Vitamina D')
+    expect(row).toHaveTextContent('Todos los días · 08:00')
+    expect(row).toHaveTextContent('Activo')
+    expect(within(sups).getByRole('link', { name: '+ Agregar suplemento' })).toBeInTheDocument()
+    const acts = screen.getByRole('region', { name: 'Actividades' })
+    expect(await within(acts).findByRole('link', { name: /Leer/ })).toHaveTextContent('Pausada')
   })
-})
 
-// specs/032: what the session can do depends on its role over THIS child and on the plan of the child's FAMILY.
-describe('ChildDetailPage, shared children (specs/032)', () => {
-  const own = account.children[0]
-  const running = {
-    childId: 'child-1',
-    doses: [],
-    activeTreatment: { medicationName: 'Amoxicilina', endsAt: new Date(2026, 8, 18, 8).toISOString(), otherCount: 0 },
-  }
-  const share = (extra: Record<string, unknown>) => {
-    account.children[0] = { ...own, accountId: 'owner-1', ...extra } as typeof own
-  }
-
-  beforeEach(() => {
-    vi.useFakeTimers({ toFake: ['Date'] })
-    vi.setSystemTime(new Date(2026, 8, 16, 12))
-    useSession()
-    useWeb()
+  it('says a section is empty in neutral words', async () => {
+    stubApi()
+    renderPage()
+    expect(await screen.findByText('Sin suplementos registrados')).toBeInTheDocument()
+    expect(screen.getByText('Sin actividades registradas')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Agregar dosis o fotos/ })).toHaveAttribute('href', '/children/child-1/cartilla')
   })
-  afterEach(() => {
+
+  it('pins «Nueva consulta», the one solid button, at the bottom', async () => {
+    stubApi()
+    renderPage()
+    const link = await screen.findByRole('link', { name: 'Nueva consulta' })
+    expect(link).toHaveAttribute('href', '/children/child-1/consultations/new')
+    expect(link.parentElement).toHaveClass('sticky')
+  })
+
+  it('«Acceso del hijo» opens its block right under «Lo demás»; «Familia que lo ve» goes to /familia', async () => {
+    stubApi()
+    renderPage()
+    const more = await screen.findByRole('navigation', { name: 'Lo demás' })
+    expect(within(more).getByRole('link', { name: /Familia que lo ve/ })).toHaveAttribute('href', '/familia')
+    expect(await within(more).findByText('3 personas')).toBeInTheDocument()
+    const accessRow = within(more).getByRole('button', { name: /Acceso del hijo/ })
+    expect(await within(more).findByText('Crear liga')).toBeInTheDocument()
+    await userEvent.click(accessRow)
+    expect(accessRow).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('on the free plan with a treatment running, «Nueva consulta» opens the plan notice; the search carries «Plan completo»', async () => {
     account.plan = 'free'
-    account.children[0] = own
-    vi.unstubAllGlobals()
-    vi.useRealTimers()
-    window.localStorage.clear()
+    stubApi({ paidPlan: false })
+    renderPage()
+    const button = await screen.findByRole('button', { name: 'Nueva consulta' })
+    await userEvent.click(button)
+    expect(await screen.findByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Buscar en el historial/ })).toHaveTextContent('Plan completo')
+    expect(screen.getByRole('button', { name: /Agregar suplementos/ })).toHaveTextContent('Plan completo')
   })
 
   it.each([
     ['a Caregiver', { role: 'caregiver', plan: 'paid', readOnly: false }],
     ['a child-role member', { role: 'child', plan: 'paid', readOnly: false }],
     ['a Tutor of a family that stopped paying', { role: 'tutor', plan: 'free', readOnly: true }],
-  ])('offers %s no "Nueva consulta", but the list and the history are there', async (_who, extra) => {
+  ])('offers %s no «Nueva consulta» nor «Acceso del hijo», but the day and the list are there', async (_who, extra) => {
     share(extra)
     stubApi()
     renderPage()
-
-    expect(await screen.findByText('Dra. Laura Cázares')).toBeInTheDocument()
+    expect(await screen.findByText(/Dra\. Laura Cázares/)).toBeInTheDocument()
+    expect(await screen.findByRole('button', { name: 'Marcar Amoxicilina de las 11:00' })).toBeEnabled()
     expect(screen.queryByRole('link', { name: 'Nueva consulta' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Nueva consulta' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Acceso del hijo/ })).not.toBeInTheDocument()
   })
 
-  it('does not block a Tutor on a free account inside a paid family: the plan is the family\'s', async () => {
+  it('locks somebody else’s mark for a Caregiver', async () => {
+    share({ role: 'caregiver', plan: 'paid', readOnly: false })
+    stubApi()
+    renderPage()
+    const rosa = await screen.findByRole('button', { name: 'Marcar Amoxicilina de las 08:00' })
+    expect(rosa).toBeDisabled()
+  })
+
+  it('says it couldn’t read the child instead of a skeleton, and «Reintentar» for a failed list', async () => {
+    const fetchMock = stubApi({ listStatus: 500 })
+    account.children[0] = { ...own, id: 'other' }
+    renderPage()
+    expect(await screen.findByText('No pudimos cargar los datos de este hijo')).toBeInTheDocument()
+    expect(await screen.findByText('No pudimos cargar sus consultas.')).toBeInTheDocument()
+    const before = fetchMock.mock.calls.filter(([u]) => String(u).endsWith('/consultations')).length
+    await userEvent.click(within(screen.getByRole('region', { name: 'Consultas' })).getByRole('button', { name: 'Reintentar' }))
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([u]) => String(u).endsWith('/consultations')).length).toBe(before + 1))
+  })
+
+  it('says «Solo lectura» to a Tutor of a family that stopped paying', async () => {
+    share({ role: 'tutor', plan: 'free', readOnly: true })
+    stubApi()
+    renderPage()
+    expect(await screen.findByRole('note')).toHaveTextContent('Solo lectura.')
+  })
+
+  it('does not block a Tutor on a free account inside a paid family: the plan is the family’s', async () => {
     account.plan = 'free'
     share({ role: 'tutor', plan: 'paid', readOnly: false })
-    stubApi({ overview: running })
+    stubApi()
     renderPage()
-
     expect(await screen.findByRole('link', { name: 'Nueva consulta' })).toHaveAttribute('href', '/children/child-1/consultations/new')
-    expect(screen.getByRole('link', { name: /Buscar en el historial/ })).toBeInTheDocument()
+  })
+})
+
+describe('ChildDetailPage — web (design A)', () => {
+  beforeEach(useWeb)
+
+  it('has «Nueva consulta» at the header’s right and the treatment and the day summary in the right column', async () => {
+    stubApi()
+    renderPage()
+    const header = await screen.findByRole('banner')
+    expect(await within(header).findByRole('link', { name: 'Nueva consulta' })).toHaveAttribute('href', '/children/child-1/consultations/new')
+    const summary = await screen.findByRole('region', { name: 'Resumen del día' })
+    expect(within(summary).getByText('6 hoy · 1 por marcar')).toBeInTheDocument()
+    expect(within(summary).getByText('Vitamina D · 08:00')).toBeInTheDocument()
+    expect(within(summary).getByText('Ninguna hoy')).toBeInTheDocument()
+    expect(summary.closest('aside')).toContainElement(screen.getByRole('region', { name: 'Tratamiento activo' }))
   })
 
-  it('blocks a paid account\'s Tutor when the child\'s family is free and a treatment runs', async () => {
-    account.plan = 'paid'
-    share({ role: 'tutor', plan: 'free', readOnly: false })
-    stubApi({ overview: running })
+  it('draws the day in three columns and the consultations with their actions in the heading row', async () => {
+    stubApi()
     renderPage()
+    const today = await screen.findByRole('region', { name: 'Hoy' })
+    expect(await within(today).findAllByRole('group')).toHaveLength(3)
+    const section = screen.getByRole('region', { name: 'Consultas' })
+    expect(await within(section).findByText('Dra. Laura Cázares')).toBeInTheDocument()
+    expect(within(section).getByRole('link', { name: 'Buscar en el historial' })).toBeInTheDocument()
+  })
 
-    expect(await screen.findByRole('button', { name: 'Nueva consulta' })).toBeInTheDocument()
+  it('says the next dose in the summary when nothing is unregistered', async () => {
+    stubApi({ overview: { ...emptyDay, doses: [dose('d1', 8, 'Amoxicilina', 'taken'), dose('d2', 20, 'Amoxicilina', 'pending')] } })
+    renderPage()
+    const summary = await screen.findByRole('region', { name: 'Resumen del día' })
+    expect(within(summary).getByText('2 hoy · 1 marcada')).toBeInTheDocument()
+    expect(within(summary).getByText('Próxima toma')).toBeInTheDocument()
+    expect(within(summary).getByText('Amoxicilina · 20:00')).toBeInTheDocument()
   })
 })

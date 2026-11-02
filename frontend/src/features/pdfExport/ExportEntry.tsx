@@ -5,6 +5,8 @@ import { ExportPanel, type ExportPanelProps } from './ExportPanel'
 interface ExportEntryProps extends Omit<ExportPanelProps, 'onClose' | 'opener'> {
   /** The phone or the web design (mock M1/M3 and W1); `phone-row` shares the row with another button (mock M2, the card). */
   variant: 'phone' | 'phone-row' | 'desktop'
+  /** The size classes of another screen's design (specs/056: the child's consultations section); the look stays. */
+  className?: string
 }
 
 const badge =
@@ -14,7 +16,7 @@ const badge =
  * «Exportar a PDF» (specs/050): an outlined button that opens the panel. On the free plan it carries the «Plan completo» mark and
  * opens straight on the plan notice; on the phone it then takes the whole width so the mark fits (mock M3).
  */
-export function ExportEntry({ variant, ...panel }: ExportEntryProps) {
+export function ExportEntry({ variant, className, ...panel }: ExportEntryProps) {
   const [open, setOpen] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const phone = variant !== 'desktop'
@@ -32,7 +34,7 @@ export function ExportEntry({ variant, ...panel }: ExportEntryProps) {
 
   return (
     <>
-      <button ref={buttonRef} type="button" aria-haspopup="dialog" onClick={() => setOpen(true)} className={`${base} ${size}`}>
+      <button ref={buttonRef} type="button" aria-haspopup="dialog" onClick={() => setOpen(true)} className={`${base} ${className ?? size}`}>
         <span>{PANEL.entry}</span>
         {panel.free && <span className={badge}>{PANEL.planBadge}</span>}
       </button>

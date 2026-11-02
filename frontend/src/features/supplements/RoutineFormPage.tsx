@@ -1,62 +1,80 @@
 import { useCallback, useRef, useState, type ReactNode } from 'react'
-import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useUnsavedWork } from '../../shared/appVersion/unsavedWork'
 import { useLocalDay } from '../../shared/useLocalDay'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { useChildAccess } from '../family/useChildAccess'
 import { AppShell } from '../home/AppShell'
+import { PageHeader, type PageHeaderProps } from '../../shared/ui/PageHeader'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { useCreatePersonalRoutine, useCreateRoutine, useRoutine, useUpdateRoutine } from './hooks'
 import { RoutineForm } from './RoutineForm'
 import type { RoutineInput, RoutineKind } from './types'
 
-/** The page frame of the routine form and detail, in the two designs: the phone's dark header and the web's text header. */
+/**
+ * The page frame of the secondary screens (routines, cartilla, appointments, plans): since specs/056 its header is the common
+ * `PageHeader` (no dark band on the phone; the design «Encabezado PediTrack.dc.html»), so every screen that uses it changed at once.
+ * The optional props are the header's (subtitle, status chip, actions, «Solo lectura», loading and error).
+ */
 export function RoutinePageFrame({
   isDesktop,
   childId,
   backLabel,
   backTo,
+  backOnClick,
   eyebrow,
   title,
   children,
   maxWidth,
+  subtitle,
+  chip,
+  actions,
+  readOnly,
+  state,
+  errorWhat,
+  onRetry,
 }: {
   isDesktop: boolean
   childId: string | undefined
   backLabel: string
   backTo: string
-  eyebrow: string
+  /** May stop the way back (a form with something typed asks first). */
+  backOnClick?: PageHeaderProps['back']['onClick']
+  eyebrow?: string
   title: ReactNode
   children: ReactNode
   /** The web's content column (the form is 640 px). */
   maxWidth?: string
-}) {
+} & Pick<PageHeaderProps, 'subtitle' | 'chip' | 'actions' | 'readOnly' | 'state' | 'errorWhat' | 'onRetry'>) {
+  const header = (variant: 'phone' | 'desktop') => (
+    <PageHeader
+      variant={variant}
+      back={{ label: backLabel, to: backTo, onClick: backOnClick }}
+      eyebrow={eyebrow}
+      title={title}
+      subtitle={subtitle}
+      chip={chip}
+      actions={actions}
+      readOnly={readOnly}
+      state={state}
+      errorWhat={errorWhat}
+      onRetry={onRetry}
+    />
+  )
   return (
     <AppShell activeChildId={childId}>
       {isDesktop ? (
-        <main className="min-w-0 bg-canvas px-6 py-8 lg:px-12 lg:py-11">
-          <div className={`mx-auto flex flex-col gap-7 ${maxWidth ?? 'max-w-[904px]'}`}>
-            <div className="flex flex-col">
-              <Link to={backTo} className="inline-flex min-h-11 items-center self-start text-sm font-bold text-action hover:underline">
-                {backLabel}
-              </Link>
-              <p className="text-sm font-bold text-action">{eyebrow}</p>
-              <h1 className="mt-1 text-[38px] leading-[1.1] font-black tracking-[-0.03em] text-ink [overflow-wrap:anywhere]">{title}</h1>
-            </div>
+        <main className="min-w-0 bg-canvas px-6 pt-7 pb-12 lg:px-12">
+          <div className={`mx-auto flex flex-col gap-6 ${maxWidth ?? 'max-w-[904px]'}`}>
+            {header('desktop')}
             {children}
           </div>
         </main>
       ) : (
         <main className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas pb-10">
-          <header className="bg-ink px-6 pt-4 pb-[26px]">
-            <Link to={backTo} className="inline-flex min-h-11 items-center text-sm font-bold text-bright-soft hover:text-white">
-              {backLabel}
-            </Link>
-            <p className="mt-1.5 text-sm font-semibold text-hint-border">{eyebrow}</p>
-            <h1 className="mt-1 text-3xl leading-[1.15] font-black tracking-[-0.03em] text-white [overflow-wrap:anywhere]">{title}</h1>
-          </header>
-          <div className="flex flex-col gap-5 px-5 pt-6">{children}</div>
+          {header('phone')}
+          <div className="flex flex-col gap-5 px-5 pt-1">{children}</div>
         </main>
       )}
     </AppShell>
@@ -104,20 +122,24 @@ export function RoutineFormPage({ kind: creatingKind = 'supplement', personal: c
 
   const editing = routineId !== undefined
   const base = activity ? '/actividades' : '/suplementos'
-  const personalHome = activity ? '/mis-actividades' : '/mis-suplementos'
+  const personalHome = activity ? '/mi-dia#actividades' : '/mi-dia#suplementos'
   const noun = activity ? 'actividad' : 'suplemento'
   const backTo = editing ? `${base}/${routineId}` : personal ? personalHome : `/children/${childId}`
   const personalTitle = activity ? 'Mis actividades' : 'Mis suplementos'
-  const childName = personal ? personalTitle : (child?.firstName ?? 'Volver')
-  const eyebrow = personal ? personalTitle : child ? `${activity ? 'Actividad' : 'Suplemento'} · ${child.firstName} ${child.lastName}` : activity ? 'Actividad' : 'Suplemento'
+  const discardQuestion = `¿Descartar ${activity ? 'la' : 'el'} ${noun}? Se perderá lo que capturaste.`
+  // specs/056 (design H4): «← Cancelar» (asking first when something was typed), the title and «Para Mateo».
+  const subtitle = personal ? personalTitle : child ? `Para ${child.firstName}` : undefined
   const frame = (content: ReactNode) => (
     <RoutinePageFrame
       isDesktop={isDesktop}
       childId={personal ? undefined : childId}
-      backLabel={editing && routine ? `← ${routine.name}` : `← ${childName}`}
+      backLabel="← Cancelar"
       backTo={backTo}
-      eyebrow={eyebrow}
+      backOnClick={(event) => {
+        if (dirtyRef.current && !window.confirm(discardQuestion)) event.preventDefault()
+      }}
       title={`${editing ? 'Editar' : 'Agregar'} ${noun}`}
+      subtitle={subtitle}
       maxWidth="max-w-[640px]"
     >
       {content}
@@ -143,7 +165,7 @@ export function RoutineFormPage({ kind: creatingKind = 'supplement', personal: c
   }
 
   const leave = () => {
-    if (dirtyRef.current && !window.confirm(`¿Descartar ${activity ? 'la' : 'el'} ${noun}? Se perderá lo que capturaste.`)) return
+    if (dirtyRef.current && !window.confirm(discardQuestion)) return
     navigate(backTo)
   }
 

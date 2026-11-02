@@ -47,7 +47,7 @@ function Page({ onSelect, ...p }: Props & { onSelect: (day: string) => void }) {
   const [selected, setSelected] = useState(() => initialDay(numbered(medications), today))
   return (
     <TreatmentCalendar
-      variant="phone"
+      variant="desktop"
       {...p}
       meds={numbered(medications)}
       today={today}
@@ -72,7 +72,7 @@ describe('TreatmentCalendar (specs/019)', () => {
   it('is one calendar for the consultation, with a legend of its medications in order', () => {
     renderCalendar()
 
-    expect(screen.getAllByRole('heading', { name: 'Calendario del tratamiento' })).toHaveLength(1)
+    expect(screen.getAllByRole('region', { name: 'Calendario del tratamiento' })).toHaveLength(1)
     const legend = screen.getByRole('list', { name: 'Medicamentos del calendario' })
     expect(within(legend).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['1Amoxicilina', '2Paracetamol'])
     expect(screen.getByText('septiembre 2026')).toBeInTheDocument()
@@ -108,11 +108,12 @@ describe('TreatmentCalendar (specs/019)', () => {
     expect(screen.getByText('septiembre 2026')).toBeInTheDocument()
   })
 
-  it('has no arrows to go to when the treatment is inside one month', () => {
+  it('has no arrows on the web when the treatment is inside one month (the design draws none)', () => {
     renderCalendar({ medications: [med('m1', 'Amoxicilina', range([10, 1], [10, 3]))], today: '2026-10-02' })
 
-    expect(screen.getByRole('button', { name: 'Mes anterior' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Mes siguiente' })).toBeDisabled()
+    expect(screen.queryByRole('button', { name: 'Mes anterior' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Mes siguiente' })).not.toBeInTheDocument()
+    expect(screen.getByText('octubre 2026')).toBeInTheDocument()
   })
 
   it('starts on today when it is inside the treatment, with today marked', () => {
@@ -315,20 +316,58 @@ describe('TreatmentCalendar (specs/019)', () => {
   })
 
   it('has its own sizes on the web (a taller day) than on the phone', () => {
-    const phone = renderCalendar()
-    expect(day(/^30 de septiembre/).className).toContain('min-h-[54px]')
+    const phone = renderCalendar({ variant: 'phone' })
+    expect(day(/^30 de septiembre/).className).toContain('h-14')
     phone.unmount()
 
-    renderCalendar({ variant: 'desktop' })
-    expect(day(/^30 de septiembre/).className).toContain('min-h-[62px]')
+    renderCalendar()
+    expect(day(/^30 de septiembre/).className).toContain('h-[60px]')
   })
 
-  it('keeps a 44 px touch area on the month arrows in both designs', () => {
-    const phone = renderCalendar()
-    expect(screen.getByRole('button', { name: 'Mes siguiente' }).className).toContain('min-h-11')
+  it('keeps a 44 px touch area on the arrows in both designs', () => {
+    const phone = renderCalendar({ variant: 'phone' })
+    expect(screen.getByRole('button', { name: 'Semana siguiente' }).className).toContain('min-h-11')
     phone.unmount()
 
-    renderCalendar({ variant: 'desktop' })
+    renderCalendar()
     expect(screen.getByRole('button', { name: 'Mes anterior' }).className).toContain('min-w-11')
+  })
+})
+
+describe('TreatmentCalendar on the phone: a week that opens to the month (specs/056)', () => {
+  it('starts on the week of the chosen day, Monday to Sunday, and steps a week at a time inside the treatment', async () => {
+    const user = userEvent.setup()
+    renderCalendar({ variant: 'phone', today: '2026-10-01' })
+
+    expect(screen.getByText('28 sep – 4 oct')).toBeInTheDocument()
+    expect(day(/^1 de octubre/)).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('button', { name: /^5 de octubre/ })).not.toBeInTheDocument()
+    // The treatment runs from 30 sep to 6 oct: one week before is out, one after is the last.
+    expect(screen.getByRole('button', { name: 'Semana anterior' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Semana siguiente' }))
+    expect(screen.getByText('5 oct – 11 oct')).toBeInTheDocument()
+    expect(day(/^6 de octubre/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Semana siguiente' })).toBeDisabled()
+    // Paging never chooses another day.
+    expect(screen.queryByRole('button', { pressed: true })).not.toBeInTheDocument()
+  })
+
+  it('«Ver mes» opens the month and «Ver semana» goes back to the chosen day’s week', async () => {
+    const user = userEvent.setup()
+    renderCalendar({ variant: 'phone', today: '2026-10-01' })
+
+    const toggle = screen.getByRole('button', { name: 'Ver mes' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await user.click(toggle)
+    expect(screen.getByText('octubre 2026')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Ver semana' })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('button', { name: 'Mes anterior' })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'Ver semana' }))
+    expect(screen.getByText('28 sep – 4 oct')).toBeInTheDocument()
+  })
+
+  it('has no legend on the phone: each medication card carries its number and color', () => {
+    renderCalendar({ variant: 'phone' })
+    expect(screen.queryByRole('list', { name: 'Medicamentos del calendario' })).not.toBeInTheDocument()
   })
 })

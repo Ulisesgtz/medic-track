@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { VaccinationCardPage } from './VaccinationCardPage'
-import { CardEntry } from './CardEntry'
 import { CHILD_ID, account, child, dose, renderAt, stubApi, stubMatchMedia } from './vaccinationsApi.test-utils'
 import { TEXT } from './vaccineText'
 
@@ -37,6 +36,19 @@ describe('VaccinationCardPage', () => {
     expect(within(list).getByText('Dosis 1 · 01 feb 2023 · Centro de salud')).toBeInTheDocument()
     expect(screen.getByText(TEXT.note)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: TEXT.add })).toBeInTheDocument()
+  })
+
+  it('says in the header how many doses and photos are recorded (specs/056)', async () => {
+    stubApi({
+      account: account(),
+      doses: [dose(), dose({ id: 'v2', doseNumber: 1, appliedOn: '2023-02-01' })],
+      photos: [
+        { id: 'p1', createdAt: '2026-10-01T10:00:00Z', createdByName: 'Ana' },
+        { id: 'p2', createdAt: '2026-10-02T10:00:00Z', createdByName: 'Ana' },
+      ],
+    })
+    page()
+    expect(await screen.findByText('2 dosis registradas · 2 fotos')).toBeInTheDocument()
   })
 
   it('says it is empty without suggesting anything, and offers to add', async () => {
@@ -295,9 +307,10 @@ describe('VaccinationCardPage: «Exportar a PDF» (specs/050)', () => {
     const user = userEvent.setup()
     const add = await screen.findByRole('button', { name: TEXT.add })
     const entry = screen.getByRole('button', { name: 'Exportar a PDF' })
+    // specs/056 (design H3): both are the header's actions, «+ Agregar vacuna» the screen's one solid.
     expect(add.parentElement).toBe(entry.parentElement)
-    expect(add.className.includes('flex-1')).toBe(!web)
-    expect(entry.className.includes('flex-1')).toBe(!web)
+    expect(add).toHaveClass('bg-confirmed')
+    expect(within(screen.getByRole('banner')).getByRole('button', { name: TEXT.add })).toBe(add)
     await user.click(entry)
     const dialog = screen.getByRole('dialog', { name: 'Exportar a PDF' })
     expect(within(dialog).getByRole('switch', { name: 'Consultas' })).toHaveAttribute('aria-checked', 'false')
@@ -318,31 +331,7 @@ describe('VaccinationCardPage: «Exportar a PDF» (specs/050)', () => {
     const entry = await screen.findByRole('button', { name: /^Exportar a PDF/ })
     expect(entry).toHaveTextContent('Plan completo')
     expect(entry).toHaveClass('w-full')
-    expect(entry.parentElement).toHaveClass('flex-col')
     await user.click(entry)
     expect(screen.getByText('Exportar a PDF es parte del plan completo')).toBeInTheDocument()
-  })
-})
-
-describe('CardEntry', () => {
-  const entry = () => renderAt(<CardEntry childId={CHILD_ID} />, '/x', '/x')
-
-  it('counts what is recorded and links to the card', async () => {
-    stubApi({ account: account(), doses: [dose(), dose({ id: 'v2' })], photos: [{ id: 'p1', createdAt: '2026-10-01T10:00:00Z', createdByName: 'Ana' }] })
-    entry()
-    expect(await screen.findByText('2 dosis registradas · 1 foto')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: TEXT.entry.link })).toHaveAttribute('href', `/children/${CHILD_ID}/cartilla`)
-  })
-
-  it('says nothing was recorded', async () => {
-    stubApi({ account: account(), doses: [] })
-    entry()
-    expect(await screen.findByText(TEXT.entry.empty)).toBeInTheDocument()
-  })
-
-  it('draws nothing when the card cannot be read', async () => {
-    stubApi({ account: account(), doses: [], listFails: true })
-    const { container } = entry()
-    await waitFor(() => expect(container).toBeEmptyDOMElement())
   })
 })

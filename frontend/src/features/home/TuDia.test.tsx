@@ -38,7 +38,7 @@ function renderTuDia(variant: 'phone' | 'desktop' = 'phone') {
       <MemoryRouter initialEntries={['/home']}>
         <Routes>
           <Route path="/home" element={<TuDia account={ana} variant={variant} />} />
-          <Route path="/mis-suplementos" element={<p>MIS SUPLEMENTOS</p>} />
+          <Route path="/mi-dia" element={<p>MI DÍA</p>} />
           <Route path="/planes" element={<p>PLANES</p>} />
         </Routes>
       </MemoryRouter>
@@ -70,7 +70,7 @@ describe('TuDia', () => {
     expect(screen.getByText('Próxima: Caminar 30 min · 18:00')).toBeInTheDocument()
     expect(screen.queryByText('✓ Todo marcado hasta ahora')).not.toBeInTheDocument()
     await user.click(screen.getByRole('link', { name: 'Ver todo' }))
-    expect(await screen.findByText('MIS SUPLEMENTOS')).toBeInTheDocument()
+    expect(await screen.findByText('MI DÍA')).toBeInTheDocument()
   })
 
   it('«✓ Realizado» marks the activity without leaving and then says when', async () => {
@@ -98,7 +98,7 @@ describe('TuDia', () => {
   it('is one line with a link when the person created nothing (paid plan)', async () => {
     stub([], [])
     renderTuDia()
-    expect(await screen.findByRole('link', { name: 'Agrega tus propios suplementos o actividades' })).toHaveAttribute('href', '/mis-suplementos')
+    expect(await screen.findByRole('link', { name: 'Agrega tus propios suplementos o actividades' })).toHaveAttribute('href', '/mi-dia')
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 

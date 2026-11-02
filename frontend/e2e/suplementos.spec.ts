@@ -40,7 +40,7 @@ for (const design of designs) {
 
       // The section invites to create the first routine.
       await expect(main.getByRole('heading', { name: 'Suplementos', exact: true })).toBeVisible()
-      await expect(main.getByRole('heading', { name: 'Mateo aún no tiene suplementos' })).toBeVisible()
+      await expect(main.getByText('Sin suplementos registrados')).toBeVisible()
       await expectNoHorizontalScroll(page)
       await main.getByRole('link', { name: '+ Agregar suplemento' }).click()
 
@@ -65,15 +65,16 @@ for (const design of designs) {
       await expect(chip).toHaveAttribute('aria-pressed', 'true')
       await expect(page.getByText(/por Ana, \d\d:\d\d/).first()).toBeVisible()
 
-      // It shows in the child's section and in «Tomas de hoy» with the «Suplemento» label.
+      // specs/056: it shows in the child's «Hoy» with the «Suplemento» label and as a compact row of «Suplementos».
       await page.goto(`/children/${owner.childId}`)
-      // The web's «Tomas de hoy» panel lists it with the label; the phone's block only counts it (its mock has no list).
-      if (design.isWeb) await expect(page.getByRole('main').getByText('Suplemento', { exact: true }).first()).toBeVisible()
-      await expect(page.getByRole('main').getByText('1 activo')).toBeVisible()
+      await expect(main.getByRole('region', { name: 'Hoy' }).getByText('Suplemento · 08:00')).toBeVisible()
+      const row = main.getByRole('region', { name: 'Suplementos' }).getByRole('link').filter({ hasText: LONG_NAME })
+      await expect(row).toContainText('Todos los días · 08:00')
+      await expect(row).toContainText('Activo')
       await expectNoHorizontalScroll(page)
 
       // Editing counts from the next dose: what was marked stays marked.
-      await page.getByRole('main').getByRole('link', { name: `Ver suplemento ${LONG_NAME}` }).click()
+      await row.click()
       await page.getByRole('link', { name: 'Editar' }).click()
       await expect(page.getByRole('heading', { name: 'Editar suplemento' })).toBeVisible()
       await expect(page.getByText('Los cambios cuentan desde la siguiente toma. Las tomas ya marcadas no cambian.')).toBeVisible()
@@ -112,13 +113,13 @@ for (const design of designs) {
 
       await guest.page.goto(`/children/${owner.childId}`)
       const main = guest.page.getByRole('main')
-      await expect(main.getByText('Los suplementos los agrega y edita un Tutor. Tú puedes marcar las tomas y elegir tus avisos.')).toBeVisible()
+      await expect(main.getByRole('region', { name: 'Suplementos' }).getByRole('link').filter({ hasText: 'Vitamina D' })).toBeVisible()
       await expect(main.getByRole('link', { name: '+ Agregar suplemento' })).toHaveCount(0)
       await expectNoHorizontalScroll(guest.page)
 
-      // They mark a dose and the Tutor sees who did.
-      await main.getByRole('button', { name: 'Toma de 08:00', exact: true }).click()
-      await expect(main.getByText(/por Luis, \d\d:\d\d/).first()).toBeVisible()
+      // They mark a dose from «Hoy» and the Tutor sees who did.
+      await main.getByRole('region', { name: 'Hoy' }).getByRole('button', { name: 'Marcar Vitamina D de las 08:00' }).click()
+      await expect(main.getByRole('region', { name: 'Hoy' }).getByRole('button', { name: 'Marcar Vitamina D de las 08:00' })).toHaveAttribute('aria-pressed', 'true')
       await page.goto(`/suplementos/${routine.id}`)
       await expect(page.getByText(/por Luis, \d\d:\d\d/).first()).toBeVisible()
 
@@ -150,8 +151,8 @@ for (const design of designs) {
 
       await page.goto(`/children/${owner.childId}`)
       const main = page.getByRole('main')
-      await expect(main.getByRole('heading', { name: 'Suplementos', level: 3 })).toBeVisible()
-      await expect(main.getByRole('link', { name: 'Ver el plan completo →' }).first()).toBeVisible()
+      await expect(main.getByRole('heading', { name: 'Suplementos', level: 2 })).toBeVisible()
+      await expect(main.getByRole('button', { name: /Agregar suplementos/ })).toContainText('Plan completo')
       await expect(main.getByRole('link', { name: '+ Agregar suplemento' })).toHaveCount(0)
       const refused = await request.post(`${API}/children/${owner.childId}/routines`, {
         data: { name: 'x', period: 'daily', times: ['08:00'], firstDate: localToday().day, utcOffsetMinutes: localToday().offset },
@@ -166,7 +167,7 @@ for (const design of designs) {
       await setAccountPlan(owner.accountId, 'free')
       await page.reload()
       await expect(main.getByText('Plan completo').first()).toBeVisible()
-      const chip = main.getByRole('button', { name: 'Toma de 08:00', exact: true })
+      const chip = main.getByRole('region', { name: 'Hoy' }).getByRole('button', { name: 'Marcar Vitamina D de las 08:00' })
       await chip.click()
       await expect(chip).toHaveAttribute('aria-pressed', 'true')
       await page.goto(`/suplementos/${routine.id}`)
@@ -187,9 +188,8 @@ for (const design of designs) {
 
       await page.goto(`/children/${owner.childId}`)
       const main = page.getByRole('main')
-      await expect(main.getByRole('status').getByText('Ya tienes 10 suplementos activos')).toBeVisible()
+      await expect(main.getByText('Ya tienes 10 suplementos activos')).toBeVisible()
       await expect(main.getByRole('link', { name: '+ Agregar suplemento' })).toHaveCount(0)
-      await expect(main.getByText('10 activos')).toBeVisible()
       await expectNoHorizontalScroll(page)
 
       await page.goto(`/suplementos/${routines[0].id}`)
@@ -197,7 +197,6 @@ for (const design of designs) {
       await expect(page.getByText('Pausado', { exact: true })).toBeVisible()
       await page.goto(`/children/${owner.childId}`)
       await expect(page.getByRole('main').getByRole('link', { name: '+ Agregar suplemento' })).toBeVisible()
-      await expect(page.getByRole('main').getByText('9 activos')).toBeVisible()
     })
   })
 }

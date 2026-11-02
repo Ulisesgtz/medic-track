@@ -12,6 +12,14 @@ const WEEKDAYS_FULL = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 's�
 const WEEKDAYS_LOWER = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'] // Date.getDay() order
 
 /** "08:00", "08:00 y 20:00", "06:00, 14:00 y 22:00". */
+/** «Activo» / «Pausado» / «Terminado» (a supplement) or «Activa» / «Pausada» / «Terminada» (an activity). */
+export function routineStatusLabel(kind: Routine['kind'], status: Routine['status']): string {
+  const feminine = kind === 'activity'
+  if (status === 'active') return feminine ? 'Activa' : 'Activo'
+  if (status === 'paused') return feminine ? 'Pausada' : 'Pausado'
+  return feminine ? 'Terminada' : 'Terminado'
+}
+
 export function joinTimes(times: string[]): string {
   if (times.length <= 1) return times[0] ?? ''
   return `${times.slice(0, -1).join(', ')} y ${times[times.length - 1]}`
@@ -297,3 +305,9 @@ export const WEEKDAY_SEGMENTS = [
   { l: 'Sá', full: 'sábado' },
   { l: 'Do', full: 'domingo' },
 ]
+
+/** «Todos los días · 08:00» or «Cada 3 horas, de 08:00 a 20:00»: how often, never the doses (those live in «Hoy»). */
+export function routineFrequency(r: Routine): string {
+  if (r.kind === 'activity') return activityRule(r)
+  return `${r.period === 'weekdays' ? daysText(r.weekdays) : 'Todos los días'} · ${joinTimes(r.times)}`
+}

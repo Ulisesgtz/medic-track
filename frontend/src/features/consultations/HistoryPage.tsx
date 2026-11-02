@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { formatAgeLong } from '../../shared/age'
 import { Notice } from '../../shared/ui/Notice'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
@@ -12,6 +12,7 @@ import { ActiveCriteria } from './ActiveCriteria'
 import { ConsultationApiError } from './api'
 import { ConsultationCard } from './ConsultationCard'
 import { HistoryFilterFields, HistorySearchField } from './HistoryFilters'
+import { PageHeader } from '../../shared/ui/PageHeader'
 import { filterCount, isEmpty, rangeInverted, toRequest } from './historyCriteria'
 import { useHistoryCriteria, useHistoryOptions, useHistorySearch } from './useHistory'
 
@@ -60,12 +61,14 @@ function HistoryScreen({ childId }: { childId: string }) {
   if (planNotice) {
     return (
       <AppShell activeChildId={childId}>
-        <main className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas px-6 py-10 lg:max-w-3xl">
-          <Link to={childPath} className="inline-flex min-h-11 items-center text-sm font-bold text-action">
-            ← Consultas
-          </Link>
-          <h1 className="mt-4 text-2xl font-black tracking-tight text-ink">Historial</h1>
-          <p className="mt-2 text-base text-body">Buscar y filtrar el historial es parte del plan completo.</p>
+        <main className={`min-h-screen w-full bg-canvas leading-[normal] ${isDesktop ? 'min-w-0 px-10 pt-7 pb-11' : 'mx-auto max-w-[430px]'}`}>
+          {/* specs/056: the same common header as the paid plan's History. */}
+          <PageHeader
+            variant={variant}
+            back={{ label: `← ${child?.firstName ?? 'Consultas'}`, to: childPath }}
+            title={child ? `Historial de ${child.firstName}` : 'Historial'}
+            subtitle="Buscar y filtrar el historial es parte del plan completo."
+          />
         </main>
         <FreemiumLimitModal reason="history_search" onStayFree={() => navigate(childPath)} onViewPlans={() => navigate('/planes')} />
       </AppShell>
@@ -160,28 +163,29 @@ function HistoryScreen({ childId }: { childId: string }) {
     />
   )
 
+  // specs/056 (design H7): the common header, «Historial de Mateo», «Exportar a PDF» as its action and the search field in it — on
+  // the phone it sticks to the top while scrolling.
+  const header = (v: 'phone' | 'desktop') => (
+    <PageHeader
+      variant={v}
+      back={{ label: `← ${child?.firstName ?? 'Consultas'}`, to: childPath }}
+      title={child ? `Historial de ${child.firstName}` : 'Historial'}
+      subtitle={child ? `${childLabel} · ${formatAgeLong(child.birthDate)}` : undefined}
+      actions={exportEntry(v) || undefined}
+      search={<HistorySearchField variant={v} criteria={criteria} onChange={update} />}
+    />
+  )
+
   // ---- Web: a header and two columns — the filters at the left, the results at the right.
   if (isDesktop) {
     return (
       <AppShell activeChildId={childId}>
-        <main className="min-w-0 bg-canvas px-10 pt-9 pb-11">
+        <main className="min-w-0 bg-canvas px-10 pt-7 pb-11 leading-[normal]">
           <div className="flex flex-col gap-[26px]">
-            <div className="flex min-w-0 flex-col gap-2">
-              <Link to={childPath} className="-my-3 inline-flex min-h-11 items-center text-sm font-bold text-action">
-                ← {childLabel ? `Consultas de ${child?.firstName}` : 'Consultas'}
-              </Link>
-              <div className="flex items-end justify-between gap-4">
-                <div className="flex min-w-0 flex-col gap-2">
-                  <h1 className="text-[38px] leading-[1.1] font-black tracking-[-0.035em] text-ink">Historial</h1>
-                  {child && <p className="text-sm font-bold text-action">{`${childLabel} · ${formatAgeLong(child.birthDate)}`}</p>}
-                </div>
-                {exportEntry('desktop')}
-              </div>
-            </div>
+            {header('desktop')}
 
             <div className="grid grid-cols-[minmax(280px,340px)_minmax(0,1fr)] items-start gap-[22px]">
               <aside aria-label="Filtros" className="sticky top-6 flex min-w-0 flex-col gap-5 rounded-3xl bg-surface p-6 shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
-                <HistorySearchField variant="desktop" criteria={criteria} onChange={update} />
                 {fields}
               </aside>
               <div className="flex min-w-0 flex-col gap-4">
@@ -200,21 +204,9 @@ function HistoryScreen({ childId }: { childId: string }) {
   return (
     <AppShell activeChildId={childId}>
       <main className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas pb-10">
-        <header className="bg-ink px-6 pt-6 pb-7">
-          <Link to={childPath} className="-my-3 inline-flex min-h-11 items-center text-sm font-bold text-bright-soft hover:text-white">
-            ← Consultas
-          </Link>
-          <div className="mt-5 flex items-end justify-between gap-3">
-            <div className="flex min-w-0 flex-col gap-1">
-              <h1 className="text-2xl font-black tracking-tight text-white">Historial</h1>
-              {child && <p className="text-sm font-semibold text-hint-border">{`${childLabel} · ${formatAgeLong(child.birthDate)}`}</p>}
-            </div>
-            {exportEntry('phone')}
-          </div>
-        </header>
+        {header('phone')}
 
-        <div className="flex flex-col gap-4 px-6 pt-6">
-          <HistorySearchField variant="phone" criteria={criteria} onChange={update} />
+        <div className="flex flex-col gap-4 px-5 pt-4">
           <button
             type="button"
             aria-expanded={filtersOpen}

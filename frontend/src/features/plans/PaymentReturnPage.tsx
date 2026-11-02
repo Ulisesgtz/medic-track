@@ -96,7 +96,7 @@ export function PaymentReturnPage() {
   }
 
   return (
-    <RoutinePageFrame isDesktop={isDesktop} childId={undefined} backLabel="← Planes" backTo="/planes" eyebrow="PediTrack" title="Tu pago">
+    <RoutinePageFrame isDesktop={isDesktop} childId={undefined} backLabel="← Planes" backTo="/planes" title="Tu pago">
       {content}
     </RoutinePageFrame>
   )
