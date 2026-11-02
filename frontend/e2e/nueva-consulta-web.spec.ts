@@ -178,7 +178,7 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
     // specs/012: the marked symptoms as pills in catalog order, then the notes.
     const symptoms = page.getByRole('main').getByRole('list').filter({ hasText: 'Fiebre' })
     await expect(symptoms.getByRole('listitem')).toHaveText(['Fiebre', 'Tos'])
-    await expect(page.getByRole('heading', { level: 2, name: 'Notas previas a la consulta' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 3, name: 'Notas' })).toBeVisible()
     await expect(page.getByText('Comió poco desde el domingo')).toBeVisible()
 
     // And the child's list sums them up.

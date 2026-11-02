@@ -23,7 +23,7 @@ test.describe('Detalle de consulta — diseño móvil (specs/056)', () => {
     await expect(main.getByRole('heading', { level: 1, name: 'Dra. Laura Cázares' })).toBeVisible()
     await expect(main.getByRole('link', { name: 'Editar consulta' })).toBeVisible()
 
-    const treatment = main.getByRole('region', { name: 'Tratamiento' })
+    const treatment = main.getByRole('region', { name: 'Tratamiento', exact: true })
     const calendar = main.getByRole('region', { name: 'Calendario del tratamiento' })
     await expect(calendar.getByRole('button', { name: 'Ver mes' })).toHaveAttribute('aria-expanded', 'false')
     await expect(main.getByRole('heading', { level: 3, name: 'Tomas de hoy' })).toBeVisible()

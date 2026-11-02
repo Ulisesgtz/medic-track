@@ -31,7 +31,7 @@ test.describe('Detalle de consulta — diseño web (specs/056)', () => {
       expect(await box(page, page.locator('aside').first())).toMatchObject({ x: 0, w: 280 })
       const main = page.getByRole('main')
       expect(await box(page, main.getByRole('heading', { level: 1 }))).toMatchObject({ x: colX })
-      expect(await box(page, main.getByRole('region', { name: 'Tratamiento' }))).toMatchObject({ x: colX, w: colW })
+      expect(await box(page, main.getByRole('region', { name: 'Tratamiento', exact: true }))).toMatchObject({ x: colX, w: colW })
       expect(await box(page, main.getByRole('region', { name: 'Datos de la consulta' }))).toMatchObject({ x: asideX, w: 300 })
       await expect(main.getByRole('heading', { level: 1 })).toHaveCSS('font-size', '34px')
     })
@@ -60,7 +60,7 @@ test.describe('Detalle de consulta — diseño web (specs/056)', () => {
     await expect(main.getByRole('link', { name: 'Editar consulta' })).toBeVisible()
     await expect(main.getByRole('link', { name: 'Nueva consulta' })).toBeVisible()
 
-    const treatment = main.getByRole('region', { name: 'Tratamiento' })
+    const treatment = main.getByRole('region', { name: 'Tratamiento', exact: true })
     await expect(treatment.getByText(/^En curso · termina el \d{1,2} \w{3}$/)).toBeVisible()
     const calendar = treatment.getByRole('region', { name: 'Calendario del tratamiento' })
     await expect(calendar.getByRole('list', { name: 'Medicamentos del calendario' })).toContainText('Amoxicilina')

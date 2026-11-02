@@ -119,7 +119,7 @@ for (const design of designs) {
 
       // They mark a dose from «Hoy» and the Tutor sees who did.
       await main.getByRole('region', { name: 'Hoy' }).getByRole('button', { name: 'Marcar Vitamina D de las 08:00' }).click()
-      await expect(main.getByText(/por Luis, \d\d:\d\d/).first()).toBeVisible()
+      await expect(main.getByRole('region', { name: 'Hoy' }).getByRole('button', { name: 'Marcar Vitamina D de las 08:00' })).toHaveAttribute('aria-pressed', 'true')
       await page.goto(`/suplementos/${routine.id}`)
       await expect(page.getByText(/por Luis, \d\d:\d\d/).first()).toBeVisible()
 

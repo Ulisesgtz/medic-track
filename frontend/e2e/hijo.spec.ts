@@ -59,7 +59,7 @@ for (const design of designs) {
       await main.getByRole('button', { name: /Acceso del hijo/ }).click() // specs/056: the block opens from «Lo demás»
 
       await main.getByLabel('Nombre del teléfono').fill('Teléfono de Mateo')
-      await main.getByRole('button', { name: 'Crear liga' }).click()
+      await main.getByRole('button', { name: 'Crear liga', exact: true }).click()
       const link = await main.getByLabel('Liga de acceso').inputValue()
       expect(link).toContain('/hijo#')
       await expectNoHorizontalScroll(page)
@@ -179,12 +179,12 @@ for (const design of designs) {
       const main = page.getByRole('main')
       await main.getByRole('button', { name: /Acceso del hijo/ }).click() // specs/056: the block opens from «Lo demás»
       await main.getByLabel('Nombre del teléfono').fill('Cuatro')
-      await main.getByRole('button', { name: 'Crear liga' }).click()
+      await main.getByRole('button', { name: 'Crear liga', exact: true }).click()
       await expect(main.getByText('Ya hay 3 teléfonos o ligas sin usar para este hijo. Quita uno para crear otro.')).toBeVisible()
       await expectNoHorizontalScroll(page)
     })
 
-    test('a Caregiver sees the list but can neither create nor remove', async ({ page, browser }) => {
+    test('a Caregiver sees nothing of the child’s phones: no «Acceso del hijo», no link, no removing (specs/056)', async ({ page, browser }) => {
       await allowClerkOn(page)
       const owner = await seedChild(page)
       const request = page.context().request
@@ -194,8 +194,10 @@ for (const design of designs) {
 
       await guest.page.goto(`/children/${owner.childId}`)
       const main = guest.page.getByRole('main')
-      await expect(main.getByText('Teléfono de Mateo')).toBeVisible()
-      await expect(main.getByRole('button', { name: 'Crear liga' })).toHaveCount(0)
+      await expect(main.getByRole('region', { name: 'Hoy' })).toBeVisible()
+      await expect(main.getByRole('button', { name: /Acceso del hijo/ })).toHaveCount(0)
+      await expect(main.getByText('Teléfono de Mateo')).toHaveCount(0)
+      await expect(main.getByRole('button', { name: 'Crear liga', exact: true })).toHaveCount(0)
       await expect(main.getByRole('button', { name: /^Quitar Teléfono/ })).toHaveCount(0)
       await expectNoHorizontalScroll(guest.page)
       await guest.context.close()
@@ -219,7 +221,7 @@ for (const design of designs) {
       const main = page.getByRole('main')
       await main.getByRole('button', { name: /Acceso del hijo/ }).click() // specs/056: the block opens from «Lo demás»
       await expect(main.getByText('Con el plan completo, cada hijo puede ver y marcar sus tomas')).toBeVisible()
-      await expect(main.getByRole('button', { name: 'Crear liga' })).toHaveCount(0)
+      await expect(main.getByRole('button', { name: 'Crear liga', exact: true })).toHaveCount(0)
       await expect(main.getByRole('button', { name: 'Quitar Teléfono de Mateo' })).toBeVisible()
       await phone.context.close()
     })

@@ -75,7 +75,7 @@ for (const design of designs) {
       await expect(page.getByText('hechas hoy')).toBeVisible()
       await expect(page.getByRole('progressbar', { name: '0 de 24 hechas hoy' })).toBeVisible()
       await expect(page.getByRole('button', { name: /^Toma de/ })).toHaveCount(0)
-      await expect(page.getByText('Cada hora, de 00:00 a 23:00')).toBeVisible()
+      await expect(page.getByText('Cada hora, de 00:00 a 23:00').first()).toBeVisible()
       await expect(page.getByText('Avisos al día')).toBeVisible()
       await expectNoHorizontalScroll(page)
 
