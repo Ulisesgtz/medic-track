@@ -35,10 +35,10 @@ rompen con apóstrofes: escribir los scripts con la herramienta de escritura); n
 
 ## Fase 2: Fundamental (bloquea todas las historias)
 
-- [ ] T004 [P] Crear `frontend/src/shared/ui/pageHeaderText.ts` (+ `pageHeaderText.test.ts` con las palabras prohibidas de
+- [x] T004 [P] Crear `frontend/src/shared/ui/pageHeaderText.ts` (+ `pageHeaderText.test.ts` con las palabras prohibidas de
   `homeText.test.ts`): «Cargando», «No pudimos cargar {qué}», «Revisa tu conexión. Lo que ya registraste está guardado.»,
   «Reintentar», «Solo lectura.» y su resto, «Solo tú ves esto»
-- [ ] T005 Crear `frontend/src/shared/ui/PageHeader.tsx` (research R2, medidas de `encabezado-medidas.md`): props `variant`
+- [x] T005 Crear `frontend/src/shared/ui/PageHeader.tsx` (research R2, medidas de `encabezado-medidas.md`): props `variant`
   (`phone`/`desktop`), `back: { label, to }`, `eyebrow?`, `title`, `subtitle?`, `chip?: { label, tone: 'hint' | 'line' }`,
   `actions?`, `readOnly?`, `search?`, `state?: 'ready' | 'loading' | 'error'`, `errorWhat?`, `onRetry?`; teléfono sin banda,
   `padding-top: env(safe-area-inset-top)`, `px-5 pb-4`, título 28/900 `leading-[1.15]` `[text-wrap:balance]`
@@ -46,19 +46,19 @@ rompen con apóstrofes: escribir los scripts con la herramienta de escritura); n
   enlace de 44 px que funciona también al cargar y con error; `search` con `sticky top-0` en el teléfono; exportar
   `pageHeaderButton(kind: 'primary' | 'secondary' | 'edit', variant)` con las clases del diseño (primaria `confirmed` 48/52 px
   radio 16, secundaria contorno 48 px radio 16, «Editar» contorno 44 px radio 14)
-- [ ] T006 Crear `frontend/src/shared/ui/PageHeader.test.tsx`: H1–H10 en ambos diseños (un solo `h1`, sin `bg-ink`, acciones
+- [x] T006 Crear `frontend/src/shared/ui/PageHeader.test.tsx`: H1–H10 en ambos diseños (un solo `h1`, sin `bg-ink`, acciones
   bajo/derecha, chip `hint`/`line`, «Solo lectura», búsqueda, esqueleto `role=status` con «← …» funcionando, error
   `role=alert` con «Reintentar» que llama `onRetry`, título largo)
-- [ ] T007 [P] Crear `frontend/src/shared/ui/StickyActionBar.tsx` (+ test): en el teléfono una barra `sticky bottom-0` dentro del
+- [x] T007 [P] Crear `frontend/src/shared/ui/StickyActionBar.tsx` (+ test): en el teléfono una barra `sticky bottom-0` dentro del
   formulario con fondo `canvas`, borde superior `hint-edge`, `padding-bottom: calc(1.625rem + env(safe-area-inset-bottom))` y el
   botón a todo lo ancho (52 px); en la web solo el contenido, al final, sin barra (research R3)
-- [ ] T008 [P] Crear `frontend/src/shared/ui/SectionIndex.tsx` (+ test): `nav aria-label="Secciones"` con pastillas de enlaces a
+- [x] T008 [P] Crear `frontend/src/shared/ui/SectionIndex.tsx` (+ test): `nav aria-label="Secciones"` con pastillas de enlaces a
   `#id`, `sticky top-0` en el teléfono, `scrollIntoView` (suave salvo `prefers-reduced-motion`), `aria-current` en la sección
   visible con `IntersectionObserver` (sin él, la primera), solo las secciones que se le pasan (research R4)
-- [ ] T009 Cambiar por dentro `RoutinePageFrame` (`frontend/src/features/supplements/RoutineFormPage.tsx`) para que use
+- [x] T009 Cambiar por dentro `RoutinePageFrame` (`frontend/src/features/supplements/RoutineFormPage.tsx`) para que use
   `PageHeader`, sumando props opcionales `subtitle`, `chip`, `actions`, `readOnly`, `state`; las 7 pantallas que lo usan siguen
   compilando sin cambios; ajustar sus pruebas que buscaban la banda
-- [ ] T010 Borrar `frontend/src/shared/ui/AppHeader.tsx` (y su prueba si existe): no lo usa nadie desde la spec 055
+- [x] T010 Borrar `frontend/src/shared/ui/AppHeader.tsx` (y su prueba si existe): no lo usa nadie desde la spec 055
 
 **Punto de control**: `npx vitest run src/shared src/features/supplements` verde.
 **Commit**: «feat(056): encabezado común, barra de guardar e índice de secciones»

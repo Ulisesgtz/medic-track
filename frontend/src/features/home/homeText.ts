@@ -1,6 +1,7 @@
 // specs/055 (research R4): every sentence of the home lives here, so one test (homeText.test.ts) can read them all. They count
 // what was registered and never evaluate it: no «debes», «atrasado», «falta», percentages, praise or scolding (Principio I).
 
+import { PAGE_HEADER } from '../../shared/ui/pageHeaderText'
 import { planStanding } from '../plans/planCopy'
 import type { Account } from './types'
 
@@ -41,8 +42,8 @@ export const HOME = {
   remindersOff: 'Desactivados',
   remindersUnavailable: 'No disponibles aquí',
   onlyYou: 'Solo tú',
-  readOnlyLead: 'Solo lectura.',
-  readOnlyRest: 'La familia no tiene un plan activo. Puedes seguir marcando tomas y actividades.',
+  readOnlyLead: PAGE_HEADER.readOnlyLead,
+  readOnlyRest: PAGE_HEADER.readOnlyRest,
   retry: 'Reintentar',
   markFailed: 'No se pudo marcar. Inténtalo de nuevo.',
   loadFailedMine: 'no pudimos cargar tus suplementos y actividades',
