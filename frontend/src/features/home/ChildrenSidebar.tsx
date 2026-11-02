@@ -30,7 +30,7 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
   const onFamilyPage = useMatch('/familia') !== null
   const onPlansPage = useMatch('/planes') !== null
   // Specs/033 part 3 and specs/056: the person's own page, apart from the children — one entry, «Mi día».
-  const onMyDay = useMatch('/mi-dia') !== null
+  const onMyDay = [useMatch('/mi-dia'), useMatch('/mis-suplementos/*'), useMatch('/mis-actividades/*')].some((m) => m !== null)
   // Every child is shared with the session (none of its own): the group is named after the family.
   const groupLabel = onlySharedChildren(account) ? (account?.family ? familyOf(account.family.ownerName) : HOME.sharedTitle) : HOME.childrenTitle
 

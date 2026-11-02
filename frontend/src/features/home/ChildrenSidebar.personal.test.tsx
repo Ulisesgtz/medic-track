@@ -48,6 +48,13 @@ describe('ChildrenSidebar — Personal', () => {
     expect(nav.querySelector('a')).toHaveAttribute('aria-current', 'page')
   })
 
+  it('marks it on the person’s own forms too', async () => {
+    stub()
+    renderAt('/mis-suplementos/nueva')
+    const nav = await screen.findByRole('navigation', { name: 'Personal' })
+    expect(nav.querySelector('a')).toHaveAttribute('aria-current', 'page')
+  })
+
   it('is not drawn until the account is known', () => {
     vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
     renderAt('/home')

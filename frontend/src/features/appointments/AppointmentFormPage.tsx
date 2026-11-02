@@ -84,7 +84,7 @@ export function AppointmentFormPage() {
     setDirty(isDirty)
   }
 
-  const backTo = editing || standalone ? `/children/${childId}` : `/consultations/${consultationId}`
+  const backTo = editing || standalone ? (childId ? `/children/${childId}` : '/home') : `/consultations/${consultationId}`
   // specs/056 (design H4): «← Cancelar» (asking first when something was typed), the title and «Para Mateo».
   const discardQuestion = '¿Descartar la cita? Se perderá lo que capturaste.'
   const frame = (content: ReactNode) => (

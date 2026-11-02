@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { formatAgeLong } from '../../shared/age'
 import { Notice } from '../../shared/ui/Notice'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
@@ -61,12 +61,14 @@ function HistoryScreen({ childId }: { childId: string }) {
   if (planNotice) {
     return (
       <AppShell activeChildId={childId}>
-        <main className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas px-6 py-10 lg:max-w-3xl">
-          <Link to={childPath} className="inline-flex min-h-11 items-center text-sm font-bold text-action">
-            ← Consultas
-          </Link>
-          <h1 className="mt-4 text-2xl font-black tracking-tight text-ink">Historial</h1>
-          <p className="mt-2 text-base text-body">Buscar y filtrar el historial es parte del plan completo.</p>
+        <main className={`min-h-screen w-full bg-canvas leading-[normal] ${isDesktop ? 'min-w-0 px-10 pt-7 pb-11' : 'mx-auto max-w-[430px]'}`}>
+          {/* specs/056: the same common header as the paid plan's History. */}
+          <PageHeader
+            variant={variant}
+            back={{ label: `← ${child?.firstName ?? 'Consultas'}`, to: childPath }}
+            title={child ? `Historial de ${child.firstName}` : 'Historial'}
+            subtitle="Buscar y filtrar el historial es parte del plan completo."
+          />
         </main>
         <FreemiumLimitModal reason="history_search" onStayFree={() => navigate(childPath)} onViewPlans={() => navigate('/planes')} />
       </AppShell>

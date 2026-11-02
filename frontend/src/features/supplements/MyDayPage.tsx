@@ -148,6 +148,7 @@ export function MyDayPage() {
       doses={doses}
       activities={activeActivities}
       toMark={toMark}
+      canManage
       empty={nothing ? firstSteps : undefined}
     />
   )

@@ -38,6 +38,19 @@ describe('VaccinationCardPage', () => {
     expect(screen.getByRole('button', { name: TEXT.add })).toBeInTheDocument()
   })
 
+  it('says in the header how many doses and photos are recorded (specs/056)', async () => {
+    stubApi({
+      account: account(),
+      doses: [dose(), dose({ id: 'v2', doseNumber: 1, appliedOn: '2023-02-01' })],
+      photos: [
+        { id: 'p1', createdAt: '2026-10-01T10:00:00Z', createdByName: 'Ana' },
+        { id: 'p2', createdAt: '2026-10-02T10:00:00Z', createdByName: 'Ana' },
+      ],
+    })
+    page()
+    expect(await screen.findByText('2 dosis registradas · 2 fotos')).toBeInTheDocument()
+  })
+
   it('says it is empty without suggesting anything, and offers to add', async () => {
     stubApi({ account: account(), doses: [] })
     page()

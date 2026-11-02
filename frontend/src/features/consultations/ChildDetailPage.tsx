@@ -108,7 +108,10 @@ export function ChildDetailPage() {
       subtitle={child ? childSubtitle(child.birthDate) : undefined}
       actions={isDesktop ? newConsultation || undefined : undefined}
       readOnly={access.readOnly}
-      state={child ? 'ready' : 'loading'}
+      // The child comes from the account: if it can't be read (or the session has no such child), say so instead of a skeleton.
+      state={child ? 'ready' : accountQuery.isPending ? 'loading' : 'error'}
+      errorWhat="los datos de este hijo"
+      onRetry={() => void accountQuery.refetch()}
     />
   )
   const sections = (
@@ -121,6 +124,7 @@ export function ChildDetailPage() {
         child={child}
         free={access.isFree}
         variant={variant}
+        onRetry={() => void query.refetch()}
       />
       <RegistroCompacto kind="supplement" childId={childId} sectionId="suplementos" variant={variant} />
       <RegistroCompacto kind="activity" childId={childId} sectionId="actividades" variant={variant} />
@@ -136,7 +140,7 @@ export function ChildDetailPage() {
         <main className="min-w-0 bg-canvas px-6 pt-7 pb-14 leading-[normal] lg:px-12">
           <div className="mx-auto flex max-w-[904px] flex-col gap-6">
             {header}
-            <ChildTodayCard childId={childId} childName={childName} variant="desktop" />
+            <ChildTodayCard childId={childId} childName={childName} variant="desktop" canManage={access.canAdd} />
             <div className="grid grid-cols-[minmax(0,1fr)_296px] items-start gap-7">
               <div className="flex min-w-0 flex-col gap-6">{sections}</div>
               <aside className="sticky top-6 flex flex-col gap-4">
@@ -157,7 +161,7 @@ export function ChildDetailPage() {
       <main className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas">
         {header}
         <div className="flex flex-col gap-5 px-5 leading-[normal]">
-          <ChildTodayCard childId={childId} childName={childName} variant="phone" />
+          <ChildTodayCard childId={childId} childName={childName} variant="phone" canManage={access.canAdd} />
           {treatment && <TreatmentCard treatment={treatment} variant="phone" />}
           {appointment}
           {sections}

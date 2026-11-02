@@ -94,6 +94,7 @@ export function ConsultationsSection({
   child,
   free,
   variant,
+  onRetry,
 }: {
   consultations: ConsultationSummary[]
   status: 'loading' | 'error' | 'ready'
@@ -101,6 +102,7 @@ export function ConsultationsSection({
   child: { firstName: string; lastName: string } | undefined
   free: boolean
   variant: Variant
+  onRetry: () => void
 }) {
   const desktop = variant === 'desktop'
   const size = desktop ? 'px-3.5 text-[14px]' : 'w-full px-4 text-[15px]'
@@ -125,9 +127,14 @@ export function ConsultationsSection({
     status === 'loading' ? (
       <p className="text-[15px] text-muted">Cargando…</p>
     ) : status === 'error' ? (
-      <p role="alert" className="text-[15px] text-body">
-        {CHILD.loadFailedList}
-      </p>
+      <div className="flex flex-col items-start gap-2.5">
+        <p role="alert" className="text-[15px] text-body">
+          {CHILD.loadFailedList}
+        </p>
+        <button type="button" onClick={onRetry} className={`${outline} px-5 text-[15px]`}>
+          {CHILD.retry}
+        </button>
+      </div>
     ) : consultations.length === 0 ? (
       <div className={`flex flex-col gap-1.5 rounded-[22px] border-2 border-dashed border-hint-border ${desktop ? 'p-6' : 'px-[18px] py-5'}`}>
         <span className={`font-extrabold text-ink ${desktop ? 'text-[17px]' : 'text-[16px]'}`}>{CHILD.noConsultations}</span>

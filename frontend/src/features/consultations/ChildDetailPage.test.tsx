@@ -183,7 +183,7 @@ describe('ChildDetailPage — phone (design A)', () => {
     expect(treatment).toHaveTextContent('Amoxicilina +1 · termina el 04 nov')
   })
 
-  it('lists the day by Mañana / Tarde / Noche, each dose markable here; somebody else’s mark is locked', async () => {
+  it('lists the day by Mañana / Tarde / Noche, each dose markable here; the owner takes back somebody else’s mark', async () => {
     const fetchMock = stubApi()
     renderPage()
 
@@ -199,7 +199,8 @@ describe('ChildDetailPage — phone (design A)', () => {
     expect(mine).toBeEnabled()
     const rosa = within(today).getByRole('button', { name: 'Marcar Amoxicilina de las 08:00' })
     expect(rosa).toHaveTextContent('✓ por Rosa, 08:05')
-    expect(rosa).toBeDisabled()
+    // Who can do everything takes back anybody's mark (specs/032), as on the consultation detail.
+    expect(rosa).toBeEnabled()
     expect(within(today).getByText('Suplemento · 08:00')).toBeInTheDocument()
 
     await userEvent.click(within(today).getByRole('button', { name: 'Marcar Amoxicilina de las 11:00' }))
@@ -330,6 +331,25 @@ describe('ChildDetailPage — phone (design A)', () => {
     expect(screen.queryByRole('link', { name: 'Nueva consulta' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Nueva consulta' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Acceso del hijo/ })).not.toBeInTheDocument()
+  })
+
+  it('locks somebody else’s mark for a Caregiver', async () => {
+    share({ role: 'caregiver', plan: 'paid', readOnly: false })
+    stubApi()
+    renderPage()
+    const rosa = await screen.findByRole('button', { name: 'Marcar Amoxicilina de las 08:00' })
+    expect(rosa).toBeDisabled()
+  })
+
+  it('says it couldn’t read the child instead of a skeleton, and «Reintentar» for a failed list', async () => {
+    const fetchMock = stubApi({ listStatus: 500 })
+    account.children[0] = { ...own, id: 'other' }
+    renderPage()
+    expect(await screen.findByText('No pudimos cargar los datos de este hijo')).toBeInTheDocument()
+    expect(await screen.findByText('No pudimos cargar sus consultas.')).toBeInTheDocument()
+    const before = fetchMock.mock.calls.filter(([u]) => String(u).endsWith('/consultations')).length
+    await userEvent.click(within(screen.getByRole('region', { name: 'Consultas' })).getByRole('button', { name: 'Reintentar' }))
+    await waitFor(() => expect(fetchMock.mock.calls.filter(([u]) => String(u).endsWith('/consultations')).length).toBe(before + 1))
   })
 
   it('says «Solo lectura» to a Tutor of a family that stopped paying', async () => {

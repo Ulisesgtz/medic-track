@@ -3,7 +3,7 @@ import { formatTime } from '../../shared/date'
 import { DayIcon } from '../../shared/ui/DayRow'
 import { useLocalDay } from '../../shared/useLocalDay'
 import { groupByPeriod } from '../consultations/dayPeriods'
-import { takenByText } from '../consultations/doseStatus'
+import { canUnmarkDose, takenByText } from '../consultations/doseStatus'
 import type { OverviewDose } from '../consultations/types'
 import { useOverviewDoseToggle } from '../consultations/useDoseToggle'
 import { MARKED_SHOWN_MS } from '../home/ChildDayCard'
@@ -35,10 +35,12 @@ const chip = 'rounded-full text-[14px] font-extrabold'
  * somebody else's «✓ por Rosa, 08:05», which is the same button disabled — fixed accessible name, state in `aria-pressed`
  * (the project's toggle convention, specs/055 deviation 7). The API has no amount per dose: the line is the time.
  */
-function DoseRow({ dose, variant }: { dose: OverviewDose; variant: Variant }) {
+function DoseRow({ dose, variant, canManage }: { dose: OverviewDose; variant: Variant; canManage: boolean }) {
   const toggle = useOverviewDoseToggle(dose)
   const time = formatTime(dose.scheduledAt)
   const others = dose.taken && dose.takenBy?.mine !== true
+  // A mark somebody else made is only taken back by who can do everything (specs/032, `canUnmarkDose`).
+  const locked = !canUnmarkDose(dose, canManage)
   const desktop = variant === 'desktop'
   return (
     <li
@@ -60,11 +62,11 @@ function DoseRow({ dose, variant }: { dose: OverviewDose; variant: Variant }) {
         type="button"
         aria-label={markLabel(dose.medicationName, time)}
         aria-pressed={dose.taken}
-        disabled={toggle.isPending || others}
+        disabled={toggle.isPending || locked}
         onClick={() => toggle.mutate(!dose.taken)}
         className={
           dose.taken
-            ? `${mint} ${others ? 'px-3 text-[14px]' : 'cursor-pointer px-3.5 text-[15px]'}`
+            ? `${mint} ${others ? 'px-3 text-[14px]' : 'px-3.5 text-[15px]'} ${locked ? '' : 'cursor-pointer'}`
             : `${outline} ${desktop ? 'min-w-[88px] px-4' : 'min-w-24 px-[18px]'}`
         }
       >
@@ -189,7 +191,7 @@ function Skeleton({ variant }: { variant: Variant }) {
  * markable here, and the activities in one row. Same answers and query keys as the home's card (`useChildDay`), so a mark shows on
  * both. The chips count only the server's `status` (never the phone's clock); nothing is evaluated (Principio I).
  */
-export function ChildTodayCard({ childId, childName, variant }: { childId: string; childName: string; variant: Variant }) {
+export function ChildTodayCard({ childId, childName, variant, canManage }: { childId: string; childName: string; variant: Variant; canManage: boolean }) {
   const { day, overview, activities, isPending, isError, refetch } = useChildDay(childId)
   return (
     <TodayCardView
@@ -199,6 +201,7 @@ export function ChildTodayCard({ childId, childName, variant }: { childId: strin
       doses={overview?.doses ?? []}
       activities={activities ?? []}
       toMark={day?.toMark ?? 0}
+      canManage={canManage}
     />
   )
 }
@@ -213,12 +216,14 @@ interface TodayCardViewProps {
   activities: Routine[]
   /** What came and nobody marked, activities included: the amber chip (the server's `status` only). */
   toMark: number
+  /** Who can do everything: may take back a mark somebody else made. */
+  canManage: boolean
   /** What «Hoy» says when there is nothing (by default «Hoy no hay tomas ni actividades»); «Mi día» puts its first steps here. */
   empty?: ReactNode
 }
 
 /** «Hoy» itself, from the doses and the activities it is given: the child's detail and «Mi día» (specs/056, designs A and B). */
-export function TodayCardView({ variant, pending, failed, doses: all, activities, toMark, empty: emptyContent }: TodayCardViewProps) {
+export function TodayCardView({ variant, pending, failed, doses: all, activities, toMark, canManage, empty: emptyContent }: TodayCardViewProps) {
   const desktop = variant === 'desktop'
 
   if (failed)
@@ -271,7 +276,7 @@ export function TodayCardView({ variant, pending, failed, doses: all, activities
         <span className={`text-[12px] font-extrabold tracking-[0.08em] text-action uppercase ${desktop ? 'pb-1' : ''}`}>{g.label}</span>
         <ul className="flex flex-col">
           {g.doses.map((d) => (
-            <DoseRow key={d.id} dose={d} variant={variant} />
+            <DoseRow key={d.id} dose={d} variant={variant} canManage={canManage} />
           ))}
         </ul>
       </div>
