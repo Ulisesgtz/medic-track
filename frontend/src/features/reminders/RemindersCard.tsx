@@ -23,7 +23,12 @@ const MESSAGES: Record<Exclude<ReminderState, 'on' | 'off' | 'loading'>, string>
  * with the design tokens: hint surface and an outline button (the screen's solid one stays its own).
  */
 export function RemindersCard({ account }: { account: Account | undefined }) {
-  const { state, busy, error, activate, deactivate, changeDetail } = useReminders(account)
+  return <RemindersCardView account={account} reminders={useReminders(account)} />
+}
+
+/** The card with the state of a `useReminders` the caller already holds (the home's «Lo demás» reads it for its row too). */
+export function RemindersCardView({ account, reminders }: { account: Account | undefined; reminders: ReturnType<typeof useReminders> }) {
+  const { state, busy, error, activate, deactivate, changeDetail } = reminders
   const [dialog, setDialog] = useState<'activate' | 'change' | null>(null)
   const activateButton = useRef<HTMLButtonElement>(null)
   const changeButton = useRef<HTMLButtonElement>(null)

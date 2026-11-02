@@ -1,11 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ConfirmDialog } from './ConfirmDialog'
 import { FamilyCounter } from './FamilyCounter'
-import { FamilyEntry } from './FamilyEntry'
 import { formatInstant, namesText } from './roles'
 import { RoleChip } from './RoleChip'
 
@@ -56,48 +53,6 @@ describe('RoleChip', () => {
     expect(screen.getByText('Cuenta de la familia')).toBeInTheDocument()
     expect(screen.getByText('Tutor')).toBeInTheDocument()
     expect(screen.getByText('Cuidador')).toBeInTheDocument()
-  })
-})
-
-describe('FamilyEntry', () => {
-  const renderEntry = (variant: 'phone' | 'desktop', body: unknown) => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => body } as Response))
-    return render(
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <MemoryRouter>
-          <FamilyEntry variant={variant} />
-        </MemoryRouter>
-      </QueryClientProvider>,
-    )
-  }
-  const family = (invitations: unknown[]) => ({
-    role: 'owner', plan: 'paid', readOnly: false, owner: { id: 'o', name: 'Ana' },
-    members: [{ id: 'm', name: 'Rosa', role: 'caregiver', childId: null, since: '2026-10-01T10:00:00Z', canRemove: true, you: false }],
-    invitations, capacity: { max: 4, used: 2 },
-  })
-
-  it('links to «Familia» with the people and the places on the phone', async () => {
-    renderEntry('phone', family([{ id: 'i', email: 'carmen@x.com', role: 'caregiver', status: 'pending', expiresAt: '2026-10-13T10:00:00Z', childId: null }]))
-    expect(await screen.findByText('3 de 4 personas · 1 pendiente')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Familia/ })).toHaveAttribute('href', '/familia')
-  })
-
-  it('says «invitación pendiente» and «Ver familia →» on the web', async () => {
-    renderEntry('desktop', family([{ id: 'i', email: 'carmen@x.com', role: 'caregiver', status: 'pending', expiresAt: '2026-10-13T10:00:00Z', childId: null }]))
-    expect(await screen.findByText('3 de 4 personas · 1 invitación pendiente')).toBeInTheDocument()
-    expect(screen.getByText('Ver familia →')).toBeInTheDocument()
-  })
-
-  it('invites the person to share when they are alone', async () => {
-    renderEntry('phone', { ...family([]), members: [], capacity: { max: 4, used: 1 } })
-    expect(await screen.findByText('Invita a tu pareja o a quien cuida a tus hijos')).toBeInTheDocument()
-  })
-
-  it('stays a plain link while the family has not answered, or answers something else', async () => {
-    renderEntry('phone', { id: 'a', firstName: 'Ana' })
-    expect(screen.getByText('Quién ve y marca las tomas de tus hijos')).toBeInTheDocument()
-    await vi.waitFor(() => expect(fetch).toHaveBeenCalled())
-    expect(screen.getByText('Quién ve y marca las tomas de tus hijos')).toBeInTheDocument()
   })
 })
 

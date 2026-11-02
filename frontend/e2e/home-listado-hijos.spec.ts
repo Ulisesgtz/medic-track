@@ -1,7 +1,7 @@
 import { test, expect, designs, seedAccount, signUp } from './helpers'
 
 // Covers specs/003-home-listado-hijos in both designs: the phone home (mock 02
-// list) and the web home (mock 15 "Hola, Ana / Tus hijos", with the sidebar).
+// list) and the web home, redesigned in specs/055 («Hola, Ana», «Tu día», the children), with the sidebar.
 // Requires the backend running locally.
 
 for (const design of designs) {
@@ -9,32 +9,23 @@ for (const design of designs) {
     test.use({ viewport: design.viewport })
 
     const addChildButton = (page: import('@playwright/test').Page) =>
-      page.getByRole('main').getByRole('button', { name: design.isWeb ? 'Agregar hijo' : '+ Agregar hijo' })
+      page.getByRole('main').getByRole('button', { name: /Agregar hijo/ })
 
     test('crear cuenta → home → recargar conserva la sesión → "Agregar hijo" muestra el límite del plan gratuito', async ({
       page,
     }) => {
       await signUp(page)
 
-      await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
-      if (design.isWeb) {
-        await expect(page.getByText('Hola, Ana')).toBeVisible()
-        await expect(page.getByRole('heading', { level: 1, name: 'Tus hijos' })).toBeVisible()
-        await expect(page.getByText('Tu plan incluye un hijo')).toBeVisible()
-        // The web card (mock 15) is plain: no status chips.
-        await expect(page.getByText('0 consultas')).toHaveCount(0)
-      } else {
-        await expect(page.getByText('Hola, Ana')).toBeVisible()
-        await expect(page.getByRole('heading', { level: 1, name: 'Tus hijos' })).toBeVisible()
-        await expect(page.getByText('El plan gratuito incluye un hijo.')).toBeVisible()
-        // Board screen 2: the child's card carries its status chips.
-        await expect(page.getByText('0 consultas')).toBeVisible()
-        await expect(page.getByText('Sin tomas pendientes')).toBeVisible()
-      }
+      await expect(page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' })).toBeVisible()
+      await expect(page.getByText('Hola, Ana')).toBeVisible()
+      // specs/055: the free plan's note is inside «+ Agregar hijo», and the card says the child's day, not its consultations.
+      await expect(addChildButton(page)).toContainText('Tu plan incluye un hijo')
+      await expect(page.getByRole('main').getByText('Hoy no hay tomas ni actividades')).toBeVisible()
+      await expect(page.getByText('0 consultas')).toHaveCount(0)
 
       // FR-003/SC-004: reloading keeps showing the same account, no re-signup.
       await page.reload()
-      await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
+      await expect(page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' })).toBeVisible()
 
       // FR-004: on the free plan with a child already registered, the limit pop-up
       // appears right away (mocks 05/15) — no form to fill first.
@@ -49,7 +40,7 @@ for (const design of designs) {
       // «Ahora no» closes it; only the original child is listed.
       await dialog.getByRole('button', { name: 'Ahora no' }).click()
       await expect(dialog).toBeHidden()
-      await expect(page.getByRole('main').getByText('Luis Gómez')).toBeVisible()
+      await expect(page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' })).toBeVisible()
     })
 
     test('el pop-up del plan gratuito se cierra con Escape y «Ver el plan completo» abre /planes', async ({ page }) => {
@@ -71,7 +62,7 @@ for (const design of designs) {
     }) => {
       await seedAccount(page, [], { plan: 'free' }) // the limit it reaches is the free plan's
       await page.goto('/home')
-      await expect(page.getByText(/todavía no tienes hijos/i)).toBeVisible()
+      await expect(page.getByText('Aún no registras a tus hijos')).toBeVisible()
 
       await addChildButton(page).click()
       const dialog = page.getByRole('dialog', { name: 'Agregar hijo' })
@@ -100,7 +91,7 @@ for (const design of designs) {
       await dialog.getByLabel('Fecha de nacimiento').fill('2025-07-01')
       await dialog.getByRole('button', { name: 'Guardar' }).click()
       await expect(dialog).toBeHidden()
-      await expect(page.getByRole('main').getByText('Sofía Morales')).toBeVisible()
+      await expect(page.getByRole('main').getByRole('link', { name: 'Ver detalle de Sofía' })).toBeVisible()
 
       // On the free plan the next one is refused with the plan pop-up.
       await addChildButton(page).click()
@@ -123,7 +114,7 @@ for (const design of designs) {
         child: { firstName: 'Mateo', lastName: 'Ruiz', birthDate: '2019-06-01' },
       })
 
-      await page.getByRole('main').getByText('Mateo Ruiz').click()
+      await page.getByRole('main').getByRole('link', { name: 'Ver detalle de Mateo' }).click()
 
       await expect(page).toHaveURL(/\/children\//)
       await expect(page.getByRole('link', { name: 'Nueva consulta' }).or(page.getByRole('link', { name: '+ Nueva' }))).toBeVisible()
@@ -156,7 +147,7 @@ test.describe('barra lateral (solo web)', () => {
     // The sidebar's logo goes "home" — the list of children (web mock 15), not the detail.
     await page.locator('aside').getByRole('link', { name: /ir a mi home/ }).click()
     await expect(page).toHaveURL(/\/home/)
-    await expect(page.getByRole('heading', { level: 1, name: 'Tus hijos' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 2, name: 'Tus hijos' })).toBeVisible()
   })
 })
 
@@ -167,7 +158,7 @@ test.describe('móvil: sin barra lateral', () => {
     await signUp(page)
     await expect(page.locator('aside')).toHaveCount(0)
 
-    await page.getByRole('main').getByText('Luis Gómez').click()
+    await page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' }).click()
     await expect(page).toHaveURL(/\/children\//)
     await expect(page.locator('aside')).toHaveCount(0)
   })

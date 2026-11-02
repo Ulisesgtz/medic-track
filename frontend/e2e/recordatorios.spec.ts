@@ -60,6 +60,11 @@ async function reminderDetailOf(page: Page) {
 
 const child = [{ firstName: 'Mateo', lastName: 'Morales', birthDate: '2021-03-14' }]
 
+/** specs/055: the reminders card opens from the «Recordatorios» row of «Lo demás», at the bottom of the home. */
+async function openReminders(page: import('@playwright/test').Page) {
+  await page.getByRole('navigation', { name: 'Más opciones' }).getByRole('button', { name: /^Recordatorios/ }).click()
+}
+
 for (const design of designs) {
   test.describe(`Recordatorios — diseño ${design.name}`, () => {
     test.use({ viewport: design.viewport })
@@ -72,6 +77,7 @@ for (const design of designs) {
     test('la primera activación pide elegir el texto, registra el dispositivo y se puede desactivar', async ({ page }) => {
       await seedAccount(page, child)
       await page.goto('/home')
+      await openReminders(page)
       const card = page.getByRole('region', { name: 'Recordatorios de tomas' })
       await expect(card).toContainText('no una alarma garantizada')
 
@@ -96,6 +102,7 @@ for (const design of designs) {
     test('en otro dispositivo de la misma cuenta ya no pregunta; cerrar sesión lo desactiva', async ({ page, browser }) => {
       const { email } = await seedAccount(page, child)
       await page.goto('/home')
+      await openReminders(page)
       await page.getByRole('button', { name: 'Activar recordatorios' }).click()
       await page.getByRole('dialog').getByRole('button', { name: /Mostrar detalle/ }).click()
       await expect(page.getByRole('region', { name: 'Recordatorios de tomas' })).toContainText('el detalle de la toma')
@@ -106,6 +113,7 @@ for (const design of designs) {
       await stubBrowserPush(second)
       await signInAs(second, email)
       await second.goto('/home')
+      await openReminders(second)
       const card = second.getByRole('region', { name: 'Recordatorios de tomas' })
 
       const registered = second.waitForResponse((r) => r.url().endsWith('/reminder-devices') && r.request().method() === 'POST')
@@ -131,6 +139,7 @@ test('un navegador sin notificaciones push dice que no puede recibir recordatori
   })
   await seedAccount(page, child)
   await page.goto('/home')
+  await openReminders(page)
 
   const card = page.getByRole('region', { name: 'Recordatorios de tomas' })
   await expect(card).toContainText('Este navegador no puede recibir recordatorios.')

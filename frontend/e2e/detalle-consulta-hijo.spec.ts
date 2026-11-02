@@ -21,7 +21,7 @@ for (const design of designs) {
 
     test('registrar consulta → ver detalle con tomas → marcar una toma → volver a la lista', async ({ page }) => {
       await signUp(page)
-      await page.getByRole('main').getByText('Luis Gómez').click()
+      await page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' }).click()
       await expect(page).toHaveURL(/\/children\//)
       await expect(page.getByText(/todavía no hay consultas/i)).toBeVisible()
 
@@ -77,7 +77,7 @@ for (const design of designs) {
 
     test('"Cancelar" vuelve al hijo, y pide confirmar solo si ya había algo capturado', async ({ page }) => {
       await signUp(page)
-      await page.getByRole('main').getByText('Luis Gómez').click()
+      await page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' }).click()
       await page.getByRole('link', { name: design.isWeb ? 'Nueva consulta' : '+ Nueva' }).click()
       await expect(page).toHaveURL(/\/consultations\/new/)
 
@@ -101,7 +101,7 @@ for (const design of designs) {
 
     test('guardar sin llenar nada muestra los errores y no crea la consulta', async ({ page }) => {
       await signUp(page)
-      await page.getByRole('main').getByText('Luis Gómez').click()
+      await page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' }).click()
       await page.getByRole('link', { name: design.isWeb ? 'Nueva consulta' : '+ Nueva' }).click()
 
       await page.getByRole('button', { name: 'Guardar consulta' }).click()
@@ -116,7 +116,7 @@ for (const design of designs) {
 
     test('"Primera toma" es obligatoria: sin hora de inicio no se guarda (y ya no dice "opcional")', async ({ page }) => {
       await signUp(page)
-      await page.getByRole('main').getByText('Luis Gómez').click()
+      await page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' }).click()
       await page.getByRole('link', { name: design.isWeb ? 'Nueva consulta' : '+ Nueva' }).click()
       const primeraToma = page.locator('label', { hasText: 'Primera toma' })
       await expect(primeraToma).toBeVisible()
@@ -142,7 +142,7 @@ for (const design of designs) {
 
     test('agregar y quitar medicamentos', async ({ page }) => {
       await signUp(page)
-      await page.getByRole('main').getByText('Luis Gómez').click()
+      await page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' }).click()
       await page.getByRole('link', { name: design.isWeb ? 'Nueva consulta' : '+ Nueva' }).click()
 
       await expect(page.getByRole('button', { name: 'Quitar medicamento' })).toHaveCount(0)
@@ -161,7 +161,7 @@ test.describe('web: un diálogo abierto desde la barra lateral queda por encima 
 
   test('el pop-up del plan gratuito no se pinta debajo de las tarjetas', async ({ page }) => {
     await signUp(page)
-    await page.getByRole('main').getByText('Luis Gómez').click()
+    await page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' }).click()
     await expect(page).toHaveURL(/\/children\//)
 
     await page.locator('aside').getByRole('button', { name: '+ Agregar hijo' }).click()

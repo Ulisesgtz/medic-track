@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import { DoseChipView } from '../../consultations/DoseChip'
+import { groupByPeriod } from '../../consultations/dayPeriods'
+import { takenByText } from '../../consultations/doseStatus'
 import type { OverviewDose } from '../../consultations/types'
-import { DayProgress } from '../../supplements/DayProgress'
-import { dayCount } from '../../supplements/scheduleText'
+import type { Routine } from '../../supplements/types'
+import { formatTime, formatWeekdayLong } from '../../../shared/date'
+import { DayIcon } from '../../../shared/ui/DayRow'
 import { useLocalDay } from '../../../shared/useLocalDay'
 import { PHONE } from '../childText'
 import { accessGone, useActivities, useDone, useMarkDose, useMe, useOverview, useRotation } from './hooks'
@@ -11,7 +13,12 @@ import { RemindersCard } from './RemindersCard'
 import { isIOS } from '../../reminders/deviceSupport'
 import { clearCredential, readCredential } from './storage'
 
-const card = 'flex flex-col gap-3 rounded-[22px] bg-surface px-[22px] py-5 shadow-[0_8px_20px_rgba(4,37,43,0.07)]'
+// specs/055 (estado 7 del diseño del inicio): the same rows, icons and chips as the child's card on the parents' home.
+const card = 'flex flex-col rounded-[22px] bg-surface p-4 shadow-[0_8px_20px_rgba(4,37,43,0.07)]'
+const outline =
+  'min-h-11 shrink-0 cursor-pointer rounded-[14px] border-2 border-action text-[15px] font-extrabold text-action hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60'
+const mint = 'inline-flex min-h-11 shrink-0 items-center rounded-[14px] bg-confirmed-soft font-extrabold text-confirmed-strong'
+const row = 'flex min-h-14 items-center gap-3 border-b border-hint-edge'
 
 /** True when the page runs as the app installed on the home screen (the advice to install is then not needed). */
 function isInstalled(): boolean {
@@ -22,15 +29,62 @@ function isInstalled(): boolean {
   }
 }
 
+/**
+ * One dose: «Marcar», the child's own mark «✓ 16:02» (tapping it takes it back) or somebody else's «✓ por Ana, 08:05» (locked).
+ * A toggle with a fixed name and its state in `aria-pressed`, as every dose chip of the app.
+ */
 function DoseRow({ credential, dose }: { credential: string; dose: OverviewDose }) {
   const mark = useMarkDose(credential)
+  const time = formatTime(dose.scheduledAt)
+  const others = dose.taken && dose.takenBy?.mine !== true
   return (
-    <li className="flex items-center justify-between gap-3">
-      <div className="flex min-w-0 flex-col">
-        <span className="text-base font-extrabold text-ink [overflow-wrap:anywhere]">{dose.medicationName}</span>
-        {dose.kind === 'supplement' && <span className="text-[13px] font-semibold text-body">{PHONE.supplement}</span>}
-      </div>
-      <DoseChipView dose={dose} canManage={false} pending={mark.isPending} onToggle={() => mark.mutate({ dose, taken: !dose.taken })} />
+    <li className={row}>
+      <DayIcon kind={dose.kind === 'supplement' ? 'sup' : 'med'} />
+      <span className="flex min-w-0 flex-1 flex-col gap-px">
+        <span className="text-[16px] font-extrabold text-ink [overflow-wrap:anywhere]">{dose.medicationName}</span>
+        <span className="text-[14px] text-body">
+          {dose.kind === 'supplement' ? `${PHONE.supplement} · ${time}` : time}
+          {dose.status === 'unregistered' && ` · ${PHONE.unregistered}`}
+        </span>
+      </span>
+      <button
+        type="button"
+        aria-label={PHONE.markLabel(dose.medicationName, time)}
+        aria-pressed={dose.taken}
+        disabled={mark.isPending || others}
+        onClick={() => mark.mutate({ dose, taken: !dose.taken })}
+        className={dose.taken ? `${mint} ${others ? 'px-3 text-[14px]' : 'cursor-pointer px-3.5 text-[15px]'}` : `${outline} min-w-24 px-[18px]`}
+      >
+        {!dose.taken ? PHONE.mark : others ? `✓ ${takenByText(dose.takenBy)}` : `✓ ${formatTime(dose.takenBy?.at ?? dose.scheduledAt)}`}
+      </button>
+    </li>
+  )
+}
+
+/** One activity: its hour (or its count when it repeats in the day) and «✓ Realizado» while one is still unmarked. */
+function ActivityRow({ activity, onDone, busy }: { activity: Routine; onDone: () => void; busy: boolean }) {
+  const doses = activity.doses
+  const done = doses.filter((d) => d.taken)
+  const last = [...done].sort((a, b) => (a.takenBy?.at ?? '').localeCompare(b.takenBy?.at ?? '')).at(-1)
+  const detail = doses.length === 1 ? formatTime(doses[0].scheduledAt) : PHONE.activitiesCount(done.length, doses.length)
+  return (
+    <li className={row}>
+      <DayIcon kind="act" />
+      <span className="flex min-w-0 flex-1 flex-col gap-px">
+        <span className="text-[16px] font-extrabold text-ink [overflow-wrap:anywhere]">{activity.name}</span>
+        <span className="text-[14px] text-body">{detail}</span>
+      </span>
+      {done.length < doses.length ? (
+        <button type="button" aria-label={`Realizado: ${activity.name}`} disabled={busy} onClick={onDone} className={`${outline} px-4`}>
+          {PHONE.done}
+        </button>
+      ) : (
+        last && (
+          <span className={`${mint} px-3 text-[14px]`}>
+            ✓ {last.takenBy?.mine === false ? takenByText(last.takenBy) : formatTime(last.takenBy?.at ?? last.scheduledAt)}
+          </span>
+        )
+      )}
     </li>
   )
 }
@@ -69,88 +123,106 @@ function Today({ credential, onRotated }: { credential: string; onRotated: (cred
   const failed = me.isError || overview.isError || activities.isError
   const loading = me.isPending || overview.isPending || activities.isPending
 
-  return (
-    <main className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas pb-10">
-      <header className="bg-ink px-6 pt-8 pb-7">
-        <p className="text-sm font-semibold text-hint-border">PediTrack</p>
-        <h1 className="mt-1 text-3xl leading-[1.15] font-black tracking-[-0.03em] text-white [overflow-wrap:anywhere]">
-          {PHONE.greeting(me.data?.childFirstName ?? '')}
-        </h1>
-      </header>
-      <div className="flex flex-col gap-5 px-5 pt-6">
-        {!isInstalled() && <p className="text-[13px] leading-relaxed text-body">{isIOS() ? PHONE.installIos : PHONE.install}</p>}
-        {loading && !failed && (
-          <p role="status" className="text-base font-semibold text-action">
-            {PHONE.loading}
-          </p>
-        )}
-        {failed && (
-          <div className={card} role="status">
-            <p className="text-base font-bold text-ink">{PHONE.loadError}</p>
-            <button
-              type="button"
-              className="min-h-12 cursor-pointer self-start rounded-2xl border-2 border-action px-5 text-base font-extrabold text-action hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
-              onClick={() => {
-                void me.refetch()
-                void overview.refetch()
-                void activities.refetch()
-              }}
-            >
-              {PHONE.retry}
-            </button>
-          </div>
-        )}
+  const doses = (overview.data?.doses ?? []).filter((d) => d.status !== 'canceled')
+  const activeActivities = (activities.data ?? []).filter((a) => a.status === 'active' && a.doses.length > 0)
+  const toMark = doses.filter((d) => d.status === 'due').length
+  const actDoses = activeActivities.flatMap((a) => a.doses)
+  // The day's chip counts the activities whose time came too (never «Todo marcado» over one still to mark).
+  const dueAll = toMark + actDoses.filter((d) => d.status === 'due').length
+  const ready = !!overview.data && !!activities.data
+  const nothing = ready && doses.length === 0 && actDoses.length === 0
 
-        {overview.data && (
-          <section aria-label={PHONE.today} className={card}>
-            <h2 className="text-xl font-black tracking-[-0.02em] text-ink">{PHONE.today}</h2>
-            {overview.data.doses.length === 0 ? (
-              <p className="text-[15px] text-body">{PHONE.noDoses}</p>
-            ) : (
-              <ul className="flex flex-col gap-3">
-                {overview.data.doses.map((dose) => (
+  return (
+    <main
+      className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col gap-5 bg-canvas px-5 pb-8 leading-[normal]"
+      style={{ paddingTop: 'calc(0.5rem + env(safe-area-inset-top))' }}
+    >
+      <header className="flex items-center gap-3.5">
+        <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-action text-[19px] font-black text-white">
+          {(me.data?.childFirstName ?? '').charAt(0)}
+        </span>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <h1 className="text-[28px] leading-tight font-black tracking-[-0.03em] text-ink [overflow-wrap:anywhere]">
+            {PHONE.greeting(me.data?.childFirstName ?? '')}
+          </h1>
+          <span className="text-[15px] text-body">{formatWeekdayLong(day.from)}</span>
+        </div>
+      </header>
+
+      {!isInstalled() && <p className="text-[13px] leading-relaxed text-body">{isIOS() ? PHONE.installIos : PHONE.install}</p>}
+      {loading && !failed && (
+        <p role="status" className="text-[16px] font-semibold text-action">
+          {PHONE.loading}
+        </p>
+      )}
+      {failed && (
+        <div className={`${card} gap-3`} role="status">
+          <p className="text-[16px] font-bold text-ink">{PHONE.loadError}</p>
+          <button
+            type="button"
+            className={`${outline} self-start px-5`}
+            onClick={() => {
+              void me.refetch()
+              void overview.refetch()
+              void activities.refetch()
+            }}
+          >
+            {PHONE.retry}
+          </button>
+        </div>
+      )}
+
+      {ready && !nothing && dueAll > 0 && (
+        <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-pending-soft px-3 py-[5px] text-[14px] font-extrabold text-on-pending-chip">
+          <span aria-hidden="true" className="h-[9px] w-[9px] rounded-full border-2 border-pending-dot" />
+          {PHONE.toMark(dueAll)}
+        </span>
+      )}
+      {ready && !nothing && dueAll === 0 && (
+        <span className="self-start rounded-full bg-confirmed-soft px-3 py-[5px] text-[14px] font-extrabold text-confirmed-strong">{PHONE.allMarked}</span>
+      )}
+      {nothing && (
+        <div className="rounded-[22px] border-2 border-dashed border-hint-border px-5 py-7 text-center text-[16px] leading-normal text-muted">
+          {PHONE.nothingToday}
+        </div>
+      )}
+
+      {ready && doses.length > 0 && (
+        <section aria-label={PHONE.today} className={`${card} gap-1.5`}>
+          <div className="flex items-baseline justify-between gap-2 pb-1">
+            <h2 className="text-[18px] font-extrabold text-ink">{PHONE.dosesTitle}</h2>
+            <span className="text-[15px] font-bold text-ink">{PHONE.dosesCount(doses.length, toMark)}</span>
+          </div>
+          {groupByPeriod(doses).map((group) => (
+            <div key={group.key} role="group" aria-label={group.label} className="flex flex-col gap-0.5 pt-2">
+              <span className="text-[12px] font-extrabold tracking-[0.08em] text-action uppercase">{group.label}</span>
+              <ul className="flex flex-col">
+                {group.doses.map((dose) => (
                   <DoseRow key={`${dose.kind ?? 'medication'}-${dose.id}`} credential={credential} dose={dose} />
                 ))}
               </ul>
-            )}
-          </section>
-        )}
+            </div>
+          ))}
+        </section>
+      )}
 
-        {!failed && !loading && <RemindersCard credential={credential} />}
+      {ready && activeActivities.length > 0 && (
+        <section aria-label={PHONE.activities} className={`${card} gap-0.5`}>
+          <div className="flex items-baseline justify-between gap-2 pb-1">
+            <h2 className="text-[18px] font-extrabold text-ink">{PHONE.activities}</h2>
+            <span className="text-[15px] font-bold text-ink">
+              {PHONE.activitiesCount(actDoses.filter((d) => d.taken).length, actDoses.length)}
+            </span>
+          </div>
+          <ul className="flex flex-col">
+            {activeActivities.map((activity) => (
+              <ActivityRow key={activity.id} activity={activity} busy={done.isPending} onDone={() => done.mutate(activity.id)} />
+            ))}
+          </ul>
+        </section>
+      )}
 
-        {activities.data && activities.data.length > 0 && (
-          <section aria-label={PHONE.activities} className={card}>
-            <h2 className="text-xl font-black tracking-[-0.02em] text-ink">{PHONE.activities}</h2>
-            <ul className="flex flex-col gap-4">
-              {activities.data
-                .filter((a) => a.status === 'active')
-                .map((activity) => {
-                  const count = dayCount(activity.doses)
-                  return (
-                    <li key={activity.id} className="flex flex-col gap-2">
-                      <span className="text-base font-extrabold text-ink [overflow-wrap:anywhere]">{activity.name}</span>
-                      {count.total > 0 && (
-                        <>
-                          <DayProgress done={count.done} total={count.total} label={`Avance de ${activity.name}`} />
-                          <span className="text-[13px] font-semibold text-body">{PHONE.doneOf(count.done, count.total)}</span>
-                        </>
-                      )}
-                      <button
-                        type="button"
-                        aria-label={`Realizado: ${activity.name}`}
-                        disabled={done.isPending || count.total === 0}
-                        onClick={() => done.mutate(activity.id)}
-                        className="min-h-12 cursor-pointer self-start rounded-2xl border-2 border-action px-[18px] text-base font-extrabold text-action transition-colors duration-200 hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        <span aria-hidden="true">✓ </span>Realizado
-                      </button>
-                    </li>
-                  )
-                })}
-            </ul>
-          </section>
-        )}
-      </div>
+      {!failed && !loading && <RemindersCard credential={credential} />}
     </main>
   )
 }

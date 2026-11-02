@@ -104,6 +104,13 @@ describe('HomePage', () => {
     expect(signOut).toHaveBeenCalledOnce()
   })
 
+  it('shows skeletons of the final height while the account loads (specs/055, estado 6)', () => {
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
+    renderHome()
+    expect(screen.getByRole('status', { name: 'Cargando el inicio' })).toHaveAttribute('aria-busy', 'true')
+    expect(screen.queryByText('Cargando…')).not.toBeInTheDocument()
+  })
+
   it('shows an empty state when the account has no children yet (FR-006)', async () => {
     window.localStorage.setItem('peditrack.accountId', 'account-empty')
     vi.stubGlobal(
@@ -118,7 +125,7 @@ describe('HomePage', () => {
     )
     renderHome()
 
-    expect(await screen.findByText(/todavía no tienes hijos/i)).toBeInTheDocument()
+    expect(await screen.findByText('Aún no registras a tus hijos')).toBeInTheDocument()
   })
 
   it('shows the "Antes de empezar" notice only while the account has not acknowledged it (specs/010)', async () => {
@@ -134,7 +141,7 @@ describe('HomePage', () => {
 
     stubApi({ ...account, disclaimerAccepted: true })
     renderHome()
-    expect(await screen.findByText(/todavía no tienes hijos/i)).toBeInTheDocument()
+    expect(await screen.findByText('Aún no registras a tus hijos')).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Antes de empezar' })).not.toBeInTheDocument()
   })
 
@@ -147,8 +154,7 @@ describe('HomePage', () => {
       })
     renderHome()
 
-    expect(await screen.findByText('Luis Gómez')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Luis Gómez/ })).toHaveAttribute('href', '/children/child-1')
+    expect(await screen.findByRole('link', { name: 'Ver detalle de Luis' })).toHaveAttribute('href', '/children/child-1')
   })
 
   it('signs out and clears the query cache when "Cerrar sesión" is clicked (phone)', async () => {
@@ -196,7 +202,7 @@ describe('HomePage', () => {
 
     expect(await screen.findByRole('dialog', { name: 'Tu plan incluye un hijo' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Nombre')).not.toBeInTheDocument()
-    expect(screen.getByText('El plan gratuito incluye un hijo.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Agregar hijo/ })).toHaveTextContent('Tu plan incluye un hijo')
   })
 
   it('gives the focus back to "+ Agregar hijo" when the plan pop-up closes, even if the click never focused it (Safari)', async () => {
@@ -208,7 +214,7 @@ describe('HomePage', () => {
       children: [{ id: 'child-1', firstName: 'Luis', lastName: 'Gómez', birthDate: '2020-01-15', height: null, weight: null }],
     })
     renderHome()
-    const opener = await screen.findByRole('button', { name: '+ Agregar hijo' })
+    const opener = await screen.findByRole('button', { name: /Agregar hijo/ })
 
     // A click that leaves the button unfocused, as Safari does; the pop-up is the one that focuses "Ahora no".
     fireEvent.click(opener)
@@ -227,7 +233,6 @@ describe('HomePage', () => {
       countryCode: null, stateCode: null, plan: 'free',
       children: [{ id: 'child-1', firstName: 'Mateo', lastName: 'Morales', birthDate: '2021-03-14', height: null, weight: null }],
     }
-    const consultation = (id: string) => ({ id, doctorName: 'Dra. López', consultDate: '2026-01-15', notes: '', symptomNames: [], medicationCount: 1 })
 
     beforeEach(() => window.localStorage.setItem('peditrack.accountId', 'account-chips'))
 
@@ -239,53 +244,37 @@ describe('HomePage', () => {
       expect(screen.getByRole('main')).toHaveClass('mx-auto', 'max-w-[430px]')
     })
 
-    it('greets the tutor and shows their initials in the header', async () => {
+    it('greets the tutor first, with the date and their initials, then «Tu día», then the children (specs/055)', async () => {
       stubApi(account)
       renderHome()
 
-      expect(await screen.findByText('Hola, Ana')).toBeInTheDocument()
-      expect(screen.getByRole('heading', { level: 1, name: 'Tus hijos' })).toBeInTheDocument()
+      const hello = await screen.findByRole('heading', { level: 1, name: 'Hola, Ana' })
+      expect(screen.getByText(/^(lunes|martes|miércoles|jueves|viernes|sábado|domingo) \d+ de /)).toBeInTheDocument()
       expect(screen.getByText('AM')).toBeInTheDocument()
+      const children = screen.getByRole('heading', { level: 2, name: 'Tus hijos' })
+      expect(hello.compareDocumentPosition(children) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     })
 
-    it('shows how many consultations the child has, and the doses still unmarked today', async () => {
-      stubApi(account, { consultations: [consultation('c1'), consultation('c2')], doses: [dose(false), dose(false), dose(true)] })
+    it('shows the day of each child: a row per kind with something today, and the next dose to mark (specs/055)', async () => {
+      stubApi(account, { doses: [dose(false), dose(true)] })
       renderHome()
 
-      expect(await screen.findByText('2 consultas')).toBeInTheDocument()
-      expect(await screen.findByText('2 tomas hoy')).toBeInTheDocument()
+      const card = (await screen.findByRole('link', { name: 'Ver detalle de Mateo' })).closest('article')!
+      expect(await within(card).findByText('2 tomas hoy · 1 por marcar')).toBeInTheDocument()
+      expect(within(card).getByText('1 por marcar')).toBeInTheDocument()
+      expect(within(card).queryByText('Suplementos')).not.toBeInTheDocument()
+      expect(within(card).getByRole('button', { name: /^Marcar Amoxicilina/ })).toBeInTheDocument()
+      expect(within(card).queryByText(/consulta/)).not.toBeInTheDocument()
     })
 
-    it('does not count doses "sin registrar" in "N tomas hoy" (specs/013)', async () => {
-      stubApi(account, { consultations: [consultation('c1')], doses: [dose(false), dose(false, 'unregistered'), dose(true)] })
+    it('says when the child has nothing today', async () => {
+      stubApi(account)
       renderHome()
 
-      expect(await screen.findByText('1 toma hoy')).toBeInTheDocument()
+      expect(await screen.findByText('Hoy no hay tomas ni actividades')).toBeInTheDocument()
     })
 
-    it('shows "Sin tomas pendientes" when only doses "sin registrar" are left', async () => {
-      stubApi(account, { consultations: [consultation('c1')], doses: [dose(false, 'unregistered')] })
-      renderHome()
-
-      expect(await screen.findByText('Sin tomas pendientes')).toBeInTheDocument()
-    })
-
-    it('uses the singular for one consultation and one dose', async () => {
-      stubApi(account, { consultations: [consultation('c1')], doses: [dose(false)] })
-      renderHome()
-
-      expect(await screen.findByText('1 consulta')).toBeInTheDocument()
-      expect(await screen.findByText('1 toma hoy')).toBeInTheDocument()
-    })
-
-    it('reads "Sin tomas pendientes" when nothing is left to mark (all taken, or none today)', async () => {
-      stubApi(account, { consultations: [consultation('c1')], doses: [dose(true)] })
-      renderHome()
-
-      expect(await screen.findByText('Sin tomas pendientes')).toBeInTheDocument()
-    })
-
-    it('keeps the card without chips when the counts fail to load', async () => {
+    it('keeps the card and offers to try again when its day fails to load', async () => {
       vi.stubGlobal(
         'fetch',
         vi.fn().mockImplementation(async (input: RequestInfo | URL) =>
@@ -296,22 +285,21 @@ describe('HomePage', () => {
       )
       renderHome()
 
-      expect(await screen.findByText('Mateo Morales')).toBeInTheDocument()
-      const card = screen.getByRole('link', { name: /Mateo Morales/ })
-      expect(within(card).queryByText(/consulta/)).not.toBeInTheDocument()
-      expect(within(card).queryByText(/tomas/)).not.toBeInTheDocument()
+      expect(await screen.findByText('No pudimos cargar el día de Mateo')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
     })
 
-    it('alternates the avatar colour between children (cyan, then mint)', async () => {
+    it('alternates the avatar colour between children (action, then confirmed)', async () => {
       stubApi({
         ...account, plan: 'paid',
         children: [...account.children, { id: 'child-2', firstName: 'Sofía', lastName: 'Morales', birthDate: '2025-07-01', height: null, weight: null }],
       })
       renderHome()
 
-      const links = await screen.findAllByRole('link', { name: /Morales/ })
-      expect(links[0].querySelector('[aria-hidden]')).toHaveClass('bg-bright')
-      expect(links[1].querySelector('[aria-hidden]')).toHaveClass('bg-mint')
+      await screen.findByRole('link', { name: 'Ver detalle de Sofía' })
+      const links = screen.getAllByRole('link', { name: /^Ver detalle de/ })
+      expect(links[0].querySelector('[aria-hidden]')).toHaveClass('bg-action')
+      expect(links[1].querySelector('[aria-hidden]')).toHaveClass('bg-confirmed')
     })
   })
 
@@ -362,19 +350,19 @@ describe('HomePage', () => {
       renderDesktopHome()
 
       await screen.findByText('Hola, Ana')
-      expect(screen.getByRole('main')).toHaveClass('px-6', 'py-8', 'lg:px-12', 'lg:py-11')
+      expect(screen.getByRole('main')).toHaveClass('px-6', 'py-8', 'lg:px-12', 'lg:pt-11')
       expect(screen.queryByRole('navigation', { name: 'Tus hijos' })).not.toBeInTheDocument()
     })
 
-    it('shows "Hola, Ana / Tus hijos", the solid "Agregar hijo" button, the cards and the plan tile (mock 15)', async () => {
+    it('shows the children in two columns, «+ Agregar hijo» with the plan note, and the sidebar (specs/055)', async () => {
       stubApi(account([kid('k1', 'Luis')]))
       renderDesktopHome()
 
-      expect(await screen.findByText('Hola, Ana')).toBeInTheDocument()
-      expect(screen.getByRole('heading', { level: 1, name: 'Tus hijos' })).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: 'Agregar hijo' })).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: /Luis Gómez/ })).toHaveAttribute('href', '/children/k1')
-      expect(screen.getByText('Tu plan incluye un hijo')).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { level: 1, name: 'Hola, Ana' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { level: 2, name: 'Tus hijos' })).toBeInTheDocument()
+      const main = screen.getByRole('main')
+      expect(within(main).getByRole('button', { name: /Agregar hijo/ })).toHaveTextContent('Tu plan incluye un hijo')
+      expect(await within(main).findByRole('link', { name: 'Ver detalle de Luis' })).toHaveAttribute('href', '/children/k1')
       expect(screen.getByRole('navigation', { name: 'Tus hijos' })).toBeInTheDocument()
     })
 
@@ -396,16 +384,23 @@ describe('HomePage', () => {
       stubApi(account([kid('k1', 'Luis')]))
       renderDesktopHome()
 
-      await user.click(await screen.findByRole('button', { name: 'Agregar hijo' }))
+      await screen.findByRole('link', { name: 'Ver detalle de Luis' })
+      await user.click(within(screen.getByRole('main')).getByRole('button', { name: /Agregar hijo/ }))
 
       expect(await screen.findByText('Intentaste agregar a otro hijo. El plan gratuito incluye uno.')).toBeInTheDocument()
+    })
+
+    it('shows the web skeletons while the account loads', () => {
+      vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
+      renderDesktopHome()
+      expect(screen.getByLabelText('Cargando el inicio').querySelector('.h-\\[196px\\]')).not.toBeNull()
     })
 
     it('shows the empty state (with the sidebar) when there are no children yet', async () => {
       stubApi(account([]))
       renderDesktopHome()
 
-      expect(await screen.findByText('Todavía no tienes hijos dados de alta')).toBeInTheDocument()
+      expect(await screen.findByText('Aún no registras a tus hijos')).toBeInTheDocument()
       expect(screen.queryByText('Tu plan incluye un hijo')).not.toBeInTheDocument()
     })
   })
@@ -450,7 +445,7 @@ describe('HomePage, family (specs/032)', () => {
   ])('does not offer %s to add a child, but still shows the shared child', async (_who, account) => {
     stubApi(account)
     renderHome()
-    expect(await screen.findByText('Mía Gómez')).toBeInTheDocument()
+    expect(await screen.findByRole('link', { name: 'Ver detalle de Mía' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Agregar hijo/ })).not.toBeInTheDocument()
     expect(screen.queryByText('El plan gratuito incluye un hijo.')).not.toBeInTheDocument()
   })

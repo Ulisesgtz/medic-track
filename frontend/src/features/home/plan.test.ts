@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addChildTarget, atFreePlanLimit } from './plan'
+import { addChildTarget, atFreePlanLimit, onlySharedChildren } from './plan'
 import type { Account, Child } from './types'
 
 const child = (id: string, extra: Partial<Child> = {}): Child => ({
@@ -55,5 +55,16 @@ describe('atFreePlanLimit', () => {
     expect(
       atFreePlanLimit(account({ children: [child('s', { accountId: 'owner' })], family: { role: 'caregiver', ownerAccountId: 'owner', ownerName: 'Ana', plan: 'free', readOnly: false } })),
     ).toBe(false)
+  })
+})
+
+describe('onlySharedChildren (spec 055)', () => {
+  it('is true only when there are children and every one belongs to another family', () => {
+    expect(onlySharedChildren(undefined)).toBe(false)
+    expect(onlySharedChildren(account())).toBe(false)
+    expect(onlySharedChildren(account({ children: [child('a')] }))).toBe(false)
+    expect(onlySharedChildren(account({ children: [child('a', { role: 'owner' })] }))).toBe(false)
+    expect(onlySharedChildren(account({ children: [child('a', { role: 'caregiver' }), child('b', { role: 'tutor' })] }))).toBe(true)
+    expect(onlySharedChildren(account({ children: [child('a', { role: 'caregiver' }), child('b')] }))).toBe(false)
   })
 })

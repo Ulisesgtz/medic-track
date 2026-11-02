@@ -32,7 +32,7 @@ test.describe('Jalar para actualizar — diseño móvil', () => {
   test('jalar hacia abajo vuelve a pedir los datos sin recargar la página', async ({ page }) => {
     await seedChild(page, { withConsultation: false })
     await page.goto('/home')
-    await expect(page.getByRole('main').getByText('Mateo Morales').first()).toBeVisible()
+    await expect(page.getByRole('main').getByRole('link', { name: 'Ver detalle de Mateo' }).first()).toBeVisible()
     await page.evaluate(() => ((window as unknown as { marker: number }).marker = 1))
 
     const refetched = page.waitForRequest((request) => /\/accounts\/me$/.test(request.url()))
@@ -47,7 +47,7 @@ test.describe('Jalar para actualizar — diseño móvil', () => {
   test('jalar poco no hace nada', async ({ page }) => {
     await seedChild(page, { withConsultation: false })
     await page.goto('/home')
-    await expect(page.getByRole('main').getByText('Mateo Morales').first()).toBeVisible()
+    await expect(page.getByRole('main').getByRole('link', { name: 'Ver detalle de Mateo' }).first()).toBeVisible()
     let requests = 0
     page.on('request', (request) => {
       if (/\/accounts\/me$/.test(request.url())) requests++
@@ -79,7 +79,7 @@ test.describe('Jalar para actualizar — diseño web', () => {
     test.skip(browserName !== 'chromium', 'Playwright solo simula toques en Chromium')
     await seedChild(page, { withConsultation: false })
     await page.goto('/home')
-    await expect(page.getByRole('main').getByText('Mateo Morales').first()).toBeVisible()
+    await expect(page.getByRole('main').getByRole('link', { name: 'Ver detalle de Mateo' }).first()).toBeVisible()
     let requests = 0
     page.on('request', (request) => {
       if (/\/accounts\/me$/.test(request.url())) requests++
@@ -142,7 +142,7 @@ for (const design of designs) {
       await seedChild(page, { withConsultation: false })
       await page.route('**/version.json*', (route) => route.fulfill({ status: 200, contentType: 'text/html', body: '<html></html>' }))
       await page.goto('/home')
-      await expect(page.getByRole('main').getByText('Mateo Morales').first()).toBeVisible()
+      await expect(page.getByRole('main').getByRole('link', { name: 'Ver detalle de Mateo' }).first()).toBeVisible()
 
       await expect(page.getByText('Hay una versión nueva')).toHaveCount(0)
     })

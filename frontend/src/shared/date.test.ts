@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatDateLong, formatDateShort, formatDayMonth, formatTime, localDayRange } from './date'
+import { formatDateLong, formatDateShort, formatDayMonth, formatTime, formatWeekdayLong, localDayRange } from './date'
 
 describe('formatDateShort', () => {
   it('formats YYYY-MM-DD as "15 sep 2026", keeping the leading zero on the day', () => {
@@ -42,5 +42,15 @@ describe('formatDateLong', () => {
   it('leaves anything that is not a date untouched', () => {
     expect(formatDateLong('pronto')).toBe('pronto')
     expect(formatDateLong('2026-13-01')).toBe('2026-13-01')
+  })
+})
+
+describe('formatWeekdayLong', () => {
+  it('says the local weekday, the day without a leading zero and the month', () => {
+    expect(formatWeekdayLong(new Date(2026, 10, 1))).toBe('domingo 1 de noviembre')
+    expect(formatWeekdayLong(new Date(2026, 9, 29))).toBe('jueves 29 de octubre')
+    expect(formatWeekdayLong(new Date(2026, 11, 31))).toBe('jueves 31 de diciembre')
+    const week = [2, 3, 4, 5, 6, 7, 8].map((d) => formatWeekdayLong(new Date(2026, 10, d)).split(' ')[0])
+    expect(week).toEqual(['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'])
   })
 })

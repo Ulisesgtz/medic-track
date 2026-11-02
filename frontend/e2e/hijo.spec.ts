@@ -67,7 +67,7 @@ for (const design of designs) {
       await phone.page.goto(link)
       await expect(phone.page.getByRole('heading', { name: 'Hola, Mateo' })).toBeVisible()
       await expect(phone.page.getByRole('region', { name: 'Tus tomas de hoy' })).toBeVisible()
-      await expect(phone.page.getByRole('button', { name: 'Toma de 08:00', exact: true })).toBeVisible()
+      await expect(phone.page.getByRole('button', { name: 'Marcar Amoxicilina de las 08:00', exact: true })).toBeVisible()
       // The secret left the address bar at once.
       expect(phone.page.url()).not.toContain('#')
       await expectNoHorizontalScroll(phone.page)
@@ -90,7 +90,7 @@ for (const design of designs) {
       const phone = await childPhone(browser, design.viewport)
       await phone.page.goto(childLinkUrl(link))
 
-      const childChip = phone.page.getByRole('button', { name: 'Toma de 08:00', exact: true })
+      const childChip = phone.page.getByRole('button', { name: 'Marcar Amoxicilina de las 08:00', exact: true })
       await childChip.click()
       await expect(childChip).toHaveAttribute('aria-pressed', 'true')
 
@@ -103,7 +103,7 @@ for (const design of designs) {
       await page.getByRole('button', { name: 'Toma de 16:00', exact: true }).click()
       await expect(page.getByRole('button', { name: 'Toma de 16:00', exact: true })).toHaveAttribute('aria-pressed', 'true')
       await phone.page.reload()
-      const locked = phone.page.getByRole('button', { name: 'Toma de 16:00', exact: true })
+      const locked = phone.page.getByRole('button', { name: 'Marcar Amoxicilina de las 16:00', exact: true })
       await expect(locked).toHaveAttribute('aria-pressed', 'true')
       await expect(locked).toBeDisabled()
 
@@ -164,7 +164,7 @@ for (const design of designs) {
 
       await phone.page.reload()
       await expect(phone.page.getByText('Este acceso ya no está activo')).toBeVisible()
-      await expect(phone.page.getByRole('button', { name: /^Toma de/ })).toHaveCount(0)
+      await expect(phone.page.getByRole('button', { name: /^Marcar / })).toHaveCount(0)
       await phone.context.close()
     })
 
@@ -208,7 +208,7 @@ for (const design of designs) {
 
       await setAccountPlan(owner.accountId, 'free')
 
-      const chip = phone.page.getByRole('button', { name: 'Toma de 08:00', exact: true })
+      const chip = phone.page.getByRole('button', { name: 'Marcar Amoxicilina de las 08:00', exact: true })
       await chip.click()
       await expect(chip).toHaveAttribute('aria-pressed', 'true')
 

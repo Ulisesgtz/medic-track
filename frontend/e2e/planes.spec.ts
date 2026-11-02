@@ -52,7 +52,10 @@ for (const design of designs) {
       await allowClerkOn(page)
       await seedChild(page, { withConsultation: false, plan: 'free' })
       await page.goto('/home')
-      await page.getByRole('link', { name: /^Planes/ }).click()
+      // specs/055: from «Lo demás» at the bottom of the home, which also says the plan.
+      const planes = page.getByRole('navigation', { name: 'Más opciones' }).getByRole('link', { name: /^Planes/ })
+      await expect(planes).toContainText('Plan gratuito')
+      await planes.click()
       await expect(page).toHaveURL(/\/planes$/)
       await expect(page.getByRole('heading', { name: 'Planes', level: 1 })).toBeVisible()
     })

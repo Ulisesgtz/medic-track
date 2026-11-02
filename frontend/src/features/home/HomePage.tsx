@@ -3,32 +3,25 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { useLogout } from '../auth/useLogout'
 import { MeApiError } from '../auth/api'
-import { ChildCard } from './ChildCard'
+import { ChildrenSection, ReadOnlyNote } from './ChildrenSection'
 import { AddChildDialogs } from './AddChildDialogs'
 import { addChildTarget, atFreePlanLimit } from './plan'
-import { AppHeader } from '../../shared/ui/AppHeader'
 import { AppShell } from './AppShell'
 import { useSidebarSession } from './useSidebarSession'
 import { Logo } from '../../shared/ui/Logo'
 import { WelcomeDisclaimer } from './WelcomeDisclaimer'
-import { RemindersCard } from '../reminders/RemindersCard'
 import { readPendingInvitation } from '../family/pendingInvitation'
-import { FamilyEntry } from '../family/FamilyEntry'
-import { PlanEntry } from '../plans/PlanEntry'
-import { PersonalHomeBlock } from '../supplements/PersonalHomeBlock'
+import { Greeting } from './Greeting'
+import { TuDia } from './TuDia'
+import { HomeSkeleton } from './HomeSkeleton'
+import { AccountMenu } from './AccountMenu'
+import { MoreLinks } from './MoreLinks'
 
 /**
- * The parent's home page: lists their children (FR-001), or an invitation to
- * finish creating their account when their Clerk session has no PediTrack
- * account linked yet (FR-006, specs/008-autenticacion-cuenta — the session
- * itself is already verified, `RequireSession` only renders this page for a
- * signed-in tutor; this only covers the gap between signing up with Clerk
- * and finishing POST /accounts).
- *
- * Two separate designs, both from the delivered mockups: the phone list (dark
- * header "Tus hijos", dashed "+ Agregar hijo" and the plan note) and, on the
- * web (mock 15, with the sidebar), "Hola, Ana / Tus hijos" with a solid
- * "Agregar hijo" button, the children grid and the dashed plan tile.
+ * The parent's home page (spec 055, the design `specs/055-rediseno-inicio/referencia/Inicio PediTrack.dc.html`): the greeting and
+ * «Tu día» first, then each child's day (`ChildDayCard`, with «Marcar» for the next dose) and «Lo demás» at the bottom, in two
+ * separate designs (phone 390 px, web with the sidebar). Before that, the gap between signing up with Clerk and finishing
+ * POST /accounts (FR-006, specs/008: «Falta terminar tu registro»), a load error and the skeletons while the account loads.
  */
 export function HomePage() {
   const [showAddChild, setShowAddChild] = useState(false)
@@ -110,10 +103,21 @@ export function HomePage() {
   }
 
   if (query.isPending) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-canvas px-5 py-10">
-        <p className="text-base font-semibold text-action">Cargando…</p>
-      </main>
+    // Specs/055 (estado 6): skeletons of the final height, in the same frame as the loaded page.
+    return isDesktop ? (
+      <AppShell>
+        <main className="min-h-screen min-w-0 bg-canvas px-6 py-8 leading-[normal] lg:px-12 lg:pt-11 lg:pb-14">
+          <div className="mx-auto max-w-[904px]">
+            <HomeSkeleton variant="desktop" />
+          </div>
+        </main>
+      </AppShell>
+    ) : (
+      <AppShell>
+        <main className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas px-5 pb-8" style={{ paddingTop: 'calc(0.5rem + env(safe-area-inset-top))' }}>
+          <HomeSkeleton variant="phone" />
+        </main>
+      </AppShell>
     )
   }
 
@@ -133,64 +137,31 @@ export function HomePage() {
     />
   )
 
-  const emptyState = (
-    <div className="rounded-3xl bg-surface p-8 text-center shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
-      <p className="text-lg font-bold tracking-tight text-ink">Todavía no tienes hijos dados de alta</p>
-      <p className="mt-2 text-base text-slate-600">Agrega al primero para empezar.</p>
-    </div>
-  )
+  // Specs/055: a Tutor of a family that stopped paying sees the note; marking keeps working.
+  const readOnly = children.some((c) => c.readOnly)
+  const childrenSection = (variant: 'phone' | 'desktop') =>
+    account && (
+      <ChildrenSection
+        account={account}
+        variant={variant}
+        canAddChild={canAddChild}
+        planNote={atLimit}
+        onAddChild={() => setShowAddChild(true)}
+        addChildButton={addChildButton}
+      />
+    )
 
   if (isDesktop) {
     return (
       <AppShell>
-        <main className="min-h-screen min-w-0 bg-canvas px-6 py-8 lg:px-12 lg:py-11">
-          <div className="mx-auto flex max-w-4xl flex-col gap-8">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                {account && <p className="text-sm font-bold text-action">Hola, {account.firstName}</p>}
-                <h1 className="mt-1 text-4xl font-black tracking-tight text-ink">Tus hijos</h1>
-              </div>
-              <div className="flex items-center gap-5">
-                <button
-                  type="button"
-                  onClick={logout}
-                  className="cursor-pointer text-sm font-bold text-action hover:underline"
-                >
-                  Cerrar sesión
-                </button>
-                {canAddChild && (
-                  <button
-                    ref={addChildButton}
-                    type="button"
-                    onClick={() => setShowAddChild(true)}
-                    className="min-h-11 cursor-pointer rounded-2xl bg-confirmed px-6 py-3.5 text-[15px] font-extrabold text-white transition-colors hover:bg-emerald-800"
-                  >
-                    Agregar hijo
-                  </button>
-                )}
-              </div>
-            </div>
-
+        <main className="min-h-screen min-w-0 bg-canvas px-6 py-8 leading-[normal] lg:px-12 lg:pt-11 lg:pb-14">
+          <div className="mx-auto flex max-w-[904px] flex-col gap-7">
             <WelcomeDisclaimer account={account} />
-
-            {children.length === 0 ? (
-              emptyState
-            ) : (
-              <div className="grid grid-cols-2 gap-5">
-                {children.map((child) => (
-                  <ChildCard key={child.id} child={child} variant="desktop" />
-                ))}
-                {atLimit && (
-                  <div className="flex min-w-0 items-center justify-center rounded-3xl border-2 border-dashed border-hint-border p-6 text-center text-[15px] font-extrabold text-action">
-                    Tu plan incluye un hijo
-                  </div>
-                )}
-              </div>
-            )}
-
-            {account && <FamilyEntry variant="desktop" />}
-            <PersonalHomeBlock account={account} variant="desktop" />
-            <RemindersCard account={account} />
+            {readOnly && <ReadOnlyNote variant="desktop" />}
+            {account && <Greeting account={account} variant="desktop" />}
+            {account && <TuDia account={account} variant="desktop" />}
+            {childrenSection('desktop')}
+            {account && <MoreLinks account={account} variant="desktop" />}
           </div>
           {dialogs}
         </main>
@@ -200,74 +171,24 @@ export function HomePage() {
 
   return (
     <AppShell>
-      <main className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas pb-16">
-        <AppHeader
-          eyebrow={account ? `Hola, ${account.firstName}` : undefined}
-          title="Tus hijos"
-          action={
-            account && (
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={logout}
-                  className="cursor-pointer text-[13px] font-bold text-bright-soft hover:underline"
-                >
-                  Cerrar sesión
-                </button>
-                <span
-                  aria-hidden="true"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-action text-sm font-extrabold text-white"
-                >
-                  {account.firstName.charAt(0)}
-                  {account.lastName.charAt(0)}
-                </span>
-              </div>
-            )
-          }
-        />
-
-        <div className="px-6 pt-6">
-          <div className="empty:hidden [&:not(:empty)]:mb-4">
-            <WelcomeDisclaimer account={account} />
-          </div>
-          {children.length === 0 ? (
-            emptyState
-          ) : (
-            <div className="flex flex-col gap-4">
-              {children.map((child, index) => (
-                <ChildCard key={child.id} child={child} variant="phone" index={index} />
-              ))}
-            </div>
-          )}
-
-          {canAddChild && (
-            <button
-              ref={addChildButton}
-              type="button"
-              onClick={() => setShowAddChild(true)}
-              className="mt-4 min-h-11 w-full cursor-pointer rounded-3xl border-2 border-dashed border-bright-soft py-5 text-base font-extrabold text-action transition-colors hover:bg-hint"
-            >
-              + Agregar hijo
-            </button>
-          )}
-          {canAddChild && target?.plan === 'free' && (
-            <p className="mt-4 text-center text-[13px] text-slate-500">El plan gratuito incluye un hijo.</p>
-          )}
-          {account && (
-            <div className="mt-6">
-              <FamilyEntry variant="phone" />
-            </div>
-          )}
-          {account && (
-            <div className="mt-4">
-              <PlanEntry account={account} />
-            </div>
-          )}
-          <PersonalHomeBlock account={account} variant="phone" />
-          <div className="mt-4">
-            <RemindersCard account={account} />
-          </div>
+      <main
+        className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col gap-5 bg-canvas px-5 pb-8 leading-[normal]"
+        style={{ paddingTop: 'calc(0.5rem + env(safe-area-inset-top))' }}
+      >
+        <div className="empty:hidden">
+          <WelcomeDisclaimer account={account} />
         </div>
+        {readOnly && <ReadOnlyNote variant="phone" />}
+        {account && (
+          <Greeting
+            account={account}
+            variant="phone"
+            accountSlot={<AccountMenu account={account} variant="phone" />}
+          />
+        )}
+        {account && <TuDia account={account} variant="phone" />}
+        {childrenSection('phone')}
+        {account && <MoreLinks account={account} variant="phone" />}
         {dialogs}
       </main>
     </AppShell>

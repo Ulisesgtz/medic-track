@@ -96,6 +96,11 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
 
 ## Backend
 
+- **Resumen del día de todos los hijos en una sola respuesta** (spec 055, anotado 2026-11-01) — el inicio rediseñado pide, por
+  hijo, su resumen (`/children/{id}/overview`) y sus actividades (`/children/{id}/routines?kind=activity`): las mismas dos
+  peticiones por hijo que ya hacía. Si el E2E con 10 hijos (SC-003) o el uso real muestran que tarda, hacer
+  `GET /accounts/me/today` que arme el día de todos los hijos y el personal, con las reglas de acceso de cada hijo
+  (`seesChild`, familias, Cuidador) y su tabla de pruebas de acceso.
 - **Consultas anteriores sin hora de inicio** — desde 2026-09-20 "Primera toma" (antes "Desde") es obligatoria, pero las consultas guardadas
   antes (p. ej. la del Dr. Erick Rojas) tienen medicamentos sin `start_time`, sin tomas y sin tratamiento activo, y como
   las consultas son inmutables no se pueden completar. Si hace falta, permitir agregar la hora solo cuando falte (excepción

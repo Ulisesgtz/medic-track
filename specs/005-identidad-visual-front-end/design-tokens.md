@@ -112,6 +112,10 @@ Eran literales (`text-[#…]`) repartidos por las pantallas; desde el refactor 0
 | `--color-calendar-muted` | `#64748b` | días de la semana y días fuera del tratamiento | 4.76:1 sobre blanco |
 | `--color-calendar-text` | `#334155` | texto de la tarjeta «Cómo leer el calendario» | — |
 | `--color-calendar-name` | `#1e293b` | nombres de medicamento en la leyenda del calendario | — |
+| `--color-muted` | `#475569` | títulos de fila, «Próxima» y vacíos del inicio (spec 055) | 7.58:1 sobre blanco |
+| `--color-skel` | `#e2eef0` | esqueletos de carga del inicio (spec 055) | — |
+| `--color-on-pending-chip` | `#78350f` | texto del chip «por marcar» del inicio (spec 055) | 8.9:1 sobre `--color-pending-soft` |
+| `--color-pending-dot` | `#b45309` | anillo del chip «por marcar» (decorativo, el texto dice el estado) | — |
 
 Los tres tonos pizarra del calendario llevan el valor **exacto** del diseño (spec 022): los `slate-500/700/800` de Tailwind v4 son oklch y salen 2–3 niveles distintos. `#451a03` (texto sobre ámbar, y fondo del botón de `TodayDosesBlock`) ya era `--color-on-pending`; `#065f46`, `--color-confirmed-strong`; `#92400e`, `--color-pending-strong`; `#a5f3fc`, `--color-hint-border`. El logo de Google (`GoogleSignupButton`) conserva los colores de su marca.
 

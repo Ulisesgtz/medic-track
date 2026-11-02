@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--color-ink:#04252b;--color-ink-soft:#0b3b44;--color-action:#0e7490;--color-bright:#22d3ee;--color-bright-soft:#67e8f9;--color-confirmed:#047857;--color-confirmed-soft:#d1fae5;--color-confirmed-strong:#065f46;--color-pending:#f59e0b;--color-pending-soft:#fef3c7;--color-canvas:#f8feff;--color-surface:#ffffff;--color-hint:#ecfeff;--color-hint-border:#a5f3fc;--color-hint-edge:#cffafe;--color-body:#1f3d44;--color-ink-edge:#0b5763;--color-muted:#475569;--color-skel:#e2eef0}
+*{box-sizing:border-box}
+body{margin:0;background:#dfe8ea;font-family:'Figtree',system-ui,sans-serif;color:#04252b}
+button{font-family:inherit}
+a{color:#0e7490;text-decoration:none}
+a:hover{color:#04252b;text-decoration:underline}
+button:focus-visible,a:focus-visible{outline:2px solid #0e7490;outline-offset:2px}
+</style>
+</helmet>
+
+<div style="padding:56px;display:flex;flex-direction:column;gap:64px">
+  <div style="max-width:900px;display:flex;flex-direction:column;gap:10px">
+    <p style="margin:0;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-action)">PediTrack · Inicio · propuesta 1 nov 2026</p>
+    <h1 style="margin:0;font-size:38px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Inicio: tu día y el de cada hijo</h1>
+    <p style="margin:0;font-size:16px;line-height:1.55;color:var(--color-body);text-wrap:pretty">Seis estados. Cada uno en teléfono (390 px) y en web (1280 px, barra lateral de 280 px), en marcos separados. Los chips «Marcar» y «✓ Realizado» funcionan en el mock. Las decisiones que cambian el inicio actual están al final.</p>
+  </div>
+
+  <sc-for list="{{ estados }}" as="s" hint-placeholder-count="2">
+    <div id="{{ s.anchor }}" style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="padding:4px 11px;border-radius:999px;background:var(--color-ink);color:#ffffff;font-size:13px;font-weight:800">{{ s.num }}</span>
+        <span style="font-size:20px;font-weight:800;color:var(--color-ink)">{{ s.label }}</span>
+        <span style="font-size:14px;color:var(--color-body)">{{ s.quien }}</span>
+      </div>
+      <div style="display:flex;gap:48px;align-items:flex-start">
+
+        <div style="display:flex;flex-direction:column;gap:10px;flex:none">
+          <span style="font-size:13px;font-weight:800;color:var(--color-muted)">{{ s.num }}t · Teléfono</span>
+          <div data-screen-label="{{ s.num }} teléfono" style="width:410px;padding:10px;border-radius:50px;background:var(--color-ink);box-shadow:0 20px 50px rgba(4,37,43,0.22)">
+            <div style="width:390px;min-height:844px;border-radius:40px;overflow:hidden;background:var(--color-canvas);display:flex;flex-direction:column">
+              <div style="height:44px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:700;color:var(--color-ink)"><span>9:41</span><span style="display:flex;gap:5px"><span style="width:18px;height:10px;border-radius:2px;background:var(--color-ink)"></span><span style="width:24px;height:11px;border-radius:3px;border:1.5px solid var(--color-ink)"></span></span></div>
+
+              <div style="padding:8px 20px 32px;display:flex;flex-direction:column;gap:20px">
+                <sc-if value="{{ s.loading }}">
+                  <div aria-busy="true" aria-label="Cargando el inicio" style="display:flex;flex-direction:column;gap:20px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;min-height:56px"><div style="display:flex;flex-direction:column;gap:8px"><span style="width:140px;height:26px;border-radius:8px;background:var(--color-skel)"></span><span style="width:180px;height:16px;border-radius:6px;background:var(--color-skel)"></span></div><span style="width:44px;height:44px;border-radius:50%;background:var(--color-skel)"></span></div>
+                    <div style="height:236px;border-radius:22px;background:var(--color-surface);border:1.5px solid var(--color-hint-edge);padding:18px;display:flex;flex-direction:column;gap:14px"><span style="width:80px;height:18px;border-radius:6px;background:var(--color-skel)"></span><span style="height:52px;border-radius:12px;background:var(--color-skel)"></span><span style="height:52px;border-radius:12px;background:var(--color-skel)"></span><span style="width:120px;height:44px;border-radius:14px;background:var(--color-skel);align-self:flex-end"></span></div>
+                    <span style="width:100px;height:18px;border-radius:6px;background:var(--color-skel)"></span>
+                    <div style="height:264px;border-radius:22px;background:var(--color-surface);border:1.5px solid var(--color-hint-edge);padding:18px;display:flex;flex-direction:column;gap:14px"><div style="display:flex;gap:12px;align-items:center"><span style="width:44px;height:44px;border-radius:50%;background:var(--color-skel)"></span><span style="width:160px;height:20px;border-radius:6px;background:var(--color-skel)"></span></div><span style="height:44px;border-radius:12px;background:var(--color-skel)"></span><span style="height:44px;border-radius:12px;background:var(--color-skel)"></span><span style="height:44px;border-radius:12px;background:var(--color-skel)"></span></div>
+                    <div style="height:220px;border-radius:22px;background:var(--color-surface);border:1.5px solid var(--color-hint-edge)"></div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ s.listo }}" hint-placeholder-val="{{ true }}">
+                  <sc-if value="{{ s.aviso }}">
+                    <div role="note" style="padding:18px 20px;border-radius:22px;border:1.5px solid var(--color-hint-border);background:var(--color-hint);display:flex;flex-direction:column;gap:8px">
+                      <p style="margin:0;font-size:17px;font-weight:800;color:var(--color-ink)">Antes de empezar</p>
+                      <p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">PediTrack solo recuerda lo que tú registras: el nombre, las horas y las fechas que escribas. No sugiere suplementos ni opina sobre ellos.</p>
+                      <button type="button" style="margin-top:4px;align-self:flex-start;min-height:44px;padding:0 20px;border:2px solid var(--color-action);border-radius:16px;background:transparent;font-size:15px;font-weight:800;color:var(--color-action);cursor:pointer">Entendido</button>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ s.lectura }}">
+                    <div role="note" style="padding:14px 16px;border-radius:16px;border:1.5px solid var(--color-hint-border);background:var(--color-surface);font-size:14px;line-height:1.5;color:var(--color-body)"><strong style="color:var(--color-ink)">Solo lectura.</strong> La familia no tiene un plan activo. Puedes seguir marcando tomas y actividades.</div>
+                  </sc-if>
+
+                  <header style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                    <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                      <h2 style="margin:0;font-size:28px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Hola, {{ s.nombre }}</h2>
+                      <span style="font-size:15px;color:var(--color-body)">jueves 1 de noviembre</span>
+                    </div>
+                    <button type="button" aria-label="Menú de cuenta" style="flex:none;width:48px;height:48px;border-radius:50%;border:none;background:var(--color-ink);color:#ffffff;font-size:15px;font-weight:800;cursor:pointer">{{ s.ini }}</button>
+                  </header>
+
+                  <sc-if value="{{ s.tuCard }}" hint-placeholder-val="{{ true }}">
+                    <section aria-label="Tu día" style="background:var(--color-surface);border-radius:22px;box-shadow:0 8px 20px rgba(4,37,43,0.07);padding:18px;display:flex;flex-direction:column;gap:14px">
+                      <div style="display:flex;align-items:center;justify-content:space-between"><h3 style="margin:0;font-size:18px;font-weight:800;color:var(--color-ink)">Tu día</h3><a href="#" style="min-height:44px;display:inline-flex;align-items:center;font-size:14px;font-weight:700">Ver todo</a></div>
+                      <sc-if value="{{ s.tuTodo }}"><span style="align-self:flex-start;padding:6px 12px;border-radius:999px;background:var(--color-confirmed-soft);color:var(--color-confirmed-strong);font-size:14px;font-weight:800">✓ Todo marcado hasta ahora</span></sc-if>
+                      <div style="display:flex;gap:12px;align-items:flex-start">
+                        <span style="flex:none;width:36px;height:36px;border-radius:10px;background:var(--color-hint);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5c3 4 5.5 7 5.5 10a5.5 5.5 0 0 1-11 0c0-3 2.5-6 5.5-10z"></path></svg></span>
+                        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+                          <div style="display:flex;justify-content:space-between;gap:8px"><span style="font-size:13px;font-weight:700;color:var(--color-muted)">Mis tomas</span><span style="font-size:15px;font-weight:800;color:var(--color-ink)">{{ s.tomas }}</span></div>
+                          <div style="height:6px;border-radius:999px;background:var(--color-hint)"><div style="height:100%;border-radius:999px;background:var(--color-action);width:{{ s.tomasPct }}"></div></div>
+                          <span style="font-size:14px;color:var(--color-body)">{{ s.tomasProx }}</span>
+                        </div>
+                      </div>
+                      <div style="height:1px;background:var(--color-hint-edge)"></div>
+                      <div style="display:flex;gap:12px;align-items:flex-start">
+                        <span style="flex:none;width:36px;height:36px;border-radius:10px;background:var(--color-hint);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M8.5 12.2l2.4 2.4 4.6-5"></path></svg></span>
+                        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+                          <div style="display:flex;justify-content:space-between;gap:8px"><span style="font-size:13px;font-weight:700;color:var(--color-muted)">Mis actividades</span><span style="font-size:15px;font-weight:800;color:var(--color-ink)">{{ s.act }}</span></div>
+                          <span style="font-size:14px;color:var(--color-body)">{{ s.actProx }}</span>
+                        </div>
+                      </div>
+                      <sc-if value="{{ s.actPend }}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{ s.onAct }}" style="align-self:flex-end;min-height:44px;padding:0 18px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">✓ Realizado</button></sc-if>
+                      <sc-if value="{{ s.actHecha }}"><span style="align-self:flex-end;min-height:44px;padding:0 16px;border-radius:14px;background:var(--color-confirmed-soft);color:var(--color-confirmed-strong);font-size:15px;font-weight:800;display:inline-flex;align-items:center">✓ Caminar 30 min · 13:22</span></sc-if>
+                    </section>
+                  </sc-if>
+                  <sc-if value="{{ s.tuVacio }}">
+                    <p style="margin:0;padding:12px 16px;border-radius:16px;border:1.5px solid var(--color-hint-edge);font-size:15px;line-height:1.5;color:var(--color-body)">Tu día · <a href="#" style="font-weight:700">Agrega tus propios suplementos o actividades</a></p>
+                  </sc-if>
+                  <sc-if value="{{ s.tuPlan }}">
+                    <button type="button" style="min-height:56px;padding:0 16px;border-radius:16px;border:1.5px solid var(--color-hint-border);background:var(--color-surface);display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;text-align:left"><span style="font-size:15px;color:var(--color-body)"><strong style="color:var(--color-ink)">Tu día</strong> · tus suplementos y actividades</span><span style="flex:none;padding:4px 10px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:12px;font-weight:800">Plan completo</span></button>
+                  </sc-if>
+
+                  <section style="display:flex;flex-direction:column;gap:12px">
+                    <div style="display:flex;flex-direction:column;gap:2px"><h3 style="margin:0;font-size:18px;font-weight:800;color:var(--color-ink)">{{ s.hijosTitulo }}</h3><sc-if value="{{ s.hijosSub }}"><span style="font-size:14px;color:var(--color-body)">{{ s.hijosSub }}</span></sc-if></div>
+                    <sc-for list="{{ s.hijos }}" as="h" hint-placeholder-count="2">
+                      <article style="background:var(--color-surface);border-radius:22px;box-shadow:0 8px 20px rgba(4,37,43,0.07);border:{{ h.borde }};display:flex;flex-direction:column;overflow:hidden">
+                        <a href="#" aria-label="Ver detalle de {{ h.nombre }}" style="padding:16px 16px 6px;display:flex;flex-direction:column;gap:10px;color:inherit;text-decoration:none">
+                          <div style="display:flex;align-items:center;gap:12px">
+                            <span style="flex:none;width:44px;height:44px;border-radius:50%;background:{{ h.bg }};color:#ffffff;font-size:18px;font-weight:900;display:flex;align-items:center;justify-content:center">{{ h.ini }}</span>
+                            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+                              <span style="font-size:17px;font-weight:800;color:var(--color-ink)">{{ h.nombre }} <span style="font-weight:500;color:var(--color-body)">· {{ h.edad }}</span></span>
+                              <sc-if value="{{ h.pend }}"><span style="align-self:flex-start;padding:3px 10px;border-radius:999px;background:var(--color-pending-soft);color:#78350f;font-size:13px;font-weight:800;display:inline-flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;border:2px solid #b45309"></span>{{ h.chip }}</span></sc-if>
+                              <sc-if value="{{ h.ok }}"><span style="align-self:flex-start;padding:3px 10px;border-radius:999px;background:var(--color-confirmed-soft);color:var(--color-confirmed-strong);font-size:13px;font-weight:800">✓ Todo marcado hasta ahora</span></sc-if>
+                              <sc-if value="{{ h.sinreg }}"><span style="align-self:flex-start;padding:2px 10px;border-radius:999px;border:1.5px dashed #64748b;color:var(--color-body);font-size:13px;font-weight:800">{{ h.chip }}</span></sc-if>
+                            </div>
+                            <span aria-hidden="true" style="font-size:22px;color:var(--color-action)">›</span>
+                          </div>
+                          <sc-if value="{{ h.vacio }}"><span style="padding:4px 0 10px 56px;font-size:15px;color:var(--color-muted)">Hoy no hay tomas ni actividades</span></sc-if>
+                          <sc-for list="{{ h.rows }}" as="r" hint-placeholder-count="3">
+                            <div style="display:flex;align-items:center;gap:12px;min-height:44px">
+                              <span style="flex:none;width:36px;height:36px;border-radius:10px;background:var(--color-hint);display:flex;align-items:center;justify-content:center">
+                                <sc-if value="{{ r.med }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="8.5" width="18" height="7" rx="3.5" transform="rotate(-45 12 12)"></rect><path d="M9.5 9.5l5 5"></path></svg></sc-if>
+                                <sc-if value="{{ r.sup }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5c3 4 5.5 7 5.5 10a5.5 5.5 0 0 1-11 0c0-3 2.5-6 5.5-10z"></path></svg></sc-if>
+                                <sc-if value="{{ r.act }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M8.5 12.2l2.4 2.4 4.6-5"></path></svg></sc-if>
+                              </span>
+                              <span style="flex:1;font-size:13px;font-weight:700;color:var(--color-muted)">{{ r.titulo }}</span>
+                              <span style="font-size:15px;font-weight:700;color:var(--color-ink);text-align:right">{{ r.valor }}</span>
+                            </div>
+                          </sc-for>
+                          <sc-if value="{{ h.sinreg }}"><span style="margin-left:48px;padding:6px 10px;border-radius:10px;border:1.5px dashed #64748b;font-size:14px;color:var(--color-body)">{{ h.sinregTxt }}</span></sc-if>
+                        </a>
+                        <sc-if value="{{ h.hasProx }}" hint-placeholder-val="{{ true }}">
+                          <div style="margin-top:8px;padding:10px 16px 14px;border-top:1px solid var(--color-hint-edge);display:flex;align-items:center;justify-content:space-between;gap:12px">
+                            <div style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:13px;font-weight:700;color:var(--color-muted)">Próxima</span><span style="font-size:15px;font-weight:800;color:var(--color-ink)">{{ h.prox }}</span></div>
+                            <sc-if value="{{ h.porMarcar }}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{ h.onMarcar }}" aria-label="Marcar {{ h.prox }} de {{ h.nombre }}" style="flex:none;min-height:44px;min-width:96px;padding:0 18px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Marcar</button></sc-if>
+                            <sc-if value="{{ h.marcada }}"><button type="button" onClick="{{ h.onMarcar }}" style="flex:none;min-height:44px;padding:0 14px;border:none;border-radius:14px;background:var(--color-confirmed-soft);color:var(--color-confirmed-strong);font-size:15px;font-weight:800;cursor:pointer">✓ 13:22</button></sc-if>
+                          </div>
+                        </sc-if>
+                      </article>
+                    </sc-for>
+                    <sc-if value="{{ s.sinHijos }}">
+                      <div style="padding:22px 20px;border-radius:22px;border:2px dashed var(--color-hint-border);display:flex;flex-direction:column;gap:12px">
+                        <span style="font-size:17px;font-weight:800;color:var(--color-ink)">Aún no registras a tus hijos</span>
+                        <span style="font-size:15px;line-height:1.5;color:var(--color-body)">Agrega a un hijo para registrar sus consultas, medicamentos y actividades.</span>
+                        <button type="button" style="min-height:52px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:17px;font-weight:800;cursor:pointer">Agregar hijo</button>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ s.agregar }}">
+                      <button type="button" style="min-height:56px;border-radius:22px;border:2px dashed var(--color-hint-border);background:transparent;color:var(--color-action);font-size:16px;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px">+ Agregar hijo<sc-if value="{{ s.planNota }}"><span style="font-size:13px;font-weight:600;color:var(--color-body)">Tu plan incluye un hijo</span></sc-if></button>
+                    </sc-if>
+                  </section>
+
+                  <nav aria-label="Más opciones" style="margin-top:8px;display:flex;flex-direction:column;border-top:1px solid var(--color-hint-edge)">
+                    <sc-for list="{{ s.otros }}" as="o" hint-placeholder-count="4">
+                      <a href="#" style="min-height:52px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--color-hint-edge);text-decoration:none">
+                        <span style="font-size:15px;font-weight:700;color:{{ o.color }}">{{ o.t }}</span>
+                        <span style="font-size:14px;color:var(--color-body)">{{ o.v }}</span>
+                      </a>
+                    </sc-for>
+                  </nav>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;flex:none">
+          <span style="font-size:13px;font-weight:800;color:var(--color-muted)">{{ s.num }}w · Web</span>
+          <div data-screen-label="{{ s.num }} web" style="width:1280px;min-height:844px;display:flex;background:var(--color-canvas);box-shadow:0 20px 50px rgba(4,37,43,0.18);border-radius:16px;overflow:hidden">
+            <aside style="width:280px;flex-shrink:0;background:var(--color-ink);padding:28px 24px;display:flex;flex-direction:column;gap:28px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <svg width="34" height="34" viewBox="0 0 64 64" role="img" aria-label="PediTrack"><defs><clipPath id="lgIn{{ s.num }}"><rect x="21" y="5" width="22" height="54" rx="11"></rect></clipPath></defs><rect width="64" height="64" rx="15" fill="#22d3ee"></rect><g transform="rotate(-45 32 32)" clip-path="url(#lgIn{{ s.num }})"><rect x="21" y="5" width="22" height="54" fill="#ffffff"></rect><rect x="21" y="32" width="22" height="27" fill="#047857"></rect><rect x="21" y="30.6" width="22" height="2.8" fill="#22d3ee"></rect></g></svg>
+                <span style="font-size:18px;font-weight:900;letter-spacing:-0.03em;color:#ffffff">Pedi<span style="color:#67e8f9">Track</span></span>
+              </div>
+              <nav style="display:flex;flex-direction:column;gap:6px">
+                <a href="#" aria-current="page" style="min-height:48px;padding:0 16px;border-radius:16px;background:var(--color-action);display:flex;align-items:center;font-size:16px;font-weight:800;color:#ffffff;text-decoration:none">Inicio</a>
+                <span style="padding:14px 16px 4px;font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#67e8f9">{{ s.navHijos }}</span>
+                <sc-if value="{{ s.loading }}"><span style="height:48px;border-radius:16px;background:var(--color-ink-soft)"></span><span style="height:48px;border-radius:16px;background:var(--color-ink-soft)"></span></sc-if>
+                <sc-for list="{{ s.hijos }}" as="h" hint-placeholder-count="2">
+                  <a href="#" style="min-height:48px;padding:0 16px;border-radius:16px;display:flex;align-items:center;justify-content:space-between;text-decoration:none" style-hover="background:var(--color-ink-soft)"><span style="font-size:16px;font-weight:700;color:#a5f3fc">{{ h.nombre }}</span><span style="font-size:13px;font-weight:600;color:#67e8f9">{{ h.corta }}</span></a>
+                </sc-for>
+                <sc-if value="{{ s.agregar }}"><a href="#" style="min-height:48px;padding:0 16px;border-radius:16px;border:1.5px dashed var(--color-ink-edge);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#67e8f9;text-decoration:none">+ Agregar hijo</a></sc-if>
+                <span style="padding:14px 16px 4px;font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#67e8f9">Personal</span>
+                <a href="#" style="min-height:44px;padding:0 16px;border-radius:16px;display:flex;align-items:center;font-size:15px;font-weight:700;color:#a5f3fc;text-decoration:none" style-hover="background:var(--color-ink-soft)">Mis suplementos</a>
+                <a href="#" style="min-height:44px;padding:0 16px;border-radius:16px;display:flex;align-items:center;font-size:15px;font-weight:700;color:#a5f3fc;text-decoration:none" style-hover="background:var(--color-ink-soft)">Mis actividades</a>
+              </nav>
+              <button type="button" aria-label="Menú de cuenta" style="margin-top:auto;min-height:56px;padding:16px 0 0;border:none;border-top:1px solid var(--color-ink-soft);background:transparent;display:flex;align-items:center;gap:12px;cursor:pointer;text-align:left">
+                <span style="flex:none;width:38px;height:38px;border-radius:50%;background:var(--color-action);color:#ffffff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center">{{ s.ini }}</span>
+                <span style="display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700;color:#ffffff">{{ s.nombreCompleto }}</span><span style="font-size:12px;color:#67e8f9">{{ s.planTxt }}</span></span>
+              </button>
+            </aside>
+
+            <main style="flex:1;min-width:0;padding:44px 48px 56px">
+              <div style="max-width:904px;margin:0 auto;display:flex;flex-direction:column;gap:28px">
+                <sc-if value="{{ s.loading }}">
+                  <div aria-busy="true" aria-label="Cargando el inicio" style="display:flex;flex-direction:column;gap:28px">
+                    <div style="display:flex;flex-direction:column;gap:10px;min-height:64px"><span style="width:220px;height:34px;border-radius:8px;background:var(--color-skel)"></span><span style="width:200px;height:18px;border-radius:6px;background:var(--color-skel)"></span></div>
+                    <div style="height:196px;border-radius:22px;background:var(--color-surface);border:1.5px solid var(--color-hint-edge);padding:22px;display:grid;grid-template-columns:1fr 1fr;gap:24px"><span style="border-radius:12px;background:var(--color-skel)"></span><span style="border-radius:12px;background:var(--color-skel)"></span></div>
+                    <span style="width:120px;height:20px;border-radius:6px;background:var(--color-skel)"></span>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div style="height:280px;border-radius:22px;background:var(--color-surface);border:1.5px solid var(--color-hint-edge)"></div><div style="height:280px;border-radius:22px;background:var(--color-surface);border:1.5px solid var(--color-hint-edge)"></div></div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ s.listo }}" hint-placeholder-val="{{ true }}">
+                  <sc-if value="{{ s.aviso }}">
+                    <div role="note" style="padding:20px 24px;border-radius:22px;border:1.5px solid var(--color-hint-border);background:var(--color-hint);display:flex;align-items:center;gap:24px">
+                      <div style="flex:1;display:flex;flex-direction:column;gap:6px"><p style="margin:0;font-size:17px;font-weight:800;color:var(--color-ink)">Antes de empezar</p><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">PediTrack solo recuerda lo que tú registras: el nombre, las horas y las fechas que escribas. No sugiere suplementos ni opina sobre ellos.</p></div>
+                      <button type="button" style="flex:none;min-height:44px;padding:0 20px;border:2px solid var(--color-action);border-radius:16px;background:transparent;font-size:15px;font-weight:800;color:var(--color-action);cursor:pointer">Entendido</button>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ s.lectura }}">
+                    <div role="note" style="padding:14px 18px;border-radius:16px;border:1.5px solid var(--color-hint-border);background:var(--color-surface);font-size:15px;color:var(--color-body)"><strong style="color:var(--color-ink)">Solo lectura.</strong> La familia no tiene un plan activo. Puedes seguir marcando tomas y actividades.</div>
+                  </sc-if>
+                  <header style="display:flex;flex-direction:column;gap:4px">
+                    <h2 style="margin:0;font-size:34px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Hola, {{ s.nombre }}</h2>
+                    <span style="font-size:16px;color:var(--color-body)">jueves 1 de noviembre</span>
+                  </header>
+
+                  <sc-if value="{{ s.tuCard }}" hint-placeholder-val="{{ true }}">
+                    <section aria-label="Tu día" style="background:var(--color-surface);border-radius:22px;box-shadow:0 8px 20px rgba(4,37,43,0.07);padding:22px 24px;display:flex;flex-direction:column;gap:16px">
+                      <div style="display:flex;align-items:center;gap:14px"><h3 style="margin:0;font-size:19px;font-weight:800;color:var(--color-ink)">Tu día</h3><sc-if value="{{ s.tuTodo }}"><span style="padding:5px 12px;border-radius:999px;background:var(--color-confirmed-soft);color:var(--color-confirmed-strong);font-size:14px;font-weight:800">✓ Todo marcado hasta ahora</span></sc-if><a href="#" style="margin-left:auto;min-height:44px;display:inline-flex;align-items:center;font-size:14px;font-weight:700">Ver todo</a></div>
+                      <div style="display:grid;grid-template-columns:minmax(0,1fr) 1px minmax(0,1fr);gap:24px">
+                        <div style="display:flex;gap:14px;align-items:flex-start">
+                          <span style="flex:none;width:40px;height:40px;border-radius:12px;background:var(--color-hint);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5c3 4 5.5 7 5.5 10a5.5 5.5 0 0 1-11 0c0-3 2.5-6 5.5-10z"></path></svg></span>
+                          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+                            <div style="display:flex;justify-content:space-between;gap:8px"><span style="font-size:14px;font-weight:700;color:var(--color-muted)">Mis tomas</span><span style="font-size:16px;font-weight:800;color:var(--color-ink)">{{ s.tomas }}</span></div>
+                            <div style="height:6px;border-radius:999px;background:var(--color-hint)"><div style="height:100%;border-radius:999px;background:var(--color-action);width:{{ s.tomasPct }}"></div></div>
+                            <span style="font-size:15px;color:var(--color-body)">{{ s.tomasProx }}</span>
+                          </div>
+                        </div>
+                        <div style="background:var(--color-hint-edge)"></div>
+                        <div style="display:flex;gap:14px;align-items:flex-start">
+                          <span style="flex:none;width:40px;height:40px;border-radius:12px;background:var(--color-hint);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M8.5 12.2l2.4 2.4 4.6-5"></path></svg></span>
+                          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:8px">
+                            <div style="display:flex;justify-content:space-between;gap:8px"><span style="font-size:14px;font-weight:700;color:var(--color-muted)">Mis actividades</span><span style="font-size:16px;font-weight:800;color:var(--color-ink)">{{ s.act }}</span></div>
+                            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="font-size:15px;color:var(--color-body)">{{ s.actProx }}</span>
+                              <sc-if value="{{ s.actPend }}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{ s.onAct }}" style="flex:none;min-height:44px;padding:0 16px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">✓ Realizado</button></sc-if>
+                              <sc-if value="{{ s.actHecha }}"><span style="flex:none;min-height:44px;padding:0 14px;border-radius:14px;background:var(--color-confirmed-soft);color:var(--color-confirmed-strong);font-size:15px;font-weight:800;display:inline-flex;align-items:center">✓ 13:22</span></sc-if>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </section>
+                  </sc-if>
+                  <sc-if value="{{ s.tuVacio }}">
+                    <p style="margin:0;padding:14px 18px;border-radius:16px;border:1.5px solid var(--color-hint-edge);font-size:15px;color:var(--color-body)">Tu día · <a href="#" style="font-weight:700">Agrega tus propios suplementos o actividades</a></p>
+                  </sc-if>
+                  <sc-if value="{{ s.tuPlan }}">
+                    <button type="button" style="min-height:56px;padding:0 20px;border-radius:16px;border:1.5px solid var(--color-hint-border);background:var(--color-surface);display:flex;align-items:center;gap:12px;cursor:pointer;text-align:left"><span style="font-size:15px;color:var(--color-body)"><strong style="color:var(--color-ink)">Tu día</strong> · tus suplementos y actividades</span><span style="padding:4px 10px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:12px;font-weight:800">Plan completo</span></button>
+                  </sc-if>
+
+                  <section style="display:flex;flex-direction:column;gap:14px">
+                    <div style="display:flex;align-items:baseline;gap:12px"><h3 style="margin:0;font-size:19px;font-weight:800;color:var(--color-ink)">{{ s.hijosTitulo }}</h3><sc-if value="{{ s.hijosSub }}"><span style="font-size:15px;color:var(--color-body)">{{ s.hijosSub }}</span></sc-if></div>
+                    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start">
+                      <sc-for list="{{ s.hijos }}" as="h" hint-placeholder-count="2">
+                        <article style="background:var(--color-surface);border-radius:22px;box-shadow:0 8px 20px rgba(4,37,43,0.07);border:{{ h.borde }};display:flex;flex-direction:column;overflow:hidden">
+                          <a href="#" aria-label="Ver detalle de {{ h.nombre }}" style="padding:20px 20px 8px;display:flex;flex-direction:column;gap:10px;color:inherit;text-decoration:none" style-hover="background:var(--color-canvas)">
+                            <div style="display:flex;align-items:center;gap:14px">
+                              <span style="flex:none;width:48px;height:48px;border-radius:50%;background:{{ h.bg }};color:#ffffff;font-size:19px;font-weight:900;display:flex;align-items:center;justify-content:center">{{ h.ini }}</span>
+                              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:5px">
+                                <span style="font-size:18px;font-weight:800;color:var(--color-ink)">{{ h.nombre }} <span style="font-weight:500;color:var(--color-body)">· {{ h.edad }}</span></span>
+                                <sc-if value="{{ h.pend }}"><span style="align-self:flex-start;padding:3px 10px;border-radius:999px;background:var(--color-pending-soft);color:#78350f;font-size:13px;font-weight:800;display:inline-flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;border:2px solid #b45309"></span>{{ h.chip }}</span></sc-if>
+                                <sc-if value="{{ h.ok }}"><span style="align-self:flex-start;padding:3px 10px;border-radius:999px;background:var(--color-confirmed-soft);color:var(--color-confirmed-strong);font-size:13px;font-weight:800">✓ Todo marcado hasta ahora</span></sc-if>
+                                <sc-if value="{{ h.sinreg }}"><span style="align-self:flex-start;padding:2px 10px;border-radius:999px;border:1.5px dashed #64748b;color:var(--color-body);font-size:13px;font-weight:800">{{ h.chip }}</span></sc-if>
+                              </div>
+                              <span aria-hidden="true" style="font-size:22px;color:var(--color-action)">›</span>
+                            </div>
+                            <sc-if value="{{ h.vacio }}"><span style="padding:4px 0 12px 62px;font-size:15px;color:var(--color-muted)">Hoy no hay tomas ni actividades</span></sc-if>
+                            <sc-for list="{{ h.rows }}" as="r" hint-placeholder-count="3">
+                              <div style="display:flex;align-items:center;gap:12px;min-height:44px">
+                                <span style="flex:none;width:36px;height:36px;border-radius:10px;background:var(--color-hint);display:flex;align-items:center;justify-content:center">
+                                  <sc-if value="{{ r.med }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="8.5" width="18" height="7" rx="3.5" transform="rotate(-45 12 12)"></rect><path d="M9.5 9.5l5 5"></path></svg></sc-if>
+                                  <sc-if value="{{ r.sup }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5c3 4 5.5 7 5.5 10a5.5 5.5 0 0 1-11 0c0-3 2.5-6 5.5-10z"></path></svg></sc-if>
+                                  <sc-if value="{{ r.act }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M8.5 12.2l2.4 2.4 4.6-5"></path></svg></sc-if>
+                                </span>
+                                <span style="flex:1;font-size:14px;font-weight:700;color:var(--color-muted)">{{ r.titulo }}</span>
+                                <span style="font-size:15px;font-weight:700;color:var(--color-ink);text-align:right">{{ r.valor }}</span>
+                              </div>
+                            </sc-for>
+                            <sc-if value="{{ h.sinreg }}"><span style="margin-left:48px;padding:6px 10px;border-radius:10px;border:1.5px dashed #64748b;font-size:14px;color:var(--color-body)">{{ h.sinregTxt }}</span></sc-if>
+                          </a>
+                          <sc-if value="{{ h.hasProx }}" hint-placeholder-val="{{ true }}">
+                            <div style="margin-top:8px;padding:12px 20px 16px;border-top:1px solid var(--color-hint-edge);display:flex;align-items:center;justify-content:space-between;gap:12px">
+                              <div style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:13px;font-weight:700;color:var(--color-muted)">Próxima</span><span style="font-size:15px;font-weight:800;color:var(--color-ink)">{{ h.prox }}</span></div>
+                              <sc-if value="{{ h.porMarcar }}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{ h.onMarcar }}" aria-label="Marcar {{ h.prox }} de {{ h.nombre }}" style="flex:none;min-height:44px;min-width:96px;padding:0 18px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Marcar</button></sc-if>
+                              <sc-if value="{{ h.marcada }}"><button type="button" onClick="{{ h.onMarcar }}" style="flex:none;min-height:44px;padding:0 14px;border:none;border-radius:14px;background:var(--color-confirmed-soft);color:var(--color-confirmed-strong);font-size:15px;font-weight:800;cursor:pointer">✓ 13:22</button></sc-if>
+                            </div>
+                          </sc-if>
+                        </article>
+                      </sc-for>
+                      <sc-if value="{{ s.sinHijos }}">
+                        <div style="grid-column:span 2;padding:28px;border-radius:22px;border:2px dashed var(--color-hint-border);display:flex;align-items:center;gap:24px">
+                          <div style="flex:1;display:flex;flex-direction:column;gap:6px"><span style="font-size:18px;font-weight:800;color:var(--color-ink)">Aún no registras a tus hijos</span><span style="font-size:15px;line-height:1.5;color:var(--color-body)">Agrega a un hijo para registrar sus consultas, medicamentos y actividades.</span></div>
+                          <button type="button" style="flex:none;min-height:52px;padding:0 28px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:17px;font-weight:800;cursor:pointer">Agregar hijo</button>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ s.agregarWeb }}">
+                        <button type="button" style="min-height:120px;border-radius:22px;border:2px dashed var(--color-hint-border);background:transparent;color:var(--color-action);font-size:16px;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px">+ Agregar hijo<sc-if value="{{ s.planNota }}"><span style="font-size:13px;font-weight:600;color:var(--color-body)">Tu plan incluye un hijo</span></sc-if></button>
+                      </sc-if>
+                    </div>
+                  </section>
+
+                  <nav aria-label="Más opciones" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:1px solid var(--color-hint-edge);border-bottom:1px solid var(--color-hint-edge)">
+                    <sc-for list="{{ s.otros }}" as="o" hint-placeholder-count="4">
+                      <a href="#" style="min-height:64px;padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;text-decoration:none" style-hover="background:var(--color-hint)">
+                        <span style="font-size:15px;font-weight:700;color:{{ o.color }}">{{ o.t }}</span>
+                        <span style="font-size:13px;color:var(--color-body)">{{ o.v }}</span>
+                      </a>
+                    </sc-for>
+                  </nav>
+                </sc-if>
+              </div>
+            </main>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-for>
+
+  <sc-if value="{{ mostrarHoy }}" hint-placeholder-val="{{ true }}">
+  <div id="e7" style="display:flex;flex-direction:column;gap:18px">
+    <div style="display:flex;align-items:center;gap:10px">
+      <span style="padding:4px 11px;border-radius:999px;background:var(--color-ink);color:#ffffff;font-size:13px;font-weight:800">7</span>
+      <span style="font-size:20px;font-weight:800;color:var(--color-ink)">Pantalla «Hoy» del hijo</span>
+      <span style="font-size:14px;color:var(--color-body)">Solo teléfono · entra con la liga, sin cuenta</span>
+    </div>
+    <div style="display:flex;gap:48px;align-items:flex-start;flex-wrap:wrap">
+      <sc-for list="{{ hoy }}" as="v" hint-placeholder-count="3">
+        <div style="display:flex;flex-direction:column;gap:10px;flex:none">
+          <span style="font-size:13px;font-weight:800;color:var(--color-muted)">{{ v.id }} · {{ v.label }}</span>
+          <div data-screen-label="{{ v.id }} Hoy hijo" style="width:410px;padding:10px;border-radius:50px;background:var(--color-ink);box-shadow:0 20px 50px rgba(4,37,43,0.22)">
+            <div style="width:390px;min-height:844px;border-radius:40px;overflow:hidden;background:var(--color-canvas);display:flex;flex-direction:column">
+              <div style="height:44px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:700;color:var(--color-ink)"><span>9:41</span><span style="display:flex;gap:5px"><span style="width:18px;height:10px;border-radius:2px;background:var(--color-ink)"></span><span style="width:24px;height:11px;border-radius:3px;border:1.5px solid var(--color-ink)"></span></span></div>
+              <div style="padding:8px 20px 32px;display:flex;flex-direction:column;gap:20px">
+                <header style="display:flex;align-items:center;gap:14px">
+                  <span style="flex:none;width:48px;height:48px;border-radius:50%;background:#0e7490;color:#ffffff;font-size:19px;font-weight:900;display:flex;align-items:center;justify-content:center">M</span>
+                  <div style="display:flex;flex-direction:column;gap:2px"><h2 style="margin:0;font-size:28px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Hola, Mateo</h2><span style="font-size:15px;color:var(--color-body)">jueves 1 de noviembre</span></div>
+                </header>
+                <sc-if value="{{ v.pend }}"><span style="align-self:flex-start;padding:5px 12px;border-radius:999px;background:var(--color-pending-soft);color:#78350f;font-size:14px;font-weight:800;display:inline-flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;border:2px solid #b45309"></span>{{ v.chip }}</span></sc-if>
+                <sc-if value="{{ v.ok }}"><span style="align-self:flex-start;padding:5px 12px;border-radius:999px;background:var(--color-confirmed-soft);color:var(--color-confirmed-strong);font-size:14px;font-weight:800">✓ Todo marcado hasta ahora</span></sc-if>
+                <sc-if value="{{ v.vacio }}">
+                  <div style="padding:28px 20px;border-radius:22px;border:2px dashed var(--color-hint-border);font-size:16px;line-height:1.5;color:var(--color-muted);text-align:center">Hoy no tienes tomas ni actividades</div>
+                </sc-if>
+
+                <sc-if value="{{ v.conDatos }}" hint-placeholder-val="{{ true }}">
+                  <section aria-label="Tus tomas de hoy" style="background:var(--color-surface);border-radius:22px;box-shadow:0 8px 20px rgba(4,37,43,0.07);padding:16px;display:flex;flex-direction:column;gap:6px">
+                    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding-bottom:4px"><h3 style="margin:0;font-size:18px;font-weight:800;color:var(--color-ink)">Tus tomas</h3><span style="font-size:15px;font-weight:700;color:var(--color-ink)">{{ v.tomasTxt }}</span></div>
+                    <sc-for list="{{ v.grupos }}" as="g" hint-placeholder-count="3">
+                      <div style="display:flex;flex-direction:column;gap:2px;padding-top:8px">
+                        <span style="font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-action)">{{ g.titulo }}</span>
+                        <sc-for list="{{ g.items }}" as="t" hint-placeholder-count="1">
+                          <div style="display:flex;align-items:center;gap:12px;min-height:56px;border-bottom:1px solid var(--color-hint-edge)">
+                            <span style="flex:none;width:36px;height:36px;border-radius:10px;background:var(--color-hint);display:flex;align-items:center;justify-content:center">
+                              <sc-if value="{{ t.med }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="8.5" width="18" height="7" rx="3.5" transform="rotate(-45 12 12)"></rect><path d="M9.5 9.5l5 5"></path></svg></sc-if>
+                              <sc-if value="{{ t.sup }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5c3 4 5.5 7 5.5 10a5.5 5.5 0 0 1-11 0c0-3 2.5-6 5.5-10z"></path></svg></sc-if>
+                            </span>
+                            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:16px;font-weight:800;color:var(--color-ink)">{{ t.nombre }}</span><span style="font-size:14px;color:var(--color-body)">{{ t.det }}</span></div>
+                            <sc-if value="{{ t.porMarcar }}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{ t.onMarcar }}" aria-label="Marcar {{ t.nombre }} de las {{ t.hora }}" style="flex:none;min-height:44px;min-width:96px;padding:0 18px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Marcar</button></sc-if>
+                            <sc-if value="{{ t.mia }}"><button type="button" onClick="{{ t.onMarcar }}" aria-label="Marcada por ti. Toca para desmarcar." style="flex:none;min-height:44px;padding:0 14px;border:none;border-radius:14px;background:var(--color-confirmed-soft);color:var(--color-confirmed-strong);font-size:15px;font-weight:800;cursor:pointer">✓ {{ t.miaHora }}</button></sc-if>
+                            <sc-if value="{{ t.otro }}"><span aria-label="Marcada {{ t.otroTxt }}. No se puede desmarcar." style="flex:none;min-height:44px;padding:0 12px;border-radius:14px;background:var(--color-confirmed-soft);color:var(--color-confirmed-strong);font-size:14px;font-weight:800;display:inline-flex;align-items:center">✓ {{ t.otroTxt }}</span></sc-if>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-for>
+                  </section>
+
+                  <section aria-label="Tus actividades" style="background:var(--color-surface);border-radius:22px;box-shadow:0 8px 20px rgba(4,37,43,0.07);padding:16px;display:flex;flex-direction:column;gap:2px">
+                    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding-bottom:4px"><h3 style="margin:0;font-size:18px;font-weight:800;color:var(--color-ink)">Tus actividades</h3><span style="font-size:15px;font-weight:700;color:var(--color-ink)">{{ v.actTxt }}</span></div>
+                    <sc-for list="{{ v.acts }}" as="a" hint-placeholder-count="3">
+                      <div style="display:flex;align-items:center;gap:12px;min-height:56px;border-bottom:1px solid var(--color-hint-edge)">
+                        <span style="flex:none;width:36px;height:36px;border-radius:10px;background:var(--color-hint);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M8.5 12.2l2.4 2.4 4.6-5"></path></svg></span>
+                        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px"><span style="font-size:16px;font-weight:800;color:var(--color-ink)">{{ a.nombre }}</span><span style="font-size:14px;color:var(--color-body)">{{ a.hora }}</span></div>
+                        <sc-if value="{{ a.porMarcar }}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{ a.onMarcar }}" style="flex:none;min-height:44px;padding:0 16px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">✓ Realizado</button></sc-if>
+                        <sc-if value="{{ a.mia }}"><button type="button" onClick="{{ a.onMarcar }}" aria-label="Realizada. Toca para desmarcar." style="flex:none;min-height:44px;padding:0 14px;border:none;border-radius:14px;background:var(--color-confirmed-soft);color:var(--color-confirmed-strong);font-size:15px;font-weight:800;cursor:pointer">✓ {{ a.miaHora }}</button></sc-if>
+                        <sc-if value="{{ a.otro }}"><span aria-label="Marcada {{ a.otroTxt }}. No se puede desmarcar." style="flex:none;min-height:44px;padding:0 12px;border-radius:14px;background:var(--color-confirmed-soft);color:var(--color-confirmed-strong);font-size:14px;font-weight:800;display:inline-flex;align-items:center">✓ {{ a.otroTxt }}</span></sc-if>
+                      </div>
+                    </sc-for>
+                  </section>
+                </sc-if>
+
+                <section aria-label="Avisos" style="padding:16px;border-radius:16px;border:1.5px solid var(--color-hint-border);background:var(--color-hint);display:flex;align-items:center;gap:14px">
+                  <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:16px;font-weight:800;color:var(--color-ink)">Avisos</span><span style="font-size:14px;line-height:1.45;color:var(--color-body)">Te llega un aviso a la hora de cada toma.</span></div>
+                  <sc-if value="{{ v.avisosOff }}" hint-placeholder-val="{{ true }}"><button type="button" onClick="{{ v.onAvisos }}" style="flex:none;min-height:44px;padding:0 16px;border:2px solid var(--color-action);border-radius:14px;background:var(--color-surface);color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Activar</button></sc-if>
+                  <sc-if value="{{ v.avisosOn }}"><span style="flex:none;min-height:44px;padding:0 12px;border-radius:14px;background:var(--color-confirmed-soft);color:var(--color-confirmed-strong);font-size:15px;font-weight:800;display:inline-flex;align-items:center">✓ Activados</span></sc-if>
+                </section>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+  </sc-if>
+
+  <section style="max-width:900px;display:flex;flex-direction:column;gap:14px">
+    <h2 style="margin:0;font-size:24px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Decisiones que cambian el inicio actual</h2>
+    <ol style="margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px;font-size:15px;line-height:1.55;color:var(--color-body)">
+      <li><strong style="color:var(--color-ink)">«Tu día» va primero.</strong> Antes «Mis suplementos» quedaba debajo de los hijos. Ahora el resumen personal es lo primero, pero es compacto: dos filas y un botón.</li>
+      <li><strong style="color:var(--color-ink)">«Cerrar sesión» sale del encabezado.</strong> Las iniciales abren el menú de cuenta y «Cerrar sesión» queda también al final de «Lo demás», lejos del pulgar.</li>
+      <li><strong style="color:var(--color-ink)">La tarjeta del hijo muestra su día, no su historia.</strong> Se quita «N consultas». Solo aparecen las filas con algo hoy; si no hay nada, una línea gris.</li>
+      <li><strong style="color:var(--color-ink)">Marcar sin entrar.</strong> La próxima toma y su chip «Marcar» van en el pie de la tarjeta, a la derecha, donde llega el pulgar. El resto de la tarjeta abre el detalle.</li>
+      <li><strong style="color:var(--color-ink)">«Sin registrar» va neutro.</strong> Borde punteado gris en la tarjeta y en la toma; nunca ámbar ni rojo. El ámbar queda solo para «por marcar».</li>
+      <li><strong style="color:var(--color-ink)">Un solo sólido, y solo cuando hace falta.</strong> En el día a día no hay botón sólido: «Marcar» y «✓ Realizado» van con contorno. El único sólido es «Agregar hijo» en la cuenta nueva.</li>
+      <li><strong style="color:var(--color-ink)">Web con la misma información.</strong> Las tarjetas de los hijos pasan a una rejilla de 2 columnas con las mismas filas y el mismo pie. «Tu día» se abre en dos columnas. La barra lateral agrega «Inicio» y el grupo «Personal».</li>
+      <li><strong style="color:var(--color-ink)">«Lo demás» como lista.</strong> Familia, Planes, Recordatorios y Cerrar sesión pasan a filas de 52 px en el teléfono y a una franja de 4 accesos en la web.</li>
+      <li><strong style="color:var(--color-ink)">Esqueletos de altura fija.</strong> Al cargar se reservan la misma altura de «Tu día» y de dos tarjetas, para que nada salte.</li>
+      <li><strong style="color:var(--color-ink)">Solo lectura.</strong> El tutor de una familia que dejó de pagar ve una nota arriba, pierde «+ Agregar hijo» y conserva «Marcar». Actívalo con el ajuste «Solo lectura».</li>
+      <li><strong style="color:var(--color-ink)">«Hoy» del hijo, solo lo suyo.</strong> Sin menú, sin consultas, fotos, notas, familia ni planes. Usa las mismas filas, iconos y chips que la tarjeta del hijo en el inicio, agrupadas en Mañana / Tarde / Noche.</li>
+      <li><strong style="color:var(--color-ink)">Lo que marcó otra persona no es un botón.</strong> «✓ por Ana, 08:05» es texto en menta, sin acción; lo que marca el hijo sí se puede desmarcar.</li>
+      <li><strong style="color:var(--color-ink)">Avisos al final.</strong> Una tarjeta chica con contorno; marcar es lo frecuente y queda arriba.</li>
+    </ol>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;estado&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;todos&quot;,&quot;1&quot;,&quot;2&quot;,&quot;3&quot;,&quot;4&quot;,&quot;5&quot;,&quot;6&quot;,&quot;7&quot;],&quot;default&quot;:&quot;todos&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;soloLectura&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  state = { marcadas: {}, act: {} };
+  renderVals() {
+    const lectura = !!this.props.soloLectura;
+    const filtro = this.props.estado ?? 'todos';
+    const st = this.state;
+    const B = '1.5px solid transparent', D = '2px dashed #64748b';
+    const mateo = { ini: 'M', nombre: 'Mateo', edad: '5 años 6 meses', corta: '5a 6m', bg: '#0e7490' };
+    const sofia = { ini: 'S', nombre: 'Sofía', edad: '1 año 2 meses', corta: '1a 2m', bg: '#047857' };
+    const row = (k, titulo, valor) => ({ med: k === 'med', sup: k === 'sup', act: k === 'act', titulo, valor });
+    const card = (sid, h, kind, rows, prox, extra) => {
+      const key = sid + h.nombre;
+      const marcada = !!st.marcadas[key];
+      return Object.assign({}, h, {
+        rows, prox, hasProx: !!prox, porMarcar: !!prox && !marcada, marcada: !!prox && marcada,
+        pend: kind === 'pend', ok: kind === 'ok', vacio: kind === 'vacio', sinreg: kind === 'sinreg',
+        borde: kind === 'sinreg' ? D : B,
+        onMarcar: () => this.setState(s => ({ marcadas: Object.assign({}, s.marcadas, { [key]: !s.marcadas[key] }) }))
+      }, extra || {});
+    };
+    const mPend = (sid) => card(sid, mateo, 'pend', [row('med', 'Medicamentos', '3 tomas hoy · 1 por marcar'), row('sup', 'Suplementos', '1 de 2'), row('act', 'Actividades', '2 de 5 hechas')], 'Amoxicilina · 16:00', { chip: '1 por marcar' });
+    const sSinreg = (sid) => card(sid, sofia, 'sinreg', [row('med', 'Medicamentos', '2 tomas hoy · 1 sin registrar'), row('act', 'Actividades', '1 de 3 hechas')], 'Paracetamol · 20:00', { chip: 'sin registrar', sinregTxt: 'Paracetamol · 08:00 · sin registrar' });
+    const otrosDueña = (plan, fam, rec) => [
+      { t: 'Familia', v: fam, color: '#04252b' }, { t: 'Planes', v: plan, color: '#04252b' },
+      { t: 'Recordatorios', v: rec, color: '#04252b' }, { t: 'Cerrar sesión', v: '', color: '#0e7490' }
+    ];
+    const tu = (mode, o) => Object.assign({ tuCard: mode === 'card' || mode === 'todo', tuTodo: mode === 'todo', tuVacio: mode === 'vacio', tuPlan: mode === 'plan' }, o || {});
+    const base = { nombre: 'Ana', nombreCompleto: 'Ana Morales', ini: 'AM', hijosTitulo: 'Tus hijos', hijosSub: '', navHijos: 'Tus hijos', aviso: false, loading: false, planNota: false, tomas: '', tomasPct: '0%', tomasProx: '', act: '', actProx: '' };
+    const raw = [
+      Object.assign({}, base, tu('card'), { num: '1', label: 'Día normal', quien: 'Dueña · plan completo', planTxt: 'Plan completo', tomas: '2 de 4 hoy', tomasPct: '50%', tomasProx: 'Próxima: Vitamina D · 14:00', act: '3 de 8 hechas', actProx: 'Próxima: Caminar 30 min · 18:00', hijos: [mPend('1'), sSinreg('1')], agregar: true, otros: otrosDueña('Plan completo', '3 personas', 'Activados') }),
+      Object.assign({}, base, tu('todo'), { num: '2', label: 'Todo marcado hasta ahora', quien: 'Dueña · plan completo', planTxt: 'Plan completo', tomas: '2 de 4 hoy', tomasPct: '50%', tomasProx: 'Próxima: Magnesio · 21:00', act: '3 de 8 hechas', actProx: 'Próxima: Caminar 30 min · 18:00', hijos: [card('2', mateo, 'ok', [row('med', 'Medicamentos', '3 tomas hoy · 2 marcadas'), row('sup', 'Suplementos', '2 de 2'), row('act', 'Actividades', '2 de 5 hechas')], 'Amoxicilina · 20:00'), card('2', sofia, 'ok', [row('med', 'Medicamentos', '2 tomas hoy · 1 marcada'), row('act', 'Actividades', '1 de 3 hechas')], 'Paracetamol · 20:00')], agregar: true, otros: otrosDueña('Plan completo', '3 personas', 'Activados') }),
+      Object.assign({}, base, tu('vacio'), { num: '3', label: 'Cuenta nueva', quien: 'Dueña · sin hijos', planTxt: 'Plan gratuito', aviso: true, hijos: [], sinHijos: true, agregar: false, otros: otrosDueña('Plan gratuito', 'Solo tú', 'Desactivados') }),
+      Object.assign({}, base, tu('plan'), { num: '4', label: 'Plan gratuito', quien: 'Dueña · 1 hijo, sin suplementos personales', planTxt: 'Plan gratuito', hijos: [mPend('4')], agregar: true, planNota: true, otros: otrosDueña('Plan gratuito', '2 personas', 'Activados') }),
+      Object.assign({}, base, tu('vacio'), { num: '5', label: 'Cuidador', quien: 'Hijos de otra familia, sin agregar', nombre: 'Rosa', nombreCompleto: 'Rosa Luna', ini: 'RL', planTxt: 'Cuidadora', hijosTitulo: 'Hijos compartidos contigo', hijosSub: 'Familia Morales · puedes ver y marcar', navHijos: 'Familia Morales', hijos: [mPend('5'), card('5', sofia, 'vacio', [], '')], agregar: false, otros: [{ t: 'Familia', v: 'Familia Morales · cuidadora', color: '#04252b' }, { t: 'Recordatorios', v: 'Activados', color: '#04252b' }, { t: 'Cerrar sesión', v: '', color: '#0e7490' }] }),
+      Object.assign({}, base, tu('none'), { num: '6', label: 'Cargando', quien: 'Esqueletos con la altura final', planTxt: 'Plan completo', loading: true, hijos: [], agregar: false, otros: [] })
+    ];
+    const estados = raw.filter(s => filtro === 'todos' || filtro === s.num).map(s => {
+      const hecha = !!st.act[s.num];
+      const lect = lectura && s.num !== '3' && s.num !== '5' && !s.loading;
+      return Object.assign(s, {
+        anchor: 'e' + s.num, listo: !s.loading, lectura: lect,
+        agregar: s.agregar && !lect, agregarWeb: s.agregar && !lect,
+        sinHijos: !!s.sinHijos,
+        actPend: !hecha, actHecha: hecha,
+        onAct: () => this.setState(x => ({ act: Object.assign({}, x.act, { [s.num]: !x.act[s.num] }) }))
+      });
+    });
+    const hm = st.hijoMarc || {}, av = st.avisos || {};
+    const tg = (k) => () => this.setState(x => ({ hijoMarc: Object.assign({}, x.hijoMarc || {}, { [k]: !(x.hijoMarc || {})[k] }) }));
+    const tm = (vid, k, nombre, det, hora, otroTxt, preMia) => {
+      const key = vid + k, on = preMia ? !hm[key] : !!hm[key];
+      return { med: k[0] === 'm', sup: k[0] === 's', nombre, det, hora, otro: !!otroTxt, otroTxt: otroTxt || '', porMarcar: !otroTxt && !on, mia: !otroTxt && on, miaHora: preMia ? preMia : '13:22', onMarcar: tg(key) };
+    };
+    const ac = (vid, k, nombre, hora, otroTxt, preMia) => {
+      const key = vid + k, on = preMia ? !hm[key] : !!hm[key];
+      return { nombre, hora, otro: !!otroTxt, otroTxt: otroTxt || '', porMarcar: !otroTxt && !on, mia: !otroTxt && on, miaHora: preMia ? preMia : '13:22', onMarcar: tg(key) };
+    };
+    const mk = (id, label, kind) => {
+      const pend = kind === 'pend';
+      const grupos = kind === 'vacio' ? [] : [
+        { titulo: 'Mañana', items: [tm(id, 'm1', 'Amoxicilina', '5 ml · 08:00', '08:00', 'por Ana, 08:05'), tm(id, 's1', 'Vitamina D', '1 gota · 08:00', '08:00', 'por Ana, 08:05')] },
+        { titulo: 'Tarde', items: [tm(id, 'm2', 'Amoxicilina', '5 ml · 16:00', '16:00', '', pend ? '' : '16:02')] },
+        { titulo: 'Noche', items: [tm(id, 'm3', 'Amoxicilina', '5 ml · 20:00', '20:00', '')] }
+      ];
+      const acts = kind === 'vacio' ? [] : [
+        ac(id, 'a1', 'Tender la cama', '08:30', 'por Ana, 08:40'),
+        ac(id, 'a2', 'Leer 20 minutos', '17:00', '', pend ? '' : '17:25'),
+        ac(id, 'a3', 'Lavarse los dientes', '21:00', '')
+      ];
+      return { id, label, pend, ok: kind === 'ok', vacio: kind === 'vacio', conDatos: kind !== 'vacio', chip: '1 por marcar',
+        tomasTxt: pend ? '4 hoy · 1 por marcar' : '4 hoy', actTxt: pend ? '1 de 3 hechas' : '2 de 3 hechas', grupos, acts,
+        avisosOff: !av[id], avisosOn: !!av[id], onAvisos: () => this.setState(x => ({ avisos: Object.assign({}, x.avisos || {}, { [id]: true }) })) };
+    };
+    const hoy = [mk('7a', 'Con cosas por marcar', 'pend'), mk('7b', 'Todo marcado hasta ahora', 'ok'), mk('7c', 'Sin nada hoy', 'vacio')];
+    return { estados, hoy, mostrarHoy: filtro === 'todos' || filtro === '7' };
+  }
+}
+</script>
+</body>
+</html>
