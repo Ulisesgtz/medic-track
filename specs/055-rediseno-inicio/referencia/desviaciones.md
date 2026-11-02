@@ -19,6 +19,7 @@ Lo que la app hace distinto de `Inicio PediTrack.dc.html`, con su motivo. Se lle
 | 12 | Nota para instalar la app en «Hoy» del hijo | No aparece | «Para que no se pierda, agrega esta app…» mientras no corre instalada | Ya existía (spec 047): sin la app instalada se pierde el acceso en iPhone | Abierta |
 | 13 | Barra lateral web | «Inicio» a 90 px del borde y la cuenta abajo | Unos 8 px más arriba (el logo y los espacios de la barra de siempre) | La barra es la misma en todas las pantallas; se ajustó lo que pide el diseño (grupo, cuenta con menú) sin mover el resto | Abierta |
 | 14 | «Marcar» que falla (sin red) | No dibujado | El botón vuelve a «Marcar» y debajo dice «No se pudo marcar. Inténtalo de nuevo.» (`role=alert`) | El diseño no tiene el estado; texto neutro decidido en la revisión del PR | Abierta |
+| 15 | «Recordatorios» en «Lo demás» cuando el teléfono no puede recibirlos | «Activados» | «No disponibles aquí» (y nada mientras carga) | «Desactivados» haría creer que basta con activarlos | Abierta |
 
 ## Medido (2026-11-01)
 
@@ -27,4 +28,3 @@ Arnés temporal (Clerk sustituido, API falsa) contra el diseño servido con su `
 - **Teléfono 390 px**: saludo, «Tu día» (82 / 273 px), «Tus hijos», las dos tarjetas (409 / 308 y 729 / 297), la fila de medicamentos, «+ Agregar hijo», «Lo demás», «✓ Realizado» y «Marcar» en **la misma posición y tamaño** que el diseño (el ancho del saludo cambia con la fecha).
 - **Web 1280 px**: «Tu día», «Tus hijos», tarjetas, «+ Agregar hijo», «Lo demás», «✓ Realizado» y «Marcar» iguales; el ancho de la columna difiere en 15 px por la barra de desplazamiento de la ventana.
 - Estados 3, 4, 5, 7a y 7c revisados a la vista. Para igualar el diseño, el inicio y la pantalla del hijo usan alto de línea `normal` y tamaños exactos (`text-[14px]`…), como el diseño.
-| 15 | «Recordatorios» en «Lo demás» cuando el teléfono no puede recibirlos | «Activados» | «No disponibles aquí» (y nada mientras carga) | «Desactivados» haría creer que basta con activarlos | Abierta |
