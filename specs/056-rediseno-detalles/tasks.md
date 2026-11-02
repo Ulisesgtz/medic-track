@@ -20,13 +20,13 @@ rompen con apóstrofes: escribir los scripts con la herramienta de escritura); n
 
 ## Fase 1: Configuración
 
-- [ ] T001 Medir los diseños: servir `referencia/Detalle y Mi día PediTrack.dc.html` y `referencia/Detalle de la consulta
+- [x] T001 Medir los diseños: servir `referencia/Detalle y Mi día PediTrack.dc.html` y `referencia/Detalle de la consulta
   PediTrack.dc.html` con su `support.js` (arnés temporal en `frontend/h`, como en la 055) y leer `Encabezado PediTrack.dc.html`
   con DesignSync; anotar en `specs/056-rediseno-detalles/referencia/medidas.md` por pantalla y estado las posiciones, tamaños,
   radios y colores de cada sección (teléfono 390 y web 1280)
-- [ ] T002 [P] Crear `specs/056-rediseno-detalles/referencia/desviaciones.md` con la tabla vacía y la fila de FR-018 («programada»
+- [x] T002 [P] Crear `specs/056-rediseno-detalles/referencia/desviaciones.md` con la tabla vacía y la fila de FR-018 («programada»
   se puede marcar, decisión del dueño)
-- [ ] T003 [P] Comparar los colores de los diseños con `@theme` (`frontend/src/index.css`): si aparece uno nuevo, agregarlo como
+- [x] T003 [P] Comparar los colores de los diseños con `@theme` (`frontend/src/index.css`): si aparece uno nuevo, agregarlo como
   token y en `specs/005-identidad-visual-front-end/design-tokens.md`
 
 **Commit**: «docs(056): medidas de los diseños y desviaciones»
