@@ -147,6 +147,10 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
 
 ## Producto / Feature futura
 
+- **El titular (padre o madre) con sus propias consultas y actividades, como los hijos** (pedido del dueño, 2026-11-02) — hoy la persona de la cuenta solo tiene sus suplementos y actividades personales («Mi día», specs 033 parte 3, 035 y 056); lo que se pide es que también registre **sus propias consultas médicas** (doctor, fecha, receta, medicamentos con sus tomas, síntomas y notas) igual que las de un hijo, con su calendario y sus recordatorios. Por decidir en la spec: dónde vive («Mi día» o un «perfil» propio parecido al detalle del hijo), si las ve alguien más de la familia (hoy lo personal solo lo ve su dueña), qué plan lo incluye y cómo encaja en el PDF y el historial.
+- **Editar y eliminar suplementos y actividades** (pedido del dueño, 2026-11-02) — hoy se editan, se pausan y se finalizan, pero no se borran (specs 033 y 035: «Finalizar» es definitivo y lo pasado queda). Se pide poder **eliminar** uno (por ejemplo, capturado por error), del hijo y personal. Por decidir: qué pasa con sus tomas ya marcadas y sus avisos, quién puede (dueña y Tutor), la confirmación neutral y si se borra de verdad o se oculta.
+- **Las consultas solo se editan, nunca se borran** (decisión del dueño, 2026-11-02) — la edición ya existe (spec 051); una consulta completa **no** se elimina. Solo se puede quitar un medicamento sin tomas marcadas al editar (spec 051).
+
 - La pantalla de detalle de hijo (consultas médicas, recetas, medicamentos, horarios de toma y
   síntomas) fue implementada en `specs/004-detalle-consulta-hijo/` — este ítem ya no está pendiente.
 - **Modo oscuro de la app** — el sistema visual de `specs/005-identidad-visual-front-end/` ya define la
