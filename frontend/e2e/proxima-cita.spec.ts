@@ -71,7 +71,10 @@ for (const design of designs) {
       await page.getByRole('button', { name: 'Quitar aviso «1 día antes»' }).click()
       await page.getByRole('button', { name: 'Guardar cambios' }).click()
       await expect(page).toHaveURL(new RegExp(`/children/${owner.childId}$`))
-      const childCard = page.getByRole('region', { name: 'Próxima cita' })
+      // specs/056: the child's detail shows it compactly; its notices and actions live on the child's appointments.
+      await expect(page.getByRole('region', { name: 'Próxima cita' })).toContainText('10:30')
+      await page.goto(`/children/${owner.childId}/citas`)
+      const childCard = page.getByRole('main')
       await expect(childCard.getByText('2 horas antes')).toBeVisible()
       await expect(childCard.getByText('1 día antes')).toHaveCount(0)
       const notices = await queryDb<{ n: string }>(
@@ -80,11 +83,11 @@ for (const design of designs) {
       )
       expect(notices[0].n).toBe('1')
 
-      // Marking it done is one tap and can be undone; it goes to the history and the card says there is none next.
+      // Marking it done is one tap and can be undone: it goes to «Anteriores» as «Realizada», and «Deshacer» brings it back.
       await childCard.getByRole('button', { name: 'Marcar realizada' }).click()
-      await expect(page.getByText(/quedó como realizada/)).toBeVisible()
-      await page.getByRole('button', { name: 'Deshacer' }).click()
-      await expect(page.getByRole('region', { name: 'Próxima cita' }).getByRole('button', { name: 'Marcar realizada' })).toBeVisible()
+      await expect(childCard.getByText('Realizada', { exact: true })).toBeVisible()
+      await childCard.getByRole('button', { name: 'Deshacer' }).click()
+      await expect(childCard.getByRole('button', { name: 'Marcar realizada' })).toBeVisible()
 
       // Cancelling asks first, in neutral words; «Volver» keeps it.
       await page.getByRole('button', { name: 'Cancelar cita' }).click()
@@ -94,7 +97,7 @@ for (const design of designs) {
       await expect(dialog).toHaveCount(0)
       await page.getByRole('button', { name: 'Cancelar cita' }).click()
       await page.getByRole('dialog').getByRole('button', { name: 'Cancelar cita' }).click()
-      await expect(page.getByRole('region', { name: 'Próxima cita' }).getByRole('button', { name: 'Marcar realizada' })).toHaveCount(0)
+      await expect(childCard.getByRole('button', { name: 'Marcar realizada' })).toHaveCount(0)
 
       // The history keeps it as «Cancelada», with who did it, and nothing is deleted.
       await page.goto(`/children/${owner.childId}/citas`)
@@ -244,7 +247,6 @@ for (const design of designs) {
       await expect(card.getByText('Consultorio 302, Av. Vallarta 1234')).toBeVisible()
       await expect(card.getByRole('link', { name: 'Abrir en Maps' })).toHaveAttribute('href', 'https://maps.app.goo.gl/abc123')
       await expect(card.getByText(/De la consulta del/)).toHaveCount(0)
-      await expect(card.getByRole('link', { name: '+ Agregar otra cita' })).toBeVisible()
 
       const rows = await queryDb<{ consultation_id: string | null; doctor_name: string; location_url: string }>(
         'SELECT consultation_id, doctor_name, location_url FROM consultation_appointments WHERE child_id = $1',
