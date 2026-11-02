@@ -111,7 +111,7 @@ for (const design of designs) {
       await expect(page.getByText('Los cambios cuentan desde el siguiente aviso. Lo ya marcado no cambia.')).toBeVisible()
       await page.getByLabel('Cantidad').fill('2')
       await page.getByRole('button', { name: 'Guardar cambios' }).click()
-      await expect(page.getByText('Cada 2 horas, de 00:00 a 23:00')).toBeVisible()
+      await expect(page.getByText('Cada 2 horas, de 00:00 a 23:00').first()).toBeVisible()
 
       // Pausing needs no confirmation and takes «Realizado» away; resuming brings it back.
       await page.getByRole('button', { name: 'Pausar' }).click()
