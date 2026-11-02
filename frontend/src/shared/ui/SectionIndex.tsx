@@ -44,7 +44,7 @@ export function SectionIndex({ sections, variant }: { sections: IndexedSection[]
   return (
     <nav
       aria-label="Secciones"
-      className={`flex gap-2 overflow-x-auto leading-[normal] ${phone ? 'sticky top-0 z-10 -mx-5 border-b border-hint-edge bg-canvas px-5 py-2' : 'flex-wrap'}`}
+      className={`flex gap-2 overflow-x-auto leading-[normal] [scrollbar-width:none] ${phone ? 'sticky top-0 z-10 -mx-5 border-b border-hint-edge bg-canvas px-5 py-2' : 'flex-wrap'}`}
     >
       {sections.map(({ id, label }) => (
         <a

@@ -175,9 +175,9 @@ rompen con apóstrofes: escribir los scripts con la herramienta de escritura); n
 
 ## Fase 7: Pulido
 
-- [ ] T034 Medir lado a lado cada pantalla y estado contra su diseño a 390 y 1280 px con el arnés; corregir lo que se pueda y
+- [x] T034 Medir lado a lado cada pantalla y estado contra su diseño a 390 y 1280 px con el arnés; corregir lo que se pueda y
   anotar el resto en `specs/056-rediseno-detalles/referencia/desviaciones.md`; comprobar SC-001 (marcar sin scroll a 390 × 844)
-- [ ] T035 [P] Documentar: entrada de la spec 056 en `CLAUDE.md`; `frontend/CLAUDE.md` (`PageHeader`, `StickyActionBar`,
+- [x] T035 [P] Documentar: entrada de la spec 056 en `CLAUDE.md`; `frontend/CLAUDE.md` (`PageHeader`, `StickyActionBar`,
   `SectionIndex`, `childDetail/`, «Mi día», el detalle de la consulta, las rutas; quitar `AppHeader` y `PersonalRoutinesPage`);
   estado de `spec.md` → «Implementada»
 - [ ] T036 Verificación completa: `npx tsc --noEmit`, `npx eslint .`, `npx vitest run --coverage --testTimeout=30000

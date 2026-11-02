@@ -5,7 +5,7 @@
 
 **Creado**: 2026-11-01
 
-**Estado**: Borrador
+**Estado**: Implementada
 
 **Entrada**: Tres diseños de Claude Design (proyecto `f4e28757-d885-471d-b5b9-6e6ca094449a`, «propuesta 1 nov 2026»), pedidos
 después de la auditoría de UX que siguió al rediseño del inicio (spec 055): **`Encabezado PediTrack.dc.html`** (medidas y

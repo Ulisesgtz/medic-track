@@ -93,7 +93,7 @@ export function VaccinationCardPage() {
       title={TEXT.title}
       // specs/056 (design H3): the count as the subtitle, «+ Agregar vacuna» (the screen's one solid) and «Exportar a PDF» in the
       // header; a Tutor of a family that stopped paying reads the note.
-      subtitle={doses ? entrySummary(doses.length, photos?.length ?? 0) : undefined}
+      subtitle={doses ? entrySummary(doses.length, photos?.photos.length ?? 0) : undefined}
       readOnly={access.readOnly}
       actions={
         account && child && childId ? (
