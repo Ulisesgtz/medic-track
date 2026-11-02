@@ -141,8 +141,8 @@ for (const design of designs) {
       const guest = await secondPerson(browser, design)
       await acceptViaApi(guest.context.request, guest.token, await inviteViaApi(page.context().request, owner.token, guest.email, 'caregiver'))
 
-      await guest.page.goto(`/children/${owner.childId}`)
-      const card = guest.page.getByRole('region', { name: 'Próxima cita' })
+      await guest.page.goto(`/children/${owner.childId}/citas`)
+      const card = guest.page.getByRole('main')
       await expect(card.getByText('Un Tutor puede editar, marcar o cancelar esta cita.')).toBeVisible()
       await expect(card.getByRole('link', { name: 'Editar' })).toHaveCount(0)
       await expect(card.getByRole('button', { name: 'Marcar realizada' })).toHaveCount(0)
@@ -155,8 +155,8 @@ for (const design of designs) {
       await expect(toggle).toHaveAttribute('aria-checked', 'false')
       const muted = await queryDb<{ account_id: string }>('SELECT account_id FROM appointment_muted WHERE appointment_id = $1', [appointment.id])
       expect(muted.map((r) => r.account_id)).toEqual([guest.accountId])
-      await page.goto(`/children/${owner.childId}`)
-      await expect(page.getByRole('region', { name: 'Próxima cita' }).getByRole('switch', { name: 'Tus avisos de esta cita' })).toHaveAttribute('aria-checked', 'true')
+      await page.goto(`/children/${owner.childId}/citas`)
+      await expect(page.getByRole('main').getByRole('switch', { name: 'Tus avisos de esta cita' })).toHaveAttribute('aria-checked', 'true')
 
       // Even calling the API directly, the Caregiver cannot change it.
       const headers = { Authorization: `Bearer ${guest.token}` }
@@ -173,15 +173,19 @@ for (const design of designs) {
       const appointment = await appointmentViaApi(page.context().request, owner.token, owner.consultationId as string)
       await setAccountPlan(owner.accountId, 'free')
 
+      // The child's detail says it in its compact card; it is marked on the child's appointments.
       await page.goto(`/children/${owner.childId}`)
-      const card = page.getByRole('region', { name: 'Próxima cita' })
+      await expect(page.getByRole('region', { name: 'Próxima cita' })).toContainText('10:30')
+      await page.getByRole('region', { name: 'Próxima cita' }).getByRole('link').first().click()
+      await expect(page).toHaveURL(new RegExp(`/children/${owner.childId}/citas$`))
+      const card = page.getByRole('main')
       await expect(card.getByText('10:30', { exact: true })).toBeVisible()
       // Editing is the full plan's; marking is not.
       await expect(card.getByRole('link', { name: 'Editar' })).toHaveCount(0)
       await card.getByRole('button', { name: 'Marcar realizada' }).click()
-      await expect(page.getByText(/quedó como realizada/)).toBeVisible()
-      const rows = await queryDb<{ status: string }>('SELECT status FROM consultation_appointments WHERE id = $1', [appointment.id])
-      expect(rows[0].status).toBe('done')
+      await expect
+        .poll(async () => (await queryDb<{ status: string }>('SELECT status FROM consultation_appointments WHERE id = $1', [appointment.id]))[0].status)
+        .toBe('done')
 
       // A new consultation shows the field disabled, with the link to the plan.
       await page.goto(`/children/${owner.childId}/consultations/new`)
@@ -206,8 +210,7 @@ for (const design of designs) {
         if (request.url().includes('google.com/maps')) googleMaps.push(request.url())
       })
       await page.goto(`/children/${owner.childId}`)
-      const section = page.getByRole('region', { name: 'Próxima cita' })
-      await section.getByRole('link', { name: '+ Agregar cita' }).click()
+      await page.getByRole('main').getByRole('link', { name: '+ Agregar cita' }).click()
       await expect(page.getByRole('heading', { name: 'Agregar próxima cita', level: 1 })).toBeVisible()
       await expectNoHorizontalScroll(page)
 

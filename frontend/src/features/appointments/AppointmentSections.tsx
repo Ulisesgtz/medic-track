@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { shortDayText } from './appointmentText'
 import { AppointmentCard } from './AppointmentCard'
-import { useAppointmentAccess, useChildAppointments, useConsultationAppointment, useSetAppointmentStatus } from './hooks'
+import { useAppointmentAccess, useConsultationAppointment, useSetAppointmentStatus } from './hooks'
 import type { Appointment } from './types'
 
 /** «La cita del vie 9 oct quedó como realizada.» with a way back: marking needs no confirmation because it can be undone. */
@@ -21,68 +21,6 @@ function DoneBanner({ appointment, onUndone }: { appointment: Appointment; onUnd
         Deshacer
       </button>
     </p>
-  )
-}
-
-/**
- * The «Próxima cita» of the child's detail (both designs): the nearest scheduled appointment of all the child's consultations,
- * or — when there is none — the line that says where appointments are written (only when the plan lets or there is history, so a
- * free account is not shown an empty block). Marking it done says so here, once the card is gone.
- */
-export function ChildAppointmentSection({ childId, historyPath }: { childId: string; historyPath: string }) {
-  const query = useChildAppointments(childId)
-  const account = useCurrentAccount()
-  const data = query.data
-  const access = useAppointmentAccess(account.data, childId, data?.paidPlan)
-  const [done, setDone] = useState<Appointment | null>(null)
-  const addPath = `/children/${childId}/citas/nueva`
-
-  if (!data) return null
-  const hasHistory = data.history.length > 0
-  if (!data.next && !done && !hasHistory && !data.paidPlan) return null
-
-  return (
-    <section aria-label="Próxima cita" className="flex flex-col gap-4">
-      {done && <DoneBanner appointment={done} onUndone={() => setDone(null)} />}
-      {data.next ? (
-        <AppointmentCard
-          key={data.next.id}
-          appointment={data.next}
-          consultationLink
-          historyLink={hasHistory ? historyPath : undefined}
-          onDone={setDone}
-          access={access}
-        />
-      ) : (
-        <div className="flex flex-col items-start gap-2 rounded-[22px] border-2 border-dashed border-hint-border px-[22px] py-5">
-          <h3 className="text-lg font-black tracking-[-0.02em] text-ink">Próxima cita</h3>
-          <p className="text-[15px] leading-relaxed text-body">
-            Si ya hay una fecha con el pediatra, se anota aquí sin necesidad de una consulta. También se puede anotar al registrar una consulta.
-          </p>
-          {access.canEdit && (
-            <Link
-              to={addPath}
-              className="inline-flex min-h-12 items-center rounded-2xl border-2 border-action px-5 text-base font-extrabold text-action hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2"
-            >
-              + Agregar cita
-            </Link>
-          )}
-          {hasHistory && (
-            <Link to={historyPath} className="inline-flex min-h-11 items-center text-[15px] font-extrabold text-action hover:underline">
-              Historial de citas →
-            </Link>
-          )}
-        </div>
-      )}
-      {data.next && access.canEdit && (
-        <Link
-          to={addPath}
-          className="inline-flex min-h-11 items-center self-start text-[15px] font-extrabold text-action underline focus:outline-none focus-visible:ring-2 focus-visible:ring-action"
-        >
-          + Agregar otra cita
-        </Link>
-      )}
-    </section>
   )
 }
 
