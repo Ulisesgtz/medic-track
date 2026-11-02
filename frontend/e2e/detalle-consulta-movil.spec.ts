@@ -1,39 +1,46 @@
 import { test, expect, seedChild } from './helpers'
 
-// Consultation detail, phone design (mock 03): dark header with the child's
-// name and the date, the prescription photo card, the symptoms and each
-// medication with its dose chips. Requires the backend running locally.
+// Consultation detail, phone design (specs/056, «Detalle de la consulta PediTrack.dc.html»): the common header, the treatment first
+// (a week of the calendar, «Tomas de hoy» and each medication with its doses), the next appointment and «Datos de la consulta»,
+// folded. Requires the backend running locally.
 
-const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
-const todayLong = () => {
+const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+const todayShort = () => {
   const now = new Date()
-  return `${now.getDate()} ${MONTHS[now.getMonth()]} ${now.getFullYear()}`
+  return `${String(now.getDate()).padStart(2, '0')} ${MONTHS[now.getMonth()]} ${now.getFullYear()}`
 }
 
-test.describe('Detalle de consulta — diseño móvil (mock 03)', () => {
+test.describe('Detalle de consulta — diseño móvil (specs/056)', () => {
   test.use({ viewport: { width: 390, height: 844 } })
 
-  test('muestra el encabezado, la foto, los síntomas y el medicamento con su horario', async ({ page }) => {
+  test('el tratamiento va primero: el encabezado, la semana, las tomas de hoy y luego los datos plegados', async ({ page }) => {
     const { consultationId } = await seedChild(page)
     await page.goto(`/consultations/${consultationId}`)
+    const main = page.getByRole('main')
 
-    await expect(page.getByRole('link', { name: '← Mateo Morales' })).toBeVisible()
-    await expect(page.getByText(todayLong(), { exact: true })).toBeVisible()
-    await expect(page.getByRole('heading', { level: 1, name: 'Dra. Laura Cázares' })).toBeVisible()
+    await expect(main.getByRole('link', { name: '← Mateo' })).toBeVisible()
+    await expect(main.getByText(todayShort(), { exact: true })).toBeVisible()
+    await expect(main.getByRole('heading', { level: 1, name: 'Dra. Laura Cázares' })).toBeVisible()
+    await expect(main.getByRole('link', { name: 'Editar consulta' })).toBeVisible()
 
-    await expect(page.getByText('Foto de la receta', { exact: true })).toBeVisible()
-    await expect(page.getByText('Leída en tu equipo')).toBeVisible()
-    await expect(page.getByRole('heading', { level: 2, name: 'Notas previas a la consulta' })).toBeVisible()
-    await expect(page.getByText('Fiebre y tos', { exact: true })).toBeVisible()
+    const treatment = main.getByRole('region', { name: 'Tratamiento' })
+    const calendar = main.getByRole('region', { name: 'Calendario del tratamiento' })
+    await expect(calendar.getByRole('button', { name: 'Ver mes' })).toHaveAttribute('aria-expanded', 'false')
+    await expect(main.getByRole('heading', { level: 3, name: 'Tomas de hoy' })).toBeVisible()
+    await expect(main.getByRole('heading', { level: 3, name: 'Amoxicilina' })).toBeVisible()
+    await expect(main.getByText('c/8 h · 1 día · primera toma 00:00')).toBeVisible()
+    for (const time of ['00:00', '08:00', '16:00']) await expect(main.getByRole('button', { name: `Toma de ${time}` })).toBeVisible()
 
-    await expect(page.getByRole('heading', { level: 2, name: 'Medicamentos' })).toBeVisible()
-    await expect(page.getByRole('heading', { level: 3, name: 'Amoxicilina' })).toBeVisible()
-    await expect(page.getByText('Cada 8 horas · 1 día · primera toma 00:00')).toBeVisible()
-    // Doses at 00:00, 08:00 and 16:00 today, as chips.
-    for (const time of ['00:00', '08:00', '16:00']) {
-      await expect(page.getByRole('button', { name: `Toma de ${time}` })).toBeVisible()
-    }
-    // Phone only: no sidebar, no web header button.
+    // The data come after the treatment, folded, with their summary; opening them shows the notes.
+    const data = main.getByRole('region', { name: 'Datos de la consulta' })
+    const toggle = data.getByRole('button', { name: /Datos de la consulta/ })
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(toggle).toContainText('Foto · notas')
+    expect((await treatment.boundingBox())!.y).toBeLessThan((await data.boundingBox())!.y)
+    await toggle.click()
+    await expect(data.getByText('Fiebre y tos', { exact: true })).toBeVisible()
+
+    // Phone only: no sidebar and no solid «Nueva consulta» (the frequent action is marking).
     await expect(page.locator('aside')).toHaveCount(0)
     await expect(page.getByRole('link', { name: 'Nueva consulta' })).toHaveCount(0)
   })
@@ -47,73 +54,86 @@ test.describe('Detalle de consulta — diseño móvil (mock 03)', () => {
     await expect(page.getByRole('group', { name: 'Noche' }).getByRole('button', { name: 'Toma de 00:00' })).toBeVisible()
   })
 
+  test('«Ver mes» abre el mes y «Ver semana» vuelve a la semana', async ({ page }) => {
+    const { consultationId } = await seedChild(page)
+    await page.goto(`/consultations/${consultationId}`)
+    const calendar = page.getByRole('region', { name: 'Calendario del tratamiento' })
+
+    await calendar.getByRole('button', { name: 'Ver mes' }).click()
+    await expect(calendar.getByRole('button', { name: 'Ver semana' })).toHaveAttribute('aria-expanded', 'true')
+    await calendar.getByRole('button', { name: 'Ver semana' }).click()
+    await expect(calendar.getByRole('button', { name: 'Ver mes' })).toBeVisible()
+  })
+
   test('la barra de progreso sube al marcar una toma, sin recargar (specs/014)', async ({ page }) => {
     const { consultationId } = await seedChild(page)
     await page.goto(`/consultations/${consultationId}`)
     const bar = page.getByRole('progressbar', { name: 'Progreso de las tomas' })
-    await expect(page.getByText('0 / 3 tomas')).toBeVisible()
+    await expect(page.getByText('0 de 3 tomas')).toBeVisible()
     await expect(bar).toHaveAttribute('aria-valuenow', '0')
 
     await page.getByRole('button', { name: 'Toma de 16:00' }).click()
 
-    await expect(page.getByText('1 / 3 tomas')).toBeVisible()
+    await expect(page.getByText('1 de 3 tomas')).toBeVisible()
     await expect(bar).toHaveAttribute('aria-valuenow', '1')
     await expect(bar).toHaveAttribute('aria-valuetext', /^1 de 3 tomas registradas/)
   })
 
-  test('cada chip alterna entre marcada y sin marcar, y se conserva al recargar', async ({ page }) => {
+  test('cada toma alterna entre marcada y sin marcar, dice quién la marcó y se conserva al recargar', async ({ page }) => {
     const { consultationId } = await seedChild(page)
     await page.goto(`/consultations/${consultationId}`)
     // 16:00: never "sin registrar" during its own day (its next dose is at midnight), whatever time the suite runs.
-    const chip = page.getByRole('button', { name: 'Toma de 16:00' })
-    await expect(chip).toHaveAttribute('aria-pressed', 'false')
+    const toggle = page.getByRole('button', { name: 'Toma de 16:00' })
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    await expect(toggle).toHaveText('Marcar')
 
-    await chip.click()
-    await expect(chip).toHaveAttribute('aria-pressed', 'true')
-    await expect(chip).toContainText('16:00 ✓')
-    await expect(chip).toContainText('por Ana') // who marked it (specs/032): the account that is signed in
-    await expect(chip).toHaveClass(/bg-confirmed/)
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    await expect(toggle).toHaveText(/^✓ \d\d:\d\d · por Ana$/) // who marked it (specs/032): the account that is signed in
+    await expect(toggle).toHaveClass(/bg-confirmed-soft/)
 
     await page.reload()
     await expect(page.getByRole('button', { name: 'Toma de 16:00' })).toHaveAttribute('aria-pressed', 'true')
 
-    // Always enabled: the parent can correct a dose of any time.
+    // The session's own mark is taken back with the same button.
     await page.getByRole('button', { name: 'Toma de 16:00' }).click()
     await expect(page.getByRole('button', { name: 'Toma de 16:00' })).toHaveAttribute('aria-pressed', 'false')
-    await expect(page.getByRole('button', { name: 'Toma de 16:00' })).toHaveText('16:00')
+    await expect(page.getByRole('button', { name: 'Toma de 16:00' })).toHaveText('Marcar')
   })
 
-  test('"Ver completa" y la miniatura abren la foto en un visor y se cierra con Cerrar o Escape', async ({ page }) => {
+  test('«Ver receta completa» y la miniatura abren la foto en un visor y se cierra con Cerrar o Escape', async ({ page }) => {
     const { consultationId } = await seedChild(page)
     await page.goto(`/consultations/${consultationId}`)
+    await page.getByRole('button', { name: /Datos de la consulta/ }).click()
     const viewer = page.getByRole('dialog', { name: 'Foto de la receta en tamaño completo' })
+    const openers = page.getByRole('button', { name: 'Ver receta completa' })
 
-    await page.getByRole('button', { name: 'Ver completa' }).click()
+    await openers.nth(1).click()
     await expect(viewer).toBeVisible()
     await viewer.getByRole('button', { name: 'Cerrar' }).click()
     await expect(viewer).toBeHidden()
 
-    await page.getByRole('button', { name: 'Abrir la foto de la receta en tamaño completo' }).click()
+    await openers.nth(0).click()
     await expect(viewer).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(viewer).toBeHidden()
   })
 
-  test('"← Mateo Morales" vuelve al detalle del hijo', async ({ page }) => {
+  test('«← Mateo» vuelve al detalle del hijo', async ({ page }) => {
     const { childId, consultationId } = await seedChild(page)
     await page.goto(`/consultations/${consultationId}`)
 
-    await page.getByRole('link', { name: '← Mateo Morales' }).click()
+    await page.getByRole('main').getByRole('link', { name: '← Mateo' }).click()
 
     await expect(page).toHaveURL(new RegExp(`/children/${childId}$`))
   })
 
-  test('es una columna centrada de máximo 430 px, como el mock, sin desborde horizontal', async ({ page }) => {
+  test('es una columna centrada de máximo 430 px, sin desborde horizontal', async ({ page }) => {
     const { consultationId } = await seedChild(page)
     await page.setViewportSize({ width: 700, height: 900 })
     await page.goto(`/consultations/${consultationId}`)
 
-    // The page's own <main> (the "Cargando…" one, shown while the session and the data load, has no max width).
+    await expect(page.getByRole('heading', { level: 1, name: 'Dra. Laura Cázares' })).toBeVisible()
     await expect(page.getByRole('main')).toHaveClass(/max-w-\[430px\]/)
     const box = await page.getByRole('main').boundingBox()
     expect(Math.round(box!.width)).toBe(430)

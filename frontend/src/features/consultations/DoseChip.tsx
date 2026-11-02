@@ -2,18 +2,6 @@ import { useId } from 'react'
 import { formatTime } from '../../shared/date'
 import { CANCELED_LABEL, DOSE_CHIP_STYLE, UNREGISTERED_LABEL, canUnmarkDose, ownTakenText, statusOf, takenByText } from './doseStatus'
 import type { Dose } from './types'
-import { useDoseToggle } from './useDoseToggle'
-
-/**
- * One dose as a time chip (mockups 03/13), by the status the server sends (specs/013): "08:00 ✓" taken (green), amber
- * while it's "por marcar", grey while it hasn't come, and "sin registrar" — dashed border and those words under the
- * time — once the next dose of its medication came unmarked. Always enabled: the parent can mark or correct any dose.
- * A toggle: fixed name ("Toma de 08:00"), marked only in aria-pressed; "sin registrar" is its description.
- */
-export function DoseChip({ consultationId, dose, canManage = true }: { consultationId: string; dose: Dose; canManage?: boolean }) {
-  const mutation = useDoseToggle(consultationId, dose.id)
-  return <DoseChipView dose={dose} canManage={canManage} pending={mutation.isPending} onToggle={() => mutation.mutate(!dose.taken)} />
-}
 
 interface DoseChipViewProps {
   dose: Pick<Dose, 'id' | 'scheduledAt' | 'taken' | 'status' | 'takenBy'>
@@ -24,7 +12,11 @@ interface DoseChipViewProps {
   own?: boolean
 }
 
-/** The chip itself, for any dose: a medication's (`DoseChip`) or a supplement routine's (specs/033, `RoutineDoseChip`). */
+/**
+ * One dose as a time chip, by the status the server sends (specs/013): "08:00 ✓" taken, amber while it's "por marcar", grey while
+ * it hasn't come, and "sin registrar" (dashed border and those words). A toggle with a fixed name ("Toma de 08:00"), marked only in
+ * aria-pressed. Since specs/056 only a supplement routine's doses use it (`RoutineDoseChip`); a medication's are `DoseRow`.
+ */
 export function DoseChipView({ dose, canManage, pending, onToggle, own = false }: DoseChipViewProps) {
   const time = formatTime(dose.scheduledAt)
   const status = statusOf(dose)

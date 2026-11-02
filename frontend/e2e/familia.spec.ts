@@ -136,7 +136,7 @@ for (const design of designs) {
       const guestChip = guest.page.getByRole('button', { name: 'Toma de 08:00', exact: true })
       await guestChip.click()
       await expect(guestChip).toHaveAttribute('aria-pressed', 'true')
-      await expect(guestChip).toContainText(/por Luis, \d{2}:\d{2}/)
+      await expect(guestChip).toContainText(/\d{2}:\d{2} · por Luis/)
 
       // The owner sees it marked, and by whom.
       await page.goto(`/consultations/${owner.consultationId}`)

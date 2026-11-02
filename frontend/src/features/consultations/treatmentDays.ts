@@ -211,3 +211,28 @@ export const monthOfDay = (day: string): Month => {
   const [year, month] = day.split('-').map(Number)
   return { year, month: month - 1 }
 }
+
+/** The day `n` days after (or before, with a negative `n`) the given one. */
+export const shiftDay = (day: string, n: number) => {
+  const [year, month, date] = day.split('-').map(Number)
+  return dayKeyOf(year, month - 1, date + n)
+}
+
+/** specs/056 (research R6): the Monday that starts the week of a day — the phone's calendar shows one week at a time. */
+export const weekStart = (day: string) => {
+  const [year, month, date] = day.split('-').map(Number)
+  return shiftDay(day, -((new Date(year, month - 1, date).getDay() + 6) % 7))
+}
+
+/** The seven days of the week that starts on `monday`, as the month grid's days (`inMonth` is always true: nothing is hidden). */
+export const weekDays = (monday: string): GridDay[] =>
+  Array.from({ length: 7 }, (_, i) => {
+    const key = shiftDay(monday, i)
+    return { key, day: Number(key.slice(8)), inMonth: true }
+  })
+
+/** «20 oct» of a `YYYY-MM-DD` day. */
+export const shortDay = (day: string) => {
+  const [, month, date] = day.split('-').map(Number)
+  return `${date} ${LONG_MONTHS[month - 1].slice(0, 3)}`
+}

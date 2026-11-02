@@ -2,24 +2,31 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { DoseChip } from './DoseChip'
+import { DoseChipView } from './DoseChip'
+import { useDoseToggle } from './useDoseToggle'
 import type { Dose, DoseStatus } from './types'
 
 const at = (h: number) => new Date(2026, 9, 1, h).toISOString()
 const dose = (status: DoseStatus, taken = false): Dose => ({ id: `d-${status}`, scheduledAt: at(8), taken, status })
 
+/** The chip with a real toggle behind it, as a routine's dose has (`RoutineDoseChip`). */
+function TestChip({ dose: d, canManage = true }: { dose: Dose; canManage?: boolean }) {
+  const mutation = useDoseToggle('c1', d.id)
+  return <DoseChipView dose={d} canManage={canManage} pending={mutation.isPending} onToggle={() => mutation.mutate(!d.taken)} />
+}
+
 function renderChip(d: Dose, canManage?: boolean) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
-      <DoseChip consultationId="c1" dose={d} canManage={canManage} />
+      <TestChip dose={d} canManage={canManage} />
     </QueryClientProvider>,
   )
 }
 
 afterEach(() => vi.unstubAllGlobals())
 
-describe('DoseChip (specs/013)', () => {
+describe('DoseChipView (specs/013)', () => {
   it('is named after its time and shows the check once taken', () => {
     renderChip(dose('taken', true))
 
@@ -57,7 +64,7 @@ describe('DoseChip (specs/013)', () => {
 })
 
 // specs/032: who marked a dose, as a line under the time ("por Ana, 08:05"), recorded and never judged.
-describe('DoseChip, who marked it (specs/032)', () => {
+describe('DoseChipView, who marked it (specs/032)', () => {
   const taken = (takenBy?: Dose['takenBy']): Dose => ({ id: 'd-taken', scheduledAt: at(8), taken: true, status: 'taken', takenBy })
 
   it('says who marked it and when, under the time, and keeps its fixed name', () => {
@@ -85,7 +92,7 @@ describe('DoseChip, who marked it (specs/032)', () => {
 })
 
 // specs/032: a mark somebody else made is only taken back by who can do everything; one's own always.
-describe('DoseChip, taking a mark back (specs/032)', () => {
+describe('DoseChipView, taking a mark back (specs/032)', () => {
   const marked = (mine?: boolean): Dose => ({
     ...dose('taken', true),
     takenBy: { name: 'Ana', at: at(8), ...(mine === undefined ? {} : { mine }) },

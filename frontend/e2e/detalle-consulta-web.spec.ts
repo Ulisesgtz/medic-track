@@ -1,11 +1,11 @@
 import type { Page } from '@playwright/test'
 import { test, expect, apiPost, seedChild } from './helpers'
 
-// Consultation detail, web design (mock 13): the children sidebar, a header row with the
-// back link, the date, the doctor and "Nueva consulta", medications, symptoms and notes on the
-// left, the photo and the active treatment on the right. The positions below were measured
-// on the mock at each width (Chromium; other engines draw fonts with other metrics, so
-// only positions and widths are asserted everywhere). Requires the backend running locally.
+// Consultation detail, web design (specs/056, «Detalle de la consulta PediTrack.dc.html»): the children sidebar, the common header
+// (back link, date, doctor, «Editar consulta» and «Nueva consulta»), the treatment at the left — calendar, «Tomas de hoy» and a card
+// per medication — and the next appointment, «Datos de la consulta» (open) and «Cómo leer el calendario» in a 300 px column at the
+// right. Positions follow the design's 904 px column (main 28/48 px padding); only positions and widths are asserted.
+// Requires the backend running locally.
 
 const box = async (page: Page, locator: ReturnType<Page['locator']>) => {
   const b = (await locator.boundingBox())!
@@ -18,65 +18,61 @@ async function open(page: Page, width: number, ids: { accountId: string; consult
   await page.evaluate(() => document.fonts.ready)
 }
 
-test.describe('Detalle de consulta — diseño web (mock 13)', () => {
-  for (const { width, mainX, mainW, titleX, colW, asideX, asideW } of [
-    { width: 1440, mainX: 280, mainW: 1160, titleX: 412, colW: 523, asideX: 983, asideW: 301 },
-    { width: 1280, mainX: 280, mainW: 1000, titleX: 332, colW: 523, asideX: 903, asideW: 301 },
-    { width: 1024, mainX: 280, mainW: 744, titleX: 328, colW: 374, asideX: 750, asideW: 202 },
+test.describe('Detalle de consulta — diseño web (specs/056)', () => {
+  for (const { width, colX, colW, asideX } of [
+    { width: 1440, colX: 408, colW: 576, asideX: 1012 },
+    { width: 1280, colX: 328, colW: 576, asideX: 932 },
+    { width: 1024, colX: 328, colW: 320, asideX: 676 },
   ]) {
-    test(`a ${width} px: barra lateral de 280 px y dos columnas 1.5fr / 1fr como el mock`, async ({ page }) => {
+    test(`a ${width} px: barra lateral de 280 px, el tratamiento a la izquierda y una columna de 300 px a la derecha`, async ({ page }) => {
       const ids = await seedChild(page)
       await open(page, width, ids)
 
       expect(await box(page, page.locator('aside').first())).toMatchObject({ x: 0, w: 280 })
-      expect(await box(page, page.getByRole('main'))).toMatchObject({ x: mainX, w: mainW })
-      expect(await box(page, page.getByRole('heading', { level: 1 }))).toMatchObject({ x: titleX })
-      expect(await box(page, page.getByRole('heading', { level: 2, name: 'Medicamentos' }))).toMatchObject({ x: titleX, w: colW })
-      expect(await box(page, page.getByRole('heading', { level: 2, name: 'Foto de la receta' }))).toMatchObject({ x: asideX, w: asideW })
-      await expect(page.getByRole('heading', { level: 1 })).toHaveCSS('font-size', '36px')
+      const main = page.getByRole('main')
+      expect(await box(page, main.getByRole('heading', { level: 1 }))).toMatchObject({ x: colX })
+      expect(await box(page, main.getByRole('region', { name: 'Tratamiento' }))).toMatchObject({ x: colX, w: colW })
+      expect(await box(page, main.getByRole('region', { name: 'Datos de la consulta' }))).toMatchObject({ x: asideX, w: 300 })
+      await expect(main.getByRole('heading', { level: 1 })).toHaveCSS('font-size', '34px')
     })
   }
 
-  test('bajo 1024 px no hay barra lateral y la página va en una columna con márgenes de 24 px, como el mock', async ({ page }) => {
+  test('bajo 1024 px no hay barra lateral y no hay desborde horizontal', async ({ page }) => {
     const ids = await seedChild(page)
     await open(page, 1000, ids)
 
-    // (The right column of the page is also an <aside>: the sidebar is the "Tus hijos" navigation.)
     await expect(page.getByRole('navigation', { name: 'Tus hijos' })).toHaveCount(0)
     expect(await box(page, page.getByRole('main'))).toMatchObject({ x: 0, w: 1000 })
-    const meds = await box(page, page.getByRole('heading', { level: 2, name: 'Medicamentos' }))
-    const photo = await box(page, page.getByRole('heading', { level: 2, name: 'Foto de la receta' }))
-    // Single column: the photo card is below the medications, in the same column.
-    expect(meds).toMatchObject({ x: 52, w: 896 }) // the title sits outside the cards (24px margin + centered 896px column)
-    expect(photo).toMatchObject({ x: 76, w: 848 })
-    expect(photo.y).toBeGreaterThan(meds.y)
     expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false)
   })
 
-  test('muestra la barra lateral con el hijo activo, el encabezado, los medicamentos, los síntomas, la foto y el tratamiento', async ({ page }) => {
+  test('muestra la barra lateral, el encabezado, el tratamiento con su mes y su leyenda, y los datos abiertos', async ({ page }) => {
     const ids = await seedChild(page, { durationDays: 7 })
     await open(page, 1280, ids)
 
-    const sidebar = page.locator('aside')
+    const sidebar = page.locator('aside').first()
     await expect(sidebar.getByRole('link', { name: /^Mateo/ })).toHaveAttribute('aria-current', 'page')
-    await expect(sidebar.getByRole('button', { name: '+ Agregar hijo' })).toBeVisible()
-    await expect(sidebar.getByText('Ana Morales')).toBeVisible()
     await expect(sidebar.getByText('Plan completo')).toBeVisible()
 
-    await expect(page.getByRole('link', { name: '← Mateo Morales' })).toBeVisible()
-    await expect(page.getByRole('heading', { level: 1, name: 'Dra. Laura Cázares' })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Nueva consulta' })).toBeVisible()
-    await expect(page.getByRole('heading', { level: 2, name: 'Medicamentos' })).toBeVisible()
-    await expect(page.getByRole('heading', { level: 3, name: 'Amoxicilina' })).toBeVisible()
-    await expect(page.getByText('Cada 8 horas · 7 días · primera toma 00:00')).toBeVisible()
-    await expect(page.getByRole('heading', { level: 2, name: 'Notas previas a la consulta' })).toBeVisible()
-    await expect(page.getByText('Fiebre y tos', { exact: true })).toBeVisible()
-    await expect(page.getByRole('heading', { level: 2, name: 'Foto de la receta' })).toBeVisible()
-    await expect(page.getByText('El texto se leyó en tu equipo; la foto se guarda solo en tu cuenta.')).toBeVisible()
+    const main = page.getByRole('main')
+    await expect(main.getByRole('link', { name: '← Mateo' })).toBeVisible()
+    await expect(main.getByRole('heading', { level: 1, name: 'Dra. Laura Cázares' })).toBeVisible()
+    await expect(main.getByRole('link', { name: 'Editar consulta' })).toBeVisible()
+    await expect(main.getByRole('link', { name: 'Nueva consulta' })).toBeVisible()
 
-    const treatment = page.getByText('Tratamiento activo').locator('..')
-    await expect(treatment).toContainText('Amoxicilina')
-    await expect(treatment).toContainText(/termina el \d{1,2} \w{3}/)
+    const treatment = main.getByRole('region', { name: 'Tratamiento' })
+    await expect(treatment.getByText(/^En curso · termina el \d{1,2} \w{3}$/)).toBeVisible()
+    const calendar = treatment.getByRole('region', { name: 'Calendario del tratamiento' })
+    await expect(calendar.getByRole('list', { name: 'Medicamentos del calendario' })).toContainText('Amoxicilina')
+    await expect(calendar.getByRole('button', { name: /Ver (mes|semana)/ })).toHaveCount(0)
+    await expect(main.getByRole('heading', { level: 3, name: 'Amoxicilina' })).toBeVisible()
+    await expect(main.getByText('c/8 h · 7 días · primera toma 00:00')).toBeVisible()
+
+    const data = main.getByRole('region', { name: 'Datos de la consulta' })
+    await expect(data.getByRole('button', { name: /Datos de la consulta/ })).toHaveAttribute('aria-expanded', 'true')
+    await expect(data.getByText('Fiebre y tos', { exact: true })).toBeVisible()
+    await expect(data.getByText('El texto se leyó en tu equipo; la foto se guarda solo en tu cuenta.')).toBeVisible()
+    await expect(main.getByRole('region', { name: 'Cómo leer el calendario' })).toBeVisible()
   })
 
   test('las tomas van agrupadas en Mañana, Tarde y Noche (specs/015)', async ({ page }) => {
@@ -92,24 +88,23 @@ test.describe('Detalle de consulta — diseño web (mock 13)', () => {
     const ids = await seedChild(page)
     await open(page, 1280, ids)
     const bar = page.getByRole('progressbar', { name: 'Progreso de las tomas' })
-    await expect(page.getByText('0 / 3 tomas')).toBeVisible()
+    await expect(page.getByText('0 de 3 tomas')).toBeVisible()
 
     await page.getByRole('button', { name: 'Toma de 16:00' }).click()
 
-    await expect(page.getByText('1 / 3 tomas')).toBeVisible()
+    await expect(page.getByText('1 de 3 tomas')).toBeVisible()
     await expect(bar).toHaveAttribute('aria-valuenow', '1')
   })
 
-  test('cada chip alterna entre marcada y sin marcar y se conserva al recargar', async ({ page }) => {
+  test('cada toma alterna entre marcada y sin marcar y se conserva al recargar', async ({ page }) => {
     const ids = await seedChild(page)
     await open(page, 1280, ids)
-    const chip = page.getByRole('button', { name: 'Toma de 00:00' })
+    const toggle = page.getByRole('button', { name: 'Toma de 00:00' })
 
-    await expect(chip).toHaveAttribute('aria-pressed', 'false')
-    await chip.click()
-    await expect(chip).toHaveAttribute('aria-pressed', 'true')
-    await expect(chip).toContainText('00:00 ✓')
-    await expect(chip).toContainText('por Ana') // who marked it (specs/032)
+    await expect(toggle).toHaveAttribute('aria-pressed', 'false')
+    await toggle.click()
+    await expect(toggle).toHaveAttribute('aria-pressed', 'true')
+    await expect(toggle).toHaveText(/^✓ \d\d:\d\d · por Ana$/) // who marked it (specs/032)
 
     await page.reload()
     await expect(page.getByRole('button', { name: 'Toma de 00:00' })).toHaveAttribute('aria-pressed', 'true')
@@ -117,28 +112,28 @@ test.describe('Detalle de consulta — diseño web (mock 13)', () => {
     await expect(page.getByRole('button', { name: 'Toma de 00:00' })).toHaveAttribute('aria-pressed', 'false')
   })
 
-  test('los botones y enlaces llevan a donde dice el mock', async ({ page }) => {
+  test('los botones y enlaces llevan a donde dicen', async ({ page }) => {
     const ids = await seedChild(page)
     await open(page, 1280, ids)
+    const main = page.getByRole('main')
 
-    await page.getByRole('link', { name: 'Nueva consulta' }).click()
+    await main.getByRole('link', { name: 'Nueva consulta' }).click()
     await expect(page).toHaveURL(/\/consultations\/new$/)
     await page.goBack()
 
-    await page.getByRole('link', { name: '← Mateo Morales' }).click()
+    await main.getByRole('link', { name: '← Mateo' }).click()
     await expect(page).toHaveURL(/\/children\/[^/]+$/)
     await page.goBack()
 
-    // "Ver completa" opens the photo in the in-app viewer; Escape closes it.
-    await page.getByRole('button', { name: 'Ver completa' }).click()
+    // «Ver receta completa» opens the photo in the in-app viewer; Escape closes it.
+    await main.getByRole('button', { name: 'Ver receta completa' }).nth(1).click()
     const viewer = page.getByRole('dialog', { name: 'Foto de la receta en tamaño completo' })
     await expect(viewer).toBeVisible()
     await page.keyboard.press('Escape')
     await expect(viewer).toBeHidden()
-    // (The free-plan pop-up opened from the sidebar has its own specs: modal-plan-gratuito-web and nueva-consulta-web.)
   })
 
-  test('el tratamiento activo dice "Ninguno" cuando no queda nada por delante', async ({ page }) => {
+  test('una consulta cuyas tomas ya pasaron dice «Terminado el …»', async ({ page }) => {
     // A consultation from the past: its doses are all behind.
     const { accountId, childId, token } = await seedChild(page, { withConsultation: false })
     const created = await apiPost(page.context().request, token, `/children/${childId}/consultations`, {
@@ -151,8 +146,6 @@ test.describe('Detalle de consulta — diseño web (mock 13)', () => {
     })
     await open(page, 1280, { accountId, consultationId: created.id })
 
-    const treatment = page.getByText('Tratamiento activo').locator('..')
-    await expect(treatment).toContainText('Ninguno')
-    await expect(treatment).toContainText('sin tomas pendientes')
+    await expect(page.getByRole('main').getByRole('region', { name: 'Tratamiento' }).getByText(/^Terminado el \d{1,2} \w{3}$/)).toBeVisible()
   })
 })

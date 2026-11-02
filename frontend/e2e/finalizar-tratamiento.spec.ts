@@ -15,7 +15,7 @@ for (const design of designs) {
     test('cancelar no cambia nada; confirmar termina el tratamiento y cancela las tomas que faltaban', async ({ page }) => {
       const ids = await seedChild(page, { durationDays: 3 })
       await open(page, ids)
-      await expect(page.getByText('0 / 9 tomas')).toBeVisible()
+      await expect(page.getByText('0 de 9 tomas')).toBeVisible()
 
       // Cancel: nothing changes.
       await page.getByRole('button', { name: 'Finalizar tratamiento' }).click()
@@ -35,7 +35,7 @@ for (const design of designs) {
 
       // It stays ended after a reload.
       await page.reload()
-      await expect(page.getByText(/^Terminado el/)).toBeVisible()
+      await expect(page.getByText(/^Terminado el/).first()).toBeVisible()
     })
 
     test('las tomas que faltaban quedan canceladas y no se pueden marcar', async ({ page }) => {
@@ -55,12 +55,12 @@ for (const design of designs) {
       await open(page, { consultationId: created.id })
       await page.getByRole('button', { name: 'Finalizar tratamiento' }).click()
       await page.getByRole('dialog').getByRole('button', { name: 'Finalizar tratamiento' }).click()
-      await expect(page.getByText(/^Terminado el/)).toBeVisible()
+      await expect(page.getByText(/^Terminado el/).first()).toBeVisible()
 
-      const canceled = page.getByRole('button', { name: 'Toma de 23:59' })
-      await expect(canceled).toBeDisabled()
-      await expect(canceled).toHaveAccessibleDescription('Cancelada')
-      await expect(canceled).toContainText('cancelada')
+      // specs/056: a canceled dose has no action — its hour struck through and «cancelada».
+      await expect(page.getByRole('button', { name: 'Toma de 23:59' })).toHaveCount(0)
+      await expect(page.getByText('cancelada', { exact: true }).first()).toBeVisible()
+      await expect(page.getByText('23:59', { exact: true }).first()).toHaveClass(/line-through/)
     })
 
     test('una toma ya pasada de un tratamiento terminado se sigue pudiendo marcar', async ({ page }) => {
@@ -68,7 +68,7 @@ for (const design of designs) {
       await open(page, ids)
       await page.getByRole('button', { name: 'Finalizar tratamiento' }).click()
       await page.getByRole('dialog').getByRole('button', { name: 'Finalizar tratamiento' }).click()
-      await expect(page.getByText(/^Terminado el/)).toBeVisible()
+      await expect(page.getByText(/^Terminado el/).first()).toBeVisible()
 
       // 00:00 of the first day came before the end: it keeps its state and can be marked.
       const first = page.getByRole('button', { name: 'Toma de 00:00' })
@@ -89,7 +89,7 @@ test('el detalle del hijo ya no muestra el tratamiento terminado como activo', a
   await page.goto(`/consultations/${ids.consultationId}`)
   await page.getByRole('button', { name: 'Finalizar tratamiento' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Finalizar tratamiento' }).click()
-  await expect(page.getByText(/^Terminado el/)).toBeVisible()
+  await expect(page.getByText(/^Terminado el/).first()).toBeVisible()
 
   await page.goto(`/children/${ids.childId}`)
   // specs/056: with nothing running the card isn't drawn.

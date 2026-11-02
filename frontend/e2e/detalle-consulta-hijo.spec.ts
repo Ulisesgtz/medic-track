@@ -52,7 +52,7 @@ for (const design of designs) {
       // FR-003/FR-013: saving navigates straight to the new consultation's detail.
       await expect(page).toHaveURL(/\/consultations\/(?!new)/)
       await expect(page.getByRole('heading', { name: 'Amoxicilina' })).toBeVisible()
-      await expect(page.getByText('Cada 8 horas · 3 días · primera toma 08:00')).toBeVisible()
+      await expect(page.getByText('c/8 h · 3 días · primera toma 08:00')).toBeVisible()
 
       // The treatment spans 3 days: the other days are reached through the treatment calendar (specs/019).
       const chips = page.getByRole('button', { name: /^Toma de / })

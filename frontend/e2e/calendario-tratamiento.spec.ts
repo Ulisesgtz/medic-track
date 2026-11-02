@@ -43,18 +43,28 @@ async function showMonthOf(page: Page, date: Date) {
 
 const calendar = (page: Page) => page.getByRole('region', { name: 'Calendario del tratamiento' })
 
+/** specs/056: the phone shows one week; these tests walk the month, so on the phone they open it with «Ver mes». */
+async function openDetail(page: Page, id: string) {
+  await page.goto(`/consultations/${id}`)
+  await expect(calendar(page)).toBeVisible()
+  const toggle = calendar(page).getByRole('button', { name: 'Ver mes' })
+  if (await toggle.isVisible()) await toggle.click()
+}
+
 for (const design of designs) {
   test.describe(`Calendario del tratamiento — diseño ${design.name}`, () => {
     test.use({ viewport: design.viewport })
 
     test('un solo calendario con leyenda; marca los días de cada medicamento y no los demás', async ({ page }) => {
       const id = await seedTwoMedications(page)
-      await page.goto(`/consultations/${id}`)
+      await openDetail(page, id)
       const cal = calendar(page)
 
       await expect(cal).toHaveCount(1)
+      // The legend is the web's (in the calendar's heading row); on the phone each card carries its number and color.
       const legend = cal.getByRole('list', { name: 'Medicamentos del calendario' })
-      await expect(legend.getByRole('listitem')).toHaveText(['1Amoxicilina', '2Paracetamol'])
+      if (design.isWeb) await expect(legend.getByRole('listitem')).toHaveText(['1Amoxicilina', '2Paracetamol'])
+      else await expect(legend).toHaveCount(0)
 
       const today = daysFromToday(0)
       await expect(cal.getByRole('button', { name: `${longDay(today)} · inicio de 1 Amoxicilina (sin dar), inicio de 2 Paracetamol (sin dar)` })).toHaveAttribute('aria-current', 'date')
@@ -72,35 +82,35 @@ for (const design of designs) {
 
     test('tocar un día cambia las tarjetas de cada medicamento; marcar una toma actualiza el progreso (spec 023)', async ({ page }) => {
       const id = await seedTwoMedications(page)
-      await page.goto(`/consultations/${id}`)
+      await openDetail(page, id)
       const cal = calendar(page)
       const amoxicilina = page.getByRole('article').filter({ hasText: 'Amoxicilina' })
       const paracetamol = page.getByRole('article').filter({ hasText: 'Paracetamol' })
 
-      // Opens on today, with no list of its own under the calendar.
-      await expect(amoxicilina.getByText('Tomas de hoy')).toBeVisible()
+      // Opens on today, with no list of its own under the calendar: «Tomas de hoy» titles the cards.
+      await expect(page.getByRole('heading', { name: 'Tomas de hoy' })).toBeVisible()
       await expect(cal.getByRole('list', { name: 'Tomas del día' })).toHaveCount(0)
 
       const day = daysFromToday(2)
       await showMonthOf(page, day)
       await cal.getByRole('button', { name: new RegExp(`^${longDay(day)} · 1 Amoxicilina \\(sin dar\\), fin de 2 Paracetamol`) }).click()
 
-      await expect(amoxicilina.getByText(`Tomas del ${longDay(day)}`)).toBeVisible()
+      await expect(page.getByRole('heading', { name: `Tomas del ${longDay(day)}` })).toBeVisible()
       await expect(amoxicilina.getByRole('button', { name: /^Toma de/ })).toHaveCount(3)
       await expect(paracetamol.getByRole('button', { name: /^Toma de/ })).toHaveCount(3)
-      await expect(page.getByText('0 / 21 tomas')).toBeVisible()
+      await expect(page.getByText('0 de 21 tomas')).toBeVisible()
 
       const dose = amoxicilina.getByRole('button', { name: 'Toma de 08:00' })
       await dose.click()
 
       await expect(dose).toHaveAttribute('aria-pressed', 'true')
-      await expect(page.getByText('1 / 21 tomas')).toBeVisible()
-      await expect(amoxicilina.getByText(`Tomas del ${longDay(day)}`)).toBeVisible()
+      await expect(page.getByText('1 de 21 tomas')).toBeVisible()
+      await expect(page.getByRole('heading', { name: `Tomas del ${longDay(day)}` })).toBeVisible()
     })
 
     test('un medicamento sin tomas el día elegido lo dice', async ({ page }) => {
       const id = await seedTwoMedications(page)
-      await page.goto(`/consultations/${id}`)
+      await openDetail(page, id)
       const cal = calendar(page)
       const day = daysFromToday(4)
       await showMonthOf(page, day)
@@ -113,7 +123,7 @@ for (const design of designs) {
 
     test('un día fuera del tratamiento dice que no hay tomas', async ({ page }) => {
       const id = await seedTwoMedications(page)
-      await page.goto(`/consultations/${id}`)
+      await openDetail(page, id)
       const cal = calendar(page)
       const today = new Date()
       // Inside this month but outside the seven days of the treatment.
@@ -127,10 +137,15 @@ for (const design of designs) {
 
     test('las flechas de mes solo llegan a los meses con tratamiento', async ({ page }) => {
       const id = await seedTwoMedications(page)
-      await page.goto(`/consultations/${id}`)
+      await openDetail(page, id)
       const cal = calendar(page)
       const crosses = daysFromToday(0).getMonth() !== daysFromToday(6).getMonth()
 
+      // A single month on the web has no arrows at all (the design draws none).
+      if (design.isWeb && !crosses) {
+        await expect(cal.getByRole('button', { name: /^Mes (anterior|siguiente)$/ })).toHaveCount(0)
+        return
+      }
       await expect(cal.getByRole('button', { name: 'Mes anterior' })).toBeDisabled()
       if (crosses) {
         await cal.getByRole('button', { name: 'Mes siguiente' }).click()
@@ -143,7 +158,7 @@ for (const design of designs) {
 
     test('finalizar un medicamento hace que su marca termine ese día', async ({ page }) => {
       const id = await seedTwoMedications(page)
-      await page.goto(`/consultations/${id}`)
+      await openDetail(page, id)
       const cal = calendar(page)
 
       await page.getByRole('article').filter({ hasText: 'Amoxicilina' }).getByRole('button', { name: 'Finalizar tratamiento' }).click()
@@ -163,10 +178,12 @@ for (const design of designs) {
     })
 
     if (!design.isWeb) {
-      test('cabe sin desplazamiento horizontal', async ({ page }) => {
+      test('cabe sin desplazamiento horizontal y empieza en la semana de hoy', async ({ page }) => {
         const id = await seedTwoMedications(page)
         await page.goto(`/consultations/${id}`)
         await expect(calendar(page)).toBeVisible()
+        await expect(calendar(page).getByRole('button', { name: 'Ver mes' })).toHaveAttribute('aria-expanded', 'false')
+        await expect(calendar(page).getByRole('button', { name: /^\d+ de \w+/ })).toHaveCount(7)
 
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
         expect(overflow).toBeLessThanOrEqual(0)

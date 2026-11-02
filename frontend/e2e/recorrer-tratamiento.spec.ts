@@ -49,7 +49,7 @@ for (const design of designs) {
     test('confirmar con el número propuesto agrega las tomas, lo dice la tarjeta y el botón se va', async ({ page }) => {
       const id = await seedOldConsultation(page)
       await open(page, id)
-      await expect(page.getByText(/^0 \/ 9 tomas/)).toBeVisible()
+      await expect(page.getByText(/^0 de 9 tomas/)).toBeVisible()
 
       await page.getByRole('button', { name: 'Recorrer tratamiento' }).click()
       const dialog = page.getByRole('dialog')
@@ -64,7 +64,7 @@ for (const design of designs) {
       await expect(page.getByText(/número ingresado manualmente/)).toHaveCount(0)
       await expect(page.getByRole('button', { name: 'Recorrer tratamiento' })).toHaveCount(0)
       // The added doses count in the progress total, and the unregistered ones stay history.
-      await expect(page.getByText(new RegExp(`^0 / ${9 + proposed} tomas`))).toBeVisible()
+      await expect(page.getByText(new RegExp(`^0 de ${9 + proposed} tomas`))).toBeVisible()
 
       await page.reload()
       await expect(page.getByText(/Se recorrió el/)).toBeVisible()
@@ -85,7 +85,7 @@ for (const design of designs) {
 
       await expect(dialog).toBeHidden()
       await expect(page.getByText(/^Se recorrió el .* · \+2 tomas · número ingresado manualmente$/)).toBeVisible()
-      await expect(page.getByText(/^0 \/ 11 tomas/)).toBeVisible()
+      await expect(page.getByText(/^0 de 11 tomas/)).toBeVisible()
     })
 
     test('no deja confirmar un número que no sea entero de 1 a 60', async ({ page }) => {

@@ -60,7 +60,12 @@ function stubApi(detail: unknown, overview: unknown = { childId: 'child-1', dose
   return fetchMock
 }
 
-function useDesktop() {
+/** «Datos de la consulta» starts folded on the phone (specs/056): open it. */
+async function openData() {
+  await userEvent.setup().click(await screen.findByRole('button', { name: /Datos de la consulta/ }))
+}
+
+function stubDesktop() {
   window.localStorage.setItem('peditrack.accountId', 'a1')
   vi.stubGlobal(
     'matchMedia',
@@ -87,16 +92,24 @@ describe('ConsultationDetailPage', () => {
       renderPage()
 
       expect(await screen.findByRole('heading', { level: 1, name: 'Dra. López' })).toBeInTheDocument()
-      expect(screen.getByText('15 enero 2026')).toBeInTheDocument()
-      expect(await screen.findByRole('link', { name: '← Mateo Morales' })).toHaveAttribute('href', '/children/child-1')
-      expect(screen.getByText('Foto de la receta')).toBeInTheDocument()
-      expect(screen.getByText('Leída en tu equipo')).toBeInTheDocument()
-      const symptoms = screen.getByRole('heading', { level: 2, name: 'Síntomas' }).parentElement!
+      expect(screen.getByText('15 ene 2026')).toBeInTheDocument()
+      expect(await screen.findByRole('link', { name: '← Mateo' })).toHaveAttribute('href', '/children/child-1')
+      // specs/056: the treatment comes first; «Datos de la consulta» is folded, with its summary, after it.
+      const treatment = screen.getByRole('region', { name: 'Tratamiento' })
+      const data = screen.getByRole('region', { name: 'Datos de la consulta' })
+      expect(treatment.compareDocumentPosition(data) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      const toggle = within(data).getByRole('button', { name: /Datos de la consulta/ })
+      expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      expect(toggle).toHaveTextContent('Foto · 2 síntomas · notas')
+      await openData()
+      const symptoms = screen.getByRole('heading', { level: 3, name: 'Síntomas' }).parentElement!
       expect(within(symptoms).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Fiebre', 'Tos'])
-      expect(screen.getByRole('heading', { level: 2, name: 'Notas previas a la consulta' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { level: 3, name: 'Notas' })).toBeInTheDocument()
       expect(screen.getByText('Comió poco el domingo')).toBeInTheDocument()
+      expect(screen.getAllByRole('button', { name: 'Ver receta completa' })).toHaveLength(2)
       expect(screen.getByRole('heading', { level: 3, name: 'Amoxicilina 250 mg' })).toBeInTheDocument()
-      expect(screen.getByText('Cada 8 horas · 3 días · primera toma 08:00')).toBeInTheDocument()
+      expect(screen.getByText('c/8 h · 3 días · primera toma 08:00')).toBeInTheDocument()
+      expect(screen.getByText('En curso · termina el 15 ene')).toBeInTheDocument()
     })
 
     it('is a centered column of at most 430px, as the mock', async () => {
@@ -117,21 +130,21 @@ describe('ConsultationDetailPage', () => {
       vi.stubGlobal('fetch', fetchMock)
       renderPage()
 
-      expect(await screen.findByRole('link', { name: '← Volver al reporte de consultas' })).toBeInTheDocument()
+      expect(await screen.findByRole('link', { name: '← Volver' })).toBeInTheDocument()
     })
 
     it('a consultation saved without a photo says so instead of showing an empty picture (specs/043)', async () => {
       stubApi(consultation({ photoBase64: '' }))
       renderPage()
 
-      await screen.findByRole('heading', { level: 1, name: 'Dra. López' })
+      await openData()
       expect(screen.getByText('Esta consulta se guardó sin foto.')).toBeInTheDocument()
       expect(screen.queryByRole('img', { name: 'Foto de la receta médica' })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Abrir la foto de la receta en tamaño completo' })).not.toBeInTheDocument()
     })
 
     it('the same on the web design', async () => {
-      useDesktop()
+      stubDesktop()
       stubApi(consultation({ photoBase64: '' }))
       renderPage()
 
@@ -154,22 +167,72 @@ describe('ConsultationDetailPage', () => {
       stubApi(consultation({ symptoms: [], notes: 'Fiebre y tos desde el lunes' }))
       renderPage()
 
+      await openData()
       expect(await screen.findByText('Fiebre y tos desde el lunes')).toBeInTheDocument()
-      expect(screen.getByRole('heading', { level: 2, name: 'Notas previas a la consulta' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { level: 3, name: 'Notas' })).toBeInTheDocument()
       expect(screen.queryByRole('heading', { name: 'Síntomas' })).not.toBeInTheDocument()
     })
 
-    it("shows the day's doses as time chips: taken, missed (amber) and not yet due (grey)", async () => {
+    it("shows the day's doses as rows: a taken one says when, one still to come offers «Marcar»", async () => {
       stubApi(consultation())
       renderPage()
 
       const taken = await screen.findByRole('button', { name: 'Toma de 08:00' })
-      expect(taken).toHaveTextContent('08:00 ✓')
+      expect(taken).toHaveTextContent('✓ 08:00')
       expect(taken).toHaveAttribute('aria-pressed', 'true')
-      expect(taken).toHaveClass('bg-confirmed')
+      expect(taken).toHaveClass('bg-confirmed-soft')
       const later = screen.getByRole('button', { name: 'Toma de 16:00' })
       expect(later).toHaveAttribute('aria-pressed', 'false')
-      expect(later).toHaveClass('bg-slate-100') // the server says it hasn't come yet
+      expect(later).toHaveTextContent('Marcar')
+      expect(screen.queryByText('por marcar')).not.toBeInTheDocument() // the server says it hasn't come yet
+    })
+
+    it('says who marked a dose, and a mark the session can’t take back carries a padlock and is disabled', async () => {
+      account.children[0] = { ...account.children[0], accountId: 'owner-1', role: 'caregiver', plan: 'paid', readOnly: false } as (typeof account.children)[0]
+      stubApi(
+        consultation({
+          medications: [{
+            id: 'm1', name: 'Amoxicilina', frequencyHours: 8, durationDays: 1, startTime: '08:00',
+            doses: [
+              { id: 'd1', scheduledAt: at(8), taken: true, status: 'taken', takenBy: { name: 'Ana', at: at(8), mine: false } },
+              { id: 'd2', scheduledAt: at(16), taken: true, status: 'taken', takenBy: { name: 'Rosa', at: at(16), mine: true } },
+            ],
+          }],
+        }),
+      )
+      renderPage()
+
+      const other = await screen.findByRole('button', { name: 'Toma de 08:00' })
+      expect(other).toHaveTextContent('✓ 08:00 · por Ana')
+      expect(other).toBeDisabled()
+      expect(other.querySelector('svg')).not.toBeNull()
+      const mine = screen.getByRole('button', { name: 'Toma de 16:00' })
+      expect(mine).toHaveTextContent('✓ 16:00 · por Rosa')
+      expect(mine).toBeEnabled()
+      account.children[0] = { id: 'child-1', firstName: 'Mateo', lastName: 'Morales', birthDate: '2021-03-14', height: null, weight: null }
+    })
+
+    it('says «programada» for an unmarked dose of a day still to come, and it can still be marked (FR-018)', async () => {
+      const user = userEvent.setup()
+      const fetchMock = stubApi(
+        consultation({
+          medications: [{
+            id: 'm1', name: 'Amoxicilina', frequencyHours: 24, durationDays: 2, startTime: '08:00',
+            doses: [
+              { id: 'd1', scheduledAt: at(8, 15), taken: true, status: 'taken' },
+              { id: 'd2', scheduledAt: at(8, 16), taken: false, status: 'pending' },
+            ],
+          }],
+        }),
+      )
+      renderPage()
+      await user.click(await screen.findByRole('button', { name: /^16 de enero/ }))
+
+      expect(screen.getAllByText('programada')[0]).toBeVisible()
+      const future = screen.getByRole('button', { name: 'Toma de 08:00' })
+      expect(future).toHaveAccessibleDescription('Programada')
+      await user.click(future)
+      await waitFor(() => expect(fetchMock.mock.calls.some(([u, init]) => init?.method === 'PATCH' && String(u).includes('/doses/d2'))).toBe(true))
     })
 
     it('groups the doses of the day by moment of the day, skipping the empty ones, and marking still works (specs/015)', async () => {
@@ -289,11 +352,12 @@ describe('ConsultationDetailPage', () => {
 
         expect(await screen.findByText('Terminado el 15 ene · 1 de 1 toma')).toBeInTheDocument()
         expect(screen.queryByRole('button', { name: 'Finalizar tratamiento' })).not.toBeInTheDocument()
-        const canceled = screen.getByRole('button', { name: 'Toma de 16:00' })
-        expect(canceled).toBeDisabled()
-        expect(canceled).toHaveAccessibleDescription('Cancelada')
-        expect(canceled).toHaveClass('border-dashed', 'disabled:opacity-100')
-        expect(screen.getByText('1 / 1 toma')).toBeInTheDocument() // the bar leaves the canceled ones out
+        // A canceled dose has no action: its hour struck through and «cancelada».
+        expect(screen.queryByRole('button', { name: 'Toma de 16:00' })).not.toBeInTheDocument()
+        expect(screen.getAllByText('cancelada')).toHaveLength(2)
+        expect(screen.getByText('16:00')).toHaveClass('line-through')
+        expect(screen.getByText('1 de 1 toma')).toBeInTheDocument() // the bar leaves the canceled ones out
+        expect(screen.getByText('Terminado el 15 ene')).toBeInTheDocument()
       })
 
       it('offers nothing when no dose is left ahead', async () => {
@@ -326,12 +390,12 @@ describe('ConsultationDetailPage', () => {
       renderPage()
 
       const bar = await screen.findByRole('progressbar', { name: 'Progreso de las tomas' })
-      expect(screen.getByText('1 / 3 tomas')).toBeInTheDocument()
+      expect(screen.getByText('1 de 3 tomas')).toBeInTheDocument()
       expect(bar).toHaveAttribute('aria-valuenow', '1')
 
       await user.click(screen.getByRole('button', { name: 'Toma de 16:00' }))
 
-      expect(await screen.findByText('2 / 3 tomas')).toBeInTheDocument()
+      expect(await screen.findByText('2 de 3 tomas')).toBeInTheDocument()
       expect(screen.getByRole('progressbar', { name: 'Progreso de las tomas' })).toHaveAttribute('aria-valuenow', '2')
     })
 
@@ -347,10 +411,11 @@ describe('ConsultationDetailPage', () => {
       renderPage()
 
       const chip = await screen.findByRole('button', { name: 'Toma de 08:00' })
-      expect(chip).toHaveClass('border-dashed', 'border-slate-400')
-      expect(chip).not.toHaveClass('bg-pending-soft')
+      const label = screen.getAllByText('sin registrar').find((el) => el.closest('li'))!
+      expect(label).toHaveClass('border-dashed')
+      expect(label).not.toHaveClass('bg-pending-soft')
       expect(chip).toHaveAttribute('aria-pressed', 'false')
-      expect(chip).toHaveTextContent('sin registrar')
+      expect(chip).toHaveTextContent('Marcar')
       expect(chip).toHaveAccessibleDescription('Sin registrar')
       expect(chip).toHaveAccessibleName('Toma de 08:00')
     })
@@ -366,7 +431,8 @@ describe('ConsultationDetailPage', () => {
       )
       renderPage()
 
-      expect(await screen.findByRole('button', { name: 'Toma de 09:00' })).toHaveClass('bg-slate-100')
+      expect(await screen.findByRole('button', { name: 'Toma de 09:00' })).toHaveTextContent('Marcar')
+      expect(screen.queryByText('por marcar')).not.toBeInTheDocument()
     })
 
     it('shows a dose whose time already passed without being marked in amber', async () => {
@@ -380,7 +446,8 @@ describe('ConsultationDetailPage', () => {
       )
       renderPage()
 
-      expect(await screen.findByRole('button', { name: 'Toma de 09:00' })).toHaveClass('bg-pending-soft')
+      await screen.findByRole('button', { name: 'Toma de 09:00' })
+      expect(screen.getAllByText('por marcar').find((el) => el.closest('li'))).toHaveClass('bg-pending-soft')
     })
 
     it('marks a dose by tapping its chip and unmarks it by tapping again', async () => {
@@ -439,12 +506,12 @@ describe('ConsultationDetailPage', () => {
       renderPage()
 
       expect(await screen.findByText('Ibuprofeno')).toBeInTheDocument()
-      expect(screen.getByText('Cada 12 horas · 1 día')).toBeInTheDocument()
+      expect(screen.getByText('c/12 h · 1 día')).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /^Toma de/ })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /Día/ })).not.toBeInTheDocument()
     })
 
-    it('says "Cada hora" for a one-hour frequency', async () => {
+    it('says the frequency as the design: «c/1 h»', async () => {
       stubApi(
         consultation({
           medications: [{ id: 'm1', name: 'Suero', frequencyHours: 1, durationDays: 2, startTime: null, doses: [] }],
@@ -452,26 +519,27 @@ describe('ConsultationDetailPage', () => {
       )
       renderPage()
 
-      expect(await screen.findByText('Cada hora · 2 días')).toBeInTheDocument()
+      expect(await screen.findByText('c/1 h · 2 días')).toBeInTheDocument()
     })
   })
 
   describe('with the desktop sidebar (mock 13)', () => {
-    it("keeps the mock's responsive rule: one column with smaller margins below 1024px, two columns from there", async () => {
-      useDesktop()
+    it('has two columns: the treatment and, at the right, the appointment and the data', async () => {
+      stubDesktop()
       stubApi(consultation())
       renderPage()
 
       await screen.findByRole('heading', { level: 1, name: 'Dra. López' })
       const main = screen.getByRole('main')
-      expect(main).toHaveClass('px-6', 'py-8', 'lg:px-12', 'lg:py-11')
-      const grid = screen.getByRole('heading', { name: 'Medicamentos' }).closest('.grid')!
-      expect(grid).toHaveClass('lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]', 'lg:items-start')
-      expect(grid).not.toHaveClass('grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]')
+      expect(main).toHaveClass('px-6', 'lg:px-12')
+      // specs/056: the treatment at the left and the appointment and the data in a 300 px column at the right.
+      const grid = screen.getByRole('region', { name: 'Tratamiento' }).closest('.grid')!
+      expect(grid).toHaveClass('grid-cols-[minmax(0,1fr)_300px]', 'items-start')
+      expect(within(grid as HTMLElement).getByRole('region', { name: 'Datos de la consulta' }).closest('aside')).not.toBeNull()
     })
 
-    it('shows the header row with "Nueva consulta", the photo card and the active treatment', async () => {
-      useDesktop()
+    it('shows the header with «Editar consulta» and «Nueva consulta», and the data open', async () => {
+      stubDesktop()
       account.plan = 'paid' // on the free plan a running treatment turns "Nueva consulta" into the plan pop-up (specs/030)
       stubApi(consultation(), {
         childId: 'child-1',
@@ -481,18 +549,17 @@ describe('ConsultationDetailPage', () => {
       renderPage()
 
       expect(await screen.findByRole('heading', { level: 1, name: 'Dra. López' })).toBeInTheDocument()
-      expect(screen.getByRole('link', { name: '← Mateo Morales' })).toHaveAttribute('href', '/children/child-1')
-      expect(screen.getByRole('link', { name: 'Nueva consulta' })).toHaveAttribute('href', '/children/child-1/consultations/new')
-      expect(screen.getByRole('heading', { level: 2, name: 'Foto de la receta' })).toBeInTheDocument()
+      expect(screen.getByRole('main').querySelector('a[href="/children/child-1"]')).toHaveTextContent('← Mateo')
+      expect(await screen.findByRole('link', { name: 'Nueva consulta' })).toHaveAttribute('href', '/children/child-1/consultations/new')
+      expect(screen.getByRole('link', { name: 'Editar consulta' })).toHaveClass('border-action')
+      // The data is open on the web.
+      expect(screen.getByRole('button', { name: /Datos de la consulta/ })).toHaveAttribute('aria-expanded', 'true')
       expect(screen.getByText('El texto se leyó en tu equipo; la foto se guarda solo en tu cuenta.')).toBeInTheDocument()
-      const treatment = (await screen.findByText('Tratamiento activo')).parentElement!
-      expect(within(treatment).getByText('Amoxicilina')).toBeInTheDocument()
-      expect(within(treatment).getByText('termina el 19 ene')).toBeInTheDocument()
       expect(screen.getByRole('navigation', { name: 'Tus hijos' })).toBeInTheDocument()
     })
 
     it('on the free plan, with a treatment running, "Nueva consulta" opens the plan pop-up instead of the form (specs/030)', async () => {
-      useDesktop()
+      stubDesktop()
       stubApi(consultation(), {
         childId: 'child-1',
         doses: [],
@@ -507,43 +574,50 @@ describe('ConsultationDetailPage', () => {
       expect(await screen.findByRole('dialog', { name: 'Ya hay un tratamiento activo' })).toBeInTheDocument()
     })
 
-    it('shows the symptoms and the notes in one card on the left, and each only when it has something', async () => {
-      useDesktop()
+    it('shows the symptoms and the notes in «Datos de la consulta», each only when it has something', async () => {
+      stubDesktop()
       stubApi(consultation())
       const { unmount } = renderPage()
 
-      const card = (await screen.findByRole('heading', { level: 2, name: 'Síntomas' })).parentElement!.parentElement!
+      const card = await screen.findByRole('region', { name: 'Datos de la consulta' })
       expect(within(card).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['Fiebre', 'Tos'])
       expect(within(card).getByText('Comió poco el domingo')).toBeInTheDocument()
       unmount()
 
       stubApi(consultation({ notes: '' }))
       renderPage()
-      expect(await screen.findByRole('heading', { level: 2, name: 'Síntomas' })).toBeInTheDocument()
-      expect(screen.queryByRole('heading', { name: 'Notas previas a la consulta' })).not.toBeInTheDocument()
+      expect(await screen.findByRole('heading', { level: 3, name: 'Síntomas' })).toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Notas' })).not.toBeInTheDocument()
     })
 
-    it('shows only the notes when a consultation has no symptoms, and no card when it has neither', async () => {
-      useDesktop()
+    it('shows only the notes when a consultation has no symptoms, and none when it has neither', async () => {
+      stubDesktop()
       stubApi(consultation({ symptoms: [] }))
       const { unmount } = renderPage()
-      expect(await screen.findByRole('heading', { level: 2, name: 'Notas previas a la consulta' })).toBeInTheDocument()
+      expect(await screen.findByRole('heading', { level: 3, name: 'Notas' })).toBeInTheDocument()
       expect(screen.queryByRole('heading', { name: 'Síntomas' })).not.toBeInTheDocument()
       unmount()
 
       stubApi(consultation({ symptoms: [], notes: ' \n ' }))
       renderPage()
       await screen.findByRole('heading', { level: 1, name: 'Dra. López' })
-      expect(screen.queryByRole('heading', { name: 'Notas previas a la consulta' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('heading', { name: 'Notas' })).not.toBeInTheDocument()
     })
 
-    it('says there is no active treatment when nothing is left ahead', async () => {
-      useDesktop()
-      stubApi(consultation())
+    it('says the treatment finished when nothing is left ahead', async () => {
+      stubDesktop()
+      stubApi(
+        consultation({
+          medications: [{
+            id: 'm1', name: 'Amoxicilina', frequencyHours: 8, durationDays: 1, startTime: '08:00',
+            doses: [{ id: 'd1', scheduledAt: at(8), taken: true, status: 'taken' }],
+          }],
+        }),
+      )
       renderPage()
 
-      expect(await screen.findByText('Ninguno')).toBeInTheDocument()
-      expect(screen.getByText('sin tomas pendientes')).toBeInTheDocument()
+      expect(await screen.findByText('Terminado el 15 ene')).toBeInTheDocument()
+      expect(screen.getByText('✓ Todo marcado hasta ahora')).toBeInTheDocument()
     })
   })
 
@@ -561,20 +635,24 @@ describe('ConsultationDetailPage', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({ message: 'boom' }) }))
     renderPage()
 
-    expect(await screen.findByText(/ocurrió un error al cargar la consulta/i)).toBeInTheDocument()
+    expect(await screen.findByText('No pudimos cargar la consulta')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
   })
 
   describe('photo viewer', () => {
     function stubConsultation() {
+      stubDesktop()
       stubApi(consultation({ symptoms: [], notes: '', medications: [] }))
     }
+    const seeFull = async () => (await screen.findAllByRole('button', { name: 'Ver receta completa' }))[1]
+    const thumbnail = async () => (await screen.findAllByRole('button', { name: 'Ver receta completa' }))[0]
 
-    it('opens the photo in an in-app viewer from "Ver completa" (a data: URL in a new tab renders blank)', async () => {
+    it('opens the photo in an in-app viewer from «Ver receta completa» (a data: URL in a new tab renders blank)', async () => {
       const user = userEvent.setup()
       stubConsultation()
       renderPage()
 
-      await user.click(await screen.findByRole('button', { name: 'Ver completa' }))
+      await user.click(await seeFull())
 
       expect(screen.getByRole('dialog', { name: /tamaño completo/i })).toBeInTheDocument()
       expect(screen.getByAltText('Foto de la receta médica en tamaño completo')).toHaveAttribute(
@@ -588,7 +666,7 @@ describe('ConsultationDetailPage', () => {
       stubConsultation()
       renderPage()
 
-      await user.click(await screen.findByRole('button', { name: /abrir la foto/i }))
+      await user.click(await thumbnail())
       const full = screen.getByAltText('Foto de la receta médica en tamaño completo')
       expect(full).toHaveClass('w-full')
 
@@ -605,11 +683,11 @@ describe('ConsultationDetailPage', () => {
       stubConsultation()
       renderPage()
 
-      await user.click(await screen.findByRole('button', { name: 'Ver completa' }))
+      await user.click(await seeFull())
       await user.click(screen.getByRole('button', { name: 'Cerrar' }))
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 
-      await user.click(screen.getByRole('button', { name: 'Ver completa' }))
+      await user.click(await seeFull())
       await user.keyboard('{Escape}')
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
@@ -619,7 +697,7 @@ describe('ConsultationDetailPage', () => {
       stubConsultation()
       renderPage()
 
-      const opener = await screen.findByRole('button', { name: 'Ver completa' })
+      const opener = await seeFull()
       await user.click(opener)
       const close = screen.getByRole('button', { name: 'Cerrar' })
       expect(close).toHaveFocus()
@@ -685,7 +763,7 @@ describe('ConsultationDetailPage', () => {
 
       stubApi(withExtension({ endedAt: at(9, 14), extendableDoses: 0 }))
       const second = renderPage()
-      await screen.findByText(/^Terminado el/)
+      await screen.findAllByText(/^Terminado el/)
       expect(screen.queryByRole('button', { name: 'Recorrer tratamiento' })).not.toBeInTheDocument()
       second.unmount()
 
@@ -829,14 +907,14 @@ describe('ConsultationDetailPage', () => {
       })
 
     it.each([false, true])('is tagged "Solo registro" and shows no schedule at all (web: %s)', async (web) => {
-      if (web) useDesktop()
+      if (web) stubDesktop()
       stubApi(recordOnly())
       renderPage()
 
       expect(await screen.findByText('Solo registro')).toBeInTheDocument()
       // The medication reads as information: its schedule line, with no first dose.
-      expect(screen.getByText('Cada 8 horas · 7 días')).toBeInTheDocument()
-      expect(screen.queryByRole('heading', { name: 'Calendario del tratamiento' })).not.toBeInTheDocument()
+      expect(screen.getByText('c/8 h · 7 días')).toBeInTheDocument()
+      expect(screen.queryByRole('region', { name: 'Calendario del tratamiento' })).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: /^Toma de/ })).not.toBeInTheDocument()
       expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Finalizar tratamiento' })).not.toBeInTheDocument()
@@ -846,7 +924,7 @@ describe('ConsultationDetailPage', () => {
     })
 
     it('on the web there is no "Tratamiento activo" nor "Cómo leer el calendario" for it', async () => {
-      useDesktop()
+      stubDesktop()
       stubApi(recordOnly())
       renderPage()
 
@@ -855,14 +933,14 @@ describe('ConsultationDetailPage', () => {
       expect(screen.queryByRole('region', { name: 'Cómo leer el calendario' })).not.toBeInTheDocument()
     })
 
-    it('a consultation with doses has no tag and keeps its "Tratamiento activo" on the web', async () => {
-      useDesktop()
+    it('a consultation with doses has no tag and keeps «Cómo leer el calendario» on the web', async () => {
+      stubDesktop()
       stubApi(consultation())
       renderPage()
 
-      await screen.findByRole('heading', { name: 'Calendario del tratamiento' })
+      await screen.findByRole('region', { name: 'Calendario del tratamiento' })
       expect(screen.queryByText('Solo registro')).not.toBeInTheDocument()
-      expect(screen.getByText('Tratamiento activo')).toBeInTheDocument()
+      expect(screen.getByRole('region', { name: 'Cómo leer el calendario' })).toBeInTheDocument()
     })
   })
 
@@ -872,8 +950,8 @@ describe('ConsultationDetailPage', () => {
       const user = userEvent.setup()
       renderPage()
 
-      const heading = await screen.findByRole('heading', { name: 'Calendario del tratamiento' })
-      const medicationsHeading = screen.getByRole('heading', { level: 2, name: 'Medicamentos' })
+      const heading = await screen.findByRole('region', { name: 'Calendario del tratamiento' })
+      const medicationsHeading = screen.getByRole('article', { name: 'Amoxicilina 250 mg' })
       expect(heading.compareDocumentPosition(medicationsHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
       expect(screen.queryByRole('list', { name: 'Tomas del día' })).not.toBeInTheDocument()
       expect(screen.getByText('Tomas de hoy')).toBeInTheDocument()
@@ -911,7 +989,7 @@ describe('ConsultationDetailPage', () => {
         renderPage()
 
         await screen.findByRole('heading', { level: 3, name: 'Amoxicilina' })
-        expect(screen.getAllByText('Tomas de hoy')).toHaveLength(2)
+        expect(screen.getAllByText('Tomas de hoy')).toHaveLength(1)
         expect(card('Amoxicilina').getByRole('button', { name: 'Toma de 08:00' })).toBeInTheDocument()
         expect(card('Paracetamol').getByRole('button', { name: 'Toma de 12:00' })).toBeInTheDocument()
       })
@@ -924,7 +1002,7 @@ describe('ConsultationDetailPage', () => {
 
         await user.click(screen.getByRole('button', { name: /^16 de enero/ }))
 
-        expect(screen.getAllByText('Tomas del 16 de enero')).toHaveLength(2)
+        expect(screen.getAllByText('Tomas del 16 de enero')).toHaveLength(1)
         expect(card('Amoxicilina').getByRole('button', { name: 'Toma de 08:00' })).toBeInTheDocument()
         expect(card('Paracetamol').queryByRole('button')).not.toBeInTheDocument()
         expect(card('Paracetamol').getByText('Este día no tiene tomas.')).toBeInTheDocument()
@@ -943,7 +1021,7 @@ describe('ConsultationDetailPage', () => {
         const patch = fetchMock.mock.calls.find(([, init]) => init?.method === 'PATCH')
         expect(String(patch?.[0])).toContain('/consultations/c1/doses/a16')
         expect(screen.getByRole('button', { name: /^16 de enero/ })).toHaveAttribute('aria-pressed', 'true')
-        expect(screen.getAllByText('Tomas del 16 de enero')).toHaveLength(2)
+        expect(screen.getAllByText('Tomas del 16 de enero')).toHaveLength(1)
       })
 
       it('progress and the end button count the whole medication, whatever day is chosen', async () => {
@@ -954,7 +1032,7 @@ describe('ConsultationDetailPage', () => {
 
         await user.click(screen.getByRole('button', { name: /^17 de enero/ }))
 
-        expect(card('Amoxicilina').getByText('0 / 3 tomas')).toBeInTheDocument()
+        expect(card('Amoxicilina').getByText('0 de 3 tomas')).toBeInTheDocument()
         expect(card('Amoxicilina').getByRole('button', { name: 'Finalizar tratamiento' })).toBeInTheDocument()
       })
 
@@ -968,32 +1046,6 @@ describe('ConsultationDetailPage', () => {
         await user.click(screen.getByRole('button', { name: /^16 de enero/ }))
 
         expect(screen.getByRole('group', { name: 'Mañana, Amoxicilina, 16 de enero' })).toBeInTheDocument()
-      })
-
-      it('on the phone, tapping a day brings the first card into view; on the web it does not move the page', async () => {
-        const scrollIntoView = vi.fn()
-        Element.prototype.scrollIntoView = scrollIntoView
-        stubApi(twoMedications())
-        const user = userEvent.setup()
-        const phone = renderPage()
-        await screen.findByRole('heading', { level: 3, name: 'Amoxicilina' })
-
-        await user.click(screen.getByRole('button', { name: /^16 de enero/ }))
-
-        expect(scrollIntoView).toHaveBeenCalledTimes(1)
-        expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest', behavior: 'smooth' })
-        expect(scrollIntoView.mock.contexts[0]).toBe(screen.getByRole('heading', { level: 3, name: 'Amoxicilina' }).closest('article'))
-        phone.unmount()
-        vi.unstubAllGlobals()
-
-        scrollIntoView.mockClear()
-        useDesktop()
-        stubApi(twoMedications())
-        renderPage()
-        await screen.findByRole('heading', { level: 3, name: 'Amoxicilina' })
-        await user.click(screen.getByRole('button', { name: /^16 de enero/ }))
-
-        expect(scrollIntoView).not.toHaveBeenCalled()
       })
 
       it('does not carry the tapped day over to another consultation', async () => {
@@ -1021,11 +1073,11 @@ describe('ConsultationDetailPage', () => {
         )
         await screen.findByRole('heading', { level: 3, name: 'Amoxicilina' })
         await user.click(screen.getByRole('button', { name: /^16 de enero/ }))
-        expect(screen.getAllByText('Tomas del 16 de enero')).toHaveLength(2)
+        expect(screen.getAllByText('Tomas del 16 de enero')).toHaveLength(1)
 
         await user.click(screen.getByRole('link', { name: 'otra consulta' }))
 
-        await waitFor(() => expect(screen.getAllByText('Tomas de hoy')).toHaveLength(2))
+        await waitFor(() => expect(screen.getAllByText('Tomas de hoy')).toHaveLength(1))
         expect(screen.getByRole('button', { name: /^15 de enero/ })).toHaveAttribute('aria-pressed', 'true')
       })
 
@@ -1045,8 +1097,9 @@ describe('ConsultationDetailPage', () => {
 
         // No calendar (it has no day to mark), but the card shows the first day's canceled dose, disabled.
         expect(await screen.findByText('Tomas de hoy')).toBeInTheDocument()
-        expect(screen.queryByRole('heading', { name: 'Calendario del tratamiento' })).not.toBeInTheDocument()
-        expect(screen.getByRole('button', { name: 'Toma de 16:00' })).toBeDisabled()
+        expect(screen.queryByRole('region', { name: 'Calendario del tratamiento' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Toma de 16:00' })).not.toBeInTheDocument()
+        expect(screen.getByText('cancelada')).toBeInTheDocument()
       })
 
       it('a finished treatment opens on its first day', async () => {
@@ -1056,7 +1109,7 @@ describe('ConsultationDetailPage', () => {
 
         await screen.findByRole('heading', { level: 3, name: 'Amoxicilina' })
 
-        expect(screen.getAllByText('Tomas del 15 de enero')).toHaveLength(2)
+        expect(screen.getAllByText('Tomas del 15 de enero')).toHaveLength(1)
         expect(screen.getByRole('button', { name: /^15 de enero/ })).toHaveAttribute('aria-pressed', 'true')
       })
     })
@@ -1065,20 +1118,20 @@ describe('ConsultationDetailPage', () => {
       stubApi(consultation({ medications: [{ id: 'm1', name: 'Ibuprofeno', frequencyHours: 12, durationDays: 1, startTime: null, doses: [] }] }))
       renderPage()
 
-      await screen.findByRole('heading', { level: 2, name: 'Medicamentos' })
-      expect(screen.queryByRole('heading', { name: 'Calendario del tratamiento' })).not.toBeInTheDocument()
-      expect(screen.getByRole('heading', { level: 2, name: 'Medicamentos' }).closest('section')?.previousElementSibling?.tagName).not.toBe('DIV')
+      await screen.findByRole('article', { name: 'Ibuprofeno' })
+      expect(screen.queryByRole('region', { name: 'Calendario del tratamiento' })).not.toBeInTheDocument()
+      expect(screen.queryByText(/^Tomas (de hoy|del)/)).not.toBeInTheDocument()
     })
 
     it('shows "Cómo leer el calendario" in the web design only, in the right column', async () => {
       stubApi(consultation())
       const phone = renderPage()
-      await screen.findByRole('heading', { name: 'Calendario del tratamiento' })
+      await screen.findByRole('region', { name: 'Calendario del tratamiento' })
       expect(screen.queryByRole('region', { name: 'Cómo leer el calendario' })).not.toBeInTheDocument()
       phone.unmount()
       vi.unstubAllGlobals()
 
-      useDesktop()
+      stubDesktop()
       stubApi(consultation())
       renderPage()
       const legend = await screen.findByRole('region', { name: 'Cómo leer el calendario' })
@@ -1086,21 +1139,21 @@ describe('ConsultationDetailPage', () => {
     })
 
     it('has no key when there is nothing on the calendar (no medication has doses)', async () => {
-      useDesktop()
+      stubDesktop()
       stubApi(consultation({ medications: [{ id: 'm1', name: 'Ibuprofeno', frequencyHours: 12, durationDays: 1, startTime: null, doses: [] }] }))
       renderPage()
 
-      await screen.findByRole('heading', { level: 2, name: 'Medicamentos' })
+      await screen.findByRole('article', { name: 'Ibuprofeno' })
       expect(screen.queryByRole('region', { name: 'Cómo leer el calendario' })).not.toBeInTheDocument()
     })
 
     it('has its own place on the web: on top of the left column, above the medications', async () => {
-      useDesktop()
+      stubDesktop()
       stubApi(consultation())
       renderPage()
 
-      const heading = await screen.findByRole('heading', { name: 'Calendario del tratamiento' })
-      const medicationsHeading = screen.getByRole('heading', { level: 2, name: 'Medicamentos' })
+      const heading = await screen.findByRole('region', { name: 'Calendario del tratamiento' })
+      const medicationsHeading = screen.getByRole('article', { name: 'Amoxicilina 250 mg' })
       expect(heading.compareDocumentPosition(medicationsHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
       expect(heading.closest('aside')).toBeNull()
     })
@@ -1113,7 +1166,7 @@ describe('ConsultationDetailPage, shared children (specs/032)', () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date(2026, 0, 15, 12))
-    useDesktop()
+    stubDesktop()
   })
   afterEach(() => {
     account.children[0] = own

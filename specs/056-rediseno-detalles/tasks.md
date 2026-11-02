@@ -129,21 +129,21 @@ rompen con apóstrofes: escribir los scripts con la herramienta de escritura); n
 **Objetivo**: calendario y medicamentos primero; semana en el teléfono; candado y «programada»; datos plegables.
 **Prueba independiente**: en el teléfono la primera tarjeta bajo el encabezado es el tratamiento.
 
-- [ ] T024 [P] [US3] `frontend/src/features/consultations/treatmentDays.ts`: `weekOf(day)` (lunes a domingo) y el paso de semana
+- [x] T024 [P] [US3] `frontend/src/features/consultations/treatmentDays.ts`: `weekOf(day)` (lunes a domingo) y el paso de semana
   dentro del rango del tratamiento (+ pruebas)
-- [ ] T025 [US3] `frontend/src/features/consultations/TreatmentCalendar.tsx`: `mode: 'week' | 'month'` con «Ver mes» / «Ver
+- [x] T025 [US3] `frontend/src/features/consultations/TreatmentCalendar.tsx`: `mode: 'week' | 'month'` con «Ver mes» / «Ver
   semana» (`aria-expanded`), el teléfono empieza en semana y la web siempre en mes; mismas celdas, puntos y aro de hoy (+ pruebas)
-- [ ] T026 [US3] `frontend/src/features/consultations/DoseChip.tsx` (research R7): candado (SVG `aria-hidden`) y «✓ HH:MM · por
+- [x] T026 [US3] `frontend/src/features/consultations/DoseChip.tsx` (research R7): candado (SVG `aria-hidden`) y «✓ HH:MM · por
   Nombre» en una marca ajena (botón deshabilitado, nombre fijo, `aria-pressed`); «programada» para una toma `pending` de un día
   posterior a hoy, **marcable** (FR-018) (+ pruebas)
-- [ ] T027 [P] [US3] Crear `frontend/src/features/consultations/consultationDetailText.ts` (+ prueba de redacción): «Tratamiento»,
+- [x] T027 [P] [US3] Crear `frontend/src/features/consultations/consultationDetailText.ts` (+ prueba de redacción): «Tratamiento»,
   «En curso · termina el …», «Terminado el …», «Datos de la consulta», el resumen «Foto · N síntomas · notas», «programada»,
   «Ver mes», «Ver semana»
-- [ ] T028 [US3] Rehacer `frontend/src/features/consultations/ConsultationDetailPage.tsx`: `PageHeader` (fecha, doctor, «Solo
+- [x] T028 [US3] Rehacer `frontend/src/features/consultations/ConsultationDetailPage.tsx`: `PageHeader` (fecha, doctor, «Solo
   registro», «Editada el … por …», «Editar consulta» con contorno) → tratamiento (resumen, calendario, tarjetas de medicamento) →
   próxima cita → «Datos de la consulta» en `<details>` (cerrado en el teléfono con su resumen; abierto en la web y en solo
   registro); web en dos columnas con «Nueva consulta» como único sólido; el teléfono sin sólido
-- [ ] T029 [US3] Pruebas de la página (orden, solo registro, Cuidador, otro día con cancelada, terminado y recorrido, cargando,
+- [x] T029 [US3] Pruebas de la página (orden, solo registro, Cuidador, otro día con cancelada, terminado y recorrido, cargando,
   error) y E2E: ampliar `frontend/e2e/detalle-consulta-movil.spec.ts` y `detalle-consulta-web.spec.ts` (tratamiento primero,
   semana/mes, «programada» se marca, datos plegados); ajustar los que dependían del orden viejo
 
