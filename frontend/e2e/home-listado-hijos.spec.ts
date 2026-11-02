@@ -62,7 +62,7 @@ for (const design of designs) {
     }) => {
       await seedAccount(page, [], { plan: 'free' }) // the limit it reaches is the free plan's
       await page.goto('/home')
-      await expect(page.getByText(/todavía no tienes hijos/i)).toBeVisible()
+      await expect(page.getByText('Aún no registras a tus hijos')).toBeVisible()
 
       await addChildButton(page).click()
       const dialog = page.getByRole('dialog', { name: 'Agregar hijo' })
@@ -91,7 +91,7 @@ for (const design of designs) {
       await dialog.getByLabel('Fecha de nacimiento').fill('2025-07-01')
       await dialog.getByRole('button', { name: 'Guardar' }).click()
       await expect(dialog).toBeHidden()
-      await expect(page.getByRole('main').getByText('Sofía Morales')).toBeVisible()
+      await expect(page.getByRole('main').getByRole('link', { name: 'Ver detalle de Sofía' })).toBeVisible()
 
       // On the free plan the next one is refused with the plan pop-up.
       await addChildButton(page).click()
@@ -114,7 +114,7 @@ for (const design of designs) {
         child: { firstName: 'Mateo', lastName: 'Ruiz', birthDate: '2019-06-01' },
       })
 
-      await page.getByRole('main').getByText('Mateo Ruiz').click()
+      await page.getByRole('main').getByRole('link', { name: 'Ver detalle de Mateo' }).click()
 
       await expect(page).toHaveURL(/\/children\//)
       await expect(page.getByRole('link', { name: 'Nueva consulta' }).or(page.getByRole('link', { name: '+ Nueva' }))).toBeVisible()

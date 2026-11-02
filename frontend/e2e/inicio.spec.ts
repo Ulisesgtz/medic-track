@@ -1,5 +1,6 @@
 import {
   acceptViaApi,
+  apiPost,
   activityViaApi,
   allowClerkOn,
   designs,
@@ -161,7 +162,10 @@ test.describe('Inicio con 10 hijos', () => {
   test('las 10 tarjetas muestran su día', async ({ page }) => {
     await allowClerkOn(page)
     const names = ['Ana', 'Beto', 'Carla', 'Diego', 'Elena', 'Fer', 'Gabi', 'Hugo', 'Iris', 'Juan']
-    await seedAccount(page, names.map((firstName) => ({ firstName, lastName: 'Morales', birthDate: '2020-01-15' })))
+    // A new account is created on the free plan (one child); the helper gives it the paid plan, then the other nine are added.
+    const child = (firstName: string) => ({ firstName, lastName: 'Morales', birthDate: '2020-01-15' })
+    const { account, token } = await seedAccount(page, [child(names[0])])
+    for (const name of names.slice(1)) await apiPost(page.context().request, token, `/accounts/${account.id}/children`, child(name))
     const started = Date.now()
     await page.goto('/home')
     const cards = page.getByRole('main').locator('article')

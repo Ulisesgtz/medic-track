@@ -166,7 +166,7 @@ for (const design of designs) {
       await dialog.getByRole('button', { name: 'Salir de la familia' }).click()
 
       await expect(guest.page).toHaveURL(/\/home/)
-      await expect(guest.page.getByText(/todavía no tienes hijos/i)).toBeVisible()
+      await expect(guest.page.getByText('Aún no registras a tus hijos')).toBeVisible()
       const gone = await guest.context.request.get(`${API}/children/${owner.childId}/consultations`, { headers: { Authorization: `Bearer ${guest.token}` } })
       expect(gone.status()).toBe(403)
 

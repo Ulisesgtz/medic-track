@@ -139,6 +139,7 @@ test('un navegador sin notificaciones push dice que no puede recibir recordatori
   })
   await seedAccount(page, child)
   await page.goto('/home')
+  await openReminders(page)
 
   const card = page.getByRole('region', { name: 'Recordatorios de tomas' })
   await expect(card).toContainText('Este navegador no puede recibir recordatorios.')
