@@ -36,3 +36,12 @@ export function atFreePlanLimit(account: Pick<Account, 'id' | 'plan' | 'children
   const target = addChildTarget(account)
   return target.allowed && target.plan === 'free' && target.children.length >= FREE_PLAN_CHILD_LIMIT
 }
+
+/**
+ * Every child on the list is somebody else's, seen through a family (specs/032): the home titles them «Hijos compartidos contigo»
+ * and the sidebar names the group after the family (spec 055). One rule for both, so the two never disagree.
+ */
+export function onlySharedChildren(account: Pick<Account, 'children'> | undefined): boolean {
+  const children = account?.children ?? []
+  return children.length > 0 && children.every((c) => c.role !== undefined && c.role !== 'owner')
+}

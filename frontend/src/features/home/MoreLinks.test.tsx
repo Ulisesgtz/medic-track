@@ -48,8 +48,16 @@ describe('MoreLinks', () => {
     expect(within(nav).getByRole('link', { name: /Familia/ })).toHaveAttribute('href', '/familia')
     expect(await within(nav).findByText('3 personas')).toBeInTheDocument()
     expect(within(nav).getByRole('link', { name: /Planes/ })).toHaveTextContent('Plan completo')
-    expect(within(nav).getByRole('button', { name: /Recordatorios/ })).toHaveTextContent('Desactivados')
+    // jsdom has no Push API: the row says they can't be had here, never «Desactivados».
+    expect(within(nav).getByRole('button', { name: /Recordatorios/ })).toHaveTextContent('No disponibles aquí')
     expect(within(nav).getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument()
+  })
+
+  it('says nothing about the family until it answers (no «Solo tú» while it loads)', () => {
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
+    renderIn(<MoreLinks account={ana} variant="phone" />)
+    expect(screen.getByRole('link', { name: /Familia/ })).toHaveTextContent(/^Familia$/)
+    expect(screen.queryByText('Solo tú')).not.toBeInTheDocument()
   })
 
   it('«Recordatorios» opens the reminders card right under it', async () => {

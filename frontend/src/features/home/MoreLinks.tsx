@@ -25,9 +25,21 @@ export function MoreLinks({ account, variant }: { account: Account; variant: Var
   const panelId = useId()
 
   const caregiver = account.family?.role === 'caregiver'
-  const people = family && Array.isArray(family.members) ? family.members.length + 1 : 1
-  const familyValue = account.family ? caregiverOf(familyOf(account.family.ownerName), ROLE_LABEL[account.family.role]) : familyMembers(people)
-  const remindersValue = reminders.state === 'on' ? HOME.remindersOn : HOME.remindersOff
+  // Nothing is said until it is known: no «Solo tú» before the family answers, no «Desactivados» while the reminders load.
+  const members = family && Array.isArray(family.members) ? family.members.length + 1 : null
+  const familyValue = account.family
+    ? caregiverOf(familyOf(account.family.ownerName), ROLE_LABEL[account.family.role])
+    : members !== null
+      ? familyMembers(members)
+      : ''
+  const remindersValue =
+    reminders.state === 'on'
+      ? HOME.remindersOn
+      : reminders.state === 'off'
+        ? HOME.remindersOff
+        : reminders.state === 'loading'
+          ? ''
+          : HOME.remindersUnavailable
 
   const row = desktop
     ? 'flex min-h-16 cursor-pointer flex-col justify-center gap-0.5 px-4 py-2.5 text-left hover:bg-hint'

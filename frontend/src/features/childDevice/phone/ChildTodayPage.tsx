@@ -127,6 +127,8 @@ function Today({ credential, onRotated }: { credential: string; onRotated: (cred
   const activeActivities = (activities.data ?? []).filter((a) => a.status === 'active' && a.doses.length > 0)
   const toMark = doses.filter((d) => d.status === 'due').length
   const actDoses = activeActivities.flatMap((a) => a.doses)
+  // The day's chip counts the activities whose time came too (never «Todo marcado» over one still to mark).
+  const dueAll = toMark + actDoses.filter((d) => d.status === 'due').length
   const ready = !!overview.data && !!activities.data
   const nothing = ready && doses.length === 0 && actDoses.length === 0
 
@@ -170,13 +172,13 @@ function Today({ credential, onRotated }: { credential: string; onRotated: (cred
         </div>
       )}
 
-      {ready && !nothing && toMark > 0 && (
+      {ready && !nothing && dueAll > 0 && (
         <span className="inline-flex items-center gap-1.5 self-start rounded-full bg-pending-soft px-3 py-[5px] text-[14px] font-extrabold text-on-pending-chip">
           <span aria-hidden="true" className="h-[9px] w-[9px] rounded-full border-2 border-pending-dot" />
-          {PHONE.toMark(toMark)}
+          {PHONE.toMark(dueAll)}
         </span>
       )}
-      {ready && !nothing && toMark === 0 && (
+      {ready && !nothing && dueAll === 0 && (
         <span className="self-start rounded-full bg-confirmed-soft px-3 py-[5px] text-[14px] font-extrabold text-confirmed-strong">{PHONE.allMarked}</span>
       )}
       {nothing && (

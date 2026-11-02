@@ -14,7 +14,7 @@ export interface ChildDay {
   /** The earliest dose of a medication or a supplement still unmarked (its time came or not): the card's «Próxima». */
   next: OverviewDose | null
   state: CardState
-  /** Medication and supplement doses whose time came and that nobody marked: the chip «N por marcar». */
+  /** Doses of medicines, supplements and activities whose time came and that nobody marked: the chip «N por marcar». */
   toMark: number
   /** The first unregistered dose, for the dashed line. */
   unregistered: OverviewDose | null
@@ -36,7 +36,8 @@ export function childDay(overview: ChildOverview, activities: Routine[]): ChildD
   const acts = activityDoses(activities)
 
   const unregisteredDoses = doses.filter((d) => d.status === 'unregistered').sort(byTime)
-  const due = doses.filter((d) => d.status === 'due').length
+  // An activity whose time came and nobody marked is «por marcar» too: the card never says «Todo marcado» over it.
+  const due = [...doses, ...acts].filter((d) => d.status === 'due').length
 
   const medications = meds.length
     ? {

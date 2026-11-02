@@ -107,7 +107,7 @@ describe('HomePage', () => {
   it('shows skeletons of the final height while the account loads (specs/055, estado 6)', () => {
     vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise(() => {})))
     renderHome()
-    expect(screen.getByLabelText('Cargando el inicio')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByRole('status', { name: 'Cargando el inicio' })).toHaveAttribute('aria-busy', 'true')
     expect(screen.queryByText('Cargando…')).not.toBeInTheDocument()
   })
 

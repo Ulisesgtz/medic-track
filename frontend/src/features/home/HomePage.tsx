@@ -18,17 +18,10 @@ import { AccountMenu } from './AccountMenu'
 import { MoreLinks } from './MoreLinks'
 
 /**
- * The parent's home page: lists their children (FR-001), or an invitation to
- * finish creating their account when their Clerk session has no PediTrack
- * account linked yet (FR-006, specs/008-autenticacion-cuenta — the session
- * itself is already verified, `RequireSession` only renders this page for a
- * signed-in tutor; this only covers the gap between signing up with Clerk
- * and finishing POST /accounts).
- *
- * Two separate designs, both from the delivered mockups: the phone list (dark
- * header "Tus hijos", dashed "+ Agregar hijo" and the plan note) and, on the
- * web (mock 15, with the sidebar), "Hola, Ana / Tus hijos" with a solid
- * "Agregar hijo" button, the children grid and the dashed plan tile.
+ * The parent's home page (spec 055, the design `specs/055-rediseno-inicio/referencia/Inicio PediTrack.dc.html`): the greeting and
+ * «Tu día» first, then each child's day (`ChildDayCard`, with «Marcar» for the next dose) and «Lo demás» at the bottom, in two
+ * separate designs (phone 390 px, web with the sidebar). Before that, the gap between signing up with Clerk and finishing
+ * POST /accounts (FR-006, specs/008: «Falta terminar tu registro»), a load error and the skeletons while the account loads.
  */
 export function HomePage() {
   const [showAddChild, setShowAddChild] = useState(false)

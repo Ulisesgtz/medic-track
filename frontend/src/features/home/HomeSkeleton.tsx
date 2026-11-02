@@ -1,12 +1,12 @@
 // specs/055 (estado 6 del diseño): while the account loads, the home reserves the final height of the greeting, «Tu día» and two
-// cards, so nothing jumps when the data arrives. Decoration only: the region says it is loading.
+// cards, so nothing jumps when the data arrives. The shapes are decoration; the `status` role says it is loading.
 
 const box = 'rounded-[22px] border-[1.5px] border-hint-edge bg-surface'
 
 export function HomeSkeleton({ variant }: { variant: 'phone' | 'desktop' }) {
   if (variant === 'desktop')
     return (
-      <div aria-busy="true" aria-label="Cargando el inicio" className="flex flex-col gap-7">
+      <div role="status" aria-busy="true" aria-label="Cargando el inicio" className="flex flex-col gap-7">
         <div className="flex min-h-16 flex-col gap-2.5">
           <span className="h-[34px] w-[220px] rounded-lg bg-skel" />
           <span className="h-[18px] w-[200px] rounded-md bg-skel" />
@@ -23,7 +23,7 @@ export function HomeSkeleton({ variant }: { variant: 'phone' | 'desktop' }) {
       </div>
     )
   return (
-    <div aria-busy="true" aria-label="Cargando el inicio" className="flex flex-col gap-5">
+    <div role="status" aria-busy="true" aria-label="Cargando el inicio" className="flex flex-col gap-5">
       <div className="flex min-h-14 items-center justify-between">
         <div className="flex flex-col gap-2">
           <span className="h-[26px] w-[140px] rounded-lg bg-skel" />

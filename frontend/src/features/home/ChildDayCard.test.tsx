@@ -149,6 +149,17 @@ describe('ChildDayCard', () => {
     expect(await screen.findByRole('button', { name: /^Marcar/, pressed: false })).toBeInTheDocument()
   })
 
+  it('a mark that fails says so, in neutral words, and keeps «Marcar»', async () => {
+    const user = userEvent.setup()
+    stub({ doses: [dose('due', '12:00')] })
+    renderCard()
+    const button = await screen.findByRole('button', { name: 'Marcar Amoxicilina 12:00 de Mateo' })
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: 'x', message: 'boom' }) } as Response)
+    await user.click(button)
+    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo marcar. Inténtalo de nuevo.')
+    expect(button).toHaveAttribute('aria-pressed', 'false')
+  })
+
   it('a failed day says so in the card and can be asked again', async () => {
     const user = userEvent.setup()
     stub({ fail: true })

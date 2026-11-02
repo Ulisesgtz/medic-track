@@ -39,10 +39,12 @@ export const HOME = {
   logout: 'Cerrar sesión',
   remindersOn: 'Activados',
   remindersOff: 'Desactivados',
+  remindersUnavailable: 'No disponibles aquí',
   onlyYou: 'Solo tú',
   readOnlyLead: 'Solo lectura.',
   readOnlyRest: 'La familia no tiene un plan activo. Puedes seguir marcando tomas y actividades.',
   retry: 'Reintentar',
+  markFailed: 'No se pudo marcar. Inténtalo de nuevo.',
   loadFailedMine: 'no pudimos cargar tus suplementos y actividades',
 } as const
 

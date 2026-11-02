@@ -6,7 +6,7 @@ import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { AccountMenu } from './AccountMenu'
 import { AddChildDialogs } from './AddChildDialogs'
 import { HOME, familyOf } from './homeText'
-import { addChildTarget } from './plan'
+import { addChildTarget, onlySharedChildren } from './plan'
 import { usePersonalRoutines } from '../supplements/hooks'
 import { useLocalDay } from '../../shared/useLocalDay'
 
@@ -37,8 +37,7 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
   const supplementCount = usePersonalRoutines(account?.id, 'supplement', day, { poll: false }).data?.activeCount ?? 0
   const activityCount = usePersonalRoutines(account?.id, 'activity', day, { poll: false }).data?.activeCount ?? 0
   // Every child is shared with the session (none of its own): the group is named after the family.
-  const sharedOnly = !!account?.family && !!account.children.length && account.children.every((c) => c.role !== undefined && c.role !== 'owner')
-  const groupLabel = sharedOnly && account?.family ? familyOf(account.family.ownerName) : HOME.childrenTitle
+  const groupLabel = onlySharedChildren(account) ? (account?.family ? familyOf(account.family.ownerName) : HOME.sharedTitle) : HOME.childrenTitle
 
   return (
     <aside className="sticky top-0 flex h-screen w-[280px] shrink-0 flex-col gap-8 overflow-y-auto bg-ink px-6 py-7">

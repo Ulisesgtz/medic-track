@@ -76,9 +76,8 @@ function Footer({
   const time = formatTime(dose.scheduledAt)
   const label = markLabel(dose.medicationName, time, childName)
   return (
-    <div
-      className={`mt-2 flex items-center justify-between gap-3 border-t border-hint-edge ${variant === 'desktop' ? 'px-5 pt-3 pb-4' : 'px-4 pt-2.5 pb-3.5'}`}
-    >
+    <div className={`mt-2 flex flex-col gap-2 border-t border-hint-edge ${variant === 'desktop' ? 'px-5 pt-3 pb-4' : 'px-4 pt-2.5 pb-3.5'}`}>
+    <div className="flex items-center justify-between gap-3">
       <span className="flex min-w-0 flex-col gap-px">
         <span className="text-[13px] font-bold text-muted">{HOME.next}</span>
         <span className="text-[15px] font-extrabold text-ink">{nameAtTime(dose.medicationName, time)}</span>
@@ -97,6 +96,13 @@ function Footer({
       >
         {held ? markedAt(heldTime ?? '') : HOME.mark}
       </button>
+    </div>
+      {/* A mark that didn't go through says so: the parent must not believe it was recorded (Principio I: neutral words). */}
+      {toggle.isError && (
+        <p role="alert" className="text-[14px] text-body">
+          {HOME.markFailed}
+        </p>
+      )}
     </div>
   )
 }

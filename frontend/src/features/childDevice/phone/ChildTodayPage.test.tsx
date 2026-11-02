@@ -95,7 +95,8 @@ describe('ChildTodayPage', () => {
     expect(within(today).getByText(/^Suplemento · /)).toBeInTheDocument()
     expect(within(today).getByRole('group', { name: 'Mañana' })).toBeInTheDocument()
     expect(within(today).getByText(PHONE.dosesCount(2, 2))).toBeInTheDocument()
-    expect(screen.getByText(PHONE.toMark(2))).toBeInTheDocument()
+    // Two doses and the activity's 10:00 one whose time came: the day's chip counts the three.
+    expect(screen.getByText(PHONE.toMark(3))).toBeInTheDocument()
     const activities = await screen.findByRole('region', { name: PHONE.activities })
     expect(within(activities).getByText('Tomar agua')).toBeInTheDocument()
     expect(within(activities).getAllByText(PHONE.activitiesCount(1, 2))).toHaveLength(2)
@@ -153,6 +154,13 @@ describe('ChildTodayPage', () => {
     const post = calls.find((c) => c.method === 'POST')
     expect(post?.path).toBe('/child-device/routines/a1/done')
     expect(post?.body).toMatchObject({ from: expect.any(String), to: expect.any(String) })
+  })
+
+  it('an activity whose time came and nobody marked is «por marcar», never «Todo marcado»', async () => {
+    stubApi({ doses: [], activities: [activity()] })
+    show()
+    expect(await screen.findByText(PHONE.toMark(1))).toBeInTheDocument()
+    expect(screen.queryByText(PHONE.allMarked)).not.toBeInTheDocument()
   })
 
   it('says there are no doses today', async () => {

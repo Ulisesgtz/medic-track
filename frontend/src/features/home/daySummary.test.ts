@@ -61,6 +61,12 @@ describe('childDay', () => {
     expect(day.next?.scheduledAt).toBe('2026-11-01T20:00:00Z')
   })
 
+  it('an activity whose time came and nobody marked is «por marcar» too', () => {
+    const day = childDay(overview(dose('taken', '08:00')), [routine('activity', 'Leer', [rdose('due', '09:00'), rdose('pending', '17:00')])])
+    expect(day.state).toBe('pend')
+    expect(day.toMark).toBe(1)
+  })
+
   it('an activity alone is something today', () => {
     expect(childDay(overview(), [routine('activity', 'Leer', [rdose('taken', '09:00')])]).state).toBe('ok')
   })

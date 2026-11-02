@@ -1,6 +1,7 @@
 import type { RefObject } from 'react'
 import { ChildDayCard } from './ChildDayCard'
 import { HOME, familyOf, sharedSubtitle } from './homeText'
+import { onlySharedChildren } from './plan'
 import type { Account } from './types'
 
 type Variant = 'phone' | 'desktop'
@@ -23,7 +24,7 @@ export function ChildrenSection({ account, variant, canAddChild, planNote, onAdd
   const desktop = variant === 'desktop'
   const children = account.children
   // Every child is somebody else's: the session only sees them through a family.
-  const sharedOnly = children.length > 0 && children.every((c) => c.role !== undefined && c.role !== 'owner')
+  const sharedOnly = onlySharedChildren(account)
   const caregiver = sharedOnly && children.every((c) => c.role === 'caregiver')
   const title = sharedOnly ? HOME.sharedTitle : HOME.childrenTitle
 
