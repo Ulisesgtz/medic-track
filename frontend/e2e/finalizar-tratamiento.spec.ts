@@ -92,6 +92,7 @@ test('el detalle del hijo ya no muestra el tratamiento terminado como activo', a
   await expect(page.getByText(/^Terminado el/)).toBeVisible()
 
   await page.goto(`/children/${ids.childId}`)
-  const treatment = page.getByText('Tratamiento activo').locator('..')
-  await expect(treatment).toContainText('Ninguno')
+  // specs/056: with nothing running the card isn't drawn.
+  await expect(page.getByRole('main').getByRole('region', { name: 'Hoy' })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Tratamiento activo' })).toHaveCount(0)
 })

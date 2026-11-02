@@ -46,7 +46,7 @@ for (const design of designs) {
       const entry = page.getByRole('main').getByRole('region', { name: 'Cartilla de vacunación' })
       await expect(entry.getByText('Sin vacunas registradas')).toBeVisible()
       await expectNoHorizontalScroll(page)
-      await entry.getByRole('link', { name: 'Abrir la cartilla →' }).click()
+      await entry.getByRole('link', { name: /Agregar dosis o fotos/ }).click()
       await expect(page).toHaveURL(new RegExp(`/children/${owner.childId}/cartilla$`))
 
       const main = page.getByRole('main')

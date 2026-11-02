@@ -2,7 +2,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { VaccinationCardPage } from './VaccinationCardPage'
-import { CardEntry } from './CardEntry'
 import { CHILD_ID, account, child, dose, renderAt, stubApi, stubMatchMedia } from './vaccinationsApi.test-utils'
 import { TEXT } from './vaccineText'
 
@@ -321,28 +320,5 @@ describe('VaccinationCardPage: «Exportar a PDF» (specs/050)', () => {
     expect(entry).toHaveClass('w-full')
     await user.click(entry)
     expect(screen.getByText('Exportar a PDF es parte del plan completo')).toBeInTheDocument()
-  })
-})
-
-describe('CardEntry', () => {
-  const entry = () => renderAt(<CardEntry childId={CHILD_ID} />, '/x', '/x')
-
-  it('counts what is recorded and links to the card', async () => {
-    stubApi({ account: account(), doses: [dose(), dose({ id: 'v2' })], photos: [{ id: 'p1', createdAt: '2026-10-01T10:00:00Z', createdByName: 'Ana' }] })
-    entry()
-    expect(await screen.findByText('2 dosis registradas · 1 foto')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: TEXT.entry.link })).toHaveAttribute('href', `/children/${CHILD_ID}/cartilla`)
-  })
-
-  it('says nothing was recorded', async () => {
-    stubApi({ account: account(), doses: [] })
-    entry()
-    expect(await screen.findByText(TEXT.entry.empty)).toBeInTheDocument()
-  })
-
-  it('draws nothing when the card cannot be read', async () => {
-    stubApi({ account: account(), doses: [], listFails: true })
-    const { container } = entry()
-    await waitFor(() => expect(container).toBeEmptyDOMElement())
   })
 })

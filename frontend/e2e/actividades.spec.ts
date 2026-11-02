@@ -51,8 +51,7 @@ for (const design of designs) {
       // Two sections, one under the other: Suplementos first, then Actividades, each with its own invitation.
       await expect(main.getByRole('heading', { name: 'Suplementos', level: 2 })).toBeVisible()
       await expect(main.getByRole('heading', { name: 'Actividades', level: 2 })).toBeVisible()
-      await expect(main.getByRole('heading', { name: 'Mateo aún no tiene actividades' })).toBeVisible()
-      await expect(main.getByText(/Para lo que Mateo hace varias veces al día, desde una hora hasta otra/)).toBeVisible()
+      await expect(main.getByText('Sin actividades registradas')).toBeVisible()
       await expectNoHorizontalScroll(page)
       await main.getByRole('link', { name: '+ Agregar actividad' }).click()
 
@@ -92,22 +91,21 @@ for (const design of designs) {
       await page.getByRole('button', { name: 'Quitar la última marca' }).click()
       await expect(page.getByText('1 de 24')).toBeVisible()
 
-      // It shows in the child's section as a card of the same height as any other: no chips, the rule and the count.
+      // specs/056: on the child's detail it is a compact row of «Actividades» (the rule, never 24 chips) and «Hoy» counts it in
+      // one row with «Realizado».
       await page.goto(`/children/${owner.childId}`)
-      await expect(main.getByText('Cada hora, de 00:00 a 23:00')).toBeVisible()
-      await expect(main.getByText('1 de 24')).toBeVisible()
-      await expect(main.getByText('1 activa')).toBeVisible()
-      await expect(main.getByText(/Próxima: \d\d:\d\d|Sin más avisos hoy/)).toBeVisible()
+      const row = main.getByRole('region', { name: 'Actividades' }).getByRole('link').filter({ hasText: 'Tomar agua' })
+      await expect(row).toContainText('Cada hora, de 00:00 a 23:00')
+      await expect(row).toContainText('Activa')
+      const today = main.getByRole('region', { name: 'Hoy' })
+      await expect(today.getByText('1 de 24 hechas')).toBeVisible()
       await expect(main.getByRole('button', { name: /^Toma de/ })).toHaveCount(0)
       await expectNoHorizontalScroll(page)
-      // The card's «Realizado» marks too.
-      await main.getByRole('button', { name: 'Realizado: Tomar agua' }).click()
-      await expect(main.getByText('2 de 24')).toBeVisible()
-      // Activities are not in «Tomas de hoy».
-      await expect(main.getByText('Tomar agua')).toHaveCount(1)
+      await today.getByRole('button', { name: 'Realizado: Tomar agua' }).click()
+      await expect(today.getByText('2 de 24 hechas')).toBeVisible()
 
       // Editing counts from the next reminder: what was marked stays.
-      await main.getByRole('link', { name: 'Ver actividad Tomar agua' }).click()
+      await row.click()
       await page.getByRole('link', { name: 'Editar' }).click()
       await expect(page.getByRole('heading', { name: 'Editar actividad' })).toBeVisible()
       await expect(page.getByText('Los cambios cuentan desde el siguiente aviso. Lo ya marcado no cambia.')).toBeVisible()
@@ -184,9 +182,9 @@ for (const design of designs) {
       await expect(page.getByText('1 de 24')).toBeVisible()
       await guest.page.goto(`/children/${owner.childId}`)
       const main = guest.page.getByRole('main')
-      await expect(main.getByText('Las actividades las agrega y edita un Tutor. Tú puedes marcar «Realizado» y elegir tus avisos.')).toBeVisible()
       await expect(main.getByRole('link', { name: '+ Agregar actividad' })).toHaveCount(0)
-      await expect(main.getByText(/Última: por Ana, \d\d:\d\d/)).toBeVisible()
+      await expect(main.getByRole('region', { name: 'Hoy' }).getByText('1 de 24 hechas')).toBeVisible()
+      await expect(main.getByRole('region', { name: 'Hoy' }).getByRole('button', { name: 'Realizado: Tomar agua' })).toBeVisible()
       await expectNoHorizontalScroll(guest.page)
 
       await guest.page.goto(`/actividades/${activity.id}`)
@@ -242,12 +240,10 @@ for (const design of designs) {
 
       await page.goto(`/children/${owner.childId}`)
       const main = page.getByRole('main')
-      await expect(main.getByRole('status').getByText('Ya tienes 10 actividades activas')).toBeVisible()
-      await expect(main.getByText(/Es el máximo para Mateo\. Para agregar otra, pausa o finaliza una/)).toBeVisible()
+      await expect(main.getByText('Ya tienes 10 actividades activas')).toBeVisible()
       await expect(main.getByRole('link', { name: '+ Agregar actividad' })).toHaveCount(0)
-      await expect(main.getByText('10 activas')).toBeVisible()
       // Supplements are another count: their section still invites.
-      await expect(main.getByRole('heading', { name: 'Mateo aún no tiene suplementos' })).toBeVisible()
+      await expect(main.getByText('Sin suplementos registrados')).toBeVisible()
       await expect(main.getByRole('link', { name: '+ Agregar suplemento' })).toBeVisible()
       await expectNoHorizontalScroll(page)
 
@@ -269,7 +265,6 @@ for (const design of designs) {
       await expect(page.getByText('Pausada', { exact: true })).toBeVisible()
       await page.goto(`/children/${owner.childId}`)
       await expect(page.getByRole('main').getByRole('link', { name: '+ Agregar actividad' })).toBeVisible()
-      await expect(page.getByRole('main').getByText('9 activas')).toBeVisible()
     })
 
     test('on the free plan the section offers the plan; what was created while paid stays and «Realizado» still works', async ({ page }) => {
@@ -279,7 +274,8 @@ for (const design of designs) {
 
       await page.goto(`/children/${owner.childId}`)
       const main = page.getByRole('main')
-      await expect(main.getByRole('heading', { name: 'Actividades', level: 3 })).toBeVisible()
+      await expect(main.getByRole('heading', { name: 'Actividades', level: 2 })).toBeVisible()
+      await expect(main.getByRole('button', { name: /Agregar actividades/ })).toContainText('Plan completo')
       await expect(main.getByRole('link', { name: '+ Agregar actividad' })).toHaveCount(0)
       const { day, offset } = localToday()
       const refused = await request.post(`${API}/children/${owner.childId}/routines`, {

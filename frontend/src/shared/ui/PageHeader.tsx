@@ -15,6 +15,8 @@ export interface PageHeaderProps {
   /** `onClick` may stop the way back (a form with something typed asks first). */
   back: { label: string; to: string; onClick?: (event: MouseEvent<HTMLAnchorElement>) => void }
   eyebrow?: string
+  /** Drawn at the left of the title (the child's initial, design A). */
+  avatar?: ReactNode
   title?: ReactNode
   subtitle?: ReactNode
   /** «Activo» (`hint`) or «Pausado» / «Terminado» / «Solo registro» (`line`): never green nor amber. */
@@ -55,6 +57,7 @@ export function PageHeader({
   variant,
   back,
   eyebrow,
+  avatar,
   title,
   subtitle,
   chip,
@@ -81,19 +84,22 @@ export function PageHeader({
       </div>
     ) : state === 'error' ? null : (
       <div className={desktop ? 'flex items-center gap-6' : 'flex flex-col'}>
-        <div className={`flex min-w-0 flex-1 flex-col ${desktop ? 'gap-[3px]' : 'gap-0.5'}`}>
-          {eyebrow && <span className="text-[13px] font-extrabold tracking-[0.06em] text-action uppercase">{eyebrow}</span>}
-          <h1
-            className={`leading-[1.15] font-black tracking-[-0.03em] text-ink [overflow-wrap:break-word] [text-wrap:balance] ${desktop ? 'text-[34px]' : 'text-[28px]'}`}
-          >
-            {title}
-          </h1>
-          {(subtitle || chip) && (
-            <div className={`mt-1 flex flex-wrap items-center ${desktop ? 'gap-x-3 gap-y-1.5' : 'gap-x-2.5 gap-y-1.5'}`}>
-              {subtitle && <span className={`text-body ${desktop ? 'text-[16px]' : 'text-[15px] leading-[1.45]'}`}>{subtitle}</span>}
-              {chip && <Chip {...chip} />}
-            </div>
-          )}
+        <div className={`flex min-w-0 flex-1 items-center ${desktop ? 'gap-4' : 'gap-3.5'}`}>
+          {avatar}
+          <div className={`flex min-w-0 flex-1 flex-col ${desktop ? 'gap-[3px]' : 'gap-0.5'}`}>
+            {eyebrow && <span className="text-[13px] font-extrabold tracking-[0.06em] text-action uppercase">{eyebrow}</span>}
+            <h1
+              className={`leading-[1.15] font-black tracking-[-0.03em] text-ink [overflow-wrap:break-word] [text-wrap:balance] ${desktop ? 'text-[34px]' : 'text-[28px]'}`}
+            >
+              {title}
+            </h1>
+            {(subtitle || chip) && (
+              <div className={`mt-1 flex flex-wrap items-center ${desktop ? 'gap-x-3 gap-y-1.5' : 'gap-x-2.5 gap-y-1.5'}`}>
+                {subtitle && <span className={`text-body ${desktop ? 'text-[16px]' : 'text-[15px] leading-[1.45]'}`}>{subtitle}</span>}
+                {chip && <Chip {...chip} />}
+              </div>
+            )}
+          </div>
         </div>
         {actions && <div className={desktop ? 'flex shrink-0 items-center gap-2.5' : 'mt-2.5 flex flex-wrap gap-2'}>{actions}</div>}
       </div>

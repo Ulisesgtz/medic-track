@@ -117,14 +117,11 @@ for (const design of designs) {
       await page.getByRole('main').getByRole('link', { name: 'Ver detalle de Mateo' }).click()
 
       await expect(page).toHaveURL(/\/children\//)
-      await expect(page.getByRole('link', { name: 'Nueva consulta' }).or(page.getByRole('link', { name: '+ Nueva' }))).toBeVisible()
-      // Phone (mock 02): the child's name in the dark header. Web (board 6): "name · date" over the age.
-      if (design.isWeb) {
-        await expect(page.getByText('Mateo Ruiz · 01 jun 2019')).toBeVisible()
-      } else {
-        await expect(page.getByRole('heading', { level: 1, name: 'Mateo Ruiz' })).toBeVisible()
-        await expect(page.getByRole('link', { name: '← Inicio' })).toBeVisible()
-      }
+      await expect(page.getByRole('main').getByRole('link', { name: 'Nueva consulta' })).toBeVisible()
+      // specs/056: the common header in both designs — the child's first name, the age and the birth date, and «← Inicio».
+      await expect(page.getByRole('heading', { level: 1, name: 'Mateo', exact: true })).toBeVisible()
+      await expect(page.getByText(/· nació el 01 jun 2019$/)).toBeVisible()
+      await expect(page.getByRole('main').getByRole('link', { name: '← Inicio' })).toBeVisible()
     })
   })
 }

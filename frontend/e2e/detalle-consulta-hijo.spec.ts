@@ -23,11 +23,11 @@ for (const design of designs) {
       await signUp(page)
       await page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' }).click()
       await expect(page).toHaveURL(/\/children\//)
-      await expect(page.getByText(/todavía no hay consultas/i)).toBeVisible()
+      await expect(page.getByText('Aún no hay consultas')).toBeVisible()
 
       // "Nueva consulta" is a page now (not a modal), reached by a link.
       await page
-        .getByRole('link', { name: design.isWeb ? 'Nueva consulta' : '+ Nueva' })
+        .getByRole('link', { name: 'Nueva consulta' })
         .click()
       await expect(page).toHaveURL(/\/consultations\/new/)
       await expect(page.getByRole('heading', { level: 1, name: 'Nueva consulta' })).toBeVisible()
@@ -72,13 +72,13 @@ for (const design of designs) {
       await page.goBack()
       await expect(page).toHaveURL(/\/children\/[^/]+$/)
       await expect(page.getByText('Dra. López')).toBeVisible()
-      await expect(page.getByText('Tomas de hoy').first()).toBeVisible()
+      await expect(page.getByRole('main').getByRole('region', { name: 'Hoy' })).toBeVisible()
     })
 
     test('"Cancelar" vuelve al hijo, y pide confirmar solo si ya había algo capturado', async ({ page }) => {
       await signUp(page)
       await page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' }).click()
-      await page.getByRole('link', { name: design.isWeb ? 'Nueva consulta' : '+ Nueva' }).click()
+      await page.getByRole('link', { name: 'Nueva consulta' }).click()
       await expect(page).toHaveURL(/\/consultations\/new/)
 
       // Nothing captured: leaves at once (the link is "← Cancelar" on the phone, "Cancelar" on the web).
@@ -86,7 +86,7 @@ for (const design of designs) {
       await expect(page).toHaveURL(/\/children\/[^/]+$/)
 
       // With something typed, the parent is asked first; declining keeps them on the form.
-      await page.getByRole('link', { name: design.isWeb ? 'Nueva consulta' : '+ Nueva' }).click()
+      await page.getByRole('link', { name: 'Nueva consulta' }).click()
       await page.getByLabel('Doctor').fill('Dr. Pérez')
       const dialogs: string[] = []
       page.once('dialog', async (dialog) => {
@@ -102,7 +102,7 @@ for (const design of designs) {
     test('guardar sin llenar nada muestra los errores y no crea la consulta', async ({ page }) => {
       await signUp(page)
       await page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' }).click()
-      await page.getByRole('link', { name: design.isWeb ? 'Nueva consulta' : '+ Nueva' }).click()
+      await page.getByRole('link', { name: 'Nueva consulta' }).click()
 
       await page.getByRole('button', { name: 'Guardar consulta' }).click()
 
@@ -117,7 +117,7 @@ for (const design of designs) {
     test('"Primera toma" es obligatoria: sin hora de inicio no se guarda (y ya no dice "opcional")', async ({ page }) => {
       await signUp(page)
       await page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' }).click()
-      await page.getByRole('link', { name: design.isWeb ? 'Nueva consulta' : '+ Nueva' }).click()
+      await page.getByRole('link', { name: 'Nueva consulta' }).click()
       const primeraToma = page.locator('label', { hasText: 'Primera toma' })
       await expect(primeraToma).toBeVisible()
       await expect(primeraToma).not.toContainText(/opcional/i)
@@ -143,7 +143,7 @@ for (const design of designs) {
     test('agregar y quitar medicamentos', async ({ page }) => {
       await signUp(page)
       await page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' }).click()
-      await page.getByRole('link', { name: design.isWeb ? 'Nueva consulta' : '+ Nueva' }).click()
+      await page.getByRole('link', { name: 'Nueva consulta' }).click()
 
       await expect(page.getByRole('button', { name: 'Quitar medicamento' })).toHaveCount(0)
       await page.getByRole('button', { name: '+ Otro medicamento' }).click()

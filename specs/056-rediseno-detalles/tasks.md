@@ -99,24 +99,24 @@ rompen con apóstrofes: escribir los scripts con la herramienta de escritura); n
 **Objetivo**: «Hoy» primero, índice de secciones, «Nueva consulta» como único sólido, «Lo demás» al final.
 **Prueba independiente**: se marca desde «Hoy» sin bajar la pantalla; el índice salta a cada sección; las tomas no se repiten.
 
-- [ ] T018 [P] [US1] Crear `frontend/src/features/childDetail/childDetailText.ts` (+ prueba de redacción) con las frases del
+- [x] T018 [P] [US1] Crear `frontend/src/features/childDetail/childDetailText.ts` (+ prueba de redacción) con las frases del
   diseño («Hoy», «Hoy no hay tomas ni actividades», «Tratamiento activo», «termina el …», «Consultas», «Suplementos»,
   «Actividades», «Cartilla», «Lo demás», «Acceso del hijo», «Familia que lo ve», «Nueva consulta», «nació el …»)
-- [ ] T019 [US1] Crear `frontend/src/features/childDetail/ChildTodayCard.tsx` (research R5): con `useChildDay` y `childDay` de la
+- [x] T019 [US1] Crear `frontend/src/features/childDetail/ChildTodayCard.tsx` (research R5): con `useChildDay` y `childDay` de la
   055, el chip del día, las tomas de medicamento y suplemento por `groupByPeriod` con el chip de toma (`DoseChipView`) y las
   actividades activas con «N de M hechas», la próxima y `RealizadoButton`; esqueleto y falla con «Reintentar»; ambos diseños
-- [ ] T020 [US1] Rehacer `frontend/src/features/consultations/ChildDetailPage.tsx` con el orden del diseño: `PageHeader`
+- [x] T020 [US1] Rehacer `frontend/src/features/consultations/ChildDetailPage.tsx` con el orden del diseño: `PageHeader`
   («← Inicio», avatar, nombre, «edad · nació el …») → `ChildTodayCard` → tratamiento activo (compacto) → próxima cita →
   `SectionIndex` (Consultas · Suplementos · Actividades · Cartilla: solo las que existen) → secciones con `id` (Consultas con
   «Buscar en el historial» y «Exportar a PDF»; Suplementos y Actividades como filas compactas sin tomas; Cartilla) → «Lo demás»
   (Acceso del hijo, Familia que lo ve) ; «Nueva consulta» en `StickyActionBar` en el teléfono y arriba a la derecha en la web;
   web en dos columnas con tratamiento, cita y resumen del día fijos a la derecha; sin «Consultas: N desde»
-- [ ] T021 [US1] Filas compactas de Suplementos y Actividades para el detalle del hijo (nombre, frecuencia, estado neutro, «›»
+- [x] T021 [US1] Filas compactas de Suplementos y Actividades para el detalle del hijo (nombre, frecuencia, estado neutro, «›»
   al detalle; «+ Agregar …» o el aviso compacto del plan) en `frontend/src/features/supplements/RegistroSeccion.tsx` (variante
   `compact`)
-- [ ] T022 [US1] Pruebas de `ChildTodayCard`, `ChildDetailPage` (orden, roles: dueña, Tutor, Cuidador, solo lectura, plan
+- [x] T022 [US1] Pruebas de `ChildTodayCard`, `ChildDetailPage` (orden, roles: dueña, Tutor, Cuidador, solo lectura, plan
   gratuito; ambos diseños; hijo recién agregado sin secciones vacías)
-- [ ] T023 [US1] E2E `frontend/e2e/detalle-hijo.spec.ts` (Chromium, 390 y 1280 px): «Hoy» primero y marcar sin scroll, índice
+- [x] T023 [US1] E2E `frontend/e2e/detalle-hijo.spec.ts` (Chromium, 390 y 1280 px): «Hoy» primero y marcar sin scroll, índice
   salta a Cartilla, Cuidador sin «Nueva consulta»; ajustar `detalle-hijo-movil.spec.ts` y los que buscaban «Tomas de hoy» del
   bloque viejo o «Consultas: N desde»
 

@@ -305,3 +305,9 @@ export const WEEKDAY_SEGMENTS = [
   { l: 'Sá', full: 'sábado' },
   { l: 'Do', full: 'domingo' },
 ]
+
+/** «Todos los días · 08:00» or «Cada 3 horas, de 08:00 a 20:00»: how often, never the doses (those live in «Hoy»). */
+export function routineFrequency(r: Routine): string {
+  if (r.kind === 'activity') return activityRule(r)
+  return `${r.period === 'weekdays' ? daysText(r.weekdays) : 'Todos los días'} · ${joinTimes(r.times)}`
+}

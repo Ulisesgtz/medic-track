@@ -56,6 +56,7 @@ for (const design of designs) {
       const owner = await seedChild(page)
       await page.goto(`/children/${owner.childId}`)
       const main = page.getByRole('main')
+      await main.getByRole('button', { name: /Acceso del hijo/ }).click() // specs/056: the block opens from «Lo demás»
 
       await main.getByLabel('Nombre del teléfono').fill('Teléfono de Mateo')
       await main.getByRole('button', { name: 'Crear liga' }).click()
@@ -158,6 +159,7 @@ for (const design of designs) {
       await expect(phone.page.getByRole('heading', { name: 'Hola, Mateo' })).toBeVisible()
 
       await page.goto(`/children/${owner.childId}`)
+      await page.getByRole('main').getByRole('button', { name: /Acceso del hijo/ }).click() // specs/056: the block opens from «Lo demás»
       await page.getByRole('button', { name: 'Quitar Teléfono de Mateo' }).click()
       await page.getByRole('dialog').getByRole('button', { name: 'Quitar', exact: true }).click()
       await expect(page.getByRole('button', { name: 'Quitar Teléfono de Mateo' })).toHaveCount(0)
@@ -175,6 +177,7 @@ for (const design of designs) {
       for (const name of ['Uno', 'Dos', 'Tres']) await childDeviceLinkViaApi(request, owner.token, owner.childId, name)
       await page.goto(`/children/${owner.childId}`)
       const main = page.getByRole('main')
+      await main.getByRole('button', { name: /Acceso del hijo/ }).click() // specs/056: the block opens from «Lo demás»
       await main.getByLabel('Nombre del teléfono').fill('Cuatro')
       await main.getByRole('button', { name: 'Crear liga' }).click()
       await expect(main.getByText('Ya hay 3 teléfonos o ligas sin usar para este hijo. Quita uno para crear otro.')).toBeVisible()
@@ -214,6 +217,7 @@ for (const design of designs) {
 
       await page.goto(`/children/${owner.childId}`)
       const main = page.getByRole('main')
+      await main.getByRole('button', { name: /Acceso del hijo/ }).click() // specs/056: the block opens from «Lo demás»
       await expect(main.getByText('Con el plan completo, cada hijo puede ver y marcar sus tomas')).toBeVisible()
       await expect(main.getByRole('button', { name: 'Crear liga' })).toHaveCount(0)
       await expect(main.getByRole('button', { name: 'Quitar Teléfono de Mateo' })).toBeVisible()
