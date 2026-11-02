@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useUnsavedWork } from '../../shared/appVersion/unsavedWork'
 import { formatDateLong } from '../../shared/date'
 import { Notice } from '../../shared/ui/Notice'
+import { StickyActionBar } from '../../shared/ui/StickyActionBar'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { fetchConsultationDetail } from '../consultations/api'
@@ -84,20 +85,19 @@ export function AppointmentFormPage() {
   }
 
   const backTo = editing || standalone ? `/children/${childId}` : `/consultations/${consultationId}`
-  const backLabel = editing || standalone ? `← ${child?.firstName ?? 'Volver'}` : consultation ? `← Consulta del ${formatDateLong(consultation.consultDate)}` : '← Volver'
-  const eyebrow = editing || standalone
-    ? `Próxima cita · ${child ? `${child.firstName} ${child.lastName}` : ''}`.trim()
-    : consultation
-      ? `Consulta del ${formatDateLong(consultation.consultDate)} · ${child ? `${child.firstName} ${child.lastName}` : ''}`.trim()
-      : 'Próxima cita'
+  // specs/056 (design H4): «← Cancelar» (asking first when something was typed), the title and «Para Mateo».
+  const discardQuestion = '¿Descartar la cita? Se perderá lo que capturaste.'
   const frame = (content: ReactNode) => (
     <RoutinePageFrame
       isDesktop={isDesktop}
       childId={childId}
-      backLabel={backLabel}
+      backLabel="← Cancelar"
       backTo={backTo}
-      eyebrow={eyebrow}
+      backOnClick={(event) => {
+        if (dirtyRef.current && !window.confirm(discardQuestion)) event.preventDefault()
+      }}
       title={editing ? 'Editar cita' : 'Agregar próxima cita'}
+      subtitle={child ? `Para ${child.firstName}` : undefined}
       maxWidth="max-w-[640px]"
     >
       {content}
@@ -123,7 +123,7 @@ export function AppointmentFormPage() {
   const form = current ?? emptyAppointmentValues()
 
   const leave = () => {
-    if (dirtyRef.current && !window.confirm('¿Descartar la cita? Se perderá lo que capturaste.')) return
+    if (dirtyRef.current && !window.confirm(discardQuestion)) return
     navigate(backTo)
   }
 
@@ -176,7 +176,7 @@ export function AppointmentFormPage() {
           )}
           <AppointmentFields value={form} onChange={change} errors={errors} disabled={!paid} withDoctor={needsDoctor} />
           {notice && <Notice tone="error">{notice}</Notice>}
-          <div className="flex flex-wrap justify-end gap-2.5">
+          <StickyActionBar variant={isDesktop ? 'desktop' : 'phone'}>
             <button
               type="button"
               onClick={leave}
@@ -193,7 +193,7 @@ export function AppointmentFormPage() {
                 {pending ? 'Guardando…' : editing ? 'Guardar cambios' : 'Guardar cita'}
               </button>
             )}
-          </div>
+          </StickyActionBar>
         </form>,
       )}
       {planOpen && <FreemiumLimitModal reason="appointments" onStayFree={closePlan} onViewPlans={() => navigate('/planes')} />}

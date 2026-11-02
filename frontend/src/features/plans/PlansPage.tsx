@@ -87,7 +87,7 @@ export function PlansPage() {
   const intro = 'Un plan gratuito y un plan completo anual. Una suscripción cubre a toda la familia.'
 
   return (
-    <RoutinePageFrame isDesktop={isDesktop} childId={undefined} backLabel="← Inicio" backTo="/home" eyebrow="PediTrack" title="Planes">
+    <RoutinePageFrame isDesktop={isDesktop} childId={undefined} backLabel="← Inicio" backTo="/home" title="Planes">
       {isDesktop ? (
         <>
           <p className="-mt-2 text-[17px] leading-relaxed text-body">{intro}</p>

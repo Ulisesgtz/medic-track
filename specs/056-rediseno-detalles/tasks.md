@@ -70,24 +70,24 @@ rompen con apóstrofes: escribir los scripts con la herramienta de escritura); n
 **Objetivo**: ninguna pantalla de FR-010 conserva la banda oscura en el teléfono.
 **Prueba independiente**: las pantallas de FR-010 usan `PageHeader` en sus variantes a 390 y 1280 px.
 
-- [ ] T011 [US2] En el detalle de suplemento/actividad (`frontend/src/features/supplements/RoutineDetailPage.tsx`) pasar a
+- [x] T011 [US2] En el detalle de suplemento/actividad (`frontend/src/features/supplements/RoutineDetailPage.tsx`) pasar a
   `RoutinePageFrame` la variante H2: línea superior «Suplemento de Mateo» / «Actividad de Mateo», subtítulo de frecuencia, chip
   de estado (`hint` para «Activo», `line` para «Pausado»/«Terminado») y «Editar» con contorno en el encabezado
-- [ ] T012 [P] [US2] Cartilla (`frontend/src/features/vaccinations/VaccinationCardPage.tsx`): H3 con línea superior «Cartilla de
+- [x] T012 [P] [US2] Cartilla (`frontend/src/features/vaccinations/VaccinationCardPage.tsx`): H3 con línea superior «Cartilla de
   Mateo», subtítulo «N dosis registradas · N fotos», «+ Agregar vacuna» sólido y «Exportar a PDF» con contorno en el encabezado
   (el `ExportEntry` actual se mueve ahí); H6 con «Solo lectura»
-- [ ] T013 [P] [US2] Familia (`frontend/src/features/family/FamilyPage.tsx`): H1 con `PageHeader` («← Inicio», «Familia»,
+- [x] T013 [P] [US2] Familia (`frontend/src/features/family/FamilyPage.tsx`): H1 con `PageHeader` («← Inicio», «Familia»,
   subtítulo «Familia de Ana · N personas») en lugar de su banda y su contador en tinta
-- [ ] T014 [P] [US2] Historial (`frontend/src/features/consultations/HistoryPage.tsx`): H7 («← Mateo», «Historial de Mateo»,
+- [x] T014 [P] [US2] Historial (`frontend/src/features/consultations/HistoryPage.tsx`): H7 («← Mateo», «Historial de Mateo»,
   subtítulo con el número de consultas, el campo de búsqueda como `search` pegado arriba)
-- [ ] T015 [US2] Formularios: `RoutineForm` (`frontend/src/features/supplements/RoutineForm.tsx`), el de citas
+- [x] T015 [US2] Formularios: `RoutineForm` (`frontend/src/features/supplements/RoutineForm.tsx`), el de citas
   (`frontend/src/features/appointments/AppointmentFormPage.tsx`) y el de consulta (`frontend/src/features/consultations/
   ConsultationForm.tsx`, con `NewConsultationPage.tsx` y `EditConsultationPage.tsx`): H4 («← Cancelar», título, «Para Mateo»)
   y el botón de guardar dentro de `StickyActionBar`; el de consulta pierde su banda propia
-- [ ] T016 [P] [US2] Planes y regreso del pago (`frontend/src/features/plans/PlansPage.tsx`, `PaymentReturnPage.tsx`) y el
+- [x] T016 [P] [US2] Planes y regreso del pago (`frontend/src/features/plans/PlansPage.tsx`, `PaymentReturnPage.tsx`) y el
   historial de citas (`frontend/src/features/appointments/AppointmentHistoryPage.tsx`): revisar que con `RoutinePageFrame` nuevo
   quedan como H1/H2 del diseño
-- [ ] T017 [US2] Ajustar las pruebas unitarias y los E2E que buscaban la banda o los títulos viejos de esas pantallas
+- [x] T017 [US2] Ajustar las pruebas unitarias y los E2E que buscaban la banda o los títulos viejos de esas pantallas
   (`grep -rn "bg-ink\|level: 1" e2e src --include=*.ts*` en lo que toque) y agregar a cada pantalla una prueba del encabezado
 
 **Commit**: «feat(056): el encabezado común en las pantallas secundarias (US2)»

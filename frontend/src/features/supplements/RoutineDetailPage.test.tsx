@@ -86,7 +86,9 @@ describe('RoutineDetailPage · suplemento', () => {
     api(active)
     renderDetail()
     expect(await screen.findByRole('heading', { name: 'Probiótico', level: 1 })).toBeInTheDocument()
-    expect(await screen.findByText('Suplemento · Mateo Morales')).toBeInTheDocument()
+    expect(await screen.findByText('Suplemento de Mateo')).toBeInTheDocument()
+    // specs/056: the schedule is the header's subtitle and «Editar» is in the header.
+    expect(screen.getAllByRole('link', { name: 'Editar' })).toHaveLength(1)
     expect(screen.getByText('Hoy · mar 6 oct')).toBeInTheDocument()
     expect(screen.getByText('Activo')).toBeInTheDocument()
     expect(screen.getByText('1 de 3')).toBeInTheDocument()
@@ -260,7 +262,7 @@ describe('RoutineDetailPage · suplemento', () => {
   it('says it could not load on any other failure, and while loading', async () => {
     api(active, { 'GET /routines/r1': { status: 500, body: {} } })
     renderDetail()
-    expect(screen.getByText('Cargando…')).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Cargando' })).toBeInTheDocument()
     expect(await screen.findByText(/No se pudo cargar el suplemento\./)).toBeInTheDocument()
   })
 
@@ -277,7 +279,7 @@ describe('RoutineDetailPage · suplemento', () => {
     api(activity())
     renderDetail('/suplementos/a1')
     expect(await screen.findByRole('heading', { name: 'Tomar agua', level: 1 })).toBeInTheDocument()
-    expect(screen.getByText('Cada hora, de 08:00 a 20:00')).toBeInTheDocument()
+    expect(screen.getAllByText('Cada hora, de 08:00 a 20:00').length).toBeGreaterThan(0)
   })
 })
 
@@ -298,7 +300,7 @@ describe('RoutineDetailPage · actividad', () => {
     api(activity())
     renderDetail(open)
     expect(await screen.findByRole('heading', { name: 'Tomar agua', level: 1 })).toBeInTheDocument()
-    expect(await screen.findByText('Actividad · Mateo Morales')).toBeInTheDocument()
+    expect(await screen.findByText('Actividad de Mateo')).toBeInTheDocument()
     expect(screen.getByText('Activa')).toBeInTheDocument()
     expect(screen.getByText('3 de 5')).toBeInTheDocument()
     expect(screen.getByRole('progressbar', { name: '3 de 5 hechas hoy' })).toBeInTheDocument()
@@ -307,7 +309,7 @@ describe('RoutineDetailPage · actividad', () => {
     expect(screen.getByText('Última marcada')).toBeInTheDocument()
     expect(screen.getByText('10:04')).toBeInTheDocument()
     expect(screen.getByText('por Rosa')).toBeInTheDocument()
-    expect(screen.getByText('Cada hora, de 08:00 a 20:00')).toBeInTheDocument()
+    expect(screen.getAllByText('Cada hora, de 08:00 a 20:00')).toHaveLength(2) // the header's subtitle and the data card
     expect(screen.getByText('Todos los días')).toBeInTheDocument()
     expect(screen.getByText('13')).toBeInTheDocument()
     expect(screen.getByText('Desde el 1 oct 2026 · sin fecha de fin')).toBeInTheDocument()

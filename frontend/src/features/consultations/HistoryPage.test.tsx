@@ -291,7 +291,7 @@ describe.each([
     renderPage()
     await screen.findByText('2 consultas')
 
-    await user.click(screen.getByRole('link', { name: /^← Consultas/ }))
+    await user.click(screen.getByRole('link', { name: /^← / }))
 
     expect(await screen.findByText('DETALLE DEL HIJO')).toBeInTheDocument()
   })

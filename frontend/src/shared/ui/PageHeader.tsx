@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { MouseEvent, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { pageHeaderButton } from './pageHeaderButton'
 import { PAGE_HEADER, loadFailedTitle } from './pageHeaderText'
@@ -12,7 +12,8 @@ export type HeaderVariant = 'phone' | 'desktop'
 
 export interface PageHeaderProps {
   variant: HeaderVariant
-  back: { label: string; to: string }
+  /** `onClick` may stop the way back (a form with something typed asks first). */
+  back: { label: string; to: string; onClick?: (event: MouseEvent<HTMLAnchorElement>) => void }
   eyebrow?: string
   title?: ReactNode
   subtitle?: ReactNode
@@ -66,7 +67,7 @@ export function PageHeader({
 }: PageHeaderProps) {
   const desktop = variant === 'desktop'
   const backLink = (
-    <Link to={back.to} className="inline-flex min-h-11 items-center self-start text-[15px] font-bold text-action hover:underline">
+    <Link to={back.to} onClick={back.onClick} className="inline-flex min-h-11 items-center self-start text-[15px] font-bold text-action hover:underline">
       {back.label}
     </Link>
   )

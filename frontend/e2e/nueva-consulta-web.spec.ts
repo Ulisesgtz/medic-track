@@ -48,7 +48,7 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
 
       expect(await box(page.locator('aside').first())).toMatchObject({ x: 0, w: 280 })
       expect(await box(page.getByRole('heading', { level: 1, name: 'Nueva consulta' }))).toMatchObject({ x: titleX })
-      await expect(page.getByRole('heading', { level: 1 })).toHaveCSS('font-size', '36px')
+      await expect(page.getByRole('heading', { level: 1 })).toHaveCSS('font-size', '34px')
       const ocr = await box(page.getByText('Foto de la receta', { exact: true }).locator('..').locator('..'))
       expect(ocr).toMatchObject({ x: titleX, w: panelW })
       expect(await box(page.getByText('Nombre y dosis', { exact: true }))).toMatchObject({ x: titleX + 24, w: nameW })

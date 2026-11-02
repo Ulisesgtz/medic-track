@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@clerk/react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -7,6 +7,7 @@ import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { PlanAvisoCompacto } from '../plans/PlanAvisoCompacto'
 import { AppShell } from '../home/AppShell'
+import { PageHeader } from '../../shared/ui/PageHeader'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { cancelInvitation, createInvitation, FamilyApiError, leaveFamily, removeMember, resendInvitation } from './api'
 import { ConfirmDialog } from './ConfirmDialog'
@@ -347,20 +348,30 @@ export function FamilyPage() {
     </>
   )
 
+  // specs/056: the common header (design H1, «Encabezado PediTrack»): no dark band; the children's names as the subtitle. The counter
+  // of places stays as a card under it (it also counts the invitations waiting, which decide whether one more can be invited).
+  const header = (variant: 'phone' | 'desktop') => (
+    <PageHeader
+      variant={variant}
+      back={{ label: '← Inicio', to: '/home' }}
+      title={title}
+      subtitle={childNames.length > 0 ? names : undefined}
+      state={family.isPending ? 'loading' : 'ready'}
+    />
+  )
+  const counter = showCounter && data && (
+    <div className="self-start">
+      <FamilyCounter people={data.members.length + 1} pending={pendingCount} max={data.capacity.max} variant="desktop" />
+    </div>
+  )
+
   if (isDesktop) {
     return (
       <AppShell>
-        <main className="min-w-0 bg-canvas px-12 pt-11 pb-11">
-          <div className="mx-auto flex max-w-[904px] flex-col gap-8">
-            <div className="flex flex-wrap items-end justify-between gap-6">
-              <div>
-                {childNames.length > 0 && <p className="text-sm font-bold text-action">{names}</p>}
-                <h1 className="mt-1 text-[38px] leading-[1.1] font-black tracking-[-0.03em] text-ink">{title}</h1>
-              </div>
-              {showCounter && data && (
-                <FamilyCounter people={data.members.length + 1} pending={pendingCount} max={data.capacity.max} variant="desktop" />
-              )}
-            </div>
+        <main className="min-w-0 bg-canvas px-12 pt-7 pb-11">
+          <div className="mx-auto flex max-w-[904px] flex-col gap-6">
+            {header('desktop')}
+            {counter}
             {family.isPending && loading}
             {family.isError && failed}
             {ready && (
@@ -371,7 +382,7 @@ export function FamilyPage() {
                     {people(data)}
                     {invitations(data)}
                   </div>
-                  <div className="flex min-w-0 flex-col gap-6 pt-[34px]">{panels(data)}</div>
+                  <div className="flex min-w-0 flex-col gap-6">{panels(data)}</div>
                 </div>
               </>
             )}
@@ -385,17 +396,9 @@ export function FamilyPage() {
   return (
     <AppShell>
       <main className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas pb-10">
-        <header className="bg-ink px-6 pt-6 pb-[26px]">
-          <BackLink className="-my-3 inline-flex min-h-11 items-center text-sm font-bold text-bright-soft hover:text-white" />
-          <h1 className="mt-[18px] text-[30px] font-black tracking-[-0.03em] text-white">{title}</h1>
-          {childNames.length > 0 && <p className="mt-1 text-sm font-semibold text-hint-border">{names}</p>}
-          {showCounter && data && (
-            <div className="mt-5">
-              <FamilyCounter people={data.members.length + 1} pending={pendingCount} max={data.capacity.max} variant="phone" />
-            </div>
-          )}
-        </header>
-        <div className="flex flex-col gap-7 px-6 pt-6 pb-10">
+        {header('phone')}
+        <div className="flex flex-col gap-7 px-5 pt-1 pb-10">
+          {counter}
           {family.isPending && loading}
           {family.isError && failed}
           {ready && (
@@ -410,13 +413,5 @@ export function FamilyPage() {
       </main>
       {dialogs}
     </AppShell>
-  )
-}
-
-function BackLink({ className }: { className: string }): ReactNode {
-  return (
-    <Link to="/home" className={className}>
-      ← Inicio
-    </Link>
   )
 }

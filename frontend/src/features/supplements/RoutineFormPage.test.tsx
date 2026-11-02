@@ -68,7 +68,7 @@ describe('RoutineFormPage — nuevo suplemento', () => {
     expect(screen.queryByRole('radio', { name: /Cada cierto número de horas/ })).not.toBeInTheDocument()
     expect(screen.getByText('PediTrack guarda lo que escribas tal cual: no revisa el nombre, la cantidad ni el horario.')).toBeInTheDocument()
     expect(screen.getByText('Se repite hasta que la pauses o la finalices.')).toBeInTheDocument()
-    expect(await screen.findByText('Suplemento · Mateo Morales')).toBeInTheDocument()
+    expect(await screen.findByText('Para Mateo')).toBeInTheDocument()
     expect(screen.queryByText(/rutina/i)).not.toBeInTheDocument()
   })
 
@@ -265,7 +265,7 @@ describe('RoutineFormPage — nuevo suplemento', () => {
     api()
     renderAt(NEW)
     expect(await screen.findByRole('heading', { name: 'Agregar suplemento', level: 1 })).toBeInTheDocument()
-    expect(await screen.findByRole('link', { name: '← Mateo' })).toHaveAttribute('href', '/children/child-1')
+    expect(await screen.findByRole('link', { name: '← Cancelar' })).toHaveAttribute('href', '/children/child-1')
   })
 })
 
@@ -300,7 +300,7 @@ describe('RoutineFormPage — nueva actividad', () => {
     expect(screen.getByLabelText('Fecha de inicio')).toHaveValue('2026-10-06')
     expect(screen.getByText('PediTrack guarda lo que escribas tal cual: no revisa el nombre, el horario ni cada cuánto.')).toBeInTheDocument()
     expect(screen.getByText('La ve toda la familia.')).toBeInTheDocument()
-    expect(await screen.findByText('Actividad · Mateo Morales')).toBeInTheDocument()
+    expect(await screen.findByText('Para Mateo')).toBeInTheDocument()
     expect(screen.queryByText('+ Agregar otra hora')).not.toBeInTheDocument()
   })
 
@@ -490,7 +490,7 @@ describe('RoutineFormPage — nueva actividad', () => {
     renderAt('/mis-actividades/nueva')
     expect(await screen.findByText('Es una actividad personal: solo tú la ves y solo a ti te llegan sus avisos.')).toBeInTheDocument()
     expect(screen.getByText('Solo la ves tú.')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '← Mis actividades' })).toHaveAttribute('href', '/mis-actividades')
+    expect(screen.getByRole('link', { name: '← Cancelar' })).toHaveAttribute('href', '/mis-actividades')
     const user = setup()
     await fill(user)
     await user.click(screen.getByRole('button', { name: 'Guardar actividad' }))

@@ -158,7 +158,7 @@ for (const design of designs) {
       await openFilters(page)
       expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(false)
       // The way back to the child's list.
-      await page.getByRole('link', { name: /^← Consultas/ }).click()
+      await page.getByRole('main').getByRole('link', { name: '← Mateo' }).click()
       await expect(page).toHaveURL(new RegExp(`/children/${childId}$`))
     })
 

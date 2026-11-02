@@ -12,6 +12,14 @@ const WEEKDAYS_FULL = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 's�
 const WEEKDAYS_LOWER = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'] // Date.getDay() order
 
 /** "08:00", "08:00 y 20:00", "06:00, 14:00 y 22:00". */
+/** «Activo» / «Pausado» / «Terminado» (a supplement) or «Activa» / «Pausada» / «Terminada» (an activity). */
+export function routineStatusLabel(kind: Routine['kind'], status: Routine['status']): string {
+  const feminine = kind === 'activity'
+  if (status === 'active') return feminine ? 'Activa' : 'Activo'
+  if (status === 'paused') return feminine ? 'Pausada' : 'Pausado'
+  return feminine ? 'Terminada' : 'Terminado'
+}
+
 export function joinTimes(times: string[]): string {
   if (times.length <= 1) return times[0] ?? ''
   return `${times.slice(0, -1).join(', ')} y ${times[times.length - 1]}`

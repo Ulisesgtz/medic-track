@@ -86,8 +86,8 @@ export function AppointmentHistoryPage() {
       childId={childId}
       backLabel={`← ${child?.firstName ?? 'Volver'}`}
       backTo={`/children/${childId}`}
-      eyebrow={child ? `${child.firstName} ${child.lastName}` : 'Citas'}
       title="Historial de citas"
+      subtitle={child ? `${child.firstName} ${child.lastName}` : undefined}
     >
       {content}
     </RoutinePageFrame>

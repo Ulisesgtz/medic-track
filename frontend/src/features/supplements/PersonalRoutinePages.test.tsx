@@ -203,7 +203,7 @@ describe('RoutineFormPage — a personal supplement', () => {
     const user = setup()
     expect(await screen.findByRole('heading', { name: 'Editar suplemento' })).toBeInTheDocument()
     expect(await screen.findByRole('note')).toHaveTextContent('Es un suplemento personal: solo tú lo ves y solo a ti te llegan sus avisos. Los cambios cuentan desde la siguiente toma.')
-    expect(screen.getByRole('link', { name: '← Omega 3' })).toHaveAttribute('href', '/suplementos/r1')
+    expect(screen.getByRole('link', { name: '← Cancelar' })).toHaveAttribute('href', '/suplementos/r1')
     await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
     await waitFor(() => expect(callsOf(mock)).toContain('PATCH /routines/r1'))
   })

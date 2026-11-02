@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { errorClass, fieldBorder, fieldRoutine, fieldRoutineMultiline, labelClass } from '../../shared/ui/formStyles'
 import { Notice } from '../../shared/ui/Notice'
+import { StickyActionBar } from '../../shared/ui/StickyActionBar'
+import { useIsDesktop } from '../../shared/ui/useIsDesktop'
 import { TimeField } from '../../shared/ui/TimeField'
 import { SupplementApiError } from './api'
 import {
@@ -223,6 +225,8 @@ export function RoutineForm({ kind, routine, onSubmit, onCancel, onPlanRequired,
   const [saving, setSaving] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   const nameRef = useRef<HTMLInputElement>(null)
+  // specs/056 (research R3): saving sits in a bar pinned to the bottom on the phone.
+  const desktop = useIsDesktop()
 
   const dirty = useMemo(() => JSON.stringify(values) !== JSON.stringify(initial), [values, initial])
   useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange])
@@ -494,7 +498,7 @@ export function RoutineForm({ kind, routine, onSubmit, onCancel, onPlanRequired,
 
       {notice && <Notice tone="error">{notice}</Notice>}
 
-      <div className="flex flex-wrap justify-end gap-2.5">
+      <StickyActionBar variant={desktop ? 'desktop' : 'phone'}>
         <button
           type="button"
           onClick={onCancel}
@@ -509,7 +513,7 @@ export function RoutineForm({ kind, routine, onSubmit, onCancel, onPlanRequired,
         >
           {saving ? 'Guardando…' : editing ? 'Guardar cambios' : activity ? 'Guardar actividad' : 'Guardar suplemento'}
         </button>
-      </div>
+      </StickyActionBar>
     </form>
   )
 }

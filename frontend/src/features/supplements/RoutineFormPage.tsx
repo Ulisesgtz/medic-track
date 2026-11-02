@@ -22,6 +22,7 @@ export function RoutinePageFrame({
   childId,
   backLabel,
   backTo,
+  backOnClick,
   eyebrow,
   title,
   children,
@@ -38,6 +39,8 @@ export function RoutinePageFrame({
   childId: string | undefined
   backLabel: string
   backTo: string
+  /** May stop the way back (a form with something typed asks first). */
+  backOnClick?: PageHeaderProps['back']['onClick']
   eyebrow?: string
   title: ReactNode
   children: ReactNode
@@ -47,7 +50,7 @@ export function RoutinePageFrame({
   const header = (variant: 'phone' | 'desktop') => (
     <PageHeader
       variant={variant}
-      back={{ label: backLabel, to: backTo }}
+      back={{ label: backLabel, to: backTo, onClick: backOnClick }}
       eyebrow={eyebrow}
       title={title}
       subtitle={subtitle}
@@ -123,16 +126,20 @@ export function RoutineFormPage({ kind: creatingKind = 'supplement', personal: c
   const noun = activity ? 'actividad' : 'suplemento'
   const backTo = editing ? `${base}/${routineId}` : personal ? personalHome : `/children/${childId}`
   const personalTitle = activity ? 'Mis actividades' : 'Mis suplementos'
-  const childName = personal ? personalTitle : (child?.firstName ?? 'Volver')
-  const eyebrow = personal ? personalTitle : child ? `${activity ? 'Actividad' : 'Suplemento'} · ${child.firstName} ${child.lastName}` : activity ? 'Actividad' : 'Suplemento'
+  const discardQuestion = `¿Descartar ${activity ? 'la' : 'el'} ${noun}? Se perderá lo que capturaste.`
+  // specs/056 (design H4): «← Cancelar» (asking first when something was typed), the title and «Para Mateo».
+  const subtitle = personal ? personalTitle : child ? `Para ${child.firstName}` : undefined
   const frame = (content: ReactNode) => (
     <RoutinePageFrame
       isDesktop={isDesktop}
       childId={personal ? undefined : childId}
-      backLabel={editing && routine ? `← ${routine.name}` : `← ${childName}`}
+      backLabel="← Cancelar"
       backTo={backTo}
-      eyebrow={eyebrow}
+      backOnClick={(event) => {
+        if (dirtyRef.current && !window.confirm(discardQuestion)) event.preventDefault()
+      }}
       title={`${editing ? 'Editar' : 'Agregar'} ${noun}`}
+      subtitle={subtitle}
       maxWidth="max-w-[640px]"
     >
       {content}
@@ -158,7 +165,7 @@ export function RoutineFormPage({ kind: creatingKind = 'supplement', personal: c
   }
 
   const leave = () => {
-    if (dirtyRef.current && !window.confirm(`¿Descartar ${activity ? 'la' : 'el'} ${noun}? Se perderá lo que capturaste.`)) return
+    if (dirtyRef.current && !window.confirm(discardQuestion)) return
     navigate(backTo)
   }
 
