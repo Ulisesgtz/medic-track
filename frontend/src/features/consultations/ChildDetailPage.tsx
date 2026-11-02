@@ -9,7 +9,7 @@ import { AppShell } from '../home/AppShell'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { useChildAccess } from '../family/useChildAccess'
-import { ChildAppointmentSection } from '../appointments/AppointmentSections'
+import { NextAppointmentCompact } from '../appointments/NextAppointmentCompact'
 import { ChildTodayCard } from '../childDetail/ChildTodayCard'
 import { CartillaSection, ConsultationsSection, DaySummaryCard, MoreRows, TreatmentCard } from '../childDetail/ChildDetailParts'
 import { CHILD, childSubtitle } from '../childDetail/childDetailText'
@@ -131,7 +131,7 @@ export function ChildDetailPage() {
       <CartillaSection childId={childId} canAdd={access.canAdd} variant={variant} />
     </>
   )
-  const appointment = <ChildAppointmentSection childId={childId} historyPath={`/children/${childId}/citas`} />
+  const appointment = <NextAppointmentCompact childId={childId} variant={variant} />
   const more = <MoreRows childId={childId} childName={childName} canAdd={access.canAdd} free={access.isFree} variant={variant} />
 
   if (isDesktop) {
