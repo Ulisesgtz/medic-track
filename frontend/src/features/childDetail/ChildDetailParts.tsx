@@ -225,6 +225,11 @@ export function DaySummaryCard({ childId }: { childId: string }) {
   if (day.unregistered) rows.push({ t: CHILD.summaryUnregistered, v: nameAtTime(day.unregistered.medicationName, formatTime(day.unregistered.scheduledAt)) })
   else if (day.next) rows.push({ t: CHILD.summaryNext, v: nameAtTime(day.next.medicationName, formatTime(day.next.scheduledAt)) })
   rows.push({ t: CHILD.activities, v: day.activities ? activitiesDone(day.activities.done, day.activities.total) : CHILD.noneToday })
+  return <DaySummaryView rows={rows} />
+}
+
+/** «Resumen del día» itself: a title and a row per thing counted (the child's detail and «Mi día» on the web). */
+export function DaySummaryView({ rows }: { rows: { t: string; v: string }[] }) {
   return (
     <section aria-label={CHILD.summary} className="flex flex-col rounded-[22px] border-[1.5px] border-hint-edge bg-surface px-[18px] py-4">
       <h2 className="pb-1.5 text-[15px] font-extrabold text-ink">{CHILD.summary}</h2>

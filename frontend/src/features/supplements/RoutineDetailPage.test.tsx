@@ -478,7 +478,7 @@ describe('RoutineDetailPage · actividad', () => {
     api(activity({ childId: null, canEdit: false }), {}, account({ plan: 'free' }))
     renderDetail(open)
     expect(await screen.findByRole('heading', { name: 'Tomar agua', level: 1 })).toBeInTheDocument()
-    expect(screen.getByText('← Mis actividades')).toBeInTheDocument()
+    expect(screen.getByText('← Mi día')).toBeInTheDocument()
     expect(screen.queryByText('Agregada por')).not.toBeInTheDocument()
     expect(screen.getByText('Última marcada')).toBeInTheDocument()
     expect(screen.queryByText(/^por /)).not.toBeInTheDocument()

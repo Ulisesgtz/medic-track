@@ -108,7 +108,7 @@ export function TuDia({ account, variant }: { account: Account; variant: Variant
     return (
       <p className={`rounded-2xl border-[1.5px] border-hint-edge text-[15px] leading-normal text-body ${desktop ? 'px-[18px] py-3.5' : 'px-4 py-3'}`}>
         {HOME.dayTitle} ·{' '}
-        <Link to="/mis-suplementos" className="font-bold text-action hover:underline">
+        <Link to="/mi-dia" className="font-bold text-action hover:underline">
           {HOME.addOwn}
         </Link>
       </p>
@@ -191,7 +191,7 @@ export function TuDia({ account, variant }: { account: Account; variant: Variant
           {HOME.dayTitle}
         </h2>
         {desktop && mine.mode === 'todo' && allChip}
-        <Link to="/mis-suplementos" className={`inline-flex min-h-11 items-center text-[14px] font-bold text-action hover:underline ${desktop ? 'ml-auto' : ''}`}>
+        <Link to="/mi-dia" className={`inline-flex min-h-11 items-center text-[14px] font-bold text-action hover:underline ${desktop ? 'ml-auto' : ''}`}>
           {HOME.seeAll}
         </Link>
       </div>

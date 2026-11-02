@@ -14,6 +14,7 @@ import { useFinishRoutine, usePauseRoutine, useResumeRoutine, useRoutine, useRou
 import { MyRemindersToggle } from './MyRemindersToggle'
 import { RealizadoButton } from './RealizadoButton'
 import { RoutineDoseChip } from './RoutineDoseChip'
+import { MY_DAY } from './myDayText'
 import { RoutinePageFrame } from './RoutineFormPage'
 import { activityRule, dayCount, detailRows, endedNote, fixedLast, fixedNext, isFixedActivity, lastMarked, lastMarkedDose, nextUnmarked, noTodayText, pausedNote, routineStatusLabel, supplementPeriodText, todayLabel } from './scheduleText'
 import type { Routine } from './types'
@@ -192,7 +193,7 @@ export function RoutineDetailPage() {
   const activity = kind === 'activity'
   const noun = activity ? 'Actividad' : 'Suplemento'
   const base = activity ? '/actividades' : '/suplementos'
-  const personalHome = activity ? '/mis-actividades' : '/mis-suplementos'
+  const personalHome = activity ? '/mi-dia#actividades' : '/mi-dia#suplementos'
   const backTo = personal ? personalHome : childId ? `/children/${childId}` : '/home'
   // specs/056: the common header H2 — «Suplemento de Mateo», the routine's name, its schedule, its status as a neutral chip and
   // «Editar» with an outline.
@@ -200,7 +201,7 @@ export function RoutineDetailPage() {
     <RoutinePageFrame
       isDesktop={isDesktop}
       childId={childId}
-      backLabel={personal ? (activity ? '← Mis actividades' : '← Mis suplementos') : child ? `← ${child.firstName}` : '← Inicio'}
+      backLabel={personal ? MY_DAY.back : child ? `← ${child.firstName}` : '← Inicio'}
       backTo={backTo}
       eyebrow={personal ? (activity ? 'Mis actividades' : 'Mis suplementos') : child ? `${noun} de ${child.firstName}` : noun}
       title={title}

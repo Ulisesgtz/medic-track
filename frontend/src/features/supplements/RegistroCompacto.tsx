@@ -5,7 +5,8 @@ import { useLocalDay } from '../../shared/useLocalDay'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { CHILD, addRoutine, emptyRoutines, planRoutines } from '../childDetail/childDetailText'
-import { useRoutineAccess, useRoutines } from './hooks'
+import { usePersonalRoutines, useRoutineAccess, useRoutines } from './hooks'
+import { MY_DAY } from './myDayText'
 import { routineFrequency, routineStatusLabel } from './scheduleText'
 import { SECTION_COPY } from './sectionCopy'
 import type { Routine, RoutineKind } from './types'
@@ -48,31 +49,50 @@ function Row({ routine, variant }: { routine: Routine; variant: Variant }) {
 }
 
 /**
- * «Suplementos» or «Actividades» of a child's detail since specs/056 (design A): one compact row per routine — name, how often and
- * its state in neutral words, «›» to its detail — and never its doses, which live in «Hoy». Who adds: a Tutor with the paid plan
- * («+ Agregar …»); on the free plan the row with the «Plan completo» mark opens the plan notice. What was created is always listed.
+ * «Suplementos» or «Actividades» of a child's detail, and «Mis suplementos» / «Mis actividades» of «Mi día» (`personal`), since
+ * specs/056 (designs A and B): one compact row per routine — name, how often and its state in neutral words, «›» to its detail —
+ * and never its doses, which live in «Hoy». Who adds: a Tutor with the paid plan, or the person on their own plan («+ Agregar …»);
+ * on the free plan the row with the «Plan completo» mark opens the plan notice. What was created is always listed.
  */
-export function RegistroCompacto({ kind, childId, sectionId, variant }: { kind: RoutineKind; childId: string; sectionId: string; variant: Variant }) {
+export function RegistroCompacto({
+  kind,
+  childId,
+  personal = false,
+  sectionId,
+  variant,
+}: {
+  kind: RoutineKind
+  /** The child's; absent for the person's own. */
+  childId?: string
+  personal?: boolean
+  sectionId: string
+  variant: Variant
+}) {
   const copy = SECTION_COPY[kind]
   const day = useLocalDay()
   const navigate = useNavigate()
   const accountQuery = useCurrentAccount()
-  const query = useRoutines(childId, kind, day)
+  const childQuery = useRoutines(personal ? undefined : childId, kind, day)
+  const personalQuery = usePersonalRoutines(personal ? accountQuery.data?.id : undefined, kind, day)
+  const query = personal ? personalQuery : childQuery
   const list = query.data
-  const access = useRoutineAccess(accountQuery.data, childId, list?.paidPlan)
+  const childAccess = useRoutineAccess(accountQuery.data, personal ? undefined : childId, list?.paidPlan)
+  // The person's own: their plan (or their paid family's) decides, never a role (specs/033 part 3).
+  const access = personal ? { canCreate: list?.paidPlan === true, showPlan: list?.paidPlan === false } : childAccess
   const [planOpen, setPlanOpen] = useState(false)
   const opener = useRef<HTMLButtonElement>(null)
   const closePlan = useCallback(() => setPlanOpen(false), [])
   const desktop = variant === 'desktop'
 
+  const name = personal ? (kind === 'activity' ? MY_DAY.myActivities : MY_DAY.mySupplements) : kind === 'activity' ? CHILD.activities : CHILD.supplements
   const title = (
     <h2 className={`flex min-h-11 items-center font-extrabold text-ink ${desktop ? 'text-[19px]' : 'text-[18px]'}`}>
-      {kind === 'activity' ? CHILD.activities : CHILD.supplements}
+      {name}
     </h2>
   )
   const body = () => {
     if (query.isPending) return <p className="text-[15px] text-muted">Cargando…</p>
-    if (query.isError || !list) return <p className="text-[15px] text-body">{copy.loadFailed}</p>
+    if (query.isError || !list) return <p className="text-[15px] text-body">{personal ? copy.personalLoadFailed : copy.loadFailed}</p>
     const routines = [...list.routines].sort((a, b) => Number(b.status === 'active') - Number(a.status === 'active'))
     const atCap = list.activeCount >= list.limit
     return (
@@ -84,11 +104,11 @@ export function RegistroCompacto({ kind, childId, sectionId, variant }: { kind: 
             ))}
           </div>
         ) : (
-          <p className="text-[15px] text-muted">{emptyRoutines(kind)}</p>
+          <p className="text-[15px] text-muted">{personal ? (kind === 'activity' ? MY_DAY.emptyActivities : MY_DAY.emptySupplements) : emptyRoutines(kind)}</p>
         )}
         {access.canCreate && !atCap && (
           <Link
-            to={copy.newPath(childId)}
+            to={copy.newPath(personal ? null : (childId ?? null))}
             className={`inline-flex items-center justify-center border-2 border-dashed border-hint-border text-[15px] font-extrabold text-action hover:bg-hint ${desktop ? 'min-h-11 self-start rounded-[14px] px-[18px]' : 'min-h-[52px] rounded-2xl'}`}
           >
             {addRoutine(kind)}
@@ -111,7 +131,7 @@ export function RegistroCompacto({ kind, childId, sectionId, variant }: { kind: 
   }
 
   return (
-    <section id={sectionId} aria-label={kind === 'activity' ? CHILD.activities : CHILD.supplements} className={`flex scroll-mt-16 flex-col ${desktop ? 'gap-3' : 'gap-2.5'}`}>
+    <section id={sectionId} aria-label={name} className={`flex scroll-mt-16 flex-col ${desktop ? 'gap-3' : 'gap-2.5'}`}>
       {title}
       {body()}
       {planOpen && <FreemiumLimitModal reason="supplements" onStayFree={closePlan} onViewPlans={() => navigate('/planes')} opener={opener} />}

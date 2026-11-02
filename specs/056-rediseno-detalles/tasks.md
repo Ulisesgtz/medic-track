@@ -156,17 +156,17 @@ rompen con apóstrofes: escribir los scripts con la herramienta de escritura); n
 **Objetivo**: una sola página personal en `/mi-dia`.
 **Prueba independiente**: «Ver todo» lleva a «Mi día»; se marca y se crea desde ahí; las direcciones viejas redirigen.
 
-- [ ] T030 [P] [US4] Crear `frontend/src/features/supplements/myDayText.ts` (+ prueba de redacción): «Mi día», «Solo tú ves
+- [x] T030 [P] [US4] Crear `frontend/src/features/supplements/myDayText.ts` (+ prueba de redacción): «Mi día», «Solo tú ves
   esto», «Agregar mi primer suplemento», «Agregar una actividad», «Cómo funcionan»
-- [ ] T031 [US4] Crear `frontend/src/features/supplements/MyDayPage.tsx` (research R8): `PageHeader` H5 → «Hoy» (tomas por
+- [x] T031 [US4] Crear `frontend/src/features/supplements/MyDayPage.tsx` (research R8): `PageHeader` H5 → «Hoy» (tomas por
   Mañana / Tarde / Noche y actividades, con los datos de `usePersonalRoutines`) → `SectionIndex` (Suplementos · Actividades) →
   `MisRegistroSeccion` de cada tipo; sin nada creado, «Agregar mi primer suplemento» sólido dentro de «Hoy» y la actividad con
   contorno; «Cómo funcionan» como enlace después de la primera vez; ambos diseños (+ pruebas)
-- [ ] T032 [US4] `frontend/src/App.tsx`: ruta `/mi-dia`; `/mis-suplementos` y `/mis-actividades` → `<Navigate to="/mi-dia#…"
+- [x] T032 [US4] `frontend/src/App.tsx`: ruta `/mi-dia`; `/mis-suplementos` y `/mis-actividades` → `<Navigate to="/mi-dia#…"
   replace />`; el «← …» de una rutina personal dice «← Mi día» (`RoutineDetailPage`, `RoutineFormPage`); «Ver todo» de
   `frontend/src/features/home/TuDia.tsx` y la entrada única «Mi día» de `ChildrenSidebar.tsx`; retirar `PersonalRoutinesPage.tsx`
   si queda sin uso
-- [ ] T033 [US4] E2E `frontend/e2e/mi-dia.spec.ts` (Chromium, 390 y 1280 px) y ajustar `suplementos-personales.spec.ts`,
+- [x] T033 [US4] E2E `frontend/e2e/mi-dia.spec.ts` (Chromium, 390 y 1280 px) y ajustar `suplementos-personales.spec.ts`,
   `actividades.spec.ts` e `inicio.spec.ts` a «Mi día»
 
 **Commit**: «feat(056): Mi día (US4)»

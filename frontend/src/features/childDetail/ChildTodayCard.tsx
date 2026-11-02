@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { formatTime } from '../../shared/date'
 import { DayIcon } from '../../shared/ui/DayRow'
 import { useLocalDay } from '../../shared/useLocalDay'
@@ -191,37 +191,65 @@ function Skeleton({ variant }: { variant: Variant }) {
  */
 export function ChildTodayCard({ childId, childName, variant }: { childId: string; childName: string; variant: Variant }) {
   const { day, overview, activities, isPending, isError, refetch } = useChildDay(childId)
+  return (
+    <TodayCardView
+      variant={variant}
+      pending={isPending || !day || !overview}
+      failed={isError ? { text: loadFailedDay(childName), onRetry: refetch } : null}
+      doses={overview?.doses ?? []}
+      activities={activities ?? []}
+      toMark={day?.toMark ?? 0}
+    />
+  )
+}
+
+interface TodayCardViewProps {
+  variant: Variant
+  pending: boolean
+  /** The sentence and the retry when the day couldn't be read. */
+  failed: { text: string; onRetry: () => void } | null
+  /** The doses of the day (medications and supplements), each markable here. */
+  doses: OverviewDose[]
+  activities: Routine[]
+  /** What came and nobody marked, activities included: the amber chip (the server's `status` only). */
+  toMark: number
+  /** What «Hoy» says when there is nothing (by default «Hoy no hay tomas ni actividades»); «Mi día» puts its first steps here. */
+  empty?: ReactNode
+}
+
+/** «Hoy» itself, from the doses and the activities it is given: the child's detail and «Mi día» (specs/056, designs A and B). */
+export function TodayCardView({ variant, pending, failed, doses: all, activities, toMark, empty: emptyContent }: TodayCardViewProps) {
   const desktop = variant === 'desktop'
 
-  if (isError)
+  if (failed)
     return (
       <section aria-label={CHILD.today} className={`${card} flex flex-col items-start gap-3 ${desktop ? 'px-6 py-[22px]' : 'p-4'}`}>
         <h2 className={`font-extrabold text-ink ${desktop ? 'text-[21px]' : 'text-[20px]'}`}>{CHILD.today}</h2>
         <p role="alert" className="text-[15px] text-body">
-          {loadFailedDay(childName)}
+          {failed.text}
         </p>
-        <button type="button" onClick={refetch} className={`${outline} px-5`}>
+        <button type="button" onClick={failed.onRetry} className={`${outline} px-5`}>
           {CHILD.retry}
         </button>
       </section>
     )
-  if (isPending || !day || !overview) return <Skeleton variant={variant} />
+  if (pending) return <Skeleton variant={variant} />
 
-  const doses = overview.doses.filter((d) => d.status !== 'canceled')
+  const doses = all.filter((d) => d.status !== 'canceled')
   const groups = groupByPeriod(doses)
   const unregistered = doses.filter((d) => d.status === 'unregistered' && !d.taken).length
-  const active = (activities ?? []).filter((r) => r.kind === 'activity' && r.status === 'active' && r.doses.length > 0)
+  const active = activities.filter((r) => r.kind === 'activity' && r.status === 'active' && r.doses.length > 0)
   const anything = doses.length > 0 || active.length > 0
 
   const chips = (
     <>
-      {day.toMark > 0 && (
+      {toMark > 0 && (
         <span className={`${chip} inline-flex items-center gap-1.5 bg-pending-soft px-3 py-[5px] text-on-pending-chip`}>
           <span aria-hidden="true" className="h-[9px] w-[9px] rounded-full border-2 border-pending-dot" />
-          {toMarkChip(day.toMark)}
+          {toMarkChip(toMark)}
         </span>
       )}
-      {anything && day.toMark === 0 && unregistered === 0 && (
+      {anything && toMark === 0 && unregistered === 0 && (
         <span className={`${chip} bg-confirmed-soft px-3 py-[5px] text-confirmed-strong`}>{CHILD.allMarked}</span>
       )}
       {unregistered > 0 && (
@@ -230,13 +258,13 @@ export function ChildTodayCard({ childId, childName, variant }: { childId: strin
     </>
   )
   const total = doses.length > 0 && dosesToday(doses.length)
-  const empty = !anything && (
+  const empty = !anything && (emptyContent ?? (
     <p
       className={`rounded-2xl border-2 border-dashed border-hint-border text-center text-muted ${desktop ? 'p-[22px] text-[16px]' : 'px-4 py-[18px] text-[15px] leading-normal'}`}
     >
       {CHILD.nothingToday}
     </p>
-  )
+  ))
   const groupList = (cls: string) =>
     groups.map((g) => (
       <div key={g.key} role="group" aria-label={g.label} className={`flex min-w-0 flex-col ${cls}`}>

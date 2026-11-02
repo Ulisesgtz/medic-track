@@ -302,24 +302,23 @@ for (const design of designs) {
   test.describe(`Actividades personales, ${design.name}`, () => {
     test.use({ viewport: design.viewport })
 
-    test('the person finds «Mis actividades» from the home, adds one, marks «Realizado» from the home and nobody else in the family sees it', async ({ page, browser }) => {
+    test('the person finds «Mi día» from the home, adds an activity, marks «Realizado» from the home and nobody else in the family sees it', async ({ page, browser }) => {
       await allowClerkOn(page)
       const owner = await seedChild(page, { withConsultation: false })
       const request = page.context().request
       await page.goto('/home')
       const main = page.getByRole('main')
 
-      // specs/055: with nothing created «Tu día» is one line with the way in (to «Mis suplementos»); the web sidebar has both.
+      // specs/056: «Tu día» leads to «Mi día» (the web sidebar too); with nothing created, «Hoy» offers the activity with outline.
       await expect(main.getByRole('link', { name: 'Agrega tus propios suplementos o actividades' })).toBeVisible()
-      if (design.isWeb) await page.getByRole('navigation', { name: 'Personal' }).getByRole('link', { name: 'Mis actividades' }).click()
-      else await page.goto('/mis-actividades')
+      if (design.isWeb) await page.getByRole('navigation', { name: 'Personal' }).getByRole('link', { name: 'Mi día' }).click()
+      else await main.getByRole('link', { name: 'Agrega tus propios suplementos o actividades' }).click()
 
-      await expect(page).toHaveURL(/\/mis-actividades$/)
-      await expect(page.getByRole('heading', { name: 'Mis actividades', level: 1 })).toBeVisible()
-      await expect(page.getByText('Solo tú ves estas actividades y solo a ti te llegan los avisos.')).toBeVisible()
-      await expect(page.getByRole('heading', { name: 'Aún no tienes actividades' })).toBeVisible()
-      await page.getByRole('button', { name: 'Entendido' }).click()
-      await page.getByRole('link', { name: '+ Agregar actividad' }).click()
+      await expect(page).toHaveURL(/\/mi-dia$/)
+      await expect(page.getByRole('heading', { name: 'Mi día', level: 1 })).toBeVisible()
+      await expect(page.getByText('Solo tú ves esto')).toBeVisible()
+      await page.getByRole('note').getByRole('button', { name: 'Entendido' }).click()
+      await page.getByRole('link', { name: 'Agregar una actividad' }).click()
 
       await expect(page.getByText('Es una actividad personal: solo tú la ves y solo a ti te llegan sus avisos.')).toBeVisible()
       await expect(page.getByText('Solo la ves tú.')).toBeVisible()
@@ -366,7 +365,10 @@ for (const design of designs) {
       await setAccountPlan(owner.accountId, 'free')
 
       await page.goto('/mis-actividades')
-      await expect(page.getByText('Tu cuenta está en el plan gratuito')).toBeVisible()
+      await expect(page).toHaveURL(/\/mi-dia#actividades$/)
+      const acts = page.getByRole('region', { name: 'Mis actividades' })
+      await expect(acts.getByRole('link').filter({ hasText: 'Pararse a estirar' })).toBeVisible()
+      await expect(acts.getByRole('button', { name: /Agregar actividades/ })).toContainText('Plan completo')
       await expect(page.getByRole('link', { name: '+ Agregar actividad' })).toHaveCount(0)
       await page.goto(`/actividades/${activity.id}`)
       await expect(page.getByText(/Con el plan gratuito puedes ver la actividad y marcar «Realizado»/)).toBeVisible()

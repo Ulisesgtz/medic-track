@@ -47,27 +47,30 @@ for (const design of designs) {
       // specs/055: «Tu día» comes first; with nothing created it is one line with the way in.
       const addOwn = main.getByRole('link', { name: 'Agrega tus propios suplementos o actividades' })
       await expect(addOwn).toBeVisible()
-      if (design.isWeb) await expect(page.getByRole('navigation', { name: 'Personal' }).getByRole('link', { name: 'Mis suplementos' })).toBeVisible()
+      if (design.isWeb) await expect(page.getByRole('navigation', { name: 'Personal' }).getByRole('link', { name: 'Mi día' })).toBeVisible()
       await expectNoHorizontalScroll(page)
       await addOwn.click()
 
-      // First time: the notice sits in the page; «Entendido» is kept for the account, so a reload doesn't bring it back.
-      await expect(page).toHaveURL(/\/mis-suplementos$/)
-      await expect(page.getByRole('heading', { name: 'Mis suplementos', level: 1 })).toBeVisible()
-      await expect(page.getByText('Antes de empezar')).toBeVisible()
-      await expect(page.getByText(/No sugiere suplementos ni opina sobre ellos/)).toBeVisible()
-      await expect(page.getByRole('heading', { name: 'Aún no tienes suplementos' })).toBeVisible()
-      await page.getByRole('button', { name: 'Entendido' }).click()
-      await expect(page.getByText('Antes de empezar')).toHaveCount(0)
+      // specs/056: «Mi día». With nothing created «Hoy» has the first steps and «Cómo funcionan» is open; «Entendido» is kept
+      // for the account, so a reload brings only the link back.
+      await expect(page).toHaveURL(/\/mi-dia$/)
+      await expect(page.getByRole('heading', { name: 'Mi día', level: 1 })).toBeVisible()
+      await expect(page.getByText('Solo tú ves esto')).toBeVisible()
+      const note = page.getByRole('note').filter({ hasText: 'Cómo funcionan' })
+      await expect(note.getByText(/PediTrack no sugiere suplementos ni opina sobre ellos/)).toBeVisible()
+      await expect(page.getByRole('region', { name: 'Hoy' }).getByText(/Aquí verás tus tomas y actividades del día/)).toBeVisible()
+      await note.getByRole('button', { name: 'Entendido' }).click()
+      await expect(note).toHaveCount(0)
       await page.reload()
-      await expect(page.getByRole('heading', { name: 'Aún no tienes suplementos' })).toBeVisible()
-      await expect(page.getByText('Antes de empezar')).toHaveCount(0)
-      await page.getByRole('button', { name: 'Cómo funcionan los suplementos' }).click()
-      await expect(page.getByText('Antes de empezar')).toBeVisible()
-      await page.getByRole('button', { name: 'Entendido' }).click()
+      await expect(page.getByRole('heading', { name: 'Mi día', level: 1 })).toBeVisible()
+      await expect(note).toHaveCount(0)
+      await page.getByRole('button', { name: 'Cómo funcionan' }).click()
+      await expect(note).toBeVisible()
+      await note.getByRole('button', { name: 'Entendido' }).click()
+      await expectNoHorizontalScroll(page)
 
       // The form: personal wording, no example in the fields.
-      await page.getByRole('link', { name: '+ Agregar suplemento' }).click()
+      await page.getByRole('link', { name: 'Agregar mi primer suplemento' }).click()
       await expect(page.getByRole('heading', { name: 'Agregar suplemento', level: 1 })).toBeVisible()
       await expect(page.getByText('Es un suplemento personal: solo tú lo ves y solo a ti te llegan sus avisos.')).toBeVisible()
       await expect(page.getByText('Solo la ves tú.')).toBeVisible()
@@ -97,7 +100,8 @@ for (const design of designs) {
 
       // Pausing needs no confirmation; finishing asks first, in its own words, and is for good.
       await tuDia.getByRole('link', { name: 'Ver todo' }).click()
-      await page.getByRole('link', { name: 'Ver suplemento Omega 3' }).click()
+      await expect(page).toHaveURL(/\/mi-dia$/)
+      await page.getByRole('region', { name: 'Mis suplementos' }).getByRole('link').filter({ hasText: 'Omega 3' }).click()
       await page.getByRole('button', { name: 'Pausar' }).click()
       await expect(page.getByText('Pausado', { exact: true })).toBeVisible()
       await page.getByRole('button', { name: 'Reanudar' }).click()
@@ -117,17 +121,17 @@ for (const design of designs) {
       const guest = await secondPerson(browser, design)
       await acceptViaApi(guest.context.request, guest.token, await inviteViaApi(request, owner.token, guest.email, 'caregiver'))
 
-      // The owner sees it in the section and not in the child's.
+      // The owner sees it in «Mi día» (an old «Mis suplementos» address still lands there) and not in the child's.
       await page.goto('/mis-suplementos')
+      await expect(page).toHaveURL(/\/mi-dia#suplementos$/)
       await expect(page.getByText('Omega privado').first()).toBeVisible()
       await page.goto(`/children/${owner.childId}`)
       await expect(page.getByRole('main').getByText('Omega privado')).toHaveCount(0)
 
-      // A caregiver of the same family sees nothing of it: not in the section, not by its address, not through the API.
-      await guest.page.goto('/mis-suplementos')
-      await expect(guest.page.getByRole('heading', { name: 'Aún no tienes suplementos' })).toBeVisible()
+      // A caregiver of the same family sees nothing of it: not in «Mi día», not by its address, not through the API.
+      await guest.page.goto('/mi-dia')
+      await expect(guest.page.getByRole('link', { name: 'Agregar mi primer suplemento' })).toBeVisible()
       await expect(guest.page.getByText('Omega privado')).toHaveCount(0)
-      await expect(guest.page.getByText('Los usas con el plan completo de la familia a la que te invitaron. Nadie de esa familia los ve.')).toBeVisible()
       await guest.page.goto(`/suplementos/${routine.id}`)
       await expect(guest.page.getByText('No se encontró este suplemento.')).toBeVisible()
       await guest.page.goto('/home')
@@ -147,27 +151,28 @@ for (const design of designs) {
       }
 
       // The caregiver, invited to a paid family, creates their own with that family's plan; the owner never sees it.
-      await guest.page.goto('/mis-suplementos')
-      await guest.page.getByRole('link', { name: '+ Agregar suplemento' }).click()
+      await guest.page.goto('/mi-dia')
+      await guest.page.getByRole('link', { name: 'Agregar mi primer suplemento' }).click()
       await guest.page.getByLabel('Nombre').fill('Magnesio de Luis')
       await pickTime(guest.page, 'Hora', '08:00')
       await guest.page.getByRole('button', { name: 'Guardar suplemento' }).click()
       await expect(guest.page.getByRole('heading', { name: 'Magnesio de Luis', level: 1 })).toBeVisible()
-      await page.goto('/mis-suplementos')
+      await page.goto('/mi-dia')
+      await expect(page.getByText('Omega privado').first()).toBeVisible()
       await expect(page.getByText('Magnesio de Luis')).toHaveCount(0)
       const rows = await queryDb<{ account_id: string; child_id: string | null }>('SELECT account_id, child_id FROM supplement_routines WHERE name = $1 AND account_id = $2', ['Magnesio de Luis', guest.accountId])
       expect(rows).toEqual([{ account_id: guest.accountId, child_id: null }])
       await guest.context.close()
     })
 
-    test('on the free plan the section offers the plan; what was created while paid stays, is markable, and only finishing is left', async ({ page }) => {
+    test('on the free plan «Mi día» offers the plan; what was created while paid stays, is markable, and only finishing is left', async ({ page }) => {
       await allowClerkOn(page)
       const owner = await seedChild(page, { withConsultation: false, plan: 'free' })
       const request = page.context().request
 
-      await page.goto('/mis-suplementos')
-      await expect(page.getByRole('heading', { name: 'Tus suplementos' })).toBeVisible()
-      await expect(page.getByRole('link', { name: '+ Agregar suplemento' })).toHaveCount(0)
+      await page.goto('/mi-dia')
+      await expect(page.getByRole('region', { name: 'Plan completo: Suplementos y actividades' })).toBeVisible()
+      await expect(page.getByRole('link', { name: 'Agregar mi primer suplemento' })).toHaveCount(0)
       const { day, offset } = localToday()
       const refused = await request.post(`${API}/accounts/${owner.accountId}/routines`, {
         data: { name: 'x', period: 'daily', times: ['08:00'], firstDate: day, utcOffsetMinutes: offset },
@@ -180,9 +185,10 @@ for (const design of designs) {
       const routine = await personalRoutineViaApi(request, owner.token, owner.accountId)
       await setAccountPlan(owner.accountId, 'free')
       await page.reload()
-      await expect(page.getByText('Tu cuenta está en el plan gratuito')).toBeVisible()
+      const sups = page.getByRole('region', { name: 'Mis suplementos' })
+      await expect(sups.getByRole('button', { name: /Agregar suplementos/ })).toContainText('Plan completo')
       await expect(page.getByRole('link', { name: '+ Agregar suplemento' })).toHaveCount(0)
-      const chip = page.getByRole('button', { name: 'Toma de 08:00', exact: true }).first()
+      const chip = page.getByRole('region', { name: 'Hoy' }).getByRole('button', { name: 'Marcar Omega 3 de las 08:00' })
       await chip.click()
       await expect(chip).toHaveAttribute('aria-pressed', 'true')
 
@@ -201,15 +207,15 @@ for (const design of designs) {
       const routines = []
       for (let i = 1; i <= 10; i++) routines.push(await personalRoutineViaApi(request, owner.token, owner.accountId, { name: `Suplemento ${i}` }))
 
-      await page.goto('/mis-suplementos')
-      await expect(page.getByRole('status').getByText('Ya tienes 10 suplementos activos')).toBeVisible()
+      await page.goto('/mi-dia')
+      await expect(page.getByText('Ya tienes 10 suplementos activos')).toBeVisible()
       await expect(page.getByRole('link', { name: '+ Agregar suplemento' })).toHaveCount(0)
       await expectNoHorizontalScroll(page)
 
       await page.goto(`/suplementos/${routines[0].id}`)
       await page.getByRole('button', { name: 'Pausar' }).click()
       await expect(page.getByText('Pausado', { exact: true })).toBeVisible()
-      await page.goto('/mis-suplementos')
+      await page.goto('/mi-dia')
       await expect(page.getByRole('link', { name: '+ Agregar suplemento' })).toBeVisible()
     })
   })
