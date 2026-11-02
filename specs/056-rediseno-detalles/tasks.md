@@ -180,10 +180,10 @@ rompen con apóstrofes: escribir los scripts con la herramienta de escritura); n
 - [x] T035 [P] Documentar: entrada de la spec 056 en `CLAUDE.md`; `frontend/CLAUDE.md` (`PageHeader`, `StickyActionBar`,
   `SectionIndex`, `childDetail/`, «Mi día», el detalle de la consulta, las rutas; quitar `AppHeader` y `PersonalRoutinesPage`);
   estado de `spec.md` → «Implementada»
-- [ ] T036 Verificación completa: `npx tsc --noEmit`, `npx eslint .`, `npx vitest run --coverage --testTimeout=30000
+- [x] T036 Verificación completa: `npx tsc --noEmit`, `npx eslint .`, `npx vitest run --coverage --testTimeout=30000
   --maxWorkers=4` (> 90 %), `npm run build`, `npx playwright test --list`
-- [ ] T037 `/code-review` del diff de la rama (de verdad, con la skill) y aplicar lo que salga
-- [ ] T038 Push y PR a `develop` **solo cuando el dueño lo pida** (después de fusionar la 055, rebasar sobre `develop`)
+- [x] T037 `/code-review` del diff de la rama (de verdad, con la skill) y aplicar lo que salga
+- [x] T038 Push y PR a `develop` **solo cuando el dueño lo pida** (después de fusionar la 055, rebasar sobre `develop`)
 
 **Commit**: «feat(056): medidas, desviaciones y docs»
 
