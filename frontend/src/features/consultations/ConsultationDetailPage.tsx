@@ -240,7 +240,7 @@ export function ConsultationDetailPage() {
           to={subject ? newConsultationHref(subject) : '/home'}
           // specs/030 for a child (a treatment still running); specs/058 for one's own (the paid plan's).
           blocked={access.isFree && (subject?.kind === 'person' || (treatment !== undefined && treatment !== null))}
-          className="min-h-[52px] cursor-pointer rounded-2xl bg-confirmed px-6 text-[16px] font-extrabold text-white transition-colors hover:bg-emerald-800"
+          className="inline-flex min-h-[52px] cursor-pointer items-center justify-center rounded-2xl bg-confirmed px-6 text-[16px] font-extrabold text-white transition-colors hover:bg-emerald-800"
         >
           {DETAIL.newConsultation}
         </NewConsultationEntry>
