@@ -28,7 +28,7 @@ incluye las suyas.
 **Propósito**: el esquema que todo lo demás usa. Aplicarla en la base local; **mostrarle al usuario el SQL completo** para
 aplicarlo en DEV antes del merge.
 
-- [ ] T001 Escribir `backend/migrations/0032_own_consultations.sql` en una transacción (`BEGIN; … COMMIT;`, comentarios en español
+- [X] T001 Escribir `backend/migrations/0032_own_consultations.sql` en una transacción (`BEGIN; … COMMIT;`, comentarios en español
   sin acentos como las demás), en este orden:
   - `consultations`: `ADD COLUMN account_id UUID REFERENCES accounts (id)`; `UPDATE consultations c SET account_id = ch.account_id
     FROM children ch WHERE ch.id = c.child_id`; `ALTER COLUMN account_id SET NOT NULL`; `ALTER COLUMN child_id DROP NOT NULL`;
@@ -45,12 +45,12 @@ aplicarlo en DEV antes del merge.
     changed_at TIMESTAMPTZ NOT NULL DEFAULT now())`.
   - `CREATE TABLE own_consultation_reminder_optins (consultation_id UUID NOT NULL REFERENCES consultations (id), account_id UUID
     NOT NULL REFERENCES accounts (id), created_at TIMESTAMPTZ NOT NULL DEFAULT now(), PRIMARY KEY (consultation_id, account_id))`.
-- [ ] T002 Aplicar la `0032` a la base local (`psql "$DATABASE_URL" -f backend/migrations/0032_own_consultations.sql`) y
+- [X] T002 Aplicar la `0032` a la base local (`psql "$DATABASE_URL" -f backend/migrations/0032_own_consultations.sql`) y
   comprobar `SELECT count(*) FROM consultations WHERE account_id IS NULL` = 0.
-- [ ] T003 [P] Prueba de la migración en `backend/internal/consultation/migration_0032_test.go`: cada consulta de un hijo tiene el
+- [X] T003 [P] Prueba de la migración en `backend/internal/consultation/migration_0032_test.go`: cada consulta de un hijo tiene el
   `account_id` de su hijo; un `INSERT` de una consulta de un hijo con el `account_id` de otra cuenta falla (llave compuesta); un
   síntoma o una cita con `(consultation_id, account_id)` que no coincide con su consulta falla; una consulta sin hijo se inserta.
-- [ ] T004 Agregar la `0032` a la lista de migraciones de `backend/CLAUDE.md` y de los pasos de CI (`.github/workflows/ci.yml`, si
+- [X] T004 Agregar la `0032` a la lista de migraciones de `backend/CLAUDE.md` y de los pasos de CI (`.github/workflows/ci.yml`, si
   ahí se aplican una por una); commit de la fase; **mostrar al usuario el SQL completo de la `0032`** para aplicarlo en DEV.
 
 ---
