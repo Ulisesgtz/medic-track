@@ -1,8 +1,9 @@
 # Contrato del API: Consultas del titular
 
 Todas las rutas detrás de `RequireSession`, escritas por `*httpx.Responder`, ninguna bajo `/child-device`. Los textos libres
-(doctor, notas, medicamentos, texto de búsqueda) solo viajan en cuerpos JSON. Un `accountId` mal formado o sin acceso = 404
-(la misma respuesta que una persona que no existe).
+(doctor, notas, medicamentos, texto de búsqueda) solo viajan en cuerpos JSON. Sin acceso, la guarda responde **403**, la misma
+respuesta que para una persona o consulta que no existe (como todas las rutas con nivel, spec 032); un `accountId` mal formado
+llega al handler y es 404.
 
 ## Rutas nuevas con `{accountId}`
 

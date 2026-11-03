@@ -249,7 +249,7 @@ y recibir su recordatorio; ningún hijo la muestra (quickstart 1–3, 10–12).
   `/mi-dia` → `/yo`; crear una consulta propia y marcar una toma; no aparece en el detalle del hijo; compartir con un Tutor (dos
   sesiones como `familia.spec.ts`): la ve y marca, no edita; un Cuidador no la ve; apagar y el Tutor deja de verla; plan gratuito
   ve el aviso. Actualizar `mi-dia.spec.ts`, `suplementos-personales.spec.ts`, `actividades.spec.ts` e `inicio.spec.ts` a `/yo`.
-- [ ] T051 [P] Documentación: `CLAUDE.md` raíz (entrada de la spec 058), `backend/CLAUDE.md` (`consultations.account_id`, el
+- [X] T051 [P] Documentación: `CLAUDE.md` raíz (entrada de la spec 058), `backend/CLAUDE.md` (`consultations.account_id`, el
   acceso a lo propio, las rutas nuevas, `0032`, `ownership` ya no es «consultations have no account_id»), `frontend/CLAUDE.md`
   (`/yo`, `Subject`, `features/profile`), `BACKLOG.md` (quitar la entrada del titular; anotar el aviso de privacidad pendiente del
   dueño), nota en `specs/004-…/spec.md` si hace falta.
