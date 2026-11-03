@@ -47,14 +47,14 @@ for (const design of designs) {
       // specs/055: «Tu día» comes first; with nothing created it is one line with the way in.
       const addOwn = main.getByRole('link', { name: 'Agrega tus propios suplementos o actividades' })
       await expect(addOwn).toBeVisible()
-      if (design.isWeb) await expect(page.getByRole('navigation', { name: 'Personal' }).getByRole('link', { name: 'Mi día' })).toBeVisible()
+      if (design.isWeb) await expect(page.getByRole('navigation', { name: 'Personal' }).getByRole('link', { name: 'Mi perfil' })).toBeVisible()
       await expectNoHorizontalScroll(page)
       await addOwn.click()
 
       // specs/056: «Mi día». With nothing created «Hoy» has the first steps and «Cómo funcionan» is open; «Entendido» is kept
       // for the account, so a reload brings only the link back.
-      await expect(page).toHaveURL(/\/mi-dia$/)
-      await expect(page.getByRole('heading', { name: 'Mi día', level: 1 })).toBeVisible()
+      await expect(page).toHaveURL(/\/yo$/)
+      await expect(page.getByRole('heading', { name: 'Ana', level: 1 })).toBeVisible()
       await expect(page.getByText('Solo tú ves esto')).toBeVisible()
       const note = page.getByRole('note').filter({ hasText: 'Cómo funcionan' })
       await expect(note.getByText(/PediTrack no sugiere suplementos ni opina sobre ellos/)).toBeVisible()
@@ -62,7 +62,7 @@ for (const design of designs) {
       await note.getByRole('button', { name: 'Entendido' }).click()
       await expect(note).toHaveCount(0)
       await page.reload()
-      await expect(page.getByRole('heading', { name: 'Mi día', level: 1 })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Ana', level: 1 })).toBeVisible()
       await expect(note).toHaveCount(0)
       await page.getByRole('button', { name: 'Cómo funcionan' }).click()
       await expect(note).toBeVisible()
@@ -100,7 +100,7 @@ for (const design of designs) {
 
       // Pausing needs no confirmation; finishing asks first, in its own words, and is for good.
       await tuDia.getByRole('link', { name: 'Ver todo' }).click()
-      await expect(page).toHaveURL(/\/mi-dia$/)
+      await expect(page).toHaveURL(/\/yo$/)
       await page.getByRole('region', { name: 'Mis suplementos' }).getByRole('link').filter({ hasText: 'Omega 3' }).click()
       await page.getByRole('button', { name: 'Pausar' }).click()
       await expect(page.getByText('Pausado', { exact: true })).toBeVisible()
@@ -123,13 +123,13 @@ for (const design of designs) {
 
       // The owner sees it in «Mi día» (an old «Mis suplementos» address still lands there) and not in the child's.
       await page.goto('/mis-suplementos')
-      await expect(page).toHaveURL(/\/mi-dia#suplementos$/)
+      await expect(page).toHaveURL(/\/yo#suplementos$/)
       await expect(page.getByText('Omega privado').first()).toBeVisible()
       await page.goto(`/children/${owner.childId}`)
       await expect(page.getByRole('main').getByText('Omega privado')).toHaveCount(0)
 
       // A caregiver of the same family sees nothing of it: not in «Mi día», not by its address, not through the API.
-      await guest.page.goto('/mi-dia')
+      await guest.page.goto('/yo')
       await expect(guest.page.getByRole('link', { name: 'Agregar mi primer suplemento' })).toBeVisible()
       await expect(guest.page.getByText('Omega privado')).toHaveCount(0)
       await guest.page.goto(`/suplementos/${routine.id}`)
@@ -151,13 +151,13 @@ for (const design of designs) {
       }
 
       // The caregiver, invited to a paid family, creates their own with that family's plan; the owner never sees it.
-      await guest.page.goto('/mi-dia')
+      await guest.page.goto('/yo')
       await guest.page.getByRole('link', { name: 'Agregar mi primer suplemento' }).click()
       await guest.page.getByLabel('Nombre').fill('Magnesio de Luis')
       await pickTime(guest.page, 'Hora', '08:00')
       await guest.page.getByRole('button', { name: 'Guardar suplemento' }).click()
       await expect(guest.page.getByRole('heading', { name: 'Magnesio de Luis', level: 1 })).toBeVisible()
-      await page.goto('/mi-dia')
+      await page.goto('/yo')
       await expect(page.getByText('Omega privado').first()).toBeVisible()
       await expect(page.getByText('Magnesio de Luis')).toHaveCount(0)
       const rows = await queryDb<{ account_id: string; child_id: string | null }>('SELECT account_id, child_id FROM supplement_routines WHERE name = $1 AND account_id = $2', ['Magnesio de Luis', guest.accountId])
@@ -170,7 +170,7 @@ for (const design of designs) {
       const owner = await seedChild(page, { withConsultation: false, plan: 'free' })
       const request = page.context().request
 
-      await page.goto('/mi-dia')
+      await page.goto('/yo')
       await expect(page.getByRole('region', { name: 'Plan completo: Suplementos y actividades' })).toBeVisible()
       await expect(page.getByRole('link', { name: 'Agregar mi primer suplemento' })).toHaveCount(0)
       const { day, offset } = localToday()
@@ -207,7 +207,7 @@ for (const design of designs) {
       const routines = []
       for (let i = 1; i <= 10; i++) routines.push(await personalRoutineViaApi(request, owner.token, owner.accountId, { name: `Suplemento ${i}` }))
 
-      await page.goto('/mi-dia')
+      await page.goto('/yo')
       await expect(page.getByText('Ya tienes 10 suplementos activos')).toBeVisible()
       await expect(page.getByRole('link', { name: '+ Agregar suplemento' })).toHaveCount(0)
       await expectNoHorizontalScroll(page)
@@ -215,7 +215,7 @@ for (const design of designs) {
       await page.goto(`/suplementos/${routines[0].id}`)
       await page.getByRole('button', { name: 'Pausar' }).click()
       await expect(page.getByText('Pausado', { exact: true })).toBeVisible()
-      await page.goto('/mi-dia')
+      await page.goto('/yo')
       await expect(page.getByRole('link', { name: '+ Agregar suplemento' })).toBeVisible()
     })
   })

@@ -245,7 +245,7 @@ y recibir su recordatorio; ningún hijo la muestra (quickstart 1–3, 10–12).
 - [X] T049 Subir `account.CurrentDisclaimerVersion` (`backend/internal/account/disclaimer.go`, fecha del día) y el texto de
   `frontend/src/features/home/WelcomeDisclaimer.tsx` (la app también registra la salud de la persona de la cuenta; se comparte
   solo si ella lo decide); actualizar su prueba de redacción y lo que compare la versión.
-- [ ] T050 [P] E2E `frontend/e2e/consultas-del-titular.spec.ts` (Chromium, 390 y 1280 px, con los helpers de `e2e/helpers.ts`):
+- [X] T050 [P] E2E `frontend/e2e/consultas-del-titular.spec.ts` (Chromium, 390 y 1280 px, con los helpers de `e2e/helpers.ts`):
   `/mi-dia` → `/yo`; crear una consulta propia y marcar una toma; no aparece en el detalle del hijo; compartir con un Tutor (dos
   sesiones como `familia.spec.ts`): la ve y marca, no edita; un Cuidador no la ve; apagar y el Tutor deja de verla; plan gratuito
   ve el aviso. Actualizar `mi-dia.spec.ts`, `suplementos-personales.spec.ts`, `actividades.spec.ts` e `inicio.spec.ts` a `/yo`.
