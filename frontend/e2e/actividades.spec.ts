@@ -311,11 +311,11 @@ for (const design of designs) {
 
       // specs/056: «Tu día» leads to «Mi día» (the web sidebar too); with nothing created, «Hoy» offers the activity with outline.
       await expect(main.getByRole('link', { name: 'Agrega tus propios suplementos o actividades' })).toBeVisible()
-      if (design.isWeb) await page.getByRole('navigation', { name: 'Personal' }).getByRole('link', { name: 'Mi día' }).click()
+      if (design.isWeb) await page.getByRole('navigation', { name: 'Personal' }).getByRole('link', { name: 'Mi perfil' }).click()
       else await main.getByRole('link', { name: 'Agrega tus propios suplementos o actividades' }).click()
 
-      await expect(page).toHaveURL(/\/mi-dia$/)
-      await expect(page.getByRole('heading', { name: 'Mi día', level: 1 })).toBeVisible()
+      await expect(page).toHaveURL(/\/yo$/)
+      await expect(page.getByRole('heading', { name: 'Ana', level: 1 })).toBeVisible()
       await expect(page.getByText('Solo tú ves esto')).toBeVisible()
       await page.getByRole('note').getByRole('button', { name: 'Entendido' }).click()
       await page.getByRole('link', { name: 'Agregar una actividad' }).click()
@@ -365,7 +365,7 @@ for (const design of designs) {
       await setAccountPlan(owner.accountId, 'free')
 
       await page.goto('/mis-actividades')
-      await expect(page).toHaveURL(/\/mi-dia#actividades$/)
+      await expect(page).toHaveURL(/\/yo#actividades$/)
       const acts = page.getByRole('region', { name: 'Mis actividades' })
       await expect(acts.getByRole('link').filter({ hasText: 'Pararse a estirar' })).toBeVisible()
       await expect(acts.getByRole('button', { name: /Agregar actividades/ })).toContainText('Plan completo')

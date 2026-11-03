@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@clerk/react'
 import { DOSE_REFETCH_MS } from '../consultations/doseStatus'
 import type { Account } from '../home/types'
-import { useChildAccess } from '../family/useChildAccess'
+import { subjectAccessOf, subjectKey, type SubjectRef } from '../../shared/subject'
 import {
   createAppointment,
   createChildAppointment,
@@ -16,10 +16,10 @@ import {
 import type { AppointmentInput } from './types'
 
 /** The child's next appointment and history; asked again every minute so «Pasó sin marcar» appears on its own. */
-export function useChildAppointments(childId: string | undefined) {
+export function useChildAppointments(childId: SubjectRef | undefined) {
   const { getToken } = useAuth()
   return useQuery({
-    queryKey: ['appointments', 'child', childId],
+    queryKey: ['appointments', 'child', childId === undefined ? undefined : subjectKey(childId)],
     queryFn: async () => fetchChildAppointments(childId!, await getToken()),
     enabled: !!childId,
     retry: false,
@@ -115,8 +115,9 @@ export interface AppointmentAccess {
   isViewer: boolean
 }
 
-export function useAppointmentAccess(account: Account | undefined, childId: string | undefined, paidPlan: boolean | undefined): AppointmentAccess {
-  const access = useChildAccess(account, childId)
+export function useAppointmentAccess(account: Account | undefined, subject: SubjectRef | undefined, paidPlan: boolean | undefined): AppointmentAccess {
+  // A child's (its role in the family) or a person's own (specs/058: only the person manages it).
+  const access = subjectAccessOf(account, subject)
   const known = account !== undefined
   const manager = known && (access.role === 'owner' || access.role === 'tutor')
   return {

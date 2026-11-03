@@ -1,4 +1,4 @@
-import { MY_DAY } from '../supplements/myDayText'
+import { PROFILE, sharedEntry } from '../profile/profileText'
 import { useRef, useState } from 'react'
 import { Link, useMatch } from 'react-router-dom'
 import { formatAgeShort } from '../../shared/age'
@@ -29,8 +29,9 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
   const onHome = useMatch('/home') !== null
   const onFamilyPage = useMatch('/familia') !== null
   const onPlansPage = useMatch('/planes') !== null
-  // Specs/033 part 3 and specs/056: the person's own page, apart from the children — one entry, «Mi día».
-  const onMyDay = [useMatch('/mi-dia'), useMatch('/mis-suplementos/*'), useMatch('/mis-actividades/*')].some((m) => m !== null)
+  // Specs/033 part 3, 056 and 058: the person's own profile, apart from the children — one entry, «Mi perfil».
+  const onMyDay = [useMatch('/yo/*'), useMatch('/mis-suplementos/*'), useMatch('/mis-actividades/*')].some((m) => m !== null)
+  const onShared = useMatch('/personas/:accountId/*')?.params.accountId
   // Every child is shared with the session (none of its own): the group is named after the family.
   const groupLabel = onlySharedChildren(account) ? (account?.family ? familyOf(account.family.ownerName) : HOME.sharedTitle) : HOME.childrenTitle
 
@@ -106,12 +107,26 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
         <nav aria-label="Personal" className="flex flex-col gap-2.5 border-t border-ink-edge pt-5">
           <p className="px-4 text-xs font-extrabold tracking-[0.1em] text-ink-muted uppercase">Personal</p>
           <Link
-            to="/mi-dia"
+            to="/yo"
             aria-current={onMyDay ? 'page' : undefined}
             className={`flex min-h-12 items-center rounded-2xl px-4 transition-colors duration-200 ${onMyDay ? 'bg-action' : 'hover:bg-ink-soft'}`}
           >
-            <span className={`text-base font-extrabold ${onMyDay ? 'text-white' : 'text-hint-border'}`}>{MY_DAY.title}</span>
+            <span className={`text-base font-extrabold ${onMyDay ? 'text-white' : 'text-hint-border'}`}>{PROFILE.sidebar}</span>
           </Link>
+          {/* Specs/058: somebody of the family who shares their own consultations with the session. */}
+          {account.sharedProfiles?.map((p) => {
+            const active = onShared === p.accountId
+            return (
+              <Link
+                key={p.accountId}
+                to={`/personas/${p.accountId}`}
+                aria-current={active ? 'page' : undefined}
+                className={`flex min-h-12 items-center rounded-2xl px-4 transition-colors duration-200 ${active ? 'bg-action' : 'hover:bg-ink-soft'}`}
+              >
+                <span className={`text-base font-extrabold ${active ? 'text-white' : 'text-hint-border'}`}>{sharedEntry(p.firstName)}</span>
+              </Link>
+            )
+          })}
         </nav>
       )}
 

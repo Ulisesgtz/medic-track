@@ -16,9 +16,9 @@ for (const design of designs) {
 
       await page.goto('/home')
       await page.getByRole('region', { name: 'Tu día' }).getByRole('link', { name: 'Ver todo' }).click()
-      await expect(page).toHaveURL(/\/mi-dia$/)
+      await expect(page).toHaveURL(/\/yo$/)
       const main = page.getByRole('main')
-      await expect(main.getByRole('heading', { level: 1, name: 'Mi día' })).toBeVisible()
+      await expect(main.getByRole('heading', { level: 1, name: 'Ana' })).toBeVisible()
 
       const today = main.getByRole('region', { name: 'Hoy' })
       const dose = today.getByRole('button', { name: 'Marcar Omega 3 de las 08:00' })
@@ -27,7 +27,7 @@ for (const design of designs) {
       await expect(today.getByRole('button', { name: 'Realizado: Pararse a estirar' })).toBeVisible()
 
       const index = main.getByRole('navigation', { name: 'Secciones' })
-      await expect(index.getByRole('link')).toHaveText(['Suplementos', 'Actividades'])
+      await expect(index.getByRole('link')).toHaveText(['Consultas', 'Suplementos', 'Actividades'])
       await index.getByRole('link', { name: 'Actividades' }).click()
       await expect(main.getByRole('region', { name: 'Mis actividades' })).toBeInViewport()
       await expect(main.getByRole('region', { name: 'Mis actividades' }).getByRole('link').filter({ hasText: 'Pararse a estirar' })).toBeVisible()
@@ -40,7 +40,7 @@ for (const design of designs) {
       await personalActivityViaApi(page.context().request, owner.token, owner.accountId)
 
       await page.goto('/mis-actividades')
-      await expect(page).toHaveURL(/\/mi-dia#actividades$/)
+      await expect(page).toHaveURL(/\/yo#actividades$/)
       await expect(page.getByRole('main').getByRole('region', { name: 'Mis actividades' })).toBeInViewport()
     })
 
@@ -50,11 +50,11 @@ for (const design of designs) {
         const owner = await seedChild(page, { withConsultation: false })
         await personalRoutineViaApi(page.context().request, owner.token, owner.accountId)
 
-        await page.goto('/mi-dia')
+        await page.goto('/yo')
         await expect(page.getByRole('region', { name: 'Resumen del día' })).toBeVisible()
         const personal = page.getByRole('navigation', { name: 'Personal' })
-        await expect(personal.getByRole('link')).toHaveText(['Mi día'])
-        await expect(personal.getByRole('link', { name: 'Mi día' })).toHaveAttribute('aria-current', 'page')
+        await expect(personal.getByRole('link')).toHaveText(['Mi perfil'])
+        await expect(personal.getByRole('link', { name: 'Mi perfil' })).toHaveAttribute('aria-current', 'page')
       })
   })
 }

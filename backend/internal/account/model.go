@@ -40,6 +40,10 @@ type Account struct {
 	// Family is set (only by GetByClerkUserID) when the account is an invited person of another account's family
 	// (specs/032-compartir-con-familia); Children then also lists the children shared with it.
 	Family *FamilyMembership
+	// ConsultationSharing and SharedProfiles are the person's own consultations (specs/058): whether they share theirs with
+	// the Tutors of their family, and who shares with them. Filled by the reads that fill Family.
+	ConsultationSharing ConsultationSharing
+	SharedProfiles      []SharedProfile
 }
 
 // FamilyMembership is an account's place in the family of another account.

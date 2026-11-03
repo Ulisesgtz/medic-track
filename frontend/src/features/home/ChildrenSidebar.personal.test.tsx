@@ -30,20 +30,20 @@ function renderAt(path: string) {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('ChildrenSidebar — Personal', () => {
-  it('has its own group after the children with one link, «Mi día»', async () => {
+  it('has its own group after the children with one link, «Mi perfil»', async () => {
     stub()
     renderAt('/home')
     const nav = await screen.findByRole('navigation', { name: 'Personal' })
     const links = Array.from(nav.querySelectorAll('a'))
     expect(links).toHaveLength(1)
-    expect(links[0]).toHaveAttribute('href', '/mi-dia')
-    expect(links[0]).toHaveTextContent('Mi día')
+    expect(links[0]).toHaveAttribute('href', '/yo')
+    expect(links[0]).toHaveTextContent('Mi perfil')
     expect(links[0]).not.toHaveAttribute('aria-current')
   })
 
-  it('marks it on «Mi día»', async () => {
+  it('marks it on «Mi perfil»', async () => {
     stub()
-    renderAt('/mi-dia')
+    renderAt('/yo')
     const nav = await screen.findByRole('navigation', { name: 'Personal' })
     expect(nav.querySelector('a')).toHaveAttribute('aria-current', 'page')
   })

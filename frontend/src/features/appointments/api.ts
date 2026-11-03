@@ -1,5 +1,6 @@
 import { ApiError, type ValidationErrorDetail } from '../../shared/apiError'
 import { withAuthHeader } from '../../shared/auth/withAuthHeader'
+import { apiBase, type SubjectRef } from '../../shared/subject'
 import type { Appointment, AppointmentInput, AppointmentOfConsultation, AppointmentsOfChild } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
@@ -55,8 +56,9 @@ async function call<T>(method: string, path: string, token: string | null, body?
 }
 
 /** GET /children/{id}/appointments: the nearest scheduled appointment and the history of the rest. */
-export const fetchChildAppointments = (childId: string, token: string | null) =>
-  call<AppointmentsOfChild>('GET', `/children/${childId}/appointments`, token, undefined, 'Unexpected error fetching the appointments')
+/** A child's appointments, or a person's own (specs/058: `GET /accounts/{id}/appointments`). */
+export const fetchChildAppointments = (subject: SubjectRef, token: string | null) =>
+  call<AppointmentsOfChild>('GET', `${apiBase(subject)}/appointments`, token, undefined, 'Unexpected error fetching the appointments')
 
 /** GET /consultations/{id}/appointment: the consultation's scheduled appointment, or none. */
 export const fetchConsultationAppointment = (consultationId: string, token: string | null) =>

@@ -1,4 +1,5 @@
 import type { ChildOverview, OverviewDose } from '../consultations/types'
+import type { DoseStatus } from '../consultations/types'
 import type { Routine, RoutineDose } from '../supplements/types'
 
 // specs/055 (data-model.md): what the home shows of a day, derived only from the answers the app already has. The state of
@@ -67,7 +68,16 @@ export function childDay(overview: ChildOverview, activities: Routine[]): ChildD
 export interface PersonalNext {
   name: string
   at: string
+  /** The routine of a supplement or activity; '' for a dose of the person's own medication (specs/058). */
   routineId: string
+}
+
+/** A dose of the person's own medication of today (specs/058), as «Tu día» counts it. */
+export interface OwnMedicationDose {
+  medicationName: string
+  scheduledAt: string
+  taken: boolean
+  status: DoseStatus
 }
 
 export interface PersonalDay {
@@ -88,15 +98,21 @@ function earliest(routines: Routine[], keep: (d: RoutineDose) => boolean): Perso
  * «Tu día» of the person's own routines (specs/033 part 3, specs/035). `paidPlan` is the server's: on the free plan with nothing
  * created the card is the plan line; whatever was created is always shown.
  */
-export function personalDay(supplements: Routine[], activities: Routine[], paidPlan: boolean): PersonalDay {
+export function personalDay(supplements: Routine[], activities: Routine[], paidPlan: boolean, medications: OwnMedicationDose[] = []): PersonalDay {
   const sups = supplements.filter((r) => r.kind === 'supplement' && r.status === 'active')
   const acts = activities.filter((r) => r.kind === 'activity' && r.status === 'active')
-  const supDoses = sups.flatMap((r) => r.doses)
+  // «Tus tomas» counts the doses of the person's own medications too (specs/058); canceled ones are not of today.
+  const meds = medications.filter((d) => d.status !== 'canceled')
+  const supDoses = [...sups.flatMap((r) => r.doses), ...meds]
   const actDoses = acts.flatMap((r) => r.doses)
+  const nextMedication = meds
+    .filter(open)
+    .map((d) => ({ name: d.medicationName, at: d.scheduledAt, routineId: '' }))
+    .sort((a, b) => a.at.localeCompare(b.at))[0]
+  const nextSupplement = earliest(sups, open)
+  const nextDose = [nextMedication, nextSupplement].filter((n): n is PersonalNext => !!n).sort((a, b) => a.at.localeCompare(b.at))[0] ?? null
 
-  const doses = supDoses.length
-    ? { marked: supDoses.filter((d) => d.taken).length, total: supDoses.length, next: earliest(sups, open) }
-    : null
+  const doses = supDoses.length ? { marked: supDoses.filter((d) => d.taken).length, total: supDoses.length, next: nextDose } : null
   const activitiesRow = actDoses.length
     ? {
         done: actDoses.filter((d) => d.taken).length,
@@ -109,7 +125,7 @@ export function personalDay(supplements: Routine[], activities: Routine[], paidP
 
   const allMarked = ![...supDoses, ...actDoses].some((d) => d.status === 'due' || d.status === 'unregistered')
   // A person with routines but nothing today still gets the card (it says so); «vacio» is only for who has created none.
-  const anyRoutine = supplements.length + activities.length > 0
+  const anyRoutine = supplements.length + activities.length + meds.length > 0
   const today = doses !== null || activitiesRow !== null
   const mode = !anyRoutine ? (paidPlan ? 'vacio' : 'plan') : !today ? 'nada' : allMarked ? 'todo' : 'card'
   return { doses, activities: activitiesRow, allMarked, mode }

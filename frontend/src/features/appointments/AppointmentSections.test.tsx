@@ -13,7 +13,7 @@ function renderConsultation() {
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={['/consultations/c1']}>
         <Routes>
-          <Route path="/consultations/:id" element={<ConsultationAppointmentSection consultationId="c1" childId="child-1" />} />
+          <Route path="/consultations/:id" element={<ConsultationAppointmentSection consultationId="c1" subject="child-1" />} />
           <Route path="/consultations/:id/cita/nueva" element={<div>NUEVA</div>} />
           <Route path="/planes" element={<div>PLANES</div>} />
         </Routes>

@@ -39,6 +39,9 @@ var (
 	// parent asked for (specs/030-reglas-plan-gratis).
 	ErrPlanLimit = errors.New("the free plan does not include this")
 
+	// ErrAccountNotFound is returned when a person's own consultation names an account that doesn't exist (specs/058).
+	ErrAccountNotFound = errors.New("account not found")
+
 	// ErrEditConflict is returned when an edit was made on a version of the consultation that is no longer the saved one:
 	// someone saved another edit after the form was opened (specs/051). Nothing is saved.
 	ErrEditConflict = errors.New("the consultation changed since it was opened")
@@ -62,6 +65,8 @@ const (
 	PlanLimitActiveTreatment = "active_treatment"
 	PlanLimitRecordOnly      = "record_only"
 	PlanLimitHistorySearch   = "history_search"
+	// PlanLimitOwnConsultations: a person's own consultations (creating one, extending one) are the paid plan's (specs/058).
+	PlanLimitOwnConsultations = "own_consultations"
 )
 
 // PlanLimitError says which rule of the free plan stopped a consultation from being saved.

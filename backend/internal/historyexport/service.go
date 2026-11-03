@@ -35,16 +35,58 @@ func (s *Service) Build(ctx context.Context, childID uuid.UUID, req Request) (*D
 		}
 		return nil, err
 	}
-	now := s.now()
 	child, err := s.repo.child(ctx, childID)
 	if err != nil {
 		return nil, err
 	}
-	doc := &Document{Child: child, Consultations: []Consultation{}, Vaccinations: []Vaccination{}}
-	if doc.ActiveTreatment, err = s.repo.activeTreatment(ctx, childID, now); err != nil {
+	search := func(ctx context.Context, h consultation.HistorySearch) ([]consultation.Consultation, error) {
+		return s.consultations.SearchAfterPlan(ctx, childID, h)
+	}
+	doc, err := s.build(ctx, childSubject(childID), child, search, req)
+	if err != nil {
 		return nil, err
 	}
-	appointments, err := s.repo.scheduledAppointments(ctx, childID, now)
+	if req.Vaccinations {
+		if err := s.addVaccinations(ctx, childID, req.Photos, doc); err != nil {
+			return nil, err
+		}
+	}
+	return doc, nil
+}
+
+// BuildOwn is Build for a person's own history (specs/058): their name on the cover, their own consultations and appointments,
+// no vaccination card; the plan is that of their own things. ErrAccountNotFound if the person doesn't exist.
+func (s *Service) BuildOwn(ctx context.Context, accountID uuid.UUID, req Request) (*Document, error) {
+	if err := s.consultations.RequirePaidPerson(ctx, accountID, consultation.PlanLimitPDFExport); err != nil {
+		if errors.Is(err, consultation.ErrAccountNotFound) {
+			return nil, ErrAccountNotFound
+		}
+		return nil, err
+	}
+	person, err := s.repo.person(ctx, accountID)
+	if err != nil {
+		return nil, err
+	}
+	search := func(ctx context.Context, h consultation.HistorySearch) ([]consultation.Consultation, error) {
+		return s.consultations.SearchOwnAfterPlan(ctx, accountID, h)
+	}
+	doc, err := s.build(ctx, personSubject(accountID), person, search, req)
+	if err != nil {
+		return nil, err
+	}
+	doc.Own = true
+	return doc, nil
+}
+
+// build reads what a child's and a person's document share: the running treatment, the next appointment and the consultations.
+func (s *Service) build(ctx context.Context, subj subject, cover Child, search searchFunc, req Request) (*Document, error) {
+	now := s.now()
+	doc := &Document{Child: cover, Consultations: []Consultation{}, Vaccinations: []Vaccination{}}
+	var err error
+	if doc.ActiveTreatment, err = s.repo.activeTreatment(ctx, subj, now); err != nil {
+		return nil, err
+	}
+	appointments, err := s.repo.scheduledAppointments(ctx, subj, now)
 	if err != nil {
 		return nil, err
 	}
@@ -55,22 +97,19 @@ func (s *Service) Build(ctx context.Context, childID uuid.UUID, req Request) (*D
 	if req.Photos {
 		doc.Photos = &Photos{Consultations: []ConsultationPhoto{}, Card: []CardPhoto{}}
 	}
-
 	if req.Consultations {
-		if err := s.addConsultations(ctx, childID, req, appointments, doc); err != nil {
-			return nil, err
-		}
-	}
-	if req.Vaccinations {
-		if err := s.addVaccinations(ctx, childID, req.Photos, doc); err != nil {
+		if err := s.addConsultations(ctx, search, req, appointments, doc); err != nil {
 			return nil, err
 		}
 	}
 	return doc, nil
 }
 
-func (s *Service) addConsultations(ctx context.Context, childID uuid.UUID, req Request, appointments []appointmentRow, doc *Document) error {
-	found, err := s.consultations.SearchAfterPlan(ctx, childID, req.search())
+// searchFunc is the history's search of the document's subject, once the plan was decided.
+type searchFunc func(ctx context.Context, h consultation.HistorySearch) ([]consultation.Consultation, error)
+
+func (s *Service) addConsultations(ctx context.Context, search searchFunc, req Request, appointments []appointmentRow, doc *Document) error {
+	found, err := search(ctx, req.search())
 	if err != nil {
 		return err
 	}

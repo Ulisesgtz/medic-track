@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { SubjectRef } from '../../shared/subject'
 import { errorClass, fieldMultiline, fieldProposed, labelClass } from '../../shared/ui/formStyles'
 import { useAuth } from '@clerk/react'
 import { useNavigate } from 'react-router-dom'
@@ -173,7 +174,8 @@ export interface ConsultationEdit {
 }
 
 interface ConsultationFormProps {
-  childId: string
+  /** The child's id, or a person's own subject (specs/058: `{ kind: 'person', accountId }`). */
+  childId: SubjectRef
   /** 'phone' = mock 04 (dark header with the OCR panel); 'desktop' = mock 14. */
   variant: 'phone' | 'desktop'
   /** "Para Mateo Morales · 5 años 6 meses" under the desktop title, when the child is known. */
@@ -232,7 +234,7 @@ export function ConsultationForm({
 }: ConsultationFormProps) {
   const navigate = useNavigate()
   // The free plan's pop-up (specs/030) when the server refuses to save: the form and what was typed stay as they are.
-  const [planLimit, setPlanLimit] = useState<'active_treatment' | 'record_only' | null>(null)
+  const [planLimit, setPlanLimit] = useState<'active_treatment' | 'record_only' | 'own_consultations' | null>(null)
   const closePlanLimit = useCallback(() => setPlanLimit(null), [])
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   // Set when the server says the account keeps as many prescription photos as it can (specs/043): from then on the
@@ -328,6 +330,7 @@ export function ConsultationForm({
       if (error instanceof ConsultationApiError && error.kind === 'photo_limit_exceeded') setPhotoLimit(true)
       if (error instanceof ConsultationApiError && error.kind === 'plan_limit_active_treatment') setPlanLimit('active_treatment')
       if (error instanceof ConsultationApiError && error.kind === 'plan_limit_record_only') setPlanLimit('record_only')
+      if (error instanceof ConsultationApiError && error.kind === 'plan_limit_own_consultations') setPlanLimit('own_consultations')
       if (!(error instanceof ConsultationApiError) || error.kind !== 'symptom_not_available') return
       // A chosen symptom was retired meanwhile: reload the catalog and drop what it no longer offers,
       // keeping everything else the parent entered.

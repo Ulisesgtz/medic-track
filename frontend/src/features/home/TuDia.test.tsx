@@ -38,7 +38,7 @@ function renderTuDia(variant: 'phone' | 'desktop' = 'phone') {
       <MemoryRouter initialEntries={['/home']}>
         <Routes>
           <Route path="/home" element={<TuDia account={ana} variant={variant} />} />
-          <Route path="/mi-dia" element={<p>MI DÍA</p>} />
+          <Route path="/yo" element={<p>MI DÍA</p>} />
           <Route path="/planes" element={<p>PLANES</p>} />
         </Routes>
       </MemoryRouter>
@@ -98,7 +98,7 @@ describe('TuDia', () => {
   it('is one line with a link when the person created nothing (paid plan)', async () => {
     stub([], [])
     renderTuDia()
-    expect(await screen.findByRole('link', { name: 'Agrega tus propios suplementos o actividades' })).toHaveAttribute('href', '/mi-dia')
+    expect(await screen.findByRole('link', { name: 'Agrega tus propios suplementos o actividades' })).toHaveAttribute('href', '/yo')
     expect(screen.queryByRole('button')).not.toBeInTheDocument()
   })
 

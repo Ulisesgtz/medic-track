@@ -35,7 +35,25 @@ func (r *Repository) RequirePaid(ctx context.Context, childID uuid.UUID, reason 
 // SearchAfterPlan is Search for a caller that already checked the plan under its own reason (the PDF: pdf_export), so the
 // plan is decided once and a plan that lapses in between can't answer with the history's reason.
 func (r *Repository) SearchAfterPlan(ctx context.Context, childID uuid.UUID, s HistorySearch) ([]Consultation, error) {
-	return r.search(ctx, childID, s)
+	return r.search(ctx, childSubject(childID), s)
+}
+
+// SearchOwnAfterPlan is SearchAfterPlan over a person's own consultations (the PDF of their own history, specs/058).
+func (r *Repository) SearchOwnAfterPlan(ctx context.Context, accountID uuid.UUID, s HistorySearch) ([]Consultation, error) {
+	return r.search(ctx, personSubject(accountID), s)
+}
+
+// RequirePaidPerson refuses with a *PlanLimitError{reason} unless a person's own things are on the paid plan (their account's
+// or a paying family's, specs/058). ErrAccountNotFound if there is no such account.
+func (r *Repository) RequirePaidPerson(ctx context.Context, accountID uuid.UUID, reason string) error {
+	paid, err := personalPlanOf(ctx, r.pool, accountID, false)
+	if err != nil {
+		return err
+	}
+	if !paid {
+		return &PlanLimitError{Reason: reason}
+	}
+	return nil
 }
 
 // Photo is the consultation's prescription photo alone; see Repository.Photo.

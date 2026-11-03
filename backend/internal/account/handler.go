@@ -88,6 +88,10 @@ type accountResponse struct {
 	// Family is present only when the session is an invited person of another account's family; its children are then
 	// in Children, after the account's own.
 	Family *familyMembershipResponse `json:"family,omitempty"`
+	// ConsultationSharing is whether the person shares their own consultations with the Tutors of their family (specs/058).
+	ConsultationSharing consultationSharingResponse `json:"consultationSharing"`
+	// SharedProfiles are the people who share their own consultations with this person and whose it can still see.
+	SharedProfiles []sharedProfileResponse `json:"sharedProfiles"`
 }
 
 type reminderSettingsRequest struct {
@@ -704,6 +708,7 @@ func toAccountResponse(acc *Account) accountResponse {
 			Plan: string(acc.Family.OwnerPlan), ReadOnly: acc.Family.ReadOnly(),
 		}
 	}
+	sharing, profiles := toOwnSharingResponse(acc)
 	return accountResponse{
 		ID:          acc.ID.String(),
 		FirstName:   acc.FirstName,
@@ -718,5 +723,8 @@ func toAccountResponse(acc *Account) accountResponse {
 		DisclaimerAccepted: acc.DisclaimerAccepted,
 		ReminderDetail:     acc.ReminderDetail,
 		Family:             membership,
+
+		ConsultationSharing: sharing,
+		SharedProfiles:      profiles,
 	}
 }

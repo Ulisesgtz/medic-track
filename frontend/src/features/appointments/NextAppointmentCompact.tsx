@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { formatTime, formatWeekdayLong } from '../../shared/date'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
+import { toSubject, type SubjectRef } from '../../shared/subject'
 import { placeLink } from './appointmentText'
 import { useAppointmentAccess, useChildAppointments } from './hooks'
 
@@ -30,21 +31,23 @@ function CalendarIcon() {
  * canceled and its reminders chosen. Without one, «+ Agregar cita» for who may add it, or on the free plan the row with the «Plan
  * completo» mark that opens the plan notice. A Caregiver with none sees nothing.
  */
-export function NextAppointmentCompact({ childId, variant }: { childId: string; variant: Variant }) {
+export function NextAppointmentCompact({ childId, variant }: { childId: SubjectRef; variant: Variant }) {
   const query = useChildAppointments(childId)
   const account = useCurrentAccount()
   const data = query.data
   const access = useAppointmentAccess(account.data, childId, data?.paidPlan)
+  // A person's own (specs/058) has no page of appointments: it opens its consultation, and nothing is offered to add.
+  const subject = toSubject(childId)
+  const person = subject.kind === 'person'
   const navigate = useNavigate()
   const [planOpen, setPlanOpen] = useState(false)
   const opener = useRef<HTMLButtonElement>(null)
   const closePlan = useCallback(() => setPlanOpen(false), [])
   const desktop = variant === 'desktop'
-  const listPath = `/children/${childId}/citas`
-
   if (!data) return null
   const next = data.next
   if (next) {
+    const listPath = person ? (next.consultationId ? `/consultations/${next.consultationId}` : null) : `/children/${subject.childId}/citas`
     const start = new Date(next.startsAt)
     const when = `${formatWeekdayLong(start)} · ${formatTime(next.startsAt)}`
     const where = [next.doctorName, next.location].filter((t) => t.trim() !== '')
@@ -68,24 +71,35 @@ export function NextAppointmentCompact({ childId, variant }: { childId: string; 
     return (
       <section aria-label="Próxima cita" className={`${card} flex flex-col ${desktop ? 'gap-1 p-[18px]' : 'gap-3 p-4'}`}>
         {desktop ? (
-          <Link to={listPath} className="flex flex-col gap-1">
-            {text}
-          </Link>
-        ) : (
+          listPath ? (
+            <Link to={listPath} className="flex flex-col gap-1">
+              {text}
+            </Link>
+          ) : (
+            <div className="flex flex-col gap-1">{text}</div>
+          )
+        ) : listPath ? (
           <Link to={listPath} className="flex items-start gap-3">
             <CalendarIcon />
             <span className="flex min-w-0 flex-1 flex-col gap-0.5">{text}</span>
           </Link>
+        ) : (
+          <div className="flex items-start gap-3">
+            <CalendarIcon />
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">{text}</span>
+          </div>
         )}
         {mapsLink}
       </section>
     )
   }
 
+  if (person) return null
+
   if (access.canEdit)
     return (
       <Link
-        to={`/children/${childId}/citas/nueva`}
+        to={`/children/${subject.childId}/citas/nueva`}
         className={
           desktop
             ? 'inline-flex min-h-12 items-center justify-center rounded-2xl border-2 border-dashed border-hint-border text-[15px] font-extrabold text-action hover:bg-hint'

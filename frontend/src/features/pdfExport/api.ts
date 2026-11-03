@@ -1,4 +1,5 @@
 import { ApiError, type ValidationErrorDetail } from '../../shared/apiError'
+import { apiBase, type SubjectRef } from '../../shared/subject'
 import { withAuthHeader } from '../../shared/auth/withAuthHeader'
 import type { ExportData, ExportRequest } from './types'
 
@@ -34,9 +35,12 @@ function exportError(status: number, body: ErrorBody, fallback: string): ExportA
   return new ExportApiError('unknown', body.message ?? fallback)
 }
 
-/** POST /children/{childId}/export: the child's registered data for the PDF. The plan is decided by the server (422 `pdf_export`). */
-export async function fetchExportData(childId: string, request: ExportRequest, token: string | null, signal?: AbortSignal): Promise<ExportData> {
-  const res = await fetch(`${API_BASE_URL}/children/${childId}/export`, {
+/**
+ * POST /children/{childId}/export (or /accounts/{accountId}/export for a person's own history, specs/058): the registered data for
+ * the PDF. The plan is decided by the server (422 `pdf_export`).
+ */
+export async function fetchExportData(subject: SubjectRef, request: ExportRequest, token: string | null, signal?: AbortSignal): Promise<ExportData> {
+  const res = await fetch(`${API_BASE_URL}${apiBase(subject)}/export`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...withAuthHeader(token) },
     body: JSON.stringify(request),

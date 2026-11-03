@@ -131,6 +131,9 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Account, error
 	if err := r.addSharedChildren(ctx, acc); err != nil {
 		return nil, err
 	}
+	if err := r.addOwnSharing(ctx, acc); err != nil {
+		return nil, err
+	}
 	if acc.DisclaimerAccepted, err = disclaimerAccepted(ctx, r.pool, id); err != nil {
 		return nil, err
 	}
@@ -263,6 +266,9 @@ func (r *Repository) GetByClerkUserID(ctx context.Context, clerkUserID string) (
 	rows.Close()
 
 	if err := r.addSharedChildren(ctx, acc); err != nil {
+		return nil, err
+	}
+	if err := r.addOwnSharing(ctx, acc); err != nil {
 		return nil, err
 	}
 	if acc.DisclaimerAccepted, err = disclaimerAccepted(ctx, r.pool, id); err != nil {

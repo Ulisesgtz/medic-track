@@ -193,7 +193,7 @@ export function RoutineDetailPage() {
   const activity = kind === 'activity'
   const noun = activity ? 'Actividad' : 'Suplemento'
   const base = activity ? '/actividades' : '/suplementos'
-  const personalHome = activity ? '/mi-dia#actividades' : '/mi-dia#suplementos'
+  const personalHome = activity ? '/yo#actividades' : '/yo#suplementos'
   const backTo = personal ? personalHome : childId ? `/children/${childId}` : '/home'
   // specs/056: the common header H2 — «Suplemento de Mateo», the routine's name, its schedule, its status as a neutral chip and
   // «Editar» with an outline.

@@ -105,7 +105,7 @@ for (const design of designs) {
       await expect(main.getByRole('button', { name: 'Ver el plan completo' })).toHaveCount(0)
 
       // specs/056: «Mi día» with nothing created, on the free plan, shows the compact notice in «Hoy».
-      await page.goto('/mi-dia')
+      await page.goto('/yo')
       await expect(page.getByRole('region', { name: 'Plan completo: Suplementos y actividades' })).toBeVisible()
       await expect(page.getByText(/MX\$499 al año/).first()).toBeVisible()
 

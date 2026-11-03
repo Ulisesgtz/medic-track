@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@clerk/react'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { subjectKey, type SubjectRef } from '../../shared/subject'
 import { fetchHistoryOptions, searchConsultations } from './api'
 import { EMPTY_CRITERIA, rangeInverted, readStored, toRequest, writeStored, type HistoryCriteria } from './historyCriteria'
 
@@ -40,10 +41,10 @@ export function useHistoryCriteria(childId: string) {
  * FR-014); a range turned around isn't asked of the server. `enabled` is false for a free account: it is the paid
  * plan's, and the server would refuse it anyway.
  */
-export function useHistorySearch(childId: string, applied: HistoryCriteria, enabled: boolean) {
+export function useHistorySearch(childId: SubjectRef, applied: HistoryCriteria, enabled: boolean) {
   const { getToken } = useAuth()
   return useQuery({
-    queryKey: ['history', childId, applied],
+    queryKey: ['history', subjectKey(childId), applied],
     queryFn: async () => searchConsultations(childId, toRequest(applied), await getToken()),
     enabled: enabled && !!childId && !rangeInverted(applied),
     placeholderData: keepPreviousData,
@@ -52,10 +53,10 @@ export function useHistorySearch(childId: string, applied: HistoryCriteria, enab
 }
 
 /** The doctors and medications registered for the child: asked once, not at every key. */
-export function useHistoryOptions(childId: string, enabled: boolean) {
+export function useHistoryOptions(childId: SubjectRef, enabled: boolean) {
   const { getToken } = useAuth()
   return useQuery({
-    queryKey: ['history-options', childId],
+    queryKey: ['history-options', subjectKey(childId)],
     queryFn: async () => fetchHistoryOptions(childId, await getToken()),
     enabled: enabled && !!childId,
     staleTime: 5 * 60_000,

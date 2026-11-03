@@ -115,8 +115,11 @@ type consultationListResponse struct {
 } // @name ConsultationListResponse
 
 type consultationDetailResponse struct {
-	ID          string `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
-	ChildID     string `json:"childId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	ID string `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	// ChildID is null for a person's own consultation (specs/058).
+	ChildID *string `json:"childId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	// AccountID is the account it belongs to: the child's, or the person whose own consultation it is (specs/058).
+	AccountID   string `json:"accountId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
 	DoctorName  string `json:"doctorName" example:"Dra. López"`
 	ConsultDate string `json:"consultDate" example:"2026-01-15"`
 	PhotoBase64 string `json:"photoBase64"`
@@ -130,6 +133,9 @@ type consultationDetailResponse struct {
 	CreatedAt string `json:"createdAt" example:"2026-10-18T15:20:00.123456Z"`
 	// Edited is the last edit (specs/051); null if the consultation was never edited.
 	Edited *editedResponse `json:"edited"`
+	// MyReminders is only there for someone who sees another person's own consultation (specs/058): whether they asked for
+	// its reminders.
+	MyReminders *bool `json:"myReminders,omitempty" example:"false"`
 } // @name ConsultationDetailResponse
 
 // editedResponse says when a consultation was last edited and by whom: the first name of the account, never its e-mail.
@@ -279,6 +285,25 @@ type childOverviewResponse struct {
 	ActiveTreatment *activeTreatmentResponse `json:"activeTreatment"`
 } // @name ChildOverviewResponse
 
+// parseWindow reads the `from` and `to` query parameters (RFC 3339) of an overview; on a bad one it writes the 400 itself
+// and answers false.
+func (h *Handler) parseWindow(w http.ResponseWriter, r *http.Request) (from, to time.Time, ok bool) {
+	var fieldErrs []ValidationError
+	from, err := time.Parse(time.RFC3339, r.URL.Query().Get("from"))
+	if err != nil {
+		fieldErrs = append(fieldErrs, ValidationError{Field: "from", Message: "must be an RFC 3339 timestamp"})
+	}
+	to, err = time.Parse(time.RFC3339, r.URL.Query().Get("to"))
+	if err != nil {
+		fieldErrs = append(fieldErrs, ValidationError{Field: "to", Message: "must be an RFC 3339 timestamp"})
+	}
+	if len(fieldErrs) > 0 {
+		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody(fieldErrs, "One or more fields are invalid"), nil)
+		return from, to, false
+	}
+	return from, to, true
+}
+
 // GetChildOverview handles GET /children/{childId}/overview
 // (specs/006-resumen-detalle-hijo/contracts/get-overview.md).
 //
@@ -306,17 +331,8 @@ func (h *Handler) GetChildOverview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var fieldErrs []ValidationError
-	from, err := time.Parse(time.RFC3339, r.URL.Query().Get("from"))
-	if err != nil {
-		fieldErrs = append(fieldErrs, ValidationError{Field: "from", Message: "must be an RFC 3339 timestamp"})
-	}
-	to, err := time.Parse(time.RFC3339, r.URL.Query().Get("to"))
-	if err != nil {
-		fieldErrs = append(fieldErrs, ValidationError{Field: "to", Message: "must be an RFC 3339 timestamp"})
-	}
-	if len(fieldErrs) > 0 {
-		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody(fieldErrs, "One or more fields are invalid"), nil)
+	from, to, ok := h.parseWindow(w, r)
+	if !ok {
 		return
 	}
 
@@ -334,6 +350,12 @@ func (h *Handler) GetChildOverview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	doses, treatment := toOverviewParts(overview, actorOf(r.Context()))
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, childOverviewResponse{ChildID: childID.String(), Doses: doses, ActiveTreatment: treatment}, nil)
+}
+
+// toOverviewParts turns an overview into its doses and its running treatment for the JSON (a child's or a person's own).
+func toOverviewParts(overview *ChildOverview, actor uuid.UUID) ([]overviewDoseResponse, *activeTreatmentResponse) {
 	doses := make([]overviewDoseResponse, 0, len(overview.Doses))
 	for _, d := range overview.Doses {
 		resp := overviewDoseResponse{
@@ -344,7 +366,7 @@ func (h *Handler) GetChildOverview(w http.ResponseWriter, r *http.Request) {
 			ScheduledAt:    d.ScheduledAt.Format(time.RFC3339),
 			Taken:          d.Taken,
 			Status:         string(d.Status),
-			TakenBy:        toTakenByResponse(d.TakenBy, actorOf(r.Context())),
+			TakenBy:        toTakenByResponse(d.TakenBy, actor),
 		}
 		if d.Kind == DoseKindSupplement {
 			resp.ConsultationID = ""
@@ -352,15 +374,15 @@ func (h *Handler) GetChildOverview(w http.ResponseWriter, r *http.Request) {
 		}
 		doses = append(doses, resp)
 	}
-	resp := childOverviewResponse{ChildID: childID.String(), Doses: doses}
+	var treatment *activeTreatmentResponse
 	if t := overview.ActiveTreatment; t != nil {
-		resp.ActiveTreatment = &activeTreatmentResponse{
+		treatment = &activeTreatmentResponse{
 			MedicationName: t.MedicationName,
 			EndsAt:         t.EndsAt.Format(time.RFC3339),
 			OtherCount:     t.OtherCount,
 		}
 	}
-	h.responder.WriteJSON(r.Context(), w, http.StatusOK, resp, nil)
+	return doses, treatment
 }
 
 type createMedicationRequest struct {
@@ -415,18 +437,34 @@ type createConsultationRequest struct {
 //	@Failure		403		{object}	sessionErrorResponseDoc	"The session does not own this resource"
 //	@Router			/children/{childId}/consultations [post]
 func (h *Handler) CreateConsultation(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
-
 	childID, err := uuid.Parse(chi.URLParam(r, "childId"))
 	if err != nil {
 		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, childNotFoundBody(), nil)
 		return
 	}
 
+	input, ok := h.decodeCreate(w, r)
+	if !ok {
+		return
+	}
+
+	c, err := h.service.CreateConsultation(r.Context(), childID, input)
+	if err != nil {
+		h.writeCreateConsultationError(r.Context(), w, err)
+		return
+	}
+
+	h.responder.WriteJSON(r.Context(), w, http.StatusCreated, toConsultationDetailResponse(c, actorOf(r.Context())), nil)
+}
+
+// decodeCreate reads the body of a new consultation (a child's or a person's own, specs/058) into the service's input. On a
+// malformed body, date or photo it writes the 400 itself and answers false.
+func (h *Handler) decodeCreate(w http.ResponseWriter, r *http.Request) (CreateConsultationInput, bool) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
 	var req createConsultationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		h.responder.WriteJSONError(r.Context(), w, http.StatusBadRequest, "validation_error", "Malformed JSON body", nil)
-		return
+		return CreateConsultationInput{}, false
 	}
 
 	var consultDate time.Time
@@ -437,7 +475,7 @@ func (h *Handler) CreateConsultation(w http.ResponseWriter, r *http.Request) {
 				Field:   "consultDate",
 				Message: "consult date must be an ISO-8601 date (YYYY-MM-DD)",
 			}}, "One or more fields are invalid"), nil)
-			return
+			return CreateConsultationInput{}, false
 		}
 		consultDate = parsed
 	}
@@ -450,14 +488,14 @@ func (h *Handler) CreateConsultation(w http.ResponseWriter, r *http.Request) {
 				Field:   "photoBase64",
 				Message: "photo must be valid base64",
 			}}, "One or more fields are invalid"), nil)
-			return
+			return CreateConsultationInput{}, false
 		}
 		if !looksLikeImage(decoded) {
 			h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody([]ValidationError{{
 				Field:   "photoBase64",
 				Message: "photo must be a JPEG, PNG, GIF, WebP or HEIC image",
 			}}, "One or more fields are invalid"), nil)
-			return
+			return CreateConsultationInput{}, false
 		}
 		photo = decoded
 	}
@@ -480,14 +518,7 @@ func (h *Handler) CreateConsultation(w http.ResponseWriter, r *http.Request) {
 			StartTime:      m.StartTime,
 		})
 	}
-
-	c, err := h.service.CreateConsultation(r.Context(), childID, input)
-	if err != nil {
-		h.writeCreateConsultationError(r.Context(), w, err)
-		return
-	}
-
-	h.responder.WriteJSON(r.Context(), w, http.StatusCreated, toConsultationDetailResponse(c, actorOf(r.Context())), nil)
+	return input, true
 }
 
 // notesOf returns the request's notes, or — from a client older than specs/012 — its "symptoms" text.
@@ -524,6 +555,8 @@ func (h *Handler) writeCreateConsultationError(ctx context.Context, w http.Respo
 		}, nil)
 	case errors.Is(err, ErrChildNotFound):
 		h.responder.WriteJSON(ctx, w, http.StatusNotFound, childNotFoundBody(), nil)
+	case errors.Is(err, ErrAccountNotFound):
+		h.responder.WriteJSON(ctx, w, http.StatusNotFound, accountNotFoundBody(), nil)
 	default:
 		h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", "Could not create consultation", nil)
 	}
@@ -534,7 +567,8 @@ type planLimitResponseDoc struct {
 	Error   string `json:"error" example:"freemium_consultation_limit_exceeded"`
 	Message string `json:"message" example:"The free plan includes one active treatment at a time"`
 	// Reason is "active_treatment" (another treatment is still running), "record_only" (saving only as a record) or
-	// "history_search" (searching and filtering the history, specs/031) or "pdf_export" (the history's PDF, specs/050).
+	// "history_search" (searching and filtering the history, specs/031), "pdf_export" (the history's PDF, specs/050) or
+	// "own_consultations" (a person's own consultations, specs/058).
 	Reason string `json:"reason" example:"active_treatment"`
 } // @name PlanLimitResponse
 
@@ -549,6 +583,8 @@ func planLimitBody(reason string) map[string]string {
 		message = "Searching and filtering the history is part of the paid plan"
 	case PlanLimitPDFExport:
 		message = "Exporting the history to PDF is part of the paid plan"
+	case PlanLimitOwnConsultations:
+		message = "Your own consultations are part of the paid plan"
 	}
 	return map[string]string{"error": "freemium_consultation_limit_exceeded", "message": message, "reason": reason}
 }
@@ -583,28 +619,8 @@ func (h *Handler) SearchConsultations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req searchConsultationsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.responder.WriteJSONError(r.Context(), w, http.StatusBadRequest, "validation_error", "Malformed JSON body", nil)
-		return
-	}
-
-	search := HistorySearch{
-		Q:            req.Q,
-		Doctor:       req.Doctor,
-		Medication:   req.Medication,
-		SymptomCodes: req.SymptomCodes,
-		Kind:         req.Kind,
-	}
-	var dateErrs ValidationErrors
-	if search.From, err = parseSearchDate(req.From); err != nil {
-		dateErrs = append(dateErrs, ValidationError{Field: "from", Message: "must be an ISO-8601 date (YYYY-MM-DD)"})
-	}
-	if search.To, err = parseSearchDate(req.To); err != nil {
-		dateErrs = append(dateErrs, ValidationError{Field: "to", Message: "must be an ISO-8601 date (YYYY-MM-DD)"})
-	}
-	if dateErrs.HasErrors() {
-		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody(dateErrs, "One or more fields are invalid"), nil)
+	search, ok := h.decodeSearch(w, r)
+	if !ok {
 		return
 	}
 
@@ -668,6 +684,36 @@ func parseSearchDate(value string) (*time.Time, error) {
 
 // writeHistoryError maps the errors of the history's two endpoints. Each case calls the responder from its own line, so
 // error_logs keeps telling them apart (backend/CLAUDE.md).
+// decodeSearch reads the criteria of a history search (a child's or a person's own); on a malformed body or date it writes
+// the 400 itself and answers false.
+func (h *Handler) decodeSearch(w http.ResponseWriter, r *http.Request) (HistorySearch, bool) {
+	var req searchConsultationsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusBadRequest, "validation_error", "Malformed JSON body", nil)
+		return HistorySearch{}, false
+	}
+	search := HistorySearch{
+		Q:            req.Q,
+		Doctor:       req.Doctor,
+		Medication:   req.Medication,
+		SymptomCodes: req.SymptomCodes,
+		Kind:         req.Kind,
+	}
+	var dateErrs ValidationErrors
+	var err error
+	if search.From, err = parseSearchDate(req.From); err != nil {
+		dateErrs = append(dateErrs, ValidationError{Field: "from", Message: "must be an ISO-8601 date (YYYY-MM-DD)"})
+	}
+	if search.To, err = parseSearchDate(req.To); err != nil {
+		dateErrs = append(dateErrs, ValidationError{Field: "to", Message: "must be an ISO-8601 date (YYYY-MM-DD)"})
+	}
+	if dateErrs.HasErrors() {
+		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody(dateErrs, "One or more fields are invalid"), nil)
+		return HistorySearch{}, false
+	}
+	return search, true
+}
+
 func (h *Handler) writeHistoryError(ctx context.Context, w http.ResponseWriter, err error, internalMessage string) {
 	var validationErrs ValidationErrors
 	var planErr *PlanLimitError
@@ -683,6 +729,8 @@ func (h *Handler) writeHistoryError(ctx context.Context, w http.ResponseWriter, 
 		h.responder.WriteJSON(ctx, w, http.StatusUnprocessableEntity, planLimitBody(planErr.Reason), nil)
 	case errors.Is(err, ErrChildNotFound):
 		h.responder.WriteJSON(ctx, w, http.StatusNotFound, childNotFoundBody(), nil)
+	case errors.Is(err, ErrAccountNotFound):
+		h.responder.WriteJSON(ctx, w, http.StatusNotFound, accountNotFoundBody(), nil)
 	default:
 		h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", internalMessage, nil)
 	}
@@ -720,7 +768,17 @@ func (h *Handler) GetConsultation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.responder.WriteJSON(r.Context(), w, http.StatusOK, toConsultationDetailResponse(c, actorOf(r.Context())), nil)
+	resp := toConsultationDetailResponse(c, actorOf(r.Context()))
+	// Someone who sees another person's own consultation (a Tutor it is shared with, specs/058) chooses its reminders.
+	if actor := actorOf(r.Context()); c.IsOwn() && actor != uuid.Nil && actor != c.AccountID {
+		on, err := h.service.OwnReminders(r.Context(), c.ID, actor)
+		if err != nil {
+			h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not fetch consultation", nil)
+			return
+		}
+		resp.MyReminders = &on
+	}
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, resp, nil)
 }
 
 type updateDoseRequest struct {
@@ -885,6 +943,7 @@ func (h *Handler) EndTreatment(w http.ResponseWriter, r *http.Request) {
 //	@Success		200				{object}	medicationResponse
 //	@Failure		400				{object}	validationErrorResponseDoc	"doses out of range, or nothing to extend (details: nothing_to_extend)"
 //	@Failure		404				{object}	medicationNotFoundResponseDoc	"No such medication in this consultation"
+//	@Failure		422				{object}	planLimitResponseDoc	"A person's own treatment, not on the paid plan (own_consultations, specs/058)"
 //	@Security		ClerkSession
 //	@Failure		401				{object}	sessionErrorResponseDoc	"No valid Clerk session"
 //	@Failure		403				{object}	sessionErrorResponseDoc	"The session does not own this resource"
@@ -916,7 +975,10 @@ func (h *Handler) ExtendTreatment(w http.ResponseWriter, r *http.Request) {
 
 	med, err := h.service.ExtendTreatment(r.Context(), consultationID, medicationID, *req.Doses)
 	var validation ValidationErrors
+	var planErr *PlanLimitError
 	switch {
+	case errors.As(err, &planErr):
+		h.responder.WriteJSON(r.Context(), w, http.StatusUnprocessableEntity, planLimitBody(planErr.Reason), nil)
 	case errors.As(err, &validation):
 		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody(validation, "One or more fields are invalid"), nil)
 	case errors.Is(err, ErrMedicationNotFound):
@@ -984,6 +1046,15 @@ func toDoseResponse(d *Dose, actor uuid.UUID) doseResponse {
 	}
 }
 
+// childIDOf is the consultation's child for the JSON: null for a person's own (specs/058).
+func childIDOf(c *Consultation) *string {
+	if c.IsOwn() {
+		return nil
+	}
+	id := c.ChildID.String()
+	return &id
+}
+
 func toConsultationDetailResponse(c *Consultation, actor uuid.UUID) consultationDetailResponse {
 	medications := make([]medicationResponse, 0, len(c.Medications))
 	for i := range c.Medications {
@@ -995,7 +1066,8 @@ func toConsultationDetailResponse(c *Consultation, actor uuid.UUID) consultation
 	}
 	return consultationDetailResponse{
 		ID:          c.ID.String(),
-		ChildID:     c.ChildID.String(),
+		ChildID:     childIDOf(c),
+		AccountID:   c.AccountID.String(),
 		DoctorName:  c.DoctorName,
 		ConsultDate: c.ConsultDate.Format("2006-01-02"),
 		PhotoBase64: base64.StdEncoding.EncodeToString(c.Photo),

@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode, type RefObject } from 'react'
+import type { SubjectRef } from '../../shared/subject'
 import { createPortal } from 'react-dom'
 import { useSymptoms } from '../../shared/catalog/useCatalog'
 import { useBodyScrollLock } from '../../shared/ui/useBodyScrollLock'
@@ -14,7 +15,8 @@ import type { ExportPeriod, ExportRequest } from './types'
 import { STAGES, useExport, type ExportResult, type ExportStage } from './useExport'
 
 export interface ExportPanelProps {
-  childId: string
+  /** The child's id, or a person's own subject (specs/058: no vaccination card). */
+  childId: SubjectRef
   child: { firstName: string; lastName: string }
   /** The child's family is on the free plan: the panel opens on the plan notice and asks the server nothing. */
   free: boolean
@@ -64,7 +66,9 @@ export function ExportPanel({ childId, child, free, filters, origin = 'history',
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [consultations, setConsultations] = useState(origin !== 'card')
-  const [vaccinations, setVaccinations] = useState(true)
+  // A person's own history has no vaccination card (specs/058): the section is neither offered nor asked for.
+  const person = typeof childId !== 'string' && childId.kind === 'person'
+  const [vaccinations, setVaccinations] = useState(!person)
   const [photos, setPhotos] = useState(false)
 
   const period: ExportPeriod =
@@ -171,9 +175,11 @@ export function ExportPanel({ childId, child, free, filters, origin = 'history',
             <Switch checked={consultations} onToggle={() => setConsultations((v) => !v)} rule>
               {PANEL.consultations}
             </Switch>
-            <Switch checked={vaccinations} onToggle={() => setVaccinations((v) => !v)} rule>
-              {PANEL.vaccinations}
-            </Switch>
+            {!person && (
+              <Switch checked={vaccinations} onToggle={() => setVaccinations((v) => !v)} rule>
+                {PANEL.vaccinations}
+              </Switch>
+            )}
             <Switch checked={photos} onToggle={() => setPhotos((v) => !v)} hint={PANEL.photosHint}>
               {PANEL.photos}
             </Switch>

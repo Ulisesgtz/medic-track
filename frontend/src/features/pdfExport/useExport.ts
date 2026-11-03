@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { SubjectRef } from '../../shared/subject'
 import { useAuth } from '@clerk/react'
 import { ExportApiError, fetchExportData } from './api'
 import { fileName } from './document/model'
@@ -32,7 +33,8 @@ export type ExportState =
   | { status: 'plan' }
 
 interface UseExportOptions {
-  childId: string
+  /** The child's id, or a person's own subject (specs/058). */
+  childId: SubjectRef
   /** Start on the plan notice: the account is known to be on the free plan, so nothing is asked of the server. */
   free?: boolean
   /** The catalog's names of the symptoms, for the cover's «Filtros». */
@@ -67,7 +69,8 @@ export function useExport({ childId, free = false, symptomNames }: UseExportOpti
         }
         let photos = NO_PHOTOS
         if (request.sections.photos && data.photos && photoCount(data.photos) > 0) {
-          photos = await preparePhotos(childId, data.photos, () => getToken(), controller.signal, (done, total) => {
+          // Only a child has a card (and so card photos); a person's history only has its prescriptions.
+          photos = await preparePhotos(typeof childId === 'string' ? childId : '', data.photos, () => getToken(), controller.signal, (done, total) => {
             if (still()) setState({ status: 'generating', stage: 'photos', photo: { done, total } })
           })
           if (!still()) return

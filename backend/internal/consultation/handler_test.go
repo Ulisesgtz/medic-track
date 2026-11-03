@@ -54,6 +54,17 @@ func doPatchPath(t *testing.T, router http.Handler, path string, body map[string
 	return rec
 }
 
+func doPutPath(t *testing.T, router http.Handler, path string, body map[string]any) *httptest.ResponseRecorder {
+	t.Helper()
+	b, err := json.Marshal(body)
+	require.NoError(t, err)
+	req := httptest.NewRequest(http.MethodPut, path, bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, req)
+	return rec
+}
+
 func validMedicationPayload() map[string]any {
 	return map[string]any{"name": "Amoxicilina", "frequencyHours": 8, "durationDays": 3, "startTime": "08:00"}
 }
@@ -366,6 +377,13 @@ func routerWith(t *testing.T, who *access.Access) (http.Handler, *pgxpool.Pool) 
 	r.Patch("/consultations/{consultationId}/doses/{doseId}", h.UpdateDose)
 	r.Post("/consultations/{consultationId}/medications/{medicationId}/end", h.EndTreatment)
 	r.Post("/consultations/{consultationId}/medications/{medicationId}/extend", h.ExtendTreatment)
+	r.Get("/accounts/{accountId}/consultations", h.ListOwnConsultations)
+	r.Post("/accounts/{accountId}/consultations", h.CreateOwnConsultation)
+	r.Get("/accounts/{accountId}/overview", h.GetOwnOverview)
+	r.Put("/accounts/{accountId}/consultation-sharing", h.SetSharing)
+	r.Post("/accounts/{accountId}/consultations/search", h.SearchOwnConsultations)
+	r.Get("/accounts/{accountId}/history-options", h.OwnHistoryOptions)
+	r.Put("/consultations/{consultationId}/my-reminders", h.SetOwnReminders)
 	return r, pool
 }
 
@@ -391,6 +409,12 @@ func newBrokenRouter(t *testing.T) http.Handler {
 	r.Post("/children/{childId}/consultations", h.CreateConsultation)
 	r.Get("/consultations/{consultationId}", h.GetConsultation)
 	r.Patch("/consultations/{consultationId}/doses/{doseId}", h.UpdateDose)
+	r.Get("/accounts/{accountId}/consultations", h.ListOwnConsultations)
+	r.Post("/accounts/{accountId}/consultations", h.CreateOwnConsultation)
+	r.Get("/accounts/{accountId}/overview", h.GetOwnOverview)
+	r.Post("/consultations/{consultationId}/medications/{medicationId}/extend", h.ExtendTreatment)
+	r.Post("/accounts/{accountId}/consultations/search", h.SearchOwnConsultations)
+	r.Get("/accounts/{accountId}/history-options", h.OwnHistoryOptions)
 	return r
 }
 

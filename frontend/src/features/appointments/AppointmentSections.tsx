@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import type { SubjectRef } from '../../shared/subject'
 import { Link } from 'react-router-dom'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { shortDayText } from './appointmentText'
@@ -28,11 +29,11 @@ function DoneBanner({ appointment, onUndone }: { appointment: Appointment; onUnd
  * The appointment of one consultation's detail: its card, or — if it has none — the invitation to add it without changing
  * anything else of the consultation (the paid plan's; a Caregiver sees nothing to add).
  */
-export function ConsultationAppointmentSection({ consultationId, childId }: { consultationId: string; childId: string | undefined }) {
+export function ConsultationAppointmentSection({ consultationId, subject }: { consultationId: string; subject: SubjectRef | undefined }) {
   const query = useConsultationAppointment(consultationId)
   const account = useCurrentAccount()
   const data = query.data
-  const access = useAppointmentAccess(account.data, childId, data?.paidPlan)
+  const access = useAppointmentAccess(account.data, subject, data?.paidPlan)
   const [done, setDone] = useState<Appointment | null>(null)
 
   if (!data) return null

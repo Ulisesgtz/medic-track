@@ -161,11 +161,11 @@ func newWorld(t *testing.T) *world {
 				}
 				return "", family.ErrEmailNotVerified
 			})), responder),
-		Payments:       paymentsHandler(t, pool, responder),
-		Supplement:     supplement.NewHandler(supplement.NewService(supplement.NewRepository(pool)), responder),
-		Appointment:    appointment.NewHandler(appointment.NewService(appointment.NewRepository(pool)), responder),
-		ChildDevice:    childdevice.NewHandler(childdevice.NewService(childdevice.NewRepository(pool)), responder),
-		Vaccination:    vaccination.NewHandler(vaccination.NewService(vaccination.NewRepository(pool)), responder),
+		Payments:    paymentsHandler(t, pool, responder),
+		Supplement:  supplement.NewHandler(supplement.NewService(supplement.NewRepository(pool)), responder),
+		Appointment: appointment.NewHandler(appointment.NewService(appointment.NewRepository(pool)), responder),
+		ChildDevice: childdevice.NewHandler(childdevice.NewService(childdevice.NewRepository(pool)), responder),
+		Vaccination: vaccination.NewHandler(vaccination.NewService(vaccination.NewRepository(pool)), responder),
 		HistoryExport: historyexport.NewHandler(historyexport.NewService(historyexport.NewRepository(pool), consultation.NewRepository(pool),
 			vaccination.NewRepository(pool)), responder),
 		Ownership:      ownership.NewRepository(pool),
@@ -222,6 +222,21 @@ func (w *world) routes() []struct {
 		ownerStatus              int
 	}{
 		{"get account", http.MethodGet, "/accounts/" + w.accountA.String(), "", http.StatusOK},
+		// Specs/058: tutor A's own consultations and appointments. A is on the free plan here: reading reaches the handler, an
+		// empty form is a 400 before the plan is asked.
+		{"own consultations", http.MethodGet, "/accounts/" + w.accountA.String() + "/consultations", "", http.StatusOK},
+		{"create own consultation", http.MethodPost, "/accounts/" + w.accountA.String() + "/consultations", `{}`, http.StatusBadRequest},
+		{"own overview", http.MethodGet, "/accounts/" + w.accountA.String() + "/overview" + window, "", http.StatusOK},
+		{"own appointments", http.MethodGet, "/accounts/" + w.accountA.String() + "/appointments", "", http.StatusOK},
+		{"create own appointment", http.MethodPost, "/accounts/" + w.accountA.String() + "/appointments", `{}`, http.StatusBadRequest},
+		// A is on the free plan here: the history and the PDF of their own consultations answer it is the paid plan's.
+		{"search own consultations", http.MethodPost, "/accounts/" + w.accountA.String() + "/consultations/search", `{}`, http.StatusUnprocessableEntity},
+		{"own history options", http.MethodGet, "/accounts/" + w.accountA.String() + "/history-options", "", http.StatusUnprocessableEntity},
+		{"export own history", http.MethodPost, "/accounts/" + w.accountA.String() + "/export", `{"period":{"kind":"all"},"sections":{"consultations":true}}`, http.StatusUnprocessableEntity},
+		// Specs/058: the switch (a missing value is a 400 before anything is asked).
+		{"consultation sharing", http.MethodPut, "/accounts/" + w.accountA.String() + "/consultation-sharing", `{}`, http.StatusBadRequest},
+		// «Tus avisos» of consultation A, a child's: never one's own consultation shared, so 400 not_shared once past the guard.
+		{"my consultation reminders", http.MethodPut, "/consultations/" + w.consultationA.String() + "/my-reminders", `{"on":true}`, http.StatusBadRequest},
 		{"personal routines", http.MethodGet, "/accounts/" + w.accountA.String() + "/routines" + window, "", http.StatusOK},
 		{"create personal routine", http.MethodPost, "/accounts/" + w.accountA.String() + "/routines", `{}`, http.StatusBadRequest},
 		{"personal routines notice", http.MethodPost, "/accounts/" + w.accountA.String() + "/routines/notice-seen", "", http.StatusNoContent},
@@ -352,7 +367,7 @@ func TestRouter_TheOwnerReachesTheHandler(t *testing.T) {
 func TestRouter_MalformedIDsFallThroughToTheHandlersOwn404(t *testing.T) {
 	w := newWorld(t)
 	tokenA := w.verifier.Token(t, w.clerkA)
-	for _, path := range []string{"/accounts/not-a-uuid", "/children/not-a-uuid/consultations", "/consultations/not-a-uuid", "/routines/not-a-uuid", "/children/not-a-uuid/routines", "/appointments/not-a-uuid", "/children/not-a-uuid/appointments"} {
+	for _, path := range []string{"/accounts/not-a-uuid", "/accounts/not-a-uuid/consultations", "/accounts/not-a-uuid/appointments", "/children/not-a-uuid/consultations", "/consultations/not-a-uuid", "/routines/not-a-uuid", "/children/not-a-uuid/routines", "/appointments/not-a-uuid", "/children/not-a-uuid/appointments"} {
 		require.Equal(t, http.StatusNotFound, w.do(t, http.MethodGet, path, tokenA, "").Code, path)
 	}
 }
@@ -378,7 +393,7 @@ func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 // ownRoutes are the person's own account (their notice, reminder settings and devices): never a family's.
 // fullRoutes need the full level (the owner or a Tutor); every other protected route needs only Mark (see and mark).
 var (
-	ownRoutes  = map[string]bool{"get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true, "get subscription": true, "subscribe": true, "cancel subscription": true}
+	ownRoutes  = map[string]bool{"search own consultations": true, "own history options": true, "export own history": true, "consultation sharing": true, "own consultations": true, "create own consultation": true, "own overview": true, "own appointments": true, "create own appointment": true, "get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true, "get subscription": true, "subscribe": true, "cancel subscription": true}
 	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "edit consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "record vaccination": true, "correct vaccination": true, "delete vaccination": true, "save card photo": true, "delete card photo": true, "edit appointment": true, "create device link": true, "remove device link": true, "choose device reminders": true, "mark appointment": true}
 )
 
@@ -544,5 +559,29 @@ func TestRouter_CORSAllowsEveryMethodTheAppUses(t *testing.T) {
 		w.router.ServeHTTP(rec, req)
 		require.Contains(t, rec.Header().Get("Access-Control-Allow-Methods"), method, method)
 		require.Equal(t, "http://localhost:5173", rec.Header().Get("Access-Control-Allow-Origin"), method)
+	}
+}
+
+// Specs/058: once tutor A shares their own consultations, a Tutor of the family sees them (Mark) and nothing more; a Caregiver
+// and a Child-role member still see nothing of them.
+func TestRouter_APersonsOwnConsultationsOnceShared(t *testing.T) {
+	w := newWorld(t)
+	_, err := w.pool.Exec(context.Background(), `INSERT INTO own_consultation_sharing (account_id, shared) VALUES ($1, true)`, w.accountA)
+	require.NoError(t, err)
+	sees := map[string]bool{"own consultations": true, "own overview": true, "own appointments": true, "search own consultations": true, "own history options": true}
+	creates := map[string]bool{"create own consultation": true, "create own appointment": true, "export own history": true}
+	for who, clerkID := range map[string]string{"tutor": w.clerkTutor, "caregiver": w.clerkCaregiver, "child member": w.clerkKid, "removed": w.clerkRemoved} {
+		token := w.verifier.Token(t, clerkID)
+		for _, rt := range w.routes() {
+			if !sees[rt.name] && !creates[rt.name] {
+				continue
+			}
+			rec := w.do(t, rt.method, rt.path, token, rt.body)
+			if who == "tutor" && sees[rt.name] {
+				require.Equal(t, rt.ownerStatus, rec.Code, "%s %s: %s", who, rt.name, rec.Body.String())
+				continue
+			}
+			require.Equal(t, http.StatusForbidden, rec.Code, "%s %s: %s", who, rt.name, rec.Body.String())
+		}
 	}
 }

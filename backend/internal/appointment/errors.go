@@ -10,6 +10,8 @@ var (
 	ErrConsultationNotFound = errors.New("consultation not found")
 	// ErrChildNotFound: no such child.
 	ErrChildNotFound = errors.New("child not found")
+	// ErrAccountNotFound: a person's own appointment names an account that doesn't exist (specs/058).
+	ErrAccountNotFound = errors.New("account not found")
 	// ErrExists: the consultation already has a scheduled appointment (cancel it or mark it first).
 	ErrExists = errors.New("the consultation already has a scheduled appointment")
 	// ErrClosed: a done or canceled appointment can't be edited or have its status changed that way.

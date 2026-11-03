@@ -4,7 +4,7 @@
 export const MY_DAY = {
   title: 'Mi día',
   onlyYou: 'Solo tú ves esto',
-  back: '← Mi día',
+  back: '← Mi perfil',
   firstText: 'Aquí verás tus tomas y actividades del día, con las horas que tú escribas.',
   firstSupplement: 'Agregar mi primer suplemento',
   firstActivity: 'Agregar una actividad',

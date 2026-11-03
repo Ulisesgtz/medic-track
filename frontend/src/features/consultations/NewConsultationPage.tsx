@@ -3,9 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { formatAgeLong } from '../../shared/age'
 import { useUnsavedWork } from '../../shared/appVersion/unsavedWork'
+import { subjectAccessOf, subjectKey, type Subject } from '../../shared/subject'
 import { AppShell } from '../home/AppShell'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
-import { useChildAccess } from '../family/useChildAccess'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { ConsultationForm } from './ConsultationForm'
 
@@ -13,9 +13,10 @@ import { ConsultationForm } from './ConsultationForm'
  * `/children/:childId/consultations/new` — the "Nueva consulta" screen
  * (mockups 04 and 14). It is a page, not a modal: "← Cancelar" goes back to
  * the child's detail, and leaving with something already captured (fields or
- * a photo) asks before discarding it.
+ * a photo) asks before discarding it. With `own` it is `/yo/consultas/nueva`, the person's own consultation (specs/058), the
+ * same form and back to `/yo`.
  */
-export function NewConsultationPage() {
+export function NewConsultationPage({ own = false }: { own?: boolean }) {
   const { childId } = useParams<{ childId: string }>()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
@@ -30,21 +31,30 @@ export function NewConsultationPage() {
   }, [])
 
   const accountQuery = useCurrentAccount()
-  const child = accountQuery.data?.children.find((c) => c.id === childId)
-  // Specs/032: the plan is the child's family's, not the session's own.
-  const access = useChildAccess(accountQuery.data, childId)
-  const childLabel = child ? `${child.firstName} ${child.lastName} · ${formatAgeLong(child.birthDate)}` : undefined
+  const account = accountQuery.data
+  const subject: Subject | undefined = own ? (account ? { kind: 'person', accountId: account.id } : undefined) : childId ? { kind: 'child', childId } : undefined
+  const child = account?.children.find((c) => c.id === childId)
+  // Specs/032: the plan is the child's family's, not the session's own. Specs/058: one's own things'.
+  const access = subjectAccessOf(account, subject)
+  const childLabel = own
+    ? account
+      ? `${account.firstName} ${account.lastName}`
+      : undefined
+    : child
+      ? `${child.firstName} ${child.lastName} · ${formatAgeLong(child.birthDate)}`
+      : undefined
+  const home = own ? '/yo' : `/children/${childId}`
 
-  if (!childId) return null
+  if (!subject) return null
 
   return (
-    <AppShell activeChildId={childId}>
+    <AppShell activeChildId={own ? undefined : childId}>
       <main className={isDesktop ? 'min-w-0 bg-canvas px-6 py-8 lg:px-12 lg:py-11' : 'mx-auto min-h-screen w-full max-w-[430px] bg-canvas pb-10'}>
         <ConsultationForm
-          childId={childId}
+          childId={subject}
           variant={isDesktop ? 'desktop' : 'phone'}
           childLabel={childLabel}
-          cancelTo={`/children/${childId}`}
+          cancelTo={home}
           confirmLeave={() =>
             !dirtyRef.current || window.confirm('¿Descartar la consulta? Se perderá lo que capturaste.')
           }
@@ -55,12 +65,13 @@ export function NewConsultationPage() {
           appointmentAvailable={!access.isFree}
           onSuccess={(consultationId, appointmentFailed) => {
             dirtyRef.current = false
-            queryClient.invalidateQueries({ queryKey: ['consultations', childId] })
+            const key = subjectKey(subject)
+            queryClient.invalidateQueries({ queryKey: ['consultations', key] })
             queryClient.invalidateQueries({ queryKey: ['overview'] })
             queryClient.invalidateQueries({ queryKey: ['appointments'] })
             // The paid plan's history (specs/031) and its doctor/medication lists.
-            queryClient.invalidateQueries({ queryKey: ['history', childId] })
-            queryClient.invalidateQueries({ queryKey: ['history-options', childId] })
+            queryClient.invalidateQueries({ queryKey: ['history', key] })
+            queryClient.invalidateQueries({ queryKey: ['history-options', key] })
             // replace: "back" from the saved consultation lands on the child, not on an already-sent form.
             navigate(`/consultations/${consultationId}`, { replace: true, state: appointmentFailed ? { appointmentFailed: true } : undefined })
           }}

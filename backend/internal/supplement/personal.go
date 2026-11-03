@@ -16,9 +16,10 @@ import (
 // ErrAccountNotFound: no such account.
 var ErrAccountNotFound = errors.New("account not found")
 
-// personalPlanSQL is whether the plan of a person's own routines is paid: their own account is, or they belong — as an active
-// member — to a family whose owner is (the invited person uses their routines while that family pays). `a` is the account.
-const personalPlanSQL = `(a.plan = 'paid' OR EXISTS (
+// PersonalPlanSQL is whether the plan of a person's own things is paid: their own account is, or they belong — as an active
+// member — to a family whose owner is (the invited person uses them while that family pays). `a` is the account. Shared with a
+// person's own consultations (specs/058), so both read the plan the same way.
+const PersonalPlanSQL = `(a.plan = 'paid' OR EXISTS (
 	SELECT 1 FROM family_members fm JOIN accounts fo ON fo.id = fm.family_account_id
 	WHERE fm.account_id = a.id AND fm.status = 'active' AND fo.plan = 'paid'))`
 
@@ -36,7 +37,7 @@ func (r *Repository) CreatePersonal(ctx context.Context, accountID uuid.UUID, in
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	var paid bool
-	err = tx.QueryRow(ctx, `SELECT `+personalPlanSQL+` FROM accounts a WHERE a.id = $1 FOR UPDATE OF a`, accountID).Scan(&paid)
+	err = tx.QueryRow(ctx, `SELECT `+PersonalPlanSQL+` FROM accounts a WHERE a.id = $1 FOR UPDATE OF a`, accountID).Scan(&paid)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uuid.Nil, ErrAccountNotFound
 	}
@@ -77,7 +78,7 @@ func checkPersonalCap(ctx context.Context, q querier, accountID uuid.UUID, kind 
 // doses of [from, to), its progress and its next dose. Nothing is hidden by plan.
 func (r *Repository) ListPersonal(ctx context.Context, accountID uuid.UUID, kind Kind, from, to time.Time) (*RoutineList, error) {
 	var paid bool
-	err := r.pool.QueryRow(ctx, `SELECT `+personalPlanSQL+` FROM accounts a WHERE a.id = $1`, accountID).Scan(&paid)
+	err := r.pool.QueryRow(ctx, `SELECT `+PersonalPlanSQL+` FROM accounts a WHERE a.id = $1`, accountID).Scan(&paid)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrAccountNotFound
 	}

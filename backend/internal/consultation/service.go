@@ -77,6 +77,20 @@ func (s *Service) SearchConsultations(ctx context.Context, childID uuid.UUID, in
 	return s.repo.Search(ctx, childID, search)
 }
 
+// SearchOwnConsultations is SearchConsultations over a person's own consultations (specs/058).
+func (s *Service) SearchOwnConsultations(ctx context.Context, accountID uuid.UUID, in HistorySearch) ([]Consultation, error) {
+	search, errs := validateHistorySearch(in)
+	if errs.HasErrors() {
+		return nil, errs
+	}
+	return s.repo.SearchOwn(ctx, accountID, search)
+}
+
+// OwnHistoryOptions is HistoryOptions over a person's own consultations (specs/058).
+func (s *Service) OwnHistoryOptions(ctx context.Context, accountID uuid.UUID) (*HistoryOptions, error) {
+	return s.repo.HistoryOptionsOwn(ctx, accountID)
+}
+
 // HistoryOptions lists the doctors and medications already registered for the child, for the history's choice lists.
 func (s *Service) HistoryOptions(ctx context.Context, childID uuid.UUID) (*HistoryOptions, error) {
 	return s.repo.HistoryOptions(ctx, childID)
@@ -90,18 +104,64 @@ const maxOverviewWindow = 48 * time.Hour
 // treatment still running now. from/to must be a positive window of at most
 // maxOverviewWindow.
 func (s *Service) GetChildOverview(ctx context.Context, childID uuid.UUID, from, to time.Time) (*ChildOverview, error) {
-	if !to.After(from) {
-		return nil, ValidationErrors{{Field: "to", Message: "must be after from"}}
-	}
-	if to.Sub(from) > maxOverviewWindow {
-		return nil, ValidationErrors{{Field: "to", Message: "the window cannot exceed 48 hours"}}
+	if errs := validateOverviewWindow(from, to); errs.HasErrors() {
+		return nil, errs
 	}
 	return s.repo.GetOverview(ctx, childID, from, to, time.Now())
+}
+
+// GetOwnOverview is GetChildOverview for a person's own consultations (specs/058), with the same window rules.
+func (s *Service) GetOwnOverview(ctx context.Context, accountID uuid.UUID, from, to time.Time) (*ChildOverview, error) {
+	if errs := validateOverviewWindow(from, to); errs.HasErrors() {
+		return nil, errs
+	}
+	return s.repo.GetOwnOverview(ctx, accountID, from, to, time.Now())
+}
+
+// ListOwnConsultations lists a person's own consultations (specs/058).
+func (s *Service) ListOwnConsultations(ctx context.Context, accountID uuid.UUID) ([]Consultation, error) {
+	return s.repo.ListOwn(ctx, accountID)
+}
+
+// validateOverviewWindow: `to` after `from`, and at most 48 hours apart.
+func validateOverviewWindow(from, to time.Time) ValidationErrors {
+	if !to.After(from) {
+		return ValidationErrors{{Field: "to", Message: "must be after from"}}
+	}
+	if to.Sub(from) > maxOverviewWindow {
+		return ValidationErrors{{Field: "to", Message: "the window cannot exceed 48 hours"}}
+	}
+	return nil
 }
 
 // CreateConsultation validates input and persists a new Consultation with
 // its Medications and generated Doses (FR-004 through FR-010).
 func (s *Service) CreateConsultation(ctx context.Context, childID uuid.UUID, input CreateConsultationInput) (*Consultation, error) {
+	c, err := consultationFrom(input)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.Create(ctx, childID, c); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+// CreateOwnConsultation registers a consultation of the person themself (specs/058): the same input and rules as a child's,
+// and the paid plan of their own things (Repository.CreateOwn).
+func (s *Service) CreateOwnConsultation(ctx context.Context, accountID uuid.UUID, input CreateConsultationInput) (*Consultation, error) {
+	c, err := consultationFrom(input)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.CreateOwn(ctx, accountID, c); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+// consultationFrom validates a new consultation and builds it, with the start times dropped when it is only a record.
+func consultationFrom(input CreateConsultationInput) (*Consultation, error) {
 	if errs := validateCreateConsultationInput(input); errs.HasErrors() {
 		return nil, errs
 	}
@@ -127,10 +187,6 @@ func (s *Service) CreateConsultation(ctx context.Context, childID uuid.UUID, inp
 			DurationDays:   m.DurationDays,
 			StartTime:      startTime,
 		})
-	}
-
-	if err := s.repo.Create(ctx, childID, c); err != nil {
-		return nil, err
 	}
 	return c, nil
 }

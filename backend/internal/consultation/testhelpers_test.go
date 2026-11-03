@@ -36,7 +36,8 @@ func closedPool(t *testing.T, dsn string) *pgxpool.Pool {
 }
 
 func uniqueEmail(base string) string {
-	return fmt.Sprintf("%s.%d@example.com", base, time.Now().UnixNano())
+	// The clock alone repeats on Windows (its resolution is coarse): two accounts made in a row would share an e-mail.
+	return fmt.Sprintf("%s.%d.%s@example.com", base, time.Now().UnixNano(), uuid.NewString()[:8])
 }
 
 // createTestChild persists a PAID account with a single child directly through the account package, returning the

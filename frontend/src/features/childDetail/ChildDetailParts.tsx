@@ -8,6 +8,7 @@ import { consultationLine } from '../consultations/consultationLine'
 import { HistoryEntry } from '../consultations/HistoryEntry'
 import { RecordOnlyBadge } from '../consultations/RecordOnlyBadge'
 import type { ActiveTreatment, ConsultationSummary } from '../consultations/types'
+import { historyHref, type SubjectRef } from '../../shared/subject'
 import { useFamily } from '../family/useFamily'
 import { familyMembers } from '../home/homeText'
 import { useChildDay } from '../home/useChildDay'
@@ -85,30 +86,35 @@ export function TreatmentCard({ treatment, variant }: { treatment: ActiveTreatme
 
 /**
  * «Consultas»: one compact row per consultation (date, doctor, what was registered, «Solo registro»), «Buscar en el historial» and
- * «Exportar a PDF» (each with the «Plan completo» mark on the free plan), or the empty block that explains «Nueva consulta».
+ * «Exportar a PDF» (each with the «Plan completo» mark on the free plan), or the empty block that explains «Nueva consulta». A
+ * child's, or a person's own (specs/058: `historyTo` is their history; `child` is who the PDF is of, null where it isn't offered).
  */
 export function ConsultationsSection({
   consultations,
   status,
   childId,
+  historyTo,
   child,
   free,
   variant,
   onRetry,
+  emptyText = CHILD.noConsultationsText,
 }: {
   consultations: ConsultationSummary[]
   status: 'loading' | 'error' | 'ready'
-  childId: string
-  child: { firstName: string; lastName: string } | undefined
+  childId: SubjectRef
+  historyTo?: string
+  child: { firstName: string; lastName: string } | undefined | null
   free: boolean
   variant: Variant
   onRetry: () => void
+  emptyText?: string
 }) {
   const desktop = variant === 'desktop'
   const size = desktop ? 'px-3.5 text-[14px]' : 'w-full px-4 text-[15px]'
   const actions = consultations.length > 0 && (
     <div className={desktop ? 'flex gap-2' : 'flex flex-col gap-2'}>
-      <HistoryEntry to={`/children/${childId}/historial`} free={free} className={`${outline} ${size}`}>
+      <HistoryEntry to={historyTo ?? historyHref(childId, undefined)} free={free} className={`${outline} ${size}`}>
         {CHILD.search}
       </HistoryEntry>
       {child && (
@@ -138,7 +144,7 @@ export function ConsultationsSection({
     ) : consultations.length === 0 ? (
       <div className={`flex flex-col gap-1.5 rounded-[22px] border-2 border-dashed border-hint-border ${desktop ? 'p-6' : 'px-[18px] py-5'}`}>
         <span className={`font-extrabold text-ink ${desktop ? 'text-[17px]' : 'text-[16px]'}`}>{CHILD.noConsultations}</span>
-        <span className="text-[15px] leading-normal text-body">{CHILD.noConsultationsText}</span>
+        <span className="text-[15px] leading-normal text-body">{emptyText}</span>
       </div>
     ) : (
       <div className={`${card} overflow-hidden`}>

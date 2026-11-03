@@ -149,6 +149,8 @@ type Photos struct {
 
 // Document is everything the PDF shows.
 type Document struct {
+	// Own says it is a person's own history (specs/058): Child is then the person (no birth date) and there is no card.
+	Own             bool
 	Child           Child
 	ActiveTreatment *ActiveTreatment
 	NextAppointment *Appointment

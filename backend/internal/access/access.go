@@ -100,15 +100,60 @@ func onChildQuery(actorWhere string) string {
 		WHERE ` + actorWhere
 }
 
+// ownLevelCase is the level of the actor account `a` over something of the person `person` themself — their own
+// consultations and appointments (specs/058-consultas-del-titular, research R3): Full for that person; Mark when the person
+// shares their consultations (own_consultation_sharing) and the actor is, in the person's family, its owner or an active
+// Tutor; None otherwise (a Caregiver, a Child-role member, someone of another family, a stranger). The person's family is
+// the one they own (if it has anyone active) or the one they are an active member of. The plan is not asked: once shared,
+// a family that stops paying keeps seeing and marking, as a Tutor does with the children (research R5).
+func ownLevelCase(person string) string {
+	return OwnLevelSQL(person)
+}
+
+// OwnLevelSQL is ownLevelCase for the queries of other packages (the reminders of a person's own doses, specs/058), so
+// they decide who may be reminded with the very same rule as the routes: an SQL expression worth 2, 1 or 0, over the
+// actor account aliased `a` and the person given as an SQL expression.
+func OwnLevelSQL(person string) string {
+	return `CASE
+		WHEN a.id = ` + person + ` THEN 2
+		WHEN EXISTS (SELECT 1 FROM own_consultation_sharing sh WHERE sh.account_id = ` + person + ` AND sh.shared)
+		 AND EXISTS (
+			SELECT 1
+			FROM (
+				SELECT ` + person + ` AS fam
+				WHERE EXISTS (SELECT 1 FROM family_members pm WHERE pm.family_account_id = ` + person + ` AND pm.status = 'active')
+				UNION ALL
+				SELECT pm.family_account_id FROM family_members pm WHERE pm.account_id = ` + person + ` AND pm.status = 'active'
+			) f
+			WHERE a.id = f.fam
+			   OR EXISTS (SELECT 1 FROM family_members tm
+			              WHERE tm.family_account_id = f.fam AND tm.account_id = a.id AND tm.status = 'active' AND tm.role = 'tutor')
+		 ) THEN 1
+		ELSE 0
+	END`
+}
+
+// onConsultationQuery: a child's consultation is resolved through its child; a person's own (no child, specs/058) by
+// ownLevelCase over its account.
 func onConsultationQuery(actorWhere string) string {
 	return `
-		SELECT a.id, ` + levelCase("m.child_id = ch.id") + `
+		SELECT a.id, CASE WHEN k.child_id IS NULL THEN ` + ownLevelCase("k.account_id") + `
+		                  ELSE ` + levelCase("m.child_id = ch.id") + ` END
 		FROM accounts a
 		JOIN consultations k ON k.id = $2
-		JOIN children ch ON ch.id = k.child_id
-		JOIN accounts owner ON owner.id = ch.account_id
+		LEFT JOIN children ch ON ch.id = k.child_id
+		JOIN accounts owner ON owner.id = k.account_id
 		LEFT JOIN family_members m
 		       ON m.account_id = a.id AND m.family_account_id = owner.id AND m.status = 'active'
+		WHERE ` + actorWhere
+}
+
+// onPersonQuery: access over a person's profile (specs/058: their own consultations, overview, history and appointments).
+func onPersonQuery(actorWhere string) string {
+	return `
+		SELECT a.id, ` + ownLevelCase("person.id") + `
+		FROM accounts a
+		JOIN accounts person ON person.id = $2
 		WHERE ` + actorWhere
 }
 
@@ -159,6 +204,22 @@ func (r *Repository) OnConsultation(ctx context.Context, clerkUserID string, con
 	return r.run(ctx, onConsultationQuery(byClerkUser), clerkUserID, consultationID)
 }
 
+// OnPerson is what the Clerk session can do with a person's profile and own consultations (specs/058): Full for the person,
+// Mark for a Tutor of their family while they share, None otherwise.
+func (r *Repository) OnPerson(ctx context.Context, clerkUserID string, accountID uuid.UUID) (Access, error) {
+	if clerkUserID == "" {
+		return Access{Level: None}, nil
+	}
+	return r.run(ctx, onPersonQuery(byClerkUser), clerkUserID, accountID)
+}
+
+// OfAccountOnConsultation is what an account (not a session) can do with the consultation: the «Tomada» button of a reminder of
+// a person's own dose (specs/058) knows the device's account, not a Clerk session.
+func (r *Repository) OfAccountOnConsultation(ctx context.Context, accountID, consultationID uuid.UUID) (Level, error) {
+	got, err := r.run(ctx, onConsultationQuery(byAccount), accountID, consultationID)
+	return got.Level, err
+}
+
 // OnAccount is what the Clerk session can do with a family's owner account (adding children to that family).
 func (r *Repository) OnAccount(ctx context.Context, clerkUserID string, ownerAccountID uuid.UUID) (Access, error) {
 	if clerkUserID == "" {
@@ -202,11 +263,12 @@ func (r *Repository) OnRoutine(ctx context.Context, clerkUserID string, routineI
 // onAppointmentQuery: access over a consultation's appointment (specs/033, part 2), resolved through its child.
 func onAppointmentQuery(actorWhere string) string {
 	return `
-		SELECT a.id, ` + levelCase("m.child_id = ch.id") + `
+		SELECT a.id, CASE WHEN ap.child_id IS NULL THEN ` + ownLevelCase("ap.account_id") + `
+		                  ELSE ` + levelCase("m.child_id = ch.id") + ` END
 		FROM accounts a
 		JOIN consultation_appointments ap ON ap.id = $2
-		JOIN children ch ON ch.id = ap.child_id
-		JOIN accounts owner ON owner.id = ch.account_id
+		LEFT JOIN children ch ON ch.id = ap.child_id
+		JOIN accounts owner ON owner.id = ap.account_id
 		LEFT JOIN family_members m
 		       ON m.account_id = a.id AND m.family_account_id = owner.id AND m.status = 'active'
 		WHERE ` + actorWhere
