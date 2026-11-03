@@ -140,3 +140,49 @@ func TestOwnHandler_DatabaseDown(t *testing.T) {
 	require.Equal(t, http.StatusInternalServerError, doPostPath(t, router, base+"/consultations", ownPayload("08:00")).Code)
 	require.Equal(t, http.StatusInternalServerError, doPostPath(t, router, "/consultations/"+uuid.NewString()+"/medications/"+uuid.NewString()+"/extend", map[string]any{"doses": 2}).Code)
 }
+
+func TestOwnHandler_HistorySearchAndOptions(t *testing.T) {
+	router, pool := routerWithPool(t)
+	ctx := context.Background()
+	child := createTestChild(t, pool)
+	accountID := accountOfChild(t, pool, child)
+	svc := consultation.NewService(consultation.NewRepository(pool))
+	_, err := svc.CreateOwnConsultation(ctx, accountID, ownInput("Dr. Propio", "08:00"))
+	require.NoError(t, err)
+	_, err = svc.CreateConsultation(ctx, child, ownInput("Dra. Del Hijo", "08:00"))
+	require.NoError(t, err)
+	base := "/accounts/" + accountID.String()
+
+	rec := doPostPath(t, router, base+"/consultations/search", map[string]any{"q": "propio"})
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.Contains(t, rec.Body.String(), "Dr. Propio")
+	require.NotContains(t, rec.Body.String(), "Dra. Del Hijo")
+	rec = doPostPath(t, router, base+"/consultations/search", map[string]any{"q": "hijo"})
+	require.Contains(t, rec.Body.String(), `"consultations":[]`)
+
+	rec = doGet(t, router, base+"/history-options")
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Contains(t, rec.Body.String(), "Dr. Propio")
+	require.NotContains(t, rec.Body.String(), "Dra. Del Hijo")
+
+	// The child's history never finds the person's.
+	rec = doPostPath(t, router, "/children/"+child.String()+"/consultations/search", map[string]any{"q": "propio"})
+	require.Contains(t, rec.Body.String(), `"consultations":[]`)
+
+	require.Equal(t, http.StatusBadRequest, doPostPath(t, router, base+"/consultations/search", map[string]any{"from": "ayer"}).Code)
+	require.Equal(t, http.StatusBadRequest, doPostPath(t, router, base+"/consultations/search", map[string]any{"kind": "otro"}).Code)
+	require.Equal(t, http.StatusNotFound, doPostPath(t, router, "/accounts/not-a-uuid/consultations/search", map[string]any{}).Code)
+	require.Equal(t, http.StatusNotFound, doPostPath(t, router, "/accounts/"+uuid.NewString()+"/consultations/search", map[string]any{}).Code)
+	require.Equal(t, http.StatusNotFound, doGet(t, router, "/accounts/"+uuid.NewString()+"/history-options").Code)
+	require.Equal(t, http.StatusNotFound, doGet(t, router, "/accounts/not-a-uuid/history-options").Code)
+
+	free := accountOfChild(t, pool, createFreeTestChild(t, pool))
+	rec = doPostPath(t, router, "/accounts/"+free.String()+"/consultations/search", map[string]any{})
+	require.Equal(t, http.StatusUnprocessableEntity, rec.Code)
+	require.Contains(t, rec.Body.String(), `"reason":"history_search"`)
+	require.Equal(t, http.StatusUnprocessableEntity, doGet(t, router, "/accounts/"+free.String()+"/history-options").Code)
+
+	broken := newBrokenRouter(t)
+	require.Equal(t, http.StatusInternalServerError, doPostPath(t, broken, base+"/consultations/search", map[string]any{}).Code)
+	require.Equal(t, http.StatusInternalServerError, doGet(t, broken, base+"/history-options").Code)
+}

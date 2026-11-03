@@ -411,6 +411,12 @@ definitions:
         items:
           $ref: '#/definitions/MedicationResponse'
         type: array
+      myReminders:
+        description: |-
+          MyReminders is only there for someone who sees another person's own consultation (specs/058): whether they asked for
+          its reminders.
+        example: false
+        type: boolean
       notes:
         example: Comió mariscos el domingo; la fiebre empezó el lunes
         type: string
@@ -480,6 +486,21 @@ definitions:
       message:
         example: This resource does not belong to the current session
         type: string
+    type: object
+  ConsultationSharingRequest:
+    properties:
+      shared:
+        example: true
+        type: boolean
+    type: object
+  ConsultationSharingResponse:
+    properties:
+      changedAt:
+        example: "2026-11-02T15:20:00Z"
+        type: string
+      shared:
+        example: true
+        type: boolean
     type: object
   ConsultationSummaryResponse:
     properties:
@@ -838,6 +859,15 @@ definitions:
         $ref: '#/definitions/ExportAppointment'
       photos:
         $ref: '#/definitions/ExportPhotos'
+      subject:
+        description: |-
+          Subject is "child" or, for a person's own history (specs/058), "person": then child is the person, with an empty
+          birthDate, and there are no vaccinations.
+        enum:
+        - child
+        - person
+        example: child
+        type: string
       vaccinations:
         items:
           $ref: '#/definitions/ExportVaccination'
@@ -1492,6 +1522,18 @@ definitions:
           $ref: '#/definitions/OverviewDoseResponse'
         type: array
     type: object
+  OwnRemindersRequest:
+    properties:
+      "on":
+        example: true
+        type: boolean
+    type: object
+  OwnRemindersResponse:
+    properties:
+      "on":
+        example: true
+        type: boolean
+    type: object
   PaymentsErrorResponse:
     properties:
       coveredBy:
@@ -1592,6 +1634,20 @@ definitions:
         type: array
       to:
         example: "2026-06-30"
+        type: string
+    type: object
+  SharingUnavailableResponse:
+    properties:
+      error:
+        example: sharing_unavailable
+        type: string
+      message:
+        example: There is nobody in your family to share with
+        type: string
+      reason:
+        description: Reason is "no_family" (nobody to share with) or "plan" (the family
+          is not on the paid plan).
+        example: no_family
         type: string
     type: object
   SubscribeResponse:
@@ -2267,6 +2323,11 @@ definitions:
         items:
           $ref: '#/definitions/internal_account.childResponse'
         type: array
+      consultationSharing:
+        allOf:
+        - $ref: '#/definitions/internal_account.consultationSharingResponse'
+        description: ConsultationSharing is whether the person shares their own consultations
+          with the Tutors of their family (specs/058).
       countryCode:
         example: MX
         type: string
@@ -2306,6 +2367,12 @@ definitions:
           chooses on the first activation (specs/011-recordatorios-push).
         example: generic
         type: string
+      sharedProfiles:
+        description: SharedProfiles are the people who share their own consultations
+          with this person and whose it can still see.
+        items:
+          $ref: '#/definitions/internal_account.sharedProfileResponse'
+        type: array
       stateCode:
         example: MX-JAL
         type: string
@@ -2354,6 +2421,15 @@ definitions:
       weight:
         example: 14.2
         type: number
+    type: object
+  internal_account.consultationSharingResponse:
+    properties:
+      changedAt:
+        example: "2026-11-02T15:20:00Z"
+        type: string
+      shared:
+        example: false
+        type: boolean
     type: object
   internal_account.createAccountRequest:
     properties:
@@ -2405,6 +2481,15 @@ definitions:
     properties:
       reminderDetail:
         example: generic
+        type: string
+    type: object
+  internal_account.sharedProfileResponse:
+    properties:
+      accountId:
+        example: e5f6a7b8-0000-0000-0000-000000000000
+        type: string
+      firstName:
+        example: Ana
         type: string
     type: object
   internal_appointment.NoticeInput:
@@ -2826,6 +2911,58 @@ paths:
       summary: Add a child to an existing account
       tags:
       - accounts
+  /accounts/{accountId}/consultation-sharing:
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Only the person themself. On: the owner and the active Tutors of their family see and mark their own
+        consultations (never a Caregiver, a Child-role member or a child's phone); it needs a family with somebody else and
+        on the paid plan (422 sharing_unavailable, reason no_family or plan). Off: always, and at once.
+      parameters:
+      - description: Account UUID of the person
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: On or off
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/ConsultationSharingRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ConsultationSharingResponse'
+        "400":
+          description: shared is missing
+          schema:
+            $ref: '#/definitions/ConsultationValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session is not this person
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/AccountNotFoundResponse'
+        "422":
+          description: Nobody to share with, or the family is not on the paid plan
+          schema:
+            $ref: '#/definitions/SharingUnavailableResponse'
+      security:
+      - ClerkSession: []
+      summary: Share one's own consultations with the Tutors of one's family, or stop
+      tags:
+      - consultations
   /accounts/{accountId}/consultations:
     get:
       description: |-
@@ -2912,6 +3049,57 @@ paths:
       summary: Register a person's own consultation
       tags:
       - consultations
+  /accounts/{accountId}/consultations/search:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        POST /children/{childId}/consultations/search over the person's own consultations, with the plan of their own
+        things (422 reason "history_search" otherwise, with no rows). The criteria travel in the body, never in the address.
+      parameters:
+      - description: Account UUID of the person
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: The criteria
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/SearchConsultationsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/OwnConsultationListResponse'
+        "400":
+          description: An invalid criterion
+          schema:
+            $ref: '#/definitions/ConsultationValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session cannot see this person's consultations
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/AccountNotFoundResponse'
+        "422":
+          description: Not on the paid plan (history_search)
+          schema:
+            $ref: '#/definitions/PlanLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: Search and filter a person's own consultations
+      tags:
+      - consultations
   /accounts/{accountId}/disclaimer-acceptance:
     post:
       consumes:
@@ -2961,6 +3149,96 @@ paths:
       summary: Record that the tutor acknowledged the "Antes de empezar" notice
       tags:
       - accounts
+  /accounts/{accountId}/export:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        POST /children/{childId}/export for the person themself: their name on the cover, their own consultations and
+        appointments and, if asked, the list of their photos; never a vaccination card (sections.vaccinations true is a 400).
+        Only the person themself; the plan is that of their own things (422 reason "pdf_export").
+      parameters:
+      - description: Account UUID of the person
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: The period and the sections
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/ExportRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ExportDocument'
+        "400":
+          description: Malformed body, an invalid period or vaccinations asked for
+          schema:
+            $ref: '#/definitions/ExportErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ExportErrorResponse'
+        "403":
+          description: The session is not this person
+          schema:
+            $ref: '#/definitions/ExportErrorResponse'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/ExportErrorResponse'
+        "422":
+          description: Not on the paid plan (pdf_export)
+          schema:
+            $ref: '#/definitions/ExportErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Everything the PDF of a person's own history shows
+      tags:
+      - export
+  /accounts/{accountId}/history-options:
+    get:
+      description: GET /children/{childId}/history-options over the person's own consultations;
+        the same plan as their search.
+      parameters:
+      - description: Account UUID of the person
+        in: path
+        name: accountId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/HistoryOptionsResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session cannot see this person's consultations
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/AccountNotFoundResponse'
+        "422":
+          description: Not on the paid plan (history_search)
+          schema:
+            $ref: '#/definitions/PlanLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: The doctors and medications of a person's own consultations
+      tags:
+      - consultations
   /accounts/{accountId}/overview:
     get:
       description: |-
@@ -5164,6 +5442,53 @@ paths:
       security:
       - ClerkSession: []
       summary: Add doses to the end of a medication's treatment
+      tags:
+      - consultations
+  /consultations/{consultationId}/my-reminders:
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Off until the Tutor turns them on; they only come while the consultation is still shared with them. 400 not_shared
+        for a child's consultation or for the person themself (they are always reminded of their own).
+      parameters:
+      - description: Consultation UUID
+        in: path
+        name: consultationId
+        required: true
+        type: string
+      - description: On or off
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/OwnRemindersRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/OwnRemindersResponse'
+        "400":
+          description: on is missing, or not_shared
+          schema:
+            $ref: '#/definitions/ConsultationValidationErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "403":
+          description: The session cannot see this consultation
+          schema:
+            $ref: '#/definitions/ConsultationSessionErrorResponse'
+        "404":
+          description: No consultation exists for this id
+          schema:
+            $ref: '#/definitions/ConsultationNotFoundResponse'
+      security:
+      - ClerkSession: []
+      summary: A Tutor's reminders of a person's own consultation shared with them
       tags:
       - consultations
   /consultations/{consultationId}/photo:

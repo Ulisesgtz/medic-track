@@ -209,6 +209,9 @@ type photosResponse struct {
 } // @name ExportPhotos
 
 type documentResponse struct {
+	// Subject is "child" or, for a person's own history (specs/058), "person": then child is the person, with an empty
+	// birthDate, and there are no vaccinations.
+	Subject         string                   `json:"subject" enums:"child,person" example:"child"`
 	Child           childResponse            `json:"child"`
 	ActiveTreatment *activeTreatmentResponse `json:"activeTreatment"`
 	NextAppointment *appointmentResponse     `json:"nextAppointment"`
@@ -247,11 +250,15 @@ func appointmentOf(a *Appointment) *appointmentResponse {
 
 func toResponse(d *Document) documentResponse {
 	out := documentResponse{
+		Subject: "child",
 		Child: childResponse{FirstName: d.Child.FirstName, LastName: d.Child.LastName, BirthDate: d.Child.BirthDate.Format("2006-01-02"),
 			Height: d.Child.Height, Weight: d.Child.Weight},
 		NextAppointment: appointmentOf(d.NextAppointment),
 		Consultations:   make([]consultationResponse, 0, len(d.Consultations)),
 		Vaccinations:    make([]vaccinationResponse, 0, len(d.Vaccinations)),
+	}
+	if d.Own {
+		out.Subject, out.Child.BirthDate = "person", ""
 	}
 	if t := d.ActiveTreatment; t != nil {
 		out.ActiveTreatment = &activeTreatmentResponse{MedicationName: t.MedicationName, FrequencyHours: t.FrequencyHours, Since: stamp(t.Since), DoctorName: t.DoctorName}
@@ -354,6 +361,69 @@ func (h *Handler) Export(w http.ResponseWriter, r *http.Request) {
 			}, actorOf(ctx))
 		case errors.Is(err, ErrChildNotFound):
 			h.responder.WriteJSONError(ctx, w, http.StatusNotFound, "child_not_found", "No child exists for this id", actorOf(ctx))
+		case errors.Is(err, consultation.ErrSymptomNotAvailable):
+			h.responder.WriteJSON(ctx, w, http.StatusBadRequest, httpx.ValidationBody("One or more fields are invalid",
+				[]httpx.FieldError{{Field: "period.filters.symptomCodes", Message: "symptom_not_available"}}), actorOf(ctx))
+		default:
+			h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", "Could not read the history", actorOf(ctx))
+		}
+		return
+	}
+	h.responder.WriteJSON(ctx, w, http.StatusOK, toResponse(doc), actorOf(ctx))
+}
+
+// ExportOwn handles POST /accounts/{accountId}/export (specs/058).
+//
+//	@Summary		Everything the PDF of a person's own history shows
+//	@Description	POST /children/{childId}/export for the person themself: their name on the cover, their own consultations and
+//	@Description	appointments and, if asked, the list of their photos; never a vaccination card (sections.vaccinations true is a 400).
+//	@Description	Only the person themself; the plan is that of their own things (422 reason "pdf_export").
+//	@Tags			export
+//	@Accept			json
+//	@Produce		json
+//	@Param			accountId	path		string			true	"Account UUID of the person"
+//	@Param			payload		body		exportRequest	true	"The period and the sections"
+//	@Success		200			{object}	documentResponse
+//	@Failure		400			{object}	errorDoc	"Malformed body, an invalid period or vaccinations asked for"
+//	@Failure		404			{object}	errorDoc						"No account exists for this id"
+//	@Failure		422			{object}	errorDoc						"Not on the paid plan (pdf_export)"
+//	@Security		ClerkSession
+//	@Failure		401			{object}	errorDoc	"No valid Clerk session"
+//	@Failure		403			{object}	errorDoc	"The session is not this person"
+//	@Router			/accounts/{accountId}/export [post]
+func (h *Handler) ExportOwn(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
+	accountID, err := uuid.Parse(chi.URLParam(r, "accountId"))
+	if err != nil {
+		h.responder.WriteJSONError(ctx, w, http.StatusNotFound, "account_not_found", "No account exists for this id", nil)
+		return
+	}
+	var body exportRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		h.responder.WriteJSONError(ctx, w, http.StatusBadRequest, "validation_error", "Malformed JSON body", actorOf(ctx))
+		return
+	}
+	if body.Sections.Vaccinations {
+		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, httpx.ValidationBody("One or more fields are invalid",
+			[]httpx.FieldError{{Field: "sections.vaccinations", Message: "a person's own history has no vaccination card"}}), actorOf(ctx))
+		return
+	}
+	req, errs := parseRequest(body)
+	if len(errs) > 0 {
+		h.responder.WriteJSON(ctx, w, http.StatusBadRequest, httpx.ValidationBody("One or more fields are invalid", errs), actorOf(ctx))
+		return
+	}
+	doc, err := h.service.BuildOwn(ctx, accountID, req)
+	if err != nil {
+		var plan *consultation.PlanLimitError
+		switch {
+		case errors.As(err, &plan):
+			h.responder.WriteJSON(ctx, w, http.StatusUnprocessableEntity, map[string]string{
+				"error": "freemium_consultation_limit_exceeded", "message": "Exporting the history to PDF is part of the paid plan", "reason": plan.Reason,
+			}, actorOf(ctx))
+		case errors.Is(err, ErrAccountNotFound):
+			h.responder.WriteJSONError(ctx, w, http.StatusNotFound, "account_not_found", "No account exists for this id", actorOf(ctx))
 		case errors.Is(err, consultation.ErrSymptomNotAvailable):
 			h.responder.WriteJSON(ctx, w, http.StatusBadRequest, httpx.ValidationBody("One or more fields are invalid",
 				[]httpx.FieldError{{Field: "period.filters.symptomCodes", Message: "symptom_not_available"}}), actorOf(ctx))

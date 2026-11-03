@@ -373,6 +373,82 @@
                 }
             }
         },
+        "/accounts/{accountId}/consultation-sharing": {
+            "put": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Only the person themself. On: the owner and the active Tutors of their family see and mark their own\nconsultations (never a Caregiver, a Child-role member or a child's phone); it needs a family with somebody else and\non the paid plan (422 sharing_unavailable, reason no_family or plan). Off: always, and at once.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "Share one's own consultations with the Tutors of one's family, or stop",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID of the person",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "On or off",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSharingRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSharingResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "shared is missing",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session is not this person",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AccountNotFoundResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Nobody to share with, or the family is not on the paid plan",
+                        "schema": {
+                            "$ref": "#/definitions/SharingUnavailableResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/accounts/{accountId}/consultations": {
             "get": {
                 "security": [
@@ -499,6 +575,82 @@
                 }
             }
         },
+        "/accounts/{accountId}/consultations/search": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "POST /children/{childId}/consultations/search over the person's own consultations, with the plan of their own\nthings (422 reason \"history_search\" otherwise, with no rows). The criteria travel in the body, never in the address.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "Search and filter a person's own consultations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID of the person",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The criteria",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/SearchConsultationsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/OwnConsultationListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "An invalid criterion",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session cannot see this person's consultations",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AccountNotFoundResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Not on the paid plan (history_search)",
+                        "schema": {
+                            "$ref": "#/definitions/PlanLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/accounts/{accountId}/disclaimer-acceptance": {
             "post": {
                 "security": [
@@ -564,6 +716,140 @@
                         "description": "No account exists for this id",
                         "schema": {
                             "$ref": "#/definitions/AccountNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}/export": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "POST /children/{childId}/export for the person themself: their name on the cover, their own consultations and\nappointments and, if asked, the list of their photos; never a vaccination card (sections.vaccinations true is a 400).\nOnly the person themself; the plan is that of their own things (422 reason \"pdf_export\").",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "export"
+                ],
+                "summary": "Everything the PDF of a person's own history shows",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID of the person",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The period and the sections",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ExportRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ExportDocument"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed body, an invalid period or vaccinations asked for",
+                        "schema": {
+                            "$ref": "#/definitions/ExportErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ExportErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session is not this person",
+                        "schema": {
+                            "$ref": "#/definitions/ExportErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ExportErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Not on the paid plan (pdf_export)",
+                        "schema": {
+                            "$ref": "#/definitions/ExportErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}/history-options": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "GET /children/{childId}/history-options over the person's own consultations; the same plan as their search.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "The doctors and medications of a person's own consultations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID of the person",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/HistoryOptionsResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session cannot see this person's consultations",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AccountNotFoundResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Not on the paid plan (history_search)",
+                        "schema": {
+                            "$ref": "#/definitions/PlanLimitResponse"
                         }
                     }
                 }
@@ -3764,6 +4050,76 @@
                 }
             }
         },
+        "/consultations/{consultationId}/my-reminders": {
+            "put": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Off until the Tutor turns them on; they only come while the consultation is still shared with them. 400 not_shared\nfor a child's consultation or for the person themself (they are always reminded of their own).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "A Tutor's reminders of a person's own consultation shared with them",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Consultation UUID",
+                        "name": "consultationId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "On or off",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/OwnRemindersRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/OwnRemindersResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "on is missing, or not_shared",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session cannot see this consultation",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No consultation exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/consultations/{consultationId}/photo": {
             "get": {
                 "security": [
@@ -5721,6 +6077,11 @@
                         "$ref": "#/definitions/MedicationResponse"
                     }
                 },
+                "myReminders": {
+                    "description": "MyReminders is only there for someone who sees another person's own consultation (specs/058): whether they asked for\nits reminders.",
+                    "type": "boolean",
+                    "example": false
+                },
                 "notes": {
                     "type": "string",
                     "example": "Comió mariscos el domingo; la fiebre empezó el lunes"
@@ -5815,6 +6176,28 @@
                 "message": {
                     "type": "string",
                     "example": "This resource does not belong to the current session"
+                }
+            }
+        },
+        "ConsultationSharingRequest": {
+            "type": "object",
+            "properties": {
+                "shared": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "ConsultationSharingResponse": {
+            "type": "object",
+            "properties": {
+                "changedAt": {
+                    "type": "string",
+                    "example": "2026-11-02T15:20:00Z"
+                },
+                "shared": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
@@ -6314,6 +6697,15 @@
                 },
                 "photos": {
                     "$ref": "#/definitions/ExportPhotos"
+                },
+                "subject": {
+                    "description": "Subject is \"child\" or, for a person's own history (specs/058), \"person\": then child is the person, with an empty\nbirthDate, and there are no vaccinations.",
+                    "type": "string",
+                    "enum": [
+                        "child",
+                        "person"
+                    ],
+                    "example": "child"
                 },
                 "vaccinations": {
                     "type": "array",
@@ -7219,6 +7611,24 @@
                 }
             }
         },
+        "OwnRemindersRequest": {
+            "type": "object",
+            "properties": {
+                "on": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "OwnRemindersResponse": {
+            "type": "object",
+            "properties": {
+                "on": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "PaymentsErrorResponse": {
             "type": "object",
             "properties": {
@@ -7345,6 +7755,24 @@
                 "to": {
                     "type": "string",
                     "example": "2026-06-30"
+                }
+            }
+        },
+        "SharingUnavailableResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "sharing_unavailable"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "There is nobody in your family to share with"
+                },
+                "reason": {
+                    "description": "Reason is \"no_family\" (nobody to share with) or \"plan\" (the family is not on the paid plan).",
+                    "type": "string",
+                    "example": "no_family"
                 }
             }
         },
@@ -8270,6 +8698,14 @@
                         "$ref": "#/definitions/internal_account.childResponse"
                     }
                 },
+                "consultationSharing": {
+                    "description": "ConsultationSharing is whether the person shares their own consultations with the Tutors of their family (specs/058).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/internal_account.consultationSharingResponse"
+                        }
+                    ]
+                },
                 "countryCode": {
                     "type": "string",
                     "example": "MX"
@@ -8315,6 +8751,13 @@
                     "description": "ReminderDetail is what the dose reminders show, \"detailed\" or \"generic\"; null until the tutor\nchooses on the first activation (specs/011-recordatorios-push).",
                     "type": "string",
                     "example": "generic"
+                },
+                "sharedProfiles": {
+                    "description": "SharedProfiles are the people who share their own consultations with this person and whose it can still see.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_account.sharedProfileResponse"
+                    }
                 },
                 "stateCode": {
                     "type": "string",
@@ -8375,6 +8818,19 @@
                 "weight": {
                     "type": "number",
                     "example": 14.2
+                }
+            }
+        },
+        "internal_account.consultationSharingResponse": {
+            "type": "object",
+            "properties": {
+                "changedAt": {
+                    "type": "string",
+                    "example": "2026-11-02T15:20:00Z"
+                },
+                "shared": {
+                    "type": "boolean",
+                    "example": false
                 }
             }
         },
@@ -8449,6 +8905,19 @@
                 "reminderDetail": {
                     "type": "string",
                     "example": "generic"
+                }
+            }
+        },
+        "internal_account.sharedProfileResponse": {
+            "type": "object",
+            "properties": {
+                "accountId": {
+                    "type": "string",
+                    "example": "e5f6a7b8-0000-0000-0000-000000000000"
+                },
+                "firstName": {
+                    "type": "string",
+                    "example": "Ana"
                 }
             }
         },

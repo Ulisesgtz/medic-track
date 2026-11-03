@@ -77,6 +77,20 @@ func (s *Service) SearchConsultations(ctx context.Context, childID uuid.UUID, in
 	return s.repo.Search(ctx, childID, search)
 }
 
+// SearchOwnConsultations is SearchConsultations over a person's own consultations (specs/058).
+func (s *Service) SearchOwnConsultations(ctx context.Context, accountID uuid.UUID, in HistorySearch) ([]Consultation, error) {
+	search, errs := validateHistorySearch(in)
+	if errs.HasErrors() {
+		return nil, errs
+	}
+	return s.repo.SearchOwn(ctx, accountID, search)
+}
+
+// OwnHistoryOptions is HistoryOptions over a person's own consultations (specs/058).
+func (s *Service) OwnHistoryOptions(ctx context.Context, accountID uuid.UUID) (*HistoryOptions, error) {
+	return s.repo.HistoryOptionsOwn(ctx, accountID)
+}
+
 // HistoryOptions lists the doctors and medications already registered for the child, for the history's choice lists.
 func (s *Service) HistoryOptions(ctx context.Context, childID uuid.UUID) (*HistoryOptions, error) {
 	return s.repo.HistoryOptions(ctx, childID)

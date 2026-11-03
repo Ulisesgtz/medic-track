@@ -133,6 +133,9 @@ type consultationDetailResponse struct {
 	CreatedAt string `json:"createdAt" example:"2026-10-18T15:20:00.123456Z"`
 	// Edited is the last edit (specs/051); null if the consultation was never edited.
 	Edited *editedResponse `json:"edited"`
+	// MyReminders is only there for someone who sees another person's own consultation (specs/058): whether they asked for
+	// its reminders.
+	MyReminders *bool `json:"myReminders,omitempty" example:"false"`
 } // @name ConsultationDetailResponse
 
 // editedResponse says when a consultation was last edited and by whom: the first name of the account, never its e-mail.
@@ -616,28 +619,8 @@ func (h *Handler) SearchConsultations(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req searchConsultationsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.responder.WriteJSONError(r.Context(), w, http.StatusBadRequest, "validation_error", "Malformed JSON body", nil)
-		return
-	}
-
-	search := HistorySearch{
-		Q:            req.Q,
-		Doctor:       req.Doctor,
-		Medication:   req.Medication,
-		SymptomCodes: req.SymptomCodes,
-		Kind:         req.Kind,
-	}
-	var dateErrs ValidationErrors
-	if search.From, err = parseSearchDate(req.From); err != nil {
-		dateErrs = append(dateErrs, ValidationError{Field: "from", Message: "must be an ISO-8601 date (YYYY-MM-DD)"})
-	}
-	if search.To, err = parseSearchDate(req.To); err != nil {
-		dateErrs = append(dateErrs, ValidationError{Field: "to", Message: "must be an ISO-8601 date (YYYY-MM-DD)"})
-	}
-	if dateErrs.HasErrors() {
-		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody(dateErrs, "One or more fields are invalid"), nil)
+	search, ok := h.decodeSearch(w, r)
+	if !ok {
 		return
 	}
 
@@ -701,6 +684,36 @@ func parseSearchDate(value string) (*time.Time, error) {
 
 // writeHistoryError maps the errors of the history's two endpoints. Each case calls the responder from its own line, so
 // error_logs keeps telling them apart (backend/CLAUDE.md).
+// decodeSearch reads the criteria of a history search (a child's or a person's own); on a malformed body or date it writes
+// the 400 itself and answers false.
+func (h *Handler) decodeSearch(w http.ResponseWriter, r *http.Request) (HistorySearch, bool) {
+	var req searchConsultationsRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusBadRequest, "validation_error", "Malformed JSON body", nil)
+		return HistorySearch{}, false
+	}
+	search := HistorySearch{
+		Q:            req.Q,
+		Doctor:       req.Doctor,
+		Medication:   req.Medication,
+		SymptomCodes: req.SymptomCodes,
+		Kind:         req.Kind,
+	}
+	var dateErrs ValidationErrors
+	var err error
+	if search.From, err = parseSearchDate(req.From); err != nil {
+		dateErrs = append(dateErrs, ValidationError{Field: "from", Message: "must be an ISO-8601 date (YYYY-MM-DD)"})
+	}
+	if search.To, err = parseSearchDate(req.To); err != nil {
+		dateErrs = append(dateErrs, ValidationError{Field: "to", Message: "must be an ISO-8601 date (YYYY-MM-DD)"})
+	}
+	if dateErrs.HasErrors() {
+		h.responder.WriteJSON(r.Context(), w, http.StatusBadRequest, validationErrorBody(dateErrs, "One or more fields are invalid"), nil)
+		return HistorySearch{}, false
+	}
+	return search, true
+}
+
 func (h *Handler) writeHistoryError(ctx context.Context, w http.ResponseWriter, err error, internalMessage string) {
 	var validationErrs ValidationErrors
 	var planErr *PlanLimitError
@@ -716,6 +729,8 @@ func (h *Handler) writeHistoryError(ctx context.Context, w http.ResponseWriter, 
 		h.responder.WriteJSON(ctx, w, http.StatusUnprocessableEntity, planLimitBody(planErr.Reason), nil)
 	case errors.Is(err, ErrChildNotFound):
 		h.responder.WriteJSON(ctx, w, http.StatusNotFound, childNotFoundBody(), nil)
+	case errors.Is(err, ErrAccountNotFound):
+		h.responder.WriteJSON(ctx, w, http.StatusNotFound, accountNotFoundBody(), nil)
 	default:
 		h.responder.WriteJSONError(ctx, w, http.StatusInternalServerError, "internal_error", internalMessage, nil)
 	}
@@ -753,7 +768,17 @@ func (h *Handler) GetConsultation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.responder.WriteJSON(r.Context(), w, http.StatusOK, toConsultationDetailResponse(c, actorOf(r.Context())), nil)
+	resp := toConsultationDetailResponse(c, actorOf(r.Context()))
+	// Someone who sees another person's own consultation (a Tutor it is shared with, specs/058) chooses its reminders.
+	if actor := actorOf(r.Context()); c.IsOwn() && actor != uuid.Nil && actor != c.AccountID {
+		on, err := h.service.OwnReminders(r.Context(), c.ID, actor)
+		if err != nil {
+			h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not fetch consultation", nil)
+			return
+		}
+		resp.MyReminders = &on
+	}
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, resp, nil)
 }
 
 type updateDoseRequest struct {

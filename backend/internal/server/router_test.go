@@ -229,6 +229,14 @@ func (w *world) routes() []struct {
 		{"own overview", http.MethodGet, "/accounts/" + w.accountA.String() + "/overview" + window, "", http.StatusOK},
 		{"own appointments", http.MethodGet, "/accounts/" + w.accountA.String() + "/appointments", "", http.StatusOK},
 		{"create own appointment", http.MethodPost, "/accounts/" + w.accountA.String() + "/appointments", `{}`, http.StatusBadRequest},
+		// A is on the free plan here: the history and the PDF of their own consultations answer it is the paid plan's.
+		{"search own consultations", http.MethodPost, "/accounts/" + w.accountA.String() + "/consultations/search", `{}`, http.StatusUnprocessableEntity},
+		{"own history options", http.MethodGet, "/accounts/" + w.accountA.String() + "/history-options", "", http.StatusUnprocessableEntity},
+		{"export own history", http.MethodPost, "/accounts/" + w.accountA.String() + "/export", `{"period":{"kind":"all"},"sections":{"consultations":true}}`, http.StatusUnprocessableEntity},
+		// Specs/058: the switch (a missing value is a 400 before anything is asked).
+		{"consultation sharing", http.MethodPut, "/accounts/" + w.accountA.String() + "/consultation-sharing", `{}`, http.StatusBadRequest},
+		// «Tus avisos» of consultation A, a child's: never one's own consultation shared, so 400 not_shared once past the guard.
+		{"my consultation reminders", http.MethodPut, "/consultations/" + w.consultationA.String() + "/my-reminders", `{"on":true}`, http.StatusBadRequest},
 		{"personal routines", http.MethodGet, "/accounts/" + w.accountA.String() + "/routines" + window, "", http.StatusOK},
 		{"create personal routine", http.MethodPost, "/accounts/" + w.accountA.String() + "/routines", `{}`, http.StatusBadRequest},
 		{"personal routines notice", http.MethodPost, "/accounts/" + w.accountA.String() + "/routines/notice-seen", "", http.StatusNoContent},
@@ -385,7 +393,7 @@ func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 // ownRoutes are the person's own account (their notice, reminder settings and devices): never a family's.
 // fullRoutes need the full level (the owner or a Tutor); every other protected route needs only Mark (see and mark).
 var (
-	ownRoutes  = map[string]bool{"own consultations": true, "create own consultation": true, "own overview": true, "own appointments": true, "create own appointment": true, "get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true, "get subscription": true, "subscribe": true, "cancel subscription": true}
+	ownRoutes  = map[string]bool{"search own consultations": true, "own history options": true, "export own history": true, "consultation sharing": true, "own consultations": true, "create own consultation": true, "own overview": true, "own appointments": true, "create own appointment": true, "get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true, "get subscription": true, "subscribe": true, "cancel subscription": true}
 	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "edit consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "record vaccination": true, "correct vaccination": true, "delete vaccination": true, "save card photo": true, "delete card photo": true, "edit appointment": true, "create device link": true, "remove device link": true, "choose device reminders": true, "mark appointment": true}
 )
 
@@ -560,8 +568,8 @@ func TestRouter_APersonsOwnConsultationsOnceShared(t *testing.T) {
 	w := newWorld(t)
 	_, err := w.pool.Exec(context.Background(), `INSERT INTO own_consultation_sharing (account_id, shared) VALUES ($1, true)`, w.accountA)
 	require.NoError(t, err)
-	sees := map[string]bool{"own consultations": true, "own overview": true, "own appointments": true}
-	creates := map[string]bool{"create own consultation": true, "create own appointment": true}
+	sees := map[string]bool{"own consultations": true, "own overview": true, "own appointments": true, "search own consultations": true, "own history options": true}
+	creates := map[string]bool{"create own consultation": true, "create own appointment": true, "export own history": true}
 	for who, clerkID := range map[string]string{"tutor": w.clerkTutor, "caregiver": w.clerkCaregiver, "child member": w.clerkKid, "removed": w.clerkRemoved} {
 		token := w.verifier.Token(t, clerkID)
 		for _, rt := range w.routes() {

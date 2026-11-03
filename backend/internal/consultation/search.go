@@ -121,11 +121,32 @@ func (r *Repository) Search(ctx context.Context, childID uuid.UUID, s HistorySea
 	if err := r.RequirePaid(ctx, childID, PlanLimitHistorySearch); err != nil {
 		return nil, err
 	}
-	return r.search(ctx, childID, s)
+	return r.search(ctx, childSubject(childID), s)
+}
+
+// SearchOwn is Search over a person's own consultations (specs/058), with the plan of their own things.
+func (r *Repository) SearchOwn(ctx context.Context, accountID uuid.UUID, s HistorySearch) ([]Consultation, error) {
+	if err := r.RequirePaidPerson(ctx, accountID, PlanLimitHistorySearch); err != nil {
+		return nil, err
+	}
+	return r.search(ctx, personSubject(accountID), s)
+}
+
+// subject is whose consultations a history reads: a child's or a person's own (specs/058). `where` is a fixed SQL fragment
+// over the alias c with $1 = id.
+type subject struct {
+	where string
+	id    uuid.UUID
+}
+
+func childSubject(childID uuid.UUID) subject { return subject{`c.child_id = $1`, childID} }
+
+func personSubject(accountID uuid.UUID) subject {
+	return subject{`c.child_id IS NULL AND c.account_id = $1`, accountID}
 }
 
 // search is Search once the plan was checked.
-func (r *Repository) search(ctx context.Context, childID uuid.UUID, s HistorySearch) ([]Consultation, error) {
+func (r *Repository) search(ctx context.Context, subj subject, s HistorySearch) ([]Consultation, error) {
 	if len(s.SymptomCodes) > 0 {
 		// Retired symptoms count: an old consultation keeps them and must still be found by them (specs/012).
 		var known int
@@ -137,8 +158,8 @@ func (r *Repository) search(ctx context.Context, childID uuid.UUID, s HistorySea
 		}
 	}
 
-	args := []any{childID}
-	where := []string{"c.child_id = $1"}
+	args := []any{subj.id}
+	where := []string{subj.where}
 	arg := func(v any) string {
 		args = append(args, v)
 		return fmt.Sprintf("$%d", len(args))
@@ -193,12 +214,24 @@ func (r *Repository) HistoryOptions(ctx context.Context, childID uuid.UUID) (*Hi
 	if err := r.RequirePaid(ctx, childID, PlanLimitHistorySearch); err != nil {
 		return nil, err
 	}
+	return r.historyOptions(ctx, childSubject(childID))
+}
+
+// HistoryOptionsOwn is HistoryOptions over a person's own consultations (specs/058).
+func (r *Repository) HistoryOptionsOwn(ctx context.Context, accountID uuid.UUID) (*HistoryOptions, error) {
+	if err := r.RequirePaidPerson(ctx, accountID, PlanLimitHistorySearch); err != nil {
+		return nil, err
+	}
+	return r.historyOptions(ctx, personSubject(accountID))
+}
+
+func (r *Repository) historyOptions(ctx context.Context, subj subject) (*HistoryOptions, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT 'doctor', btrim(c.doctor_name) FROM consultations c WHERE c.child_id = $1
+		SELECT 'doctor', btrim(c.doctor_name) FROM consultations c WHERE `+subj.where+`
 		UNION
 		SELECT 'medication', btrim(m.name)
-		FROM medications m JOIN consultations c ON c.id = m.consultation_id WHERE c.child_id = $1
-	`, childID)
+		FROM medications m JOIN consultations c ON c.id = m.consultation_id WHERE `+subj.where+`
+	`, subj.id)
 	if err != nil {
 		return nil, fmt.Errorf("listing the history options: %w", err)
 	}

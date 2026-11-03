@@ -183,22 +183,22 @@ y recibir su recordatorio; ningún hijo la muestra (quickstart 1–3, 10–12).
 
 ### Backend
 
-- [ ] T033 [US2] `backend/internal/consultation/sharing.go` (+ handler en `own_handler.go`): `SetSharing(ctx, accountID,
+- [X] T033 [US2] `backend/internal/consultation/sharing.go` (+ handler en `own_handler.go`): `SetSharing(ctx, accountID,
   shared)`: en una `tx` con la cuenta `FOR UPDATE`; al encender pide familia (dueña con algún integrante activo, o integrante
   activo) → si no, `422 sharing_unavailable` `reason: "no_family"`; y que esa familia sea `paid` → si no, `reason: "plan"`; apagar
   siempre; `INSERT … ON CONFLICT (account_id) DO UPDATE SET shared, changed_at = now()`. Ruta `PUT
   /accounts/{accountId}/consultation-sharing` (`ownsAccount`).
-- [ ] T034 [US2] `PUT /consultations/{consultationId}/my-reminders` (`seesConsultation`): `{on}` inserta o borra en
+- [X] T034 [US2] `PUT /consultations/{consultationId}/my-reminders` (`seesConsultation`): `{on}` inserta o borra en
   `own_consultation_reminder_optins`; `400 not_shared` si la consulta tiene hijo o si la sesión es su dueña. El detalle de una
   consulta propia trae `myReminders`.
-- [ ] T035 [US2] `backend/internal/reminder/repository.go` `ClaimDueDoses`: en una consulta propia, además del dueño, cada cuenta
+- [X] T035 [US2] `backend/internal/reminder/repository.go` `ClaimDueDoses`: en una consulta propia, además del dueño, cada cuenta
   con nivel Mark por la regla `ownLevel` de T009 **y** una fila de opt-in recibe su par; el nombre del dueño va en el aviso del
   Tutor. Lo mismo para las citas propias (`appointment.go`) con el opt-in de la consulta de la cita (una cita propia sin
   consulta: solo el dueño).
-- [ ] T036 [US2] `backend/internal/account/`: `GET /accounts/me` gana `consultationSharing {shared, changedAt}` y `sharedProfiles
+- [X] T036 [US2] `backend/internal/account/`: `GET /accounts/me` gana `consultationSharing {shared, changedAt}` y `sharedProfiles
   [{accountId, firstName}]` (las personas que comparten con la sesión y a las que tiene Mark ahora); Swagger.
-- [ ] T037 [US2] `router.go` + filas en `router_test.go` para T033 y T034.
-- [ ] T038 [P] [US2] Pruebas contra la base real (`sharing_test.go`, `reminder/own_sharing_test.go`, `account` `me`): encender sin
+- [X] T037 [US2] `router.go` + filas en `router_test.go` para T033 y T034.
+- [X] T038 [P] [US2] Pruebas contra la base real (`sharing_test.go`, `reminder/own_sharing_test.go`, `account` `me`): encender sin
   familia y con familia `free` (422), con familia `paid` (200); apagar siempre; el Tutor ve y marca con el interruptor encendido y
   recibe 404 en la petición siguiente a apagarlo; su marca conserva «por Luis»; no puede editar, finalizar, recorrer, cambiar la
   cita ni crear (403/404); avisos solo con opt-in y solo con acceso; Cuidador nunca; las rutinas personales siguen siendo solo del
@@ -223,13 +223,13 @@ y recibir su recordatorio; ningún hijo la muestra (quickstart 1–3, 10–12).
 
 **Prueba independiente**: quickstart 9.
 
-- [ ] T043 [US3] `backend/internal/consultation/search.go`: `Search`/`HistoryOptions` con un sujeto (persona: `c.child_id IS NULL
+- [X] T043 [US3] `backend/internal/consultation/search.go`: `Search`/`HistoryOptions` con un sujeto (persona: `c.child_id IS NULL
   AND c.account_id = $1`); el plan de la persona dueña con `personalPlanSQL` (`history_search`). Rutas `POST
   /accounts/{accountId}/consultations/search` y `GET /accounts/{accountId}/history-options` (`seesPerson`) + filas del router.
-- [ ] T044 [US3] `backend/internal/historyexport/` y `consultation/export_batch.go`: `POST /accounts/{accountId}/export`
+- [X] T044 [US3] `backend/internal/historyexport/` y `consultation/export_batch.go`: `POST /accounts/{accountId}/export`
   (`fullPerson`): `sections.vaccinations: true` → 400 en ese campo; plan `pdf_export` con `personalPlanSQL`; respuesta con
   `subject {kind: "person", firstName, lastName}`, su tratamiento, sus citas y sus consultas en lote, sin cartilla. Fila del router.
-- [ ] T045 [P] [US3] Pruebas contra la base real: la búsqueda propia nunca devuelve consultas de hijos ni la del hijo las propias;
+- [X] T045 [P] [US3] Pruebas contra la base real: la búsqueda propia nunca devuelve consultas de hijos ni la del hijo las propias;
   el Tutor con el interruptor busca y no exporta (403/404); plan; `TestExport_ErrorLogsNeverCarryTheChoice` para la ruta propia;
   Swagger regenerado.
 - [ ] T046 [US3] Frontend: `HistoryPage`, `useHistory`, `historyCriteria` (`sessionStorage` por sujeto) y `HistoryEntry` con

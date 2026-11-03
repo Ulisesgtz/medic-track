@@ -229,7 +229,16 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(fullPerson).Post("/accounts/{accountId}/consultations", d.Consultation.CreateOwnConsultation)
 		r.With(seesPerson).Get("/accounts/{accountId}/overview", d.Consultation.GetOwnOverview)
 		r.With(seesPerson).Get("/accounts/{accountId}/appointments", d.Appointment.ForPerson)
+		// Their history (specs/031) and its PDF (specs/050): a Tutor it is shared with searches; only the person exports.
+		r.With(seesPerson).Post("/accounts/{accountId}/consultations/search", d.Consultation.SearchOwnConsultations)
+		r.With(seesPerson).Get("/accounts/{accountId}/history-options", d.Consultation.OwnHistoryOptions)
+		if d.HistoryExport != nil {
+			r.With(fullPerson).Post("/accounts/{accountId}/export", d.HistoryExport.ExportOwn)
+		}
 		r.With(fullPerson).Post("/accounts/{accountId}/appointments", d.Appointment.CreateOwn)
+		// The switch is the person's own decision; «Tus avisos» of a shared consultation, each Tutor's.
+		r.With(ownsAccount).Put("/accounts/{accountId}/consultation-sharing", d.Consultation.SetSharing)
+		r.With(seesConsultation).Put("/consultations/{consultationId}/my-reminders", d.Consultation.SetOwnReminders)
 
 		// Supplement routines (specs/033).
 		r.With(seesChild).Get("/children/{childId}/routines", d.Supplement.ListRoutines)

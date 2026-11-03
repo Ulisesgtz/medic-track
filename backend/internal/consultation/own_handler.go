@@ -153,3 +153,66 @@ func (h *Handler) GetOwnOverview(w http.ResponseWriter, r *http.Request) {
 	doses, treatment := toOverviewParts(overview, actorOf(r.Context()))
 	h.responder.WriteJSON(r.Context(), w, http.StatusOK, ownOverviewResponse{AccountID: accountID.String(), Doses: doses, ActiveTreatment: treatment}, nil)
 }
+
+// SearchOwnConsultations handles POST /accounts/{accountId}/consultations/search (specs/058).
+//
+//	@Summary		Search and filter a person's own consultations
+//	@Description	POST /children/{childId}/consultations/search over the person's own consultations, with the plan of their own
+//	@Description	things (422 reason "history_search" otherwise, with no rows). The criteria travel in the body, never in the address.
+//	@Tags			consultations
+//	@Accept			json
+//	@Produce		json
+//	@Param			accountId	path		string						true	"Account UUID of the person"
+//	@Param			payload		body		searchConsultationsRequest	true	"The criteria"
+//	@Success		200			{object}	ownConsultationListResponse
+//	@Failure		400			{object}	validationErrorResponseDoc	"An invalid criterion"
+//	@Failure		404			{object}	accountNotFoundResponseDoc	"No account exists for this id"
+//	@Failure		422			{object}	planLimitResponseDoc		"Not on the paid plan (history_search)"
+//	@Security		ClerkSession
+//	@Failure		401			{object}	sessionErrorResponseDoc	"No valid Clerk session"
+//	@Failure		403			{object}	sessionErrorResponseDoc	"The session cannot see this person's consultations"
+//	@Router			/accounts/{accountId}/consultations/search [post]
+func (h *Handler) SearchOwnConsultations(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+	accountID, ok := h.accountParam(w, r)
+	if !ok {
+		return
+	}
+	search, ok := h.decodeSearch(w, r)
+	if !ok {
+		return
+	}
+	list, err := h.service.SearchOwnConsultations(r.Context(), accountID, search)
+	if err != nil {
+		h.writeHistoryError(r.Context(), w, err, "Could not search consultations")
+		return
+	}
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, ownConsultationListResponse{AccountID: accountID.String(), Consultations: toSummaries(list)}, nil)
+}
+
+// OwnHistoryOptions handles GET /accounts/{accountId}/history-options (specs/058).
+//
+//	@Summary		The doctors and medications of a person's own consultations
+//	@Description	GET /children/{childId}/history-options over the person's own consultations; the same plan as their search.
+//	@Tags			consultations
+//	@Produce		json
+//	@Param			accountId	path		string	true	"Account UUID of the person"
+//	@Success		200			{object}	historyOptionsResponse
+//	@Failure		404			{object}	accountNotFoundResponseDoc	"No account exists for this id"
+//	@Failure		422			{object}	planLimitResponseDoc		"Not on the paid plan (history_search)"
+//	@Security		ClerkSession
+//	@Failure		401			{object}	sessionErrorResponseDoc	"No valid Clerk session"
+//	@Failure		403			{object}	sessionErrorResponseDoc	"The session cannot see this person's consultations"
+//	@Router			/accounts/{accountId}/history-options [get]
+func (h *Handler) OwnHistoryOptions(w http.ResponseWriter, r *http.Request) {
+	accountID, ok := h.accountParam(w, r)
+	if !ok {
+		return
+	}
+	options, err := h.service.OwnHistoryOptions(r.Context(), accountID)
+	if err != nil {
+		h.writeHistoryError(r.Context(), w, err, "Could not list the history options")
+		return
+	}
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, historyOptionsResponse{Doctors: options.Doctors, Medications: options.Medications}, nil)
+}
