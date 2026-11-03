@@ -308,18 +308,12 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
      además se niega a arrancar (Railway dejaría corriendo la versión anterior) o arranca igual.
   2. **Aviso en el PR**: un paso del CI (o un comentario automático) que, cuando el PR agrega un archivo en
      `backend/migrations/`, recuerde aplicarla en DEV **antes** de hacer merge (y lo deje en la descripción del PR).
-- **E2E del CI que fallan por el límite de Clerk** (anotado 2026-10-30, tras los PR 69 y 70): las E2E corren contra la
-  instancia de desarrollo de Clerk, cuyo límite de peticiones es compartido por todos los jobs (Chromium en 3 partes,
-  Firefox y WebKit a la vez). Cuando se junta el tráfico fallan pruebas que no tienen que ver con el cambio (registro,
-  familia, consultas, recordatorios): el backend responde 500 «Could not resolve the session's email» (Clerk le contestó
-  429 al pedir el correo) y el navegador marca «[Clerk Testing] FAPI request failed» tras 4 intentos. Hoy se arregla
-  volviendo a correr los jobs fallidos. Opciones para arreglarlo de raíz (decidir una o varias):
-  1. **Backend**: `clerkPrimaryEmail` (`internal/account/handler.go`) reintenta tras un 429 solo con
-     `clerkRateLimitWaits` = 0.5 s, 1.5 s y 3 s (unos 5 s en total); alargar las esperas o respetar el `Retry-After` de
-     Clerk, y responder 503 en vez de 500 si aun así no se pudo.
-  2. **CI**: que los jobs de E2E no peguen a Clerk todos al mismo tiempo (menos trabajadores, escalonar Firefox y WebKit
-     después de Chromium, o reutilizar sesiones/cuentas de prueba entre specs en vez de crear una por prueba).
-  3. **Reintento automático** de Playwright (`retries` en CI) solo para estos fallos, sabiendo que esconde fallas reales.
+- ~~**E2E del CI que fallan por el límite de Clerk**~~ — **hecho** el 2026-11-03 en `bugfix/059-boton-nueva-consulta-web` (PR 77),
+  después de que los PR 76 y 77 fallaran solo al iniciar sesión en Clerk: (a) CI con `max-parallel: 3` (seis navegadores
+  contra Clerk a la vez en lugar de diez); (b) `retryWhileRateLimited` (`e2e/clerkApi.ts`) también reintenta 502/503/504,
+  «Service Unavailable» y los rechazos del inicio de sesión del navegador, y `signInAs` vuelve a `/login` en cada intento;
+  (c) `retries: 2` en CI; (d) el backend (`clerkPrimaryEmail`) también reintenta 502/503/504. Queda abierto, si vuelve a
+  pasar: respetar el `Retry-After` de Clerk, responder 503 en vez de 500, o reutilizar cuentas de prueba entre specs.
 
 ## Producto / Legal
 

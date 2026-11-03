@@ -49,17 +49,23 @@ function secretKey() {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 /**
- * Runs `attempt` again, with a growing pause, while it fails because Clerk is rate limiting the
- * development instance (429 / "Too Many Requests"). The suite hits Clerk's real servers hundreds of
- * times per run, and the limit is shared with every other run and with local runs, so a burst of
- * 429s is expected now and then — it is not a failure of the app. Any other error is thrown at once.
+ * What Clerk answers when it is overloaded rather than when something is wrong: a 429 / "Too Many Requests", a 502/503/504
+ * ("Service Unavailable"), and what its browser sign-in says when the request behind it was refused that way ("Sign-in with
+ * ticket failed. Status: null", "Failed to sign in"). Seen in PRs 76 and 77: the sign-in failed and the next try passed.
+ */
+export const CLERK_TRANSIENT = /(-> 429:|-> 50[234]:|too many requests|service unavailable|sign-in with ticket failed|failed to sign in)/i
+
+/**
+ * Runs `attempt` again, with a growing pause, while it fails because Clerk is overloaded (CLERK_TRANSIENT). The suite hits
+ * Clerk's real servers hundreds of times per run, and the limit is shared with every other run and with local runs, so a burst
+ * of refusals is expected now and then — it is not a failure of the app. Any other error is thrown at once.
  */
 export async function retryWhileRateLimited<T>(attempt: () => Promise<T>, waitsMs = [1_000, 2_000, 4_000, 8_000]): Promise<T> {
   for (let i = 0; ; i++) {
     try {
       return await attempt()
     } catch (error) {
-      const rateLimited = error instanceof Error && /(-> 429:|too many requests)/i.test(error.message)
+      const rateLimited = error instanceof Error && CLERK_TRANSIENT.test(error.message)
       if (!rateLimited || i >= waitsMs.length) throw error
       await sleep(waitsMs[i] + Math.random() * 500)
     }

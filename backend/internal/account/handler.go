@@ -282,7 +282,13 @@ func (h *Handler) CreateAccount(w http.ResponseWriter, r *http.Request) {
 // primary email exists but Clerk has not verified it.
 var errEmailNotVerified = errors.New("the session's primary email is not verified")
 
-// clerkRateLimitWaits are the waits before asking Clerk again after a 429 (a variable so tests can shorten them).
+// clerkTransient says Clerk refused because it is overloaded, not because of the request: 429, or a 502/503/504.
+func clerkTransient(status int) bool {
+	return status == http.StatusTooManyRequests || status == http.StatusBadGateway ||
+		status == http.StatusServiceUnavailable || status == http.StatusGatewayTimeout
+}
+
+// clerkRateLimitWaits are the waits before asking Clerk again after a 429 or a 502/503/504 (a variable so tests can shorten them).
 var clerkRateLimitWaits = []time.Duration{500 * time.Millisecond, 1500 * time.Millisecond, 3 * time.Second}
 
 // clerkPrimaryEmail resolves the verified primary email for a Clerk user id
@@ -298,7 +304,7 @@ func clerkPrimaryEmail(ctx context.Context, clerkUserID string) (string, error) 
 	// times with growing waits (clerkRateLimitWaits), and only for that answer.
 	for _, wait := range clerkRateLimitWaits {
 		var apiErr *clerk.APIErrorResponse
-		if err == nil || !errors.As(err, &apiErr) || apiErr.HTTPStatusCode != http.StatusTooManyRequests {
+		if err == nil || !errors.As(err, &apiErr) || !clerkTransient(apiErr.HTTPStatusCode) {
 			break
 		}
 		select {

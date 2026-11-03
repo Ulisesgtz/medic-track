@@ -282,5 +282,7 @@ describe('ProfilePage — web', () => {
     const activityLink = screen.getByRole('link', { name: 'Agregar una actividad' })
     expect(activityLink.compareDocumentPosition(supplement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Nueva consulta' })).toHaveAttribute('href', '/yo/consultas/nueva')
+    // A link inside the header's flex row: centered by its own flex, or its text sits at the top left of the 52 px.
+    expect(screen.getByRole('link', { name: 'Nueva consulta' })).toHaveClass('inline-flex', 'items-center', 'justify-center')
   })
 })

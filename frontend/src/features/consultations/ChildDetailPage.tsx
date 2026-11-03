@@ -94,7 +94,7 @@ export function ChildDetailPage() {
     <NewConsultationEntry
       to={`/children/${childId}/consultations/new`}
       blocked={blocked}
-      className={`min-h-[52px] cursor-pointer rounded-2xl bg-confirmed text-[17px] font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-confirmed focus-visible:ring-offset-2 ${isDesktop ? 'shrink-0 px-7' : 'flex w-full items-center justify-center'}`}
+      className={`min-h-[52px] cursor-pointer rounded-2xl bg-confirmed text-[17px] font-extrabold text-white transition-colors duration-200 hover:bg-emerald-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-confirmed focus-visible:ring-offset-2 ${isDesktop ? 'inline-flex shrink-0 items-center justify-center px-7' : 'flex w-full items-center justify-center'}`}
     >
       {CHILD.newConsultation}
     </NewConsultationEntry>

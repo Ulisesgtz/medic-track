@@ -113,11 +113,15 @@ jobs:
   frontend-e2e:
     name: E2E ${{ matrix.name }}
     runs-on: ubuntu-latest
-    # The suite is split in five jobs that run at the same time (~2 min of tests each instead of ~12 in one): Chromium, which runs
-    # every spec, in three shards, and Firefox and WebKit, which run only the CROSS_BROWSER_SPECS of playwright.config.ts. Each job
-    # has its own API and database and installs only its browser. The «Frontend — Playwright E2E gate» job below sums them up.
+    # The suite is split in five jobs (~2 min of tests each instead of ~12 in one): Chromium, which runs every spec, in three shards,
+    # and Firefox and WebKit, which run only the CROSS_BROWSER_SPECS of playwright.config.ts. Each job has its own API and database
+    # and installs only its browser. The «Frontend — Playwright E2E gate» job below sums them up.
     strategy:
       fail-fast: false
+      # At most three at a time (six browsers signing in, not ten): every test signs up and signs in against the ONE shared Clerk
+      # development instance, and five jobs at once kept going over its limit (PRs 76 and 77 failed only at Clerk's sign-in, in a
+      # different spec each time). The other two start as soon as one ends.
+      max-parallel: 3
       matrix:
         include:
           - { name: 'chromium 1/3', project: chromium, shard: 1/3 }
