@@ -9,6 +9,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/Ulisesgtz/medic-track/backend/internal/supplement"
 )
 
 // Repository persists Consultation, Medication and Dose records.
@@ -74,6 +76,16 @@ func childExists(ctx context.Context, q querier, childID uuid.UUID) (bool, error
 	return exists, nil
 }
 
+// childIDColumn reads consultations.child_id (alias c) as a uuid: uuid.Nil for a person's own consultation (specs/058).
+const childIDColumn = `coalesce(c.child_id, '00000000-0000-0000-0000-000000000000'::uuid)`
+
+// summaryColumns are the columns of the consultations list, in the order scanSummaries reads them (alias c).
+const summaryColumns = `c.id, ` + childIDColumn + `, c.account_id, c.doctor_name, c.consult_date, c.notes, c.created_at, c.record_only,
+		       (SELECT count(*) FROM medications m WHERE m.consultation_id = c.id),
+		       COALESCE((SELECT array_agg(s.name ORDER BY s.sort_order)
+		                 FROM consultation_symptoms cs JOIN symptoms s ON s.code = cs.symptom_code
+		                 WHERE cs.consultation_id = c.id), '{}')`
+
 // GetByChild lists a child's consultations, most recent first (FR-001). It
 // returns ErrChildNotFound if no child exists for childID.
 func (r *Repository) GetByChild(ctx context.Context, childID uuid.UUID) ([]Consultation, error) {
@@ -86,11 +98,7 @@ func (r *Repository) GetByChild(ctx context.Context, childID uuid.UUID) ([]Consu
 	}
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT c.id, c.child_id, c.doctor_name, c.consult_date, c.notes, c.created_at, c.record_only,
-		       (SELECT count(*) FROM medications m WHERE m.consultation_id = c.id),
-		       COALESCE((SELECT array_agg(s.name ORDER BY s.sort_order)
-		                 FROM consultation_symptoms cs JOIN symptoms s ON s.code = cs.symptom_code
-		                 WHERE cs.consultation_id = c.id), '{}')
+		SELECT `+summaryColumns+`
 		FROM consultations c WHERE c.child_id = $1 ORDER BY c.consult_date DESC
 	`, childID)
 	if err != nil {
@@ -107,7 +115,7 @@ func scanSummaries(rows pgx.Rows) ([]Consultation, error) {
 	consultations := make([]Consultation, 0)
 	for rows.Next() {
 		var c Consultation
-		if err := rows.Scan(&c.ID, &c.ChildID, &c.DoctorName, &c.ConsultDate, &c.Notes, &c.CreatedAt, &c.RecordOnly, &c.MedicationCount, &c.SymptomNames); err != nil {
+		if err := rows.Scan(&c.ID, &c.ChildID, &c.AccountID, &c.DoctorName, &c.ConsultDate, &c.Notes, &c.CreatedAt, &c.RecordOnly, &c.MedicationCount, &c.SymptomNames); err != nil {
 			return nil, fmt.Errorf("scanning consultation: %w", err)
 		}
 		consultations = append(consultations, c)
@@ -140,20 +148,81 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, c *Consultat
 
 	c.ChildID = childID
 	now := r.now() // one reading for every dose's status in this response
-	if err := checkPlan(ctx, tx, childID, c, now); err != nil {
+	accountID, plan, err := accountPlanOf(ctx, tx, childID, true)
+	if err != nil {
 		return err
 	}
-	if err := checkPhotoCap(ctx, tx, childID, c); err != nil {
+	c.AccountID = accountID
+	if err := checkPlan(ctx, tx, accountID, plan, c, now); err != nil {
+		return err
+	}
+	return r.insert(ctx, tx, c, now)
+}
+
+// CreateOwn persists a person's own consultation (specs/058): no child, the account is the patient. Like Create it is one
+// transaction and locks the account row first; then the paid plan (*PlanLimitError own_consultations: their own account or a
+// family that pays, the same rule as their own routines) and the photo cap. The free plan's rules of specs/030 don't apply:
+// they are about the children. ErrAccountNotFound if there is no such account.
+func (r *Repository) CreateOwn(ctx context.Context, accountID uuid.UUID, c *Consultation) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("beginning transaction: %w", err)
+	}
+	defer tx.Rollback(ctx) //nolint:errcheck // rollback is a no-op after a successful commit
+
+	paid, err := personalPlanOf(ctx, tx, accountID, true)
+	if err != nil {
+		return err
+	}
+	if !paid {
+		return &PlanLimitError{Reason: PlanLimitOwnConsultations}
+	}
+	c.ChildID = uuid.Nil
+	c.AccountID = accountID
+	return r.insert(ctx, tx, c, r.now())
+}
+
+// personalPlanOf says whether a person's own things are on the paid plan (supplement.PersonalPlanSQL). `lock` takes the
+// account row FOR UPDATE, so the requests of one account are decided one after the other. ErrAccountNotFound if none.
+func personalPlanOf(ctx context.Context, q querier, accountID uuid.UUID, lock bool) (bool, error) {
+	query := `SELECT ` + supplement.PersonalPlanSQL + ` FROM accounts a WHERE a.id = $1`
+	if lock {
+		query += ` FOR UPDATE OF a`
+	}
+	var paid bool
+	err := q.QueryRow(ctx, query, accountID).Scan(&paid)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, ErrAccountNotFound
+	}
+	if err != nil {
+		return false, fmt.Errorf("reading the person's plan: %w", err)
+	}
+	return paid, nil
+}
+
+// childParam is the child of a consultation as a query argument: NULL for a person's own.
+func childParam(childID uuid.UUID) *uuid.UUID {
+	if childID == uuid.Nil {
+		return nil
+	}
+	return &childID
+}
+
+// insert writes a consultation whose account (and child, if any) are already decided and locked, with its symptoms,
+// medications and doses, and commits. The photo cap is checked here, on the consultation's account.
+func (r *Repository) insert(ctx context.Context, tx pgx.Tx, c *Consultation, now time.Time) error {
+	if err := checkPhotoCap(ctx, tx, c.AccountID, c); err != nil {
 		return err
 	}
 	if c.Photo == nil {
 		c.Photo = []byte{} // the column is NOT NULL: "no photo" is an empty one
 	}
-	err = tx.QueryRow(ctx, `
-		INSERT INTO consultations (child_id, doctor_name, consult_date, photo, notes, record_only, utc_offset_minutes)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+	err := tx.QueryRow(ctx, `
+		INSERT INTO consultations (child_id, account_id, doctor_name, consult_date, photo, notes, record_only, utc_offset_minutes)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, created_at
-	`, c.ChildID, c.DoctorName, c.ConsultDate, c.Photo, c.Notes, c.RecordOnly, offsetMinutes(c.ScheduleLocation, c.ConsultDate),
+	`, childParam(c.ChildID), c.AccountID, c.DoctorName, c.ConsultDate, c.Photo, c.Notes, c.RecordOnly,
+		offsetMinutes(c.ScheduleLocation, c.ConsultDate),
 	).Scan(&c.ID, &c.CreatedAt)
 	if err != nil {
 		return fmt.Errorf("inserting consultation: %w", err)
@@ -161,15 +230,15 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, c *Consultat
 
 	c.Symptoms = []Symptom{}
 	if codes := uniqueCodes(c.SymptomCodes); len(codes) > 0 {
-		// The child's account comes from the database, never from the request, and only active catalog
-		// symptoms are accepted: fewer rows than (distinct) codes means one is unknown or retired, and the
-		// whole consultation is rolled back (specs/012 research R4).
+		// The child and the account are the consultation's own (the database checks the pair), never the request's, and
+		// only active catalog symptoms are accepted: fewer rows than (distinct) codes means one is unknown or retired, and
+		// the whole consultation is rolled back (specs/012 research R4).
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO consultation_symptoms (consultation_id, child_id, account_id, symptom_code)
-			SELECT $1, ch.id, ch.account_id, s.code
-			FROM children ch JOIN symptoms s ON s.code = ANY($3) AND s.active
-			WHERE ch.id = $2
-		`, c.ID, c.ChildID, codes)
+			SELECT co.id, co.child_id, co.account_id, s.code
+			FROM consultations co JOIN symptoms s ON s.code = ANY($2) AND s.active
+			WHERE co.id = $1
+		`, c.ID, codes)
 		if err != nil {
 			return fmt.Errorf("inserting consultation symptoms: %w", err)
 		}
@@ -253,11 +322,10 @@ func accountPlanOf(ctx context.Context, q querier, childID uuid.UUID, lock bool)
 // treatment running (a medication not ended with a dose still ahead — the same "active" as the child's overview).
 // It locks the account row first, so two requests of the same account are checked one after the other and both can't
 // start a treatment. Paid accounts pass untouched; nothing already saved is ever hidden or changed.
-func checkPlan(ctx context.Context, tx pgx.Tx, childID uuid.UUID, c *Consultation, now time.Time) error {
-	accountID, plan, err := accountPlanOf(ctx, tx, childID, true)
-	if err != nil {
-		return err
-	}
+//
+// Only the children's consultations count (specs/058 research R4): a person's own consultation is the paid plan's, and with
+// the plan lapsed it must not keep the account from registering a child's. The caller has locked the account row.
+func checkPlan(ctx context.Context, tx pgx.Tx, accountID uuid.UUID, plan string, c *Consultation, now time.Time) error {
 	if plan == planPaid {
 		return nil
 	}
@@ -266,14 +334,13 @@ func checkPlan(ctx context.Context, tx pgx.Tx, childID uuid.UUID, c *Consultatio
 	}
 
 	var active bool
-	err = tx.QueryRow(ctx, `
+	err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
 			SELECT 1
 			FROM doses d
 			JOIN medications m ON m.id = d.medication_id
 			JOIN consultations co ON co.id = m.consultation_id
-			JOIN children ch ON ch.id = co.child_id
-			WHERE ch.account_id = $1 AND m.ended_at IS NULL AND d.scheduled_at > $2
+			WHERE co.account_id = $1 AND co.child_id IS NOT NULL AND m.ended_at IS NULL AND d.scheduled_at > $2
 		)
 	`, accountID, now).Scan(&active)
 	if err != nil {
@@ -287,17 +354,12 @@ func checkPlan(ctx context.Context, tx pgx.Tx, childID uuid.UUID, c *Consultatio
 
 // checkPhotoCap enforces the photo rule on every plan: a consultation needs its prescription photo, unless the account
 // already keeps MaxPhotosPerAccount of them — then a photo is refused (ErrPhotoLimit) and one without it is saved. The
-// account row is locked, so two requests can't both take the last place.
-func checkPhotoCap(ctx context.Context, tx pgx.Tx, childID uuid.UUID, c *Consultation) error {
-	accountID, _, err := accountPlanOf(ctx, tx, childID, true)
-	if err != nil {
-		return err
-	}
+// caller has already locked the account row, so two requests can't both take the last place. A person's own consultations
+// count in the same cap: it is the same account (specs/058).
+func checkPhotoCap(ctx context.Context, tx pgx.Tx, accountID uuid.UUID, c *Consultation) error {
 	var kept int
-	err = tx.QueryRow(ctx, `
-		SELECT count(*)
-		FROM consultations co JOIN children ch ON ch.id = co.child_id
-		WHERE ch.account_id = $1 AND octet_length(co.photo) > 0
+	err := tx.QueryRow(ctx, `
+		SELECT count(*) FROM consultations co WHERE co.account_id = $1 AND octet_length(co.photo) > 0
 	`, accountID).Scan(&kept)
 	if err != nil {
 		return fmt.Errorf("counting the account's photos: %w", err)
@@ -370,10 +432,10 @@ func (r *Repository) getByID(ctx context.Context, id uuid.UUID, withPhoto bool) 
 		photo = "''::bytea"
 	}
 	err := r.pool.QueryRow(ctx, `
-		SELECT child_id, doctor_name, consult_date, `+photo+`, notes, created_at, record_only, edited_at,
-		       (SELECT first_name FROM accounts WHERE id = edited_by_account_id)
+		SELECT coalesce(child_id, '00000000-0000-0000-0000-000000000000'::uuid), account_id, doctor_name, consult_date, `+photo+`,
+		       notes, created_at, record_only, edited_at, (SELECT first_name FROM accounts WHERE id = edited_by_account_id)
 		FROM consultations WHERE id = $1
-	`, id).Scan(&c.ChildID, &c.DoctorName, &c.ConsultDate, &c.Photo, &c.Notes, &c.CreatedAt, &c.RecordOnly, &c.EditedAt, &c.EditedBy)
+	`, id).Scan(&c.ChildID, &c.AccountID, &c.DoctorName, &c.ConsultDate, &c.Photo, &c.Notes, &c.CreatedAt, &c.RecordOnly, &c.EditedAt, &c.EditedBy)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrConsultationNotFound
@@ -697,8 +759,8 @@ func (r *Repository) ExtendTreatment(ctx context.Context, consultationID, medica
 	var extensionID uuid.UUID
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO medication_extensions (medication_id, account_id, proposed_doses, added_doses)
-		SELECT $1, ch.account_id, $2, $3
-		FROM consultations co JOIN children ch ON ch.id = co.child_id WHERE co.id = $4
+		SELECT $1, co.account_id, $2, $3
+		FROM consultations co WHERE co.id = $4
 		RETURNING id
 	`, medicationID, len(covering), doses, consultationID).Scan(&extensionID); err != nil {
 		return nil, fmt.Errorf("recording extension: %w", err)

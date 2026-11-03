@@ -31,10 +31,10 @@ type UpdateConsultationInput struct {
 	DoctorName      string
 	ConsultDate     time.Time
 	// Photo replaces the prescription photo; empty leaves it as it is.
-	Photo            []byte
-	Notes            string
-	SymptomCodes     []string
-	Medications      []UpdateMedicationInput
+	Photo        []byte
+	Notes        string
+	SymptomCodes []string
+	Medications  []UpdateMedicationInput
 	// UTCOffsetMinutes is the editing device's offset: only for a consultation that has no zone of its own yet.
 	UTCOffsetMinutes int
 }
@@ -101,17 +101,18 @@ func (r *Repository) Update(ctx context.Context, id uuid.UUID, in UpdateConsulta
 	}
 	defer tx.Rollback(ctx) //nolint:errcheck // rollback is a no-op after a successful commit
 
-	var childID uuid.UUID
-	err = tx.QueryRow(ctx, `SELECT child_id FROM consultations WHERE id = $1`, id).Scan(&childID)
+	var accountID uuid.UUID
+	var own bool
+	err = tx.QueryRow(ctx, `SELECT account_id, child_id IS NULL FROM consultations WHERE id = $1`, id).Scan(&accountID, &own)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrConsultationNotFound
 	}
 	if err != nil {
-		return fmt.Errorf("reading the consultation's child: %w", err)
+		return fmt.Errorf("reading the consultation's account: %w", err)
 	}
-	accountID, plan, err := accountPlanOf(ctx, tx, childID, true)
-	if err != nil {
-		return err
+	var plan string
+	if err := tx.QueryRow(ctx, `SELECT plan::text FROM accounts WHERE id = $1 FOR UPDATE`, accountID).Scan(&plan); err != nil {
+		return fmt.Errorf("locking the account: %w", err)
 	}
 
 	var savedDate, version time.Time
@@ -198,17 +199,18 @@ func (r *Repository) Update(ctx context.Context, id uuid.UUID, in UpdateConsulta
 	}
 
 	if len(in.Photo) > 0 && !hasPhoto {
-		if err := checkPhotoCap(ctx, tx, childID, &Consultation{Photo: in.Photo}); err != nil {
+		if err := checkPhotoCap(ctx, tx, accountID, &Consultation{Photo: in.Photo}); err != nil {
 			return err
 		}
 	}
 	if err := saveConsultation(ctx, tx, id, in, offset, editor); err != nil {
 		return err
 	}
-	if err := replaceSymptoms(ctx, tx, id, childID, in.SymptomCodes); err != nil {
+	if err := replaceSymptoms(ctx, tx, id, in.SymptomCodes); err != nil {
 		return err
 	}
-	if plan != planPaid && addedAhead {
+	// The free plan's rule is about the children (specs/030); a person's own consultation is edited on any plan (specs/058).
+	if plan != planPaid && addedAhead && !own {
 		if err := checkNoOtherActive(ctx, tx, accountID, id, now); err != nil {
 			return err
 		}
@@ -398,7 +400,7 @@ func saveConsultation(ctx context.Context, tx pgx.Tx, id uuid.UUID, in UpdateCon
 
 // replaceSymptoms sets the consultation's symptoms: active catalog ones, plus retired ones it already had (they stay if the
 // parent didn't take them off). Fewer rows than codes = one is unknown, or retired and new: ErrSymptomNotAvailable.
-func replaceSymptoms(ctx context.Context, tx pgx.Tx, id, childID uuid.UUID, codes []string) error {
+func replaceSymptoms(ctx context.Context, tx pgx.Tx, id uuid.UUID, codes []string) error {
 	var had []string
 	if err := tx.QueryRow(ctx, `SELECT coalesce(array_agg(symptom_code), '{}') FROM consultation_symptoms WHERE consultation_id = $1`, id).Scan(&had); err != nil {
 		return fmt.Errorf("reading the symptoms it had: %w", err)
@@ -412,10 +414,10 @@ func replaceSymptoms(ctx context.Context, tx pgx.Tx, id, childID uuid.UUID, code
 	}
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO consultation_symptoms (consultation_id, child_id, account_id, symptom_code)
-		SELECT $1, ch.id, ch.account_id, s.code
-		FROM children ch JOIN symptoms s ON s.code = ANY($3) AND (s.active OR s.code = ANY($4))
-		WHERE ch.id = $2
-	`, id, childID, codes, had)
+		SELECT co.id, co.child_id, co.account_id, s.code
+		FROM consultations co JOIN symptoms s ON s.code = ANY($2) AND (s.active OR s.code = ANY($3))
+		WHERE co.id = $1
+	`, id, codes, had)
 	if err != nil {
 		return fmt.Errorf("inserting the symptoms: %w", err)
 	}
@@ -435,8 +437,7 @@ func checkNoOtherActive(ctx context.Context, tx pgx.Tx, accountID, consultationI
 			FROM doses d
 			JOIN medications m ON m.id = d.medication_id
 			JOIN consultations co ON co.id = m.consultation_id
-			JOIN children ch ON ch.id = co.child_id
-			WHERE ch.account_id = $1 AND co.id <> $2 AND m.ended_at IS NULL AND d.scheduled_at > $3
+			WHERE co.account_id = $1 AND co.child_id IS NOT NULL AND co.id <> $2 AND m.ended_at IS NULL AND d.scheduled_at > $3
 		)
 	`, accountID, consultationID, now).Scan(&other)
 	if err != nil {

@@ -174,11 +174,7 @@ func (r *Repository) search(ctx context.Context, childID uuid.UUID, s HistorySea
 	}
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT c.id, c.child_id, c.doctor_name, c.consult_date, c.notes, c.created_at, c.record_only,
-		       (SELECT count(*) FROM medications m WHERE m.consultation_id = c.id),
-		       COALESCE((SELECT array_agg(s.name ORDER BY s.sort_order)
-		                 FROM consultation_symptoms cs JOIN symptoms s ON s.code = cs.symptom_code
-		                 WHERE cs.consultation_id = c.id), '{}')
+		SELECT `+summaryColumns+`
 		FROM consultations c
 		WHERE `+strings.Join(where, " AND ")+`
 		ORDER BY c.consult_date DESC, c.created_at DESC, c.id

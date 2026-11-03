@@ -37,14 +37,13 @@ func (r *Repository) OwnsChild(ctx context.Context, clerkUserID string, childID 
 		   WHERE c.id = $1 AND a.clerk_user_id = $2)`, childID)
 }
 
-// OwnsConsultation reports whether consultationID belongs to a child of the
-// account linked to clerkUserID.
+// OwnsConsultation reports whether consultationID belongs to the account linked to clerkUserID: a consultation of one of its
+// children or one of its own (specs/058; consultations carry their account since then).
 func (r *Repository) OwnsConsultation(ctx context.Context, clerkUserID string, consultationID uuid.UUID) (bool, error) {
 	return r.exists(ctx, clerkUserID,
 		`SELECT EXISTS (
 		   SELECT 1 FROM consultations k
-		   JOIN children c ON c.id = k.child_id
-		   JOIN accounts a ON a.id = c.account_id
+		   JOIN accounts a ON a.id = k.account_id
 		   WHERE k.id = $1 AND a.clerk_user_id = $2)`, consultationID)
 }
 

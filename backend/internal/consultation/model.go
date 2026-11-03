@@ -14,8 +14,11 @@ import (
 // Consultation represents a single medical visit for a child. It is never deleted; since specs/051 it can be edited
 // (Repository.Update), but what was already registered — a marked dose, a dose whose time passed — never changes.
 type Consultation struct {
-	ID          uuid.UUID
-	ChildID     uuid.UUID
+	ID uuid.UUID
+	// ChildID is the child the consultation is of; uuid.Nil for a person's own consultation (specs/058).
+	ChildID uuid.UUID
+	// AccountID is the account it belongs to: the child's, or the person whose own consultation it is (specs/058).
+	AccountID   uuid.UUID
 	DoctorName  string
 	ConsultDate time.Time
 	Photo       []byte
@@ -48,6 +51,9 @@ type Consultation struct {
 	// medications themselves aren't loaded.
 	MedicationCount int
 }
+
+// IsOwn says the consultation is a person's own, not a child's (specs/058).
+func (c *Consultation) IsOwn() bool { return c.ChildID == uuid.Nil }
 
 // Symptom is one catalog symptom marked on a consultation: something the
 // parent observed, never a diagnosis (specs/012, Principio I). The catalog's

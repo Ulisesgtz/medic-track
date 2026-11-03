@@ -11,6 +11,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/Ulisesgtz/medic-track/backend/internal/supplement"
 )
 
 const planPaid = "paid"
@@ -32,11 +34,18 @@ type querier interface {
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 }
 
+// planOfAppointmentSQL is the plan an appointment is decided by: the owner account's for a child's, and for a person's own
+// (specs/058, no child) the plan of their own things (supplement.PersonalPlanSQL: their account or a family that pays).
+const planOfAppointmentSQL = `CASE WHEN ap.child_id IS NULL
+	THEN CASE WHEN (SELECT ` + supplement.PersonalPlanSQL + ` FROM accounts a WHERE a.id = ap.account_id) THEN 'paid' ELSE 'free' END
+	ELSE owner.plan::text END`
+
 const appointmentSelect = `
-	SELECT ap.id, COALESCE(ap.consultation_id, '00000000-0000-0000-0000-000000000000'::uuid), ap.child_id, ap.account_id,
+	SELECT ap.id, COALESCE(ap.consultation_id, '00000000-0000-0000-0000-000000000000'::uuid),
+	       COALESCE(ap.child_id, '00000000-0000-0000-0000-000000000000'::uuid), ap.account_id,
 	       COALESCE(NULLIF(ap.doctor_name, ''), co.doctor_name, ''), COALESCE(co.consult_date::text, ''), ap.starts_at,
 	       ap.utc_offset_minutes, ap.note, ap.location, ap.location_url, ap.status, COALESCE(sb.first_name, ''), ap.status_at,
-	       cb.first_name, owner.plan::text
+	       cb.first_name, ` + planOfAppointmentSQL + `
 	FROM consultation_appointments ap
 	LEFT JOIN consultations co ON co.id = ap.consultation_id
 	JOIN accounts cb ON cb.id = ap.created_by_account_id
@@ -57,7 +66,9 @@ func scanAppointment(row pgx.Row) (Appointment, error) {
 func (r *Repository) ConsultDate(ctx context.Context, consultationID uuid.UUID) (string, uuid.UUID, error) {
 	var date string
 	var child uuid.UUID
-	err := r.pool.QueryRow(ctx, `SELECT consult_date::text, child_id FROM consultations WHERE id = $1`, consultationID).Scan(&date, &child)
+	err := r.pool.QueryRow(ctx, `
+		SELECT consult_date::text, COALESCE(child_id, '00000000-0000-0000-0000-000000000000'::uuid) FROM consultations WHERE id = $1`,
+		consultationID).Scan(&date, &child)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", uuid.Nil, ErrConsultationNotFound
 	}
@@ -78,20 +89,22 @@ func (r *Repository) Create(ctx context.Context, consultationID uuid.UUID, n Nor
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	var accountID, childID uuid.UUID
-	var plan string
+	var accountID uuid.UUID
+	var childID *uuid.UUID
+	var paid bool
+	// A person's own consultation (no child, specs/058) is decided by the plan of their own things.
 	err = tx.QueryRow(ctx, `
-		SELECT a.id, a.plan::text, co.child_id
-		FROM consultations co JOIN children ch ON ch.id = co.child_id JOIN accounts a ON a.id = ch.account_id
+		SELECT a.id, CASE WHEN co.child_id IS NULL THEN `+supplement.PersonalPlanSQL+` ELSE a.plan = 'paid' END, co.child_id
+		FROM consultations co JOIN accounts a ON a.id = co.account_id
 		WHERE co.id = $1
-		FOR UPDATE OF a`, consultationID).Scan(&accountID, &plan, &childID)
+		FOR UPDATE OF a`, consultationID).Scan(&accountID, &paid, &childID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return uuid.Nil, ErrConsultationNotFound
 	}
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("reading the account's plan: %w", err)
 	}
-	if plan != planPaid {
+	if !paid {
 		return uuid.Nil, &PlanLimitError{Reason: PlanLimitAppointments}
 	}
 	var scheduled bool
@@ -129,11 +142,35 @@ func (r *Repository) CreateForChild(ctx context.Context, childID uuid.UUID, n No
 	if plan != planPaid {
 		return uuid.Nil, &PlanLimitError{Reason: PlanLimitAppointments}
 	}
-	return r.insertAndCommit(ctx, tx, nil, childID, accountID, n, createdBy)
+	return r.insertAndCommit(ctx, tx, nil, &childID, accountID, n, createdBy)
 }
 
-// insertAndCommit writes the appointment and its notices and commits; `consultationID` is nil for one with no consultation.
-func (r *Repository) insertAndCommit(ctx context.Context, tx pgx.Tx, consultationID *uuid.UUID, childID, accountID uuid.UUID, n Normalized, createdBy uuid.UUID) (uuid.UUID, error) {
+// CreateOwn saves an appointment of a person, with no consultation (specs/058): their account's row is locked and the plan is
+// that of their own things. ErrAccountNotFound if the account doesn't exist.
+func (r *Repository) CreateOwn(ctx context.Context, accountID uuid.UUID, n Normalized, createdBy uuid.UUID) (uuid.UUID, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("starting transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var paid bool
+	err = tx.QueryRow(ctx, `SELECT `+supplement.PersonalPlanSQL+` FROM accounts a WHERE a.id = $1 FOR UPDATE OF a`, accountID).Scan(&paid)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return uuid.Nil, ErrAccountNotFound
+	}
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("reading the person's plan: %w", err)
+	}
+	if !paid {
+		return uuid.Nil, &PlanLimitError{Reason: PlanLimitAppointments}
+	}
+	return r.insertAndCommit(ctx, tx, nil, nil, accountID, n, createdBy)
+}
+
+// insertAndCommit writes the appointment and its notices and commits; `consultationID` is nil for one with no consultation and
+// `childID` for a person's own (specs/058).
+func (r *Repository) insertAndCommit(ctx context.Context, tx pgx.Tx, consultationID, childID *uuid.UUID, accountID uuid.UUID, n Normalized, createdBy uuid.UUID) (uuid.UUID, error) {
 	now := r.now()
 	var id uuid.UUID
 	err := tx.QueryRow(ctx, `
@@ -217,10 +254,11 @@ func (r *Repository) Get(ctx context.Context, id uuid.UUID) (*Appointment, error
 
 // ForConsultation is the consultation's scheduled appointment (which may already read «Pasó sin marcar»), nil if it has none.
 func (r *Repository) ForConsultation(ctx context.Context, consultationID uuid.UUID) (*Appointment, bool, error) {
-	var plan string
+	var paid bool
 	err := r.pool.QueryRow(ctx, `
-		SELECT a.plan::text FROM consultations co JOIN children ch ON ch.id = co.child_id JOIN accounts a ON a.id = ch.account_id
-		WHERE co.id = $1`, consultationID).Scan(&plan)
+		SELECT CASE WHEN co.child_id IS NULL THEN `+supplement.PersonalPlanSQL+` ELSE a.plan = 'paid' END
+		FROM consultations co JOIN accounts a ON a.id = co.account_id
+		WHERE co.id = $1`, consultationID).Scan(&paid)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, false, ErrConsultationNotFound
 	}
@@ -229,7 +267,7 @@ func (r *Repository) ForConsultation(ctx context.Context, consultationID uuid.UU
 	}
 	a, err := scanAppointment(r.pool.QueryRow(ctx, appointmentSelect+` WHERE ap.consultation_id = $1 AND ap.status = 'scheduled'`, consultationID))
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, plan == planPaid, nil
+		return nil, paid, nil
 	}
 	if err != nil {
 		return nil, false, fmt.Errorf("reading appointment: %w", err)
@@ -238,7 +276,7 @@ func (r *Repository) ForConsultation(ctx context.Context, consultationID uuid.UU
 	if err := r.loadNotices(ctx, list); err != nil {
 		return nil, false, err
 	}
-	return &list[0], plan == planPaid, nil
+	return &list[0], paid, nil
 }
 
 // ForChild returns the child's nearest scheduled appointment that has not passed (`next`) and the rest — done, canceled and
@@ -252,24 +290,45 @@ func (r *Repository) ForChild(ctx context.Context, childID uuid.UUID) (next *App
 	if err != nil {
 		return nil, nil, false, fmt.Errorf("reading the account's plan: %w", err)
 	}
-	rows, err := r.pool.Query(ctx, appointmentSelect+` WHERE ap.child_id = $1 ORDER BY ap.starts_at DESC, ap.id`, childID)
+	next, history, err = r.split(ctx, `ap.child_id = $1`, childID)
+	return next, history, plan == planPaid, err
+}
+
+// ForPerson is ForChild for a person's own appointments (specs/058: no child), with the plan of their own things.
+// ErrAccountNotFound if the account doesn't exist.
+func (r *Repository) ForPerson(ctx context.Context, accountID uuid.UUID) (next *Appointment, history []Appointment, paid bool, err error) {
+	err = r.pool.QueryRow(ctx, `SELECT `+supplement.PersonalPlanSQL+` FROM accounts a WHERE a.id = $1`, accountID).Scan(&paid)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil, false, ErrAccountNotFound
+	}
 	if err != nil {
-		return nil, nil, false, fmt.Errorf("listing appointments: %w", err)
+		return nil, nil, false, fmt.Errorf("reading the person's plan: %w", err)
+	}
+	next, history, err = r.split(ctx, `ap.child_id IS NULL AND ap.account_id = $1`, accountID)
+	return next, history, paid, err
+}
+
+// split reads the appointments that match `where` ($1 = arg) and splits them into the nearest scheduled one that has not
+// passed and the rest, most recent first.
+func (r *Repository) split(ctx context.Context, where string, arg uuid.UUID) (next *Appointment, history []Appointment, err error) {
+	rows, err := r.pool.Query(ctx, appointmentSelect+` WHERE `+where+` ORDER BY ap.starts_at DESC, ap.id`, arg)
+	if err != nil {
+		return nil, nil, fmt.Errorf("listing appointments: %w", err)
 	}
 	defer rows.Close()
 	var all []Appointment
 	for rows.Next() {
 		a, err := scanAppointment(rows)
 		if err != nil {
-			return nil, nil, false, fmt.Errorf("scanning appointment: %w", err)
+			return nil, nil, fmt.Errorf("scanning appointment: %w", err)
 		}
 		all = append(all, a)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, nil, false, fmt.Errorf("listing appointments: %w", err)
+		return nil, nil, fmt.Errorf("listing appointments: %w", err)
 	}
 	if err := r.loadNotices(ctx, all); err != nil {
-		return nil, nil, false, err
+		return nil, nil, err
 	}
 	now := r.now()
 	nextIdx := -1
@@ -288,7 +347,7 @@ func (r *Repository) ForChild(ctx context.Context, childID uuid.UUID) (next *App
 		}
 	}
 	sort.SliceStable(history, func(i, j int) bool { return history[i].StartsAt.After(history[j].StartsAt) })
-	return next, history, plan == planPaid, nil
+	return next, history, nil
 }
 
 // lock starts a transaction with the owner account's row and then the appointment's locked, in that order.

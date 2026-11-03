@@ -102,6 +102,31 @@ func (s *Service) GetChildOverview(ctx context.Context, childID uuid.UUID, from,
 // CreateConsultation validates input and persists a new Consultation with
 // its Medications and generated Doses (FR-004 through FR-010).
 func (s *Service) CreateConsultation(ctx context.Context, childID uuid.UUID, input CreateConsultationInput) (*Consultation, error) {
+	c, err := consultationFrom(input)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.Create(ctx, childID, c); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+// CreateOwnConsultation registers a consultation of the person themself (specs/058): the same input and rules as a child's,
+// and the paid plan of their own things (Repository.CreateOwn).
+func (s *Service) CreateOwnConsultation(ctx context.Context, accountID uuid.UUID, input CreateConsultationInput) (*Consultation, error) {
+	c, err := consultationFrom(input)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.CreateOwn(ctx, accountID, c); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+// consultationFrom validates a new consultation and builds it, with the start times dropped when it is only a record.
+func consultationFrom(input CreateConsultationInput) (*Consultation, error) {
 	if errs := validateCreateConsultationInput(input); errs.HasErrors() {
 		return nil, errs
 	}
@@ -127,10 +152,6 @@ func (s *Service) CreateConsultation(ctx context.Context, childID uuid.UUID, inp
 			DurationDays:   m.DurationDays,
 			StartTime:      startTime,
 		})
-	}
-
-	if err := s.repo.Create(ctx, childID, c); err != nil {
-		return nil, err
 	}
 	return c, nil
 }

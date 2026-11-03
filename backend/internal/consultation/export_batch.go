@@ -17,7 +17,8 @@ func (r *Repository) ListWithoutPhoto(ctx context.Context, ids []uuid.UUID) ([]*
 	byID := make(map[uuid.UUID]*Consultation, len(ids))
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT c.id, c.child_id, c.doctor_name, c.consult_date, c.notes, c.created_at, c.record_only, c.edited_at, e.first_name
+		SELECT c.id, `+childIDColumn+`, c.account_id, c.doctor_name, c.consult_date, c.notes, c.created_at, c.record_only, c.edited_at,
+		       e.first_name
 		FROM consultations c LEFT JOIN accounts e ON e.id = c.edited_by_account_id
 		WHERE c.id = ANY($1)
 	`, ids)
@@ -26,7 +27,7 @@ func (r *Repository) ListWithoutPhoto(ctx context.Context, ids []uuid.UUID) ([]*
 	}
 	for rows.Next() {
 		c := &Consultation{Photo: []byte{}, Symptoms: make([]Symptom, 0)}
-		if err := rows.Scan(&c.ID, &c.ChildID, &c.DoctorName, &c.ConsultDate, &c.Notes, &c.CreatedAt, &c.RecordOnly, &c.EditedAt, &c.EditedBy); err != nil {
+		if err := rows.Scan(&c.ID, &c.ChildID, &c.AccountID, &c.DoctorName, &c.ConsultDate, &c.Notes, &c.CreatedAt, &c.RecordOnly, &c.EditedAt, &c.EditedBy); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scanning consultation: %w", err)
 		}

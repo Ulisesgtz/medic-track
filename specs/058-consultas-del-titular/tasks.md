@@ -60,19 +60,19 @@ aplicarlo en DEV antes del merge.
 **Propósito**: que todo lo que hoy encuentra la cuenta dueña por `children.account_id` la lea de `consultations.account_id`, y que
 el acceso sepa qué hacer con una consulta propia. **Bloquea todas las historias.**
 
-- [ ] T005 `backend/internal/consultation/repository.go`: `Create` escribe `consultations.account_id` (la cuenta del hijo,
+- [X] T005 `backend/internal/consultation/repository.go`: `Create` escribe `consultations.account_id` (la cuenta del hijo,
   leída en la misma `tx`); el `INSERT … SELECT` de `consultation_symptoms` toma `child_id` y `account_id` **de la consulta**, no de
   `children`; las consultas de lectura que unen `children` solo para llegar a la cuenta (`accountPlanOf`, la del detalle en ~701,
   la del tope de fotos `checkPhotoCap` en ~234/275/299) usan `co.account_id`. El tope de fotos cuenta **por
   `consultations.account_id`** (las fotos propias entran en el mismo tope de 100, R2). La regla del plan gratuito de la spec 030
   (`checkPlan`, «otro tratamiento activo en la cuenta») sigue contando **solo consultas con hijo** (`child_id IS NOT NULL`, R4).
-- [ ] T006 `backend/internal/consultation/edit.go`: síntomas por la cuenta de la consulta (~416); la consulta de ~438 por
+- [X] T006 `backend/internal/consultation/edit.go`: síntomas por la cuenta de la consulta (~416); la consulta de ~438 por
   `co.account_id`; la regla `active_treatment` de `Update` solo aplica si la consulta tiene hijo y solo cuenta consultas con hijo.
-- [ ] T007 [P] `backend/internal/appointment/repository.go`: las lecturas del plan de una consulta (~84, ~222) por
+- [X] T007 [P] `backend/internal/appointment/repository.go`: las lecturas del plan de una consulta (~84, ~222) por
   `co.account_id`; `Create` llena `child_id` desde la consulta (puede ser nulo) y `account_id` desde `consultations.account_id`.
-- [ ] T008 [P] `backend/internal/ownership/repository.go`: `OwnsConsultation` por `consultations.account_id` (si todavía se usa
+- [X] T008 [P] `backend/internal/ownership/repository.go`: `OwnsConsultation` por `consultations.account_id` (si todavía se usa
   en alguna ruta; si no, dejarlo coherente y probado).
-- [ ] T009 `backend/internal/access/access.go`:
+- [X] T009 `backend/internal/access/access.go`:
   - `onConsultationQuery`: `LEFT JOIN children ch ON ch.id = k.child_id`, `JOIN accounts owner ON owner.id = k.account_id`; nivel
     = `levelCase(...)` si `k.child_id IS NOT NULL`, si no `ownLevel`: 2 si `a.id = k.account_id`; 1 si hay fila
     `own_consultation_sharing` con `shared` del dueño **y** el que pregunta es la dueña de la familia del dueño o un integrante
@@ -81,19 +81,19 @@ el acceso sepa qué hacer con una consulta propia. **Bloquea todas las historias
   - `onAppointmentQuery`: igual con `ap.child_id` nulo y `ap.account_id`.
   - Nuevo `OnPerson(ctx, clerkUserID, accountID)`: 2 si la sesión es esa cuenta, 1 por la misma regla de compartir, 0 si no.
   - Nuevo `OfAccountOnConsultation(ctx, accountID, consultationID) (Level, error)` (para «Tomada»).
-- [ ] T010 [P] Pruebas de acceso en `backend/internal/access/access_test.go` (tabla): consulta propia con el interruptor sin fila,
+- [X] T010 [P] Pruebas de acceso en `backend/internal/access/access_test.go` (tabla): consulta propia con el interruptor sin fila,
   `false`, `true` y de nuevo `false` × dueño, dueña de la familia (cuando el dueño es invitado), Tutor activo, Cuidador,
   integrante Hijo, Tutor quitado, Tutor de otra familia, extraño, sesión sin cuenta; con la familia `free` el Tutor sigue en Mark
   si el interruptor está encendido (R5); `OnAppointment` de una cita propia; `OnPerson`; `OfAccountOnConsultation`; las consultas
   de hijos dan exactamente lo de antes (filas de regresión).
-- [ ] T011 [P] Prueba de aislamiento en `backend/internal/consultation/own_isolation_test.go`: con una consulta propia (y su cita,
+- [X] T011 [P] Prueba de aislamiento en `backend/internal/consultation/own_isolation_test.go`: con una consulta propia (y su cita,
   síntomas, tomas de hoy, tratamiento activo y foto) en la cuenta de un hijo, **ninguna** de estas la devuelve ni la cuenta: lista
   del hijo, `GetOverview`, `Search` y `HistoryOptions` del hijo, `ListWithoutPhoto`/export del hijo, citas del hijo, `checkPlan`
   (spec 030) y `active_treatment` de la edición.
-- [ ] T012 [P] Prueba en `backend/internal/childdevice/` (`own_isolation_test.go`): `ConsultationOfChild`, el overview del teléfono
+- [X] T012 [P] Prueba en `backend/internal/childdevice/` (`own_isolation_test.go`): `ConsultationOfChild`, el overview del teléfono
   y `ClaimDueChildDevices` nunca devuelven ni marcan una toma de una consulta propia de la cuenta dueña; `childdevice_router_test.go`
   sigue verde sin cambios.
-- [ ] T013 Correr `go vet ./... && go test ./... -cover` y lo mismo con `pool_max_conns=4` en `consultation`, `access`,
+- [X] T013 Correr `go vet ./... && go test ./... -cover` y lo mismo con `pool_max_conns=4` en `consultation`, `access`,
   `appointment`, `reminder`, `childdevice`; cobertura > 90 %; commit de la fase.
 
 **Punto de control**: todo lo de los hijos funciona igual y una consulta propia escrita a mano en la base ya tiene acceso correcto.
