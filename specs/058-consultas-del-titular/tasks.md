@@ -109,38 +109,38 @@ y recibir su recordatorio; ningún hijo la muestra (quickstart 1–3, 10–12).
 
 ### Backend
 
-- [ ] T014 [US1] `backend/internal/consultation/repository.go`: `CreateOwn(ctx, accountID, in)` (o `Create` con un sujeto): una
+- [X] T014 [US1] `backend/internal/consultation/repository.go`: `CreateOwn(ctx, accountID, in)` (o `Create` con un sujeto): una
   `tx` que bloquea `accounts` `FOR UPDATE`, lee el plan con el mismo `personalPlanSQL` de `internal/supplement/personal.go`
   (moverlo a un lugar común o duplicarlo con una prueba que los mantenga iguales) y, si no paga, `*PlanLimitError{Reason:
   PlanLimitOwnConsultations}` (`"own_consultations"`); luego `checkPhotoCap`, inserta con `child_id` NULL y `account_id`, síntomas,
   medicamentos, tomas y la cita opcional, igual que `Create`. Las reglas de la spec 030 no aplican.
-- [ ] T015 [US1] Mismo archivo: `ListOwn(ctx, accountID)` (forma de la lista del hijo, `WHERE c.child_id IS NULL AND c.account_id
+- [X] T015 [US1] Mismo archivo: `ListOwn(ctx, accountID)` (forma de la lista del hijo, `WHERE c.child_id IS NULL AND c.account_id
   = $1`) y `GetOwnOverview(ctx, accountID, from, to)` (tomas de medicamentos de consultas propias en la ventana + tratamiento
   activo, la misma regla de `GetOverview`, sin suplementos).
-- [ ] T016 [US1] `ExtendTreatment`: si la consulta no tiene hijo, dentro de la `tx` y con la cuenta bloqueada, pedir
+- [X] T016 [US1] `ExtendTreatment`: si la consulta no tiene hijo, dentro de la `tx` y con la cuenta bloqueada, pedir
   `personalPlanSQL` → `*PlanLimitError` `own_consultations`; la consulta de un hijo no cambia.
-- [ ] T017 [US1] El detalle (`GetByID`) devuelve `childId` (nulo) y `accountId`; `model.go` y la respuesta JSON del handler.
-- [ ] T018 [US1] `backend/internal/consultation/own_handler.go` (nuevo, `*httpx.Responder`, Swagger completo): `GET/POST
+- [X] T017 [US1] El detalle (`GetByID`) devuelve `childId` (nulo) y `accountId`; `model.go` y la respuesta JSON del handler.
+- [X] T018 [US1] `backend/internal/consultation/own_handler.go` (nuevo, `*httpx.Responder`, Swagger completo): `GET/POST
   /accounts/{accountId}/consultations`, `GET /accounts/{accountId}/overview?from=&to=` (ventana ≤ 48 h); `accountId` mal formado
   → 404; mismos códigos que las rutas del hijo (contracts/api.md).
-- [ ] T019 [P] [US1] `backend/internal/appointment/`: `ListOwn`/`CreateOwn` y `GET/POST /accounts/{accountId}/appointments` (plan
+- [X] T019 [P] [US1] `backend/internal/appointment/`: `ListOwn`/`CreateOwn` y `GET/POST /accounts/{accountId}/appointments` (plan
   `appointments` con `personalPlanSQL`); una cita propia sin consulta se inserta con `child_id` y `consultation_id` nulos.
-- [ ] T020 [US1] `backend/internal/reminder/candidates.go` y `repository.go`: `medicationCandidates` con `LEFT JOIN children`,
+- [X] T020 [US1] `backend/internal/reminder/candidates.go` y `repository.go`: `medicationCandidates` con `LEFT JOIN children`,
   `owner_id = c.account_id`, el nombre (`COALESCE(ch.first_name, owner.first_name)`) y una marca `own` (consulta sin hijo);
   `ClaimDueDoses`: en una consulta propia el destinatario es **solo el dueño** en esta fase (los Tutores llegan en la US2); el
   nombre va vacío para el dueño. `MarkTakenByAction`: una toma de una consulta propia se resuelve con
   `access.OfAccountOnConsultation` (Mark) y marca como la cuenta del dispositivo. `internal/reminder/appointment.go`: citas
   propias, solo al dueño.
-- [ ] T021 [US1] `backend/internal/server/router.go`: guardas `seesPerson` (`RequireAccess("accountId", Mark, OnPerson)`) y
+- [X] T021 [US1] `backend/internal/server/router.go`: guardas `seesPerson` (`RequireAccess("accountId", Mark, OnPerson)`) y
   `fullPerson` (Full); registrar las rutas de T018 y T019; `cmd/api/main.go` si hace falta cablear algo. Filas en
   `backend/internal/server/router_test.go` para cada ruta nueva × dueño, Tutor (sin interruptor → 404/403 según el patrón del
   test), Cuidador, extraño; ninguna bajo `/child-device`.
-- [ ] T022 [P] [US1] Pruebas contra la base real en `backend/internal/consultation/own_test.go`, `own_handler_test.go`,
+- [X] T022 [P] [US1] Pruebas contra la base real en `backend/internal/consultation/own_test.go`, `own_handler_test.go`,
   `backend/internal/appointment/own_test.go`, `backend/internal/reminder/own_test.go`: crear con plan propio, con plan de familia y
   sin plan (422 sin guardar nada); el tope de fotos cuenta las propias; lista y overview solo propios; editar (spec 051),
   finalizar y marcar con el plan vencido sí; recorrer con el plan vencido no; aviso al dueño sin nombre; «Tomada» desde el
   dispositivo del dueño sí y desde otro no; `error_logs` sin doctor, notas ni medicamentos.
-- [ ] T023 [US1] Regenerar Swagger (`go run github.com/swaggo/swag/cmd/swag init -g cmd/api/main.go -o internal/docs --pd`).
+- [X] T023 [US1] Regenerar Swagger (`go run github.com/swaggo/swag/cmd/swag init -g cmd/api/main.go -o internal/docs --pd`).
 
 ### Frontend
 

@@ -107,6 +107,13 @@ func onChildQuery(actorWhere string) string {
 // the one they own (if it has anyone active) or the one they are an active member of. The plan is not asked: once shared,
 // a family that stops paying keeps seeing and marking, as a Tutor does with the children (research R5).
 func ownLevelCase(person string) string {
+	return OwnLevelSQL(person)
+}
+
+// OwnLevelSQL is ownLevelCase for the queries of other packages (the reminders of a person's own doses, specs/058), so
+// they decide who may be reminded with the very same rule as the routes: an SQL expression worth 2, 1 or 0, over the
+// actor account aliased `a` and the person given as an SQL expression.
+func OwnLevelSQL(person string) string {
 	return `CASE
 		WHEN a.id = ` + person + ` THEN 2
 		WHEN EXISTS (SELECT 1 FROM own_consultation_sharing sh WHERE sh.account_id = ` + person + ` AND sh.shared)

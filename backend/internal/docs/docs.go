@@ -179,6 +179,132 @@ const docTemplate = `{
                 }
             }
         },
+        "/accounts/{accountId}/appointments": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "GET /children/{childId}/appointments for the person themself (specs/058). Reading never depends on the plan.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "appointments"
+                ],
+                "summary": "A person's own next appointment and the history of the rest",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID of the person",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentsOfChildResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session cannot see this person's appointments",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "POST /children/{childId}/appointments for the person (specs/058): the plan is that of their own things (their\naccount's or a paying family's; 422 reason \"appointments\" otherwise). Only the person themself.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "appointments"
+                ],
+                "summary": "Add an appointment of the person themself, with no consultation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID of the person",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The appointment",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "An invalid field",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session is not this person",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Not on the paid plan",
+                        "schema": {
+                            "$ref": "#/definitions/AppointmentPlanLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/accounts/{accountId}/children": {
             "post": {
                 "security": [
@@ -255,6 +381,132 @@ const docTemplate = `{
                 }
             }
         },
+        "/accounts/{accountId}/consultations": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The consultations of the person themself (no child), most recent first, in the shape of a child's list. The person\nsees theirs; a Tutor of their family sees them only while the person shares them.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "List a person's own consultations",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID of the person",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/OwnConsultationListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session cannot see this person's consultations",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AccountNotFoundResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The body and rules of a child's consultation. Only the person themself, and only on the paid plan (their own\naccount's or a paying family's): otherwise 422 \"freemium_consultation_limit_exceeded\" with reason\n\"own_consultations\". The free plan's rules of a child's consultation don't apply; the photo counts in the account's cap.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "Register a person's own consultation",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID of the person",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Consultation to register",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_consultation.createConsultationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationDetailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing/invalid field",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session is not this person",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AccountNotFoundResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Not on the paid plan (own_consultations), or the photo cap",
+                        "schema": {
+                            "$ref": "#/definitions/PlanLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/accounts/{accountId}/disclaimer-acceptance": {
             "post": {
                 "security": [
@@ -314,6 +566,80 @@ const docTemplate = `{
                         "description": "The session does not own this resource",
                         "schema": {
                             "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AccountNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}/overview": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "GET /children/{childId}/overview for the person's own consultations: the medication doses of [from, to) and the\ntreatment still running. No supplements (a person's own routines keep their routes). The window may not exceed 48 hours.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "consultations"
+                ],
+                "summary": "A person's own doses in a window and their running treatment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID of the person",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "2026-01-15T00:00:00-06:00",
+                        "description": "Window start, RFC 3339",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "example": "2026-01-16T00:00:00-06:00",
+                        "description": "Window end (exclusive), RFC 3339",
+                        "name": "to",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/OwnOverviewResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Missing/invalid window",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationValidationErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session cannot see this person's consultations",
+                        "schema": {
+                            "$ref": "#/definitions/ConsultationSessionErrorResponse"
                         }
                     },
                     "404": {
@@ -3436,6 +3762,12 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/MedicationNotFoundResponse"
                         }
+                    },
+                    "422": {
+                        "description": "A person's own treatment, not on the paid plan (own_consultations, specs/058)",
+                        "schema": {
+                            "$ref": "#/definitions/PlanLimitResponse"
+                        }
                     }
                 }
             }
@@ -5026,6 +5358,7 @@ const docTemplate = `{
                     "example": true
                 },
                 "childId": {
+                    "description": "ChildID is null for a person's own appointment (specs/058).",
                     "type": "string",
                     "example": "a1b2c3d4-0000-0000-0000-000000000000"
                 },
@@ -5355,7 +5688,13 @@ const docTemplate = `{
         "ConsultationDetailResponse": {
             "type": "object",
             "properties": {
+                "accountId": {
+                    "description": "AccountID is the account it belongs to: the child's, or the person whose own consultation it is (specs/058).",
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
                 "childId": {
+                    "description": "ChildID is null for a person's own consultation (specs/058).",
                     "type": "string",
                     "example": "a1b2c3d4-0000-0000-0000-000000000000"
                 },
@@ -6855,6 +7194,39 @@ const docTemplate = `{
                 }
             }
         },
+        "OwnConsultationListResponse": {
+            "type": "object",
+            "properties": {
+                "accountId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "consultations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ConsultationSummaryResponse"
+                    }
+                }
+            }
+        },
+        "OwnOverviewResponse": {
+            "type": "object",
+            "properties": {
+                "accountId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "activeTreatment": {
+                    "$ref": "#/definitions/ActiveTreatmentResponse"
+                },
+                "doses": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/OverviewDoseResponse"
+                    }
+                }
+            }
+        },
         "PaymentsErrorResponse": {
             "type": "object",
             "properties": {
@@ -6887,7 +7259,7 @@ const docTemplate = `{
                     "example": "The free plan includes one active treatment at a time"
                 },
                 "reason": {
-                    "description": "Reason is \"active_treatment\" (another treatment is still running), \"record_only\" (saving only as a record) or\n\"history_search\" (searching and filtering the history, specs/031) or \"pdf_export\" (the history's PDF, specs/050).",
+                    "description": "Reason is \"active_treatment\" (another treatment is still running), \"record_only\" (saving only as a record) or\n\"history_search\" (searching and filtering the history, specs/031), \"pdf_export\" (the history's PDF, specs/050) or\n\"own_consultations\" (a person's own consultations, specs/058).",
                     "type": "string",
                     "example": "active_treatment"
                 }

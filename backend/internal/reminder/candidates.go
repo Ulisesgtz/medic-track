@@ -4,12 +4,16 @@ package reminder
 // ClaimDueSupplementDoses) and by the child phones' (specs/047): a dose is a candidate only if it is not taken, its time has come
 // inside the window, it is not «sin registrar» and it was not canceled by ending the treatment. $1 is `now`, $2 the window in seconds.
 
-// medicationCandidates is the body of the `cand` CTE of a consultation's doses.
-const medicationCandidates = `	SELECT d.id, d.scheduled_at, c.id AS consultation_id, m.name, ch.id AS child_id, ch.first_name, ch.account_id AS owner_id
+// medicationCandidates is the body of the `cand` CTE of a consultation's doses. A person's own consultation (specs/058) has no
+// child: its `child_id` is NULL, its `first_name` empty and its `person_name` the first name of the person it belongs to (the
+// name a Tutor's reminder carries; the person's own carries none).
+const medicationCandidates = `	SELECT d.id, d.scheduled_at, c.id AS consultation_id, m.name, c.child_id AS child_id, COALESCE(ch.first_name, '') AS first_name,
+			       c.account_id AS owner_id, COALESCE(po.first_name, '') AS person_name
 			FROM doses d
 			JOIN medications m ON m.id = d.medication_id
 			JOIN consultations c ON c.id = m.consultation_id
-			JOIN children ch ON ch.id = c.child_id
+			LEFT JOIN children ch ON ch.id = c.child_id
+			LEFT JOIN accounts po ON po.id = c.account_id AND c.child_id IS NULL
 			WHERE d.taken = false
 			  AND d.scheduled_at <= $1
 			  AND d.scheduled_at > $1 - make_interval(secs => $2)

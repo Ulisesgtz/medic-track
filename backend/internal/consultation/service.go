@@ -90,13 +90,34 @@ const maxOverviewWindow = 48 * time.Hour
 // treatment still running now. from/to must be a positive window of at most
 // maxOverviewWindow.
 func (s *Service) GetChildOverview(ctx context.Context, childID uuid.UUID, from, to time.Time) (*ChildOverview, error) {
-	if !to.After(from) {
-		return nil, ValidationErrors{{Field: "to", Message: "must be after from"}}
-	}
-	if to.Sub(from) > maxOverviewWindow {
-		return nil, ValidationErrors{{Field: "to", Message: "the window cannot exceed 48 hours"}}
+	if errs := validateOverviewWindow(from, to); errs.HasErrors() {
+		return nil, errs
 	}
 	return s.repo.GetOverview(ctx, childID, from, to, time.Now())
+}
+
+// GetOwnOverview is GetChildOverview for a person's own consultations (specs/058), with the same window rules.
+func (s *Service) GetOwnOverview(ctx context.Context, accountID uuid.UUID, from, to time.Time) (*ChildOverview, error) {
+	if errs := validateOverviewWindow(from, to); errs.HasErrors() {
+		return nil, errs
+	}
+	return s.repo.GetOwnOverview(ctx, accountID, from, to, time.Now())
+}
+
+// ListOwnConsultations lists a person's own consultations (specs/058).
+func (s *Service) ListOwnConsultations(ctx context.Context, accountID uuid.UUID) ([]Consultation, error) {
+	return s.repo.ListOwn(ctx, accountID)
+}
+
+// validateOverviewWindow: `to` after `from`, and at most 48 hours apart.
+func validateOverviewWindow(from, to time.Time) ValidationErrors {
+	if !to.After(from) {
+		return ValidationErrors{{Field: "to", Message: "must be after from"}}
+	}
+	if to.Sub(from) > maxOverviewWindow {
+		return ValidationErrors{{Field: "to", Message: "the window cannot exceed 48 hours"}}
+	}
+	return nil
 }
 
 // CreateConsultation validates input and persists a new Consultation with

@@ -163,6 +163,10 @@ func NewRouter(d Deps) *chi.Mux {
 	fullAppointment := authmw.RequireAccess(d.Responder, "appointmentId", access.Full, d.Access.OnAppointment)
 	// Adding a child to a family (its owner account): the owner or one of its Tutors.
 	fullAccount := authmw.RequireAccess(d.Responder, "accountId", access.Full, d.Access.OnAccount)
+	// A person's own consultations (specs/058): Full = the person themself; Mark = a Tutor of their family while they share
+	// them (see, mark and search); nobody else, whatever their role.
+	seesPerson := authmw.RequireAccess(d.Responder, "accountId", access.Mark, d.Access.OnPerson)
+	fullPerson := authmw.RequireAccess(d.Responder, "accountId", access.Full, d.Access.OnPerson)
 
 	r.Group(func(r chi.Router) {
 		r.Use(d.RequireSession)
@@ -219,6 +223,13 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(fullConsultation).Put("/consultations/{consultationId}", d.Consultation.UpdateConsultation)
 		r.With(fullConsultation).Post("/consultations/{consultationId}/medications/{medicationId}/end", d.Consultation.EndTreatment)
 		r.With(fullConsultation).Post("/consultations/{consultationId}/medications/{medicationId}/extend", d.Consultation.ExtendTreatment)
+
+		// A person's own consultations and appointments (specs/058); each one is then reached through its ordinary route.
+		r.With(seesPerson).Get("/accounts/{accountId}/consultations", d.Consultation.ListOwnConsultations)
+		r.With(fullPerson).Post("/accounts/{accountId}/consultations", d.Consultation.CreateOwnConsultation)
+		r.With(seesPerson).Get("/accounts/{accountId}/overview", d.Consultation.GetOwnOverview)
+		r.With(seesPerson).Get("/accounts/{accountId}/appointments", d.Appointment.ForPerson)
+		r.With(fullPerson).Post("/accounts/{accountId}/appointments", d.Appointment.CreateOwn)
 
 		// Supplement routines (specs/033).
 		r.With(seesChild).Get("/children/{childId}/routines", d.Supplement.ListRoutines)

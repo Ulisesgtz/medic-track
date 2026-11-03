@@ -109,6 +109,35 @@ func (r *Repository) GetByChild(ctx context.Context, childID uuid.UUID) ([]Consu
 	return scanSummaries(rows)
 }
 
+// ListOwn lists a person's own consultations (specs/058), most recent first, in the shape of GetByChild.
+// ErrAccountNotFound if no such account.
+func (r *Repository) ListOwn(ctx context.Context, accountID uuid.UUID) ([]Consultation, error) {
+	if err := accountExists(ctx, r.pool, accountID); err != nil {
+		return nil, err
+	}
+	rows, err := r.pool.Query(ctx, `
+		SELECT `+summaryColumns+`
+		FROM consultations c WHERE c.child_id IS NULL AND c.account_id = $1 ORDER BY c.consult_date DESC, c.created_at DESC
+	`, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("querying own consultations: %w", err)
+	}
+	defer rows.Close()
+	return scanSummaries(rows)
+}
+
+// accountExists is ErrAccountNotFound when there is no account with that id.
+func accountExists(ctx context.Context, q querier, accountID uuid.UUID) error {
+	var exists bool
+	if err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM accounts WHERE id = $1)`, accountID).Scan(&exists); err != nil {
+		return fmt.Errorf("checking account existence: %w", err)
+	}
+	if !exists {
+		return ErrAccountNotFound
+	}
+	return nil
+}
+
 // scanSummaries reads the rows of the consultations list (the columns GetByChild and Search select, in that order) into
 // summaries; an empty result is an empty slice, never nil.
 func scanSummaries(rows pgx.Rows) ([]Consultation, error) {
@@ -710,6 +739,26 @@ func (r *Repository) ExtendTreatment(ctx context.Context, consultationID, medica
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
+	// A person's own treatment is extended only on the paid plan (specs/058); a child's never asks. The account is locked
+	// before the medication: the order creating and editing take.
+	var accountID uuid.UUID
+	var own bool
+	if err := tx.QueryRow(ctx, `SELECT account_id, child_id IS NULL FROM consultations WHERE id = $1`, consultationID).Scan(&accountID, &own); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrMedicationNotFound
+		}
+		return nil, fmt.Errorf("reading the consultation: %w", err)
+	}
+	if own {
+		paid, err := personalPlanOf(ctx, tx, accountID, true)
+		if err != nil {
+			return nil, err
+		}
+		if !paid {
+			return nil, &PlanLimitError{Reason: PlanLimitOwnConsultations}
+		}
+	}
+
 	var frequencyHours int
 	var endedAt *time.Time
 	if err := tx.QueryRow(ctx, `
@@ -807,6 +856,31 @@ func (r *Repository) GetOverview(ctx context.Context, childID uuid.UUID, from, t
 		return nil, ErrChildNotFound
 	}
 
+	overview, err := r.medicationOverview(ctx, `c.child_id = $1`, childID, from, to, now)
+	if err != nil {
+		return nil, err
+	}
+
+	// The doses of the child's active supplement routines count in "Tomas de hoy" too (specs/033), not as a treatment.
+	if err := r.addSupplementDoses(ctx, overview, childID, from, to, now); err != nil {
+		return nil, err
+	}
+
+	return overview, nil
+}
+
+// GetOwnOverview is GetOverview for a person's own consultations (specs/058): their doses of [from, to) and their running
+// treatment. No supplements here: a person's own routines keep their own routes. ErrAccountNotFound if no such account.
+func (r *Repository) GetOwnOverview(ctx context.Context, accountID uuid.UUID, from, to, now time.Time) (*ChildOverview, error) {
+	if err := accountExists(ctx, r.pool, accountID); err != nil {
+		return nil, err
+	}
+	return r.medicationOverview(ctx, `c.child_id IS NULL AND c.account_id = $1`, accountID, from, to, now)
+}
+
+// medicationOverview reads the medication doses of [from, to) and the running treatment of the consultations that match
+// `where` ($1 = subject): a child's (`c.child_id = $1`) or a person's own.
+func (r *Repository) medicationOverview(ctx context.Context, where string, subject uuid.UUID, from, to, now time.Time) (*ChildOverview, error) {
 	doseRows, err := r.pool.Query(ctx, `
 		SELECT d.id, m.consultation_id, m.name, d.scheduled_at, d.taken, m.frequency_hours,
 		       COALESCE(d.taken_by_account_id, d.taken_by_child_device_id), COALESCE(a.first_name, tdc.first_name), d.taken_at
@@ -816,11 +890,11 @@ func (r *Repository) GetOverview(ctx context.Context, childID uuid.UUID, from, t
 		LEFT JOIN accounts a ON a.id = d.taken_by_account_id
 		LEFT JOIN child_device_links tdl ON tdl.id = d.taken_by_child_device_id
 		LEFT JOIN children tdc ON tdc.id = tdl.child_id
-		WHERE c.child_id = $1 AND d.scheduled_at >= $2 AND d.scheduled_at < $3
+		WHERE `+where+` AND d.scheduled_at >= $2 AND d.scheduled_at < $3
 		  -- A dose canceled by ending the treatment early is not one of today's (specs/016).
 		  AND NOT (m.ended_at IS NOT NULL AND d.scheduled_at > m.ended_at AND NOT d.taken)
 		ORDER BY d.scheduled_at ASC, m.name ASC
-	`, childID, from, to)
+	`, subject, from, to)
 	if err != nil {
 		return nil, fmt.Errorf("querying doses in range: %w", err)
 	}
@@ -843,21 +917,16 @@ func (r *Repository) GetOverview(ctx context.Context, childID uuid.UUID, from, t
 		return nil, fmt.Errorf("iterating doses: %w", err)
 	}
 
-	// The doses of the child's active supplement routines count in "Tomas de hoy" too (specs/033), not as a treatment.
-	if err := r.addSupplementDoses(ctx, overview, childID, from, to, now); err != nil {
-		return nil, err
-	}
-
 	treatmentRows, err := r.pool.Query(ctx, `
 		SELECT m.name, max(d.scheduled_at) AS ends_at
 		FROM doses d
 		JOIN medications m ON m.id = d.medication_id
 		JOIN consultations c ON c.id = m.consultation_id
-		WHERE c.child_id = $1 AND m.ended_at IS NULL
+		WHERE `+where+` AND m.ended_at IS NULL
 		GROUP BY m.id, m.name
 		HAVING max(d.scheduled_at) > $2
 		ORDER BY ends_at DESC, m.name ASC
-	`, childID, now)
+	`, subject, now)
 	if err != nil {
 		return nil, fmt.Errorf("querying active treatments: %w", err)
 	}

@@ -97,6 +97,8 @@ func newEnv(t *testing.T, plan account.Plan) *env {
 	r.With(fullAppointment).Patch("/appointments/{appointmentId}", h.Update)
 	r.With(fullAppointment).Post("/appointments/{appointmentId}/status", h.SetStatus)
 	r.With(seesAppointment).Put("/appointments/{appointmentId}/my-reminders", h.SetMyReminders)
+	r.With(authmw.RequireAccess(responder, "accountId", access.Mark, acc.OnPerson)).Get("/accounts/{accountId}/appointments", h.ForPerson)
+	r.With(authmw.RequireAccess(responder, "accountId", access.Full, acc.OnPerson)).Post("/accounts/{accountId}/appointments", h.CreateOwn)
 	e.router = r
 	return e
 }
@@ -411,6 +413,8 @@ func TestHandlers_DatabaseUnavailableAnswer500(t *testing.T) {
 	r.Patch("/appointments/{appointmentId}", h.Update)
 	r.Post("/appointments/{appointmentId}/status", h.SetStatus)
 	r.Put("/appointments/{appointmentId}/my-reminders", h.SetMyReminders)
+	r.Get("/accounts/{accountId}/appointments", h.ForPerson)
+	r.Post("/accounts/{accountId}/appointments", h.CreateOwn)
 	id := uuid.NewString()
 	for name, req := range map[string]*http.Request{
 		"child":        httptest.NewRequest(http.MethodGet, "/children/"+id+"/appointments", nil),
@@ -420,6 +424,8 @@ func TestHandlers_DatabaseUnavailableAnswer500(t *testing.T) {
 		"update":       httptest.NewRequest(http.MethodPatch, "/appointments/"+id, strings.NewReader(apptBody("x"))),
 		"status":       httptest.NewRequest(http.MethodPost, "/appointments/"+id+"/status", strings.NewReader(`{"status":"done"}`)),
 		"remind":       httptest.NewRequest(http.MethodPut, "/appointments/"+id+"/my-reminders", strings.NewReader(`{"enabled":true}`)),
+		"person":       httptest.NewRequest(http.MethodGet, "/accounts/"+id+"/appointments", nil),
+		"create own":   httptest.NewRequest(http.MethodPost, "/accounts/"+id+"/appointments", strings.NewReader(apptBody("x"))),
 	} {
 		rec := httptest.NewRecorder()
 		r.ServeHTTP(rec, req)

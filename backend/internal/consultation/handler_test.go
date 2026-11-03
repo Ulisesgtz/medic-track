@@ -366,6 +366,9 @@ func routerWith(t *testing.T, who *access.Access) (http.Handler, *pgxpool.Pool) 
 	r.Patch("/consultations/{consultationId}/doses/{doseId}", h.UpdateDose)
 	r.Post("/consultations/{consultationId}/medications/{medicationId}/end", h.EndTreatment)
 	r.Post("/consultations/{consultationId}/medications/{medicationId}/extend", h.ExtendTreatment)
+	r.Get("/accounts/{accountId}/consultations", h.ListOwnConsultations)
+	r.Post("/accounts/{accountId}/consultations", h.CreateOwnConsultation)
+	r.Get("/accounts/{accountId}/overview", h.GetOwnOverview)
 	return r, pool
 }
 
@@ -391,6 +394,10 @@ func newBrokenRouter(t *testing.T) http.Handler {
 	r.Post("/children/{childId}/consultations", h.CreateConsultation)
 	r.Get("/consultations/{consultationId}", h.GetConsultation)
 	r.Patch("/consultations/{consultationId}/doses/{doseId}", h.UpdateDose)
+	r.Get("/accounts/{accountId}/consultations", h.ListOwnConsultations)
+	r.Post("/accounts/{accountId}/consultations", h.CreateOwnConsultation)
+	r.Get("/accounts/{accountId}/overview", h.GetOwnOverview)
+	r.Post("/consultations/{consultationId}/medications/{medicationId}/extend", h.ExtendTreatment)
 	return r
 }
 

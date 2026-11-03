@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/Ulisesgtz/medic-track/backend/internal/access"
 )
 
 // ClaimDueAppointmentNotices is ClaimDueDoses for the notices of a consultation's next appointment (specs/033, part 2): it claims,
@@ -21,11 +23,13 @@ func (r *Repository) ClaimDueAppointmentNotices(ctx context.Context, now time.Ti
 		WITH cand AS (
 			SELECT n.id AS notice_id, n.fire_at, ap.id AS appointment_id, COALESCE(ap.consultation_id, '00000000-0000-0000-0000-000000000000'::uuid) AS consultation_id, ap.starts_at,
 			       COALESCE(NULLIF(ap.doctor_name, ''), co.doctor_name, '') AS doctor_name, ap.note,
-			       ch.id AS child_id, ch.first_name, ch.account_id AS owner_id
+			       ap.child_id AS child_id, COALESCE(ch.first_name, '') AS first_name, ap.account_id AS owner_id,
+			       COALESCE(po.first_name, '') AS person_name
 			FROM appointment_notices n
 			JOIN consultation_appointments ap ON ap.id = n.appointment_id AND ap.status = 'scheduled'
 			LEFT JOIN consultations co ON co.id = ap.consultation_id
-			JOIN children ch ON ch.id = ap.child_id
+			LEFT JOIN children ch ON ch.id = ap.child_id
+			LEFT JOIN accounts po ON po.id = ap.account_id AND ap.child_id IS NULL
 			WHERE n.fire_at <= $1
 			  AND n.fire_at > $1 - make_interval(secs => $2)
 			  AND n.fire_at > n.created_at
@@ -35,11 +39,16 @@ func (r *Repository) ClaimDueAppointmentNotices(ctx context.Context, now time.Ti
 			SELECT cand.notice_id, a.id AS account_id, cand.fire_at
 			FROM cand
 			JOIN accounts a ON a.id = cand.owner_id
-			   OR EXISTS (
+			   OR (cand.child_id IS NOT NULL AND EXISTS (
 				SELECT 1 FROM family_members fm
 				WHERE fm.account_id = a.id AND fm.family_account_id = cand.owner_id AND fm.status = 'active'
 				  AND (fm.role <> 'child' OR fm.child_id = cand.child_id)
-			   )
+			   ))
+			   -- A person's own appointment (specs/058): besides the person, only who asked for the reminders of its consultation
+			   -- and still sees it; one with no consultation, nobody else.
+			   OR (cand.child_id IS NULL
+			       AND EXISTS (SELECT 1 FROM own_consultation_reminder_optins o WHERE o.consultation_id = cand.consultation_id AND o.account_id = a.id)
+			       AND (`+access.OwnLevelSQL("cand.owner_id")+`) >= 1)
 			WHERE EXISTS (
 				SELECT 1 FROM reminder_devices rd
 				WHERE rd.account_id = a.id AND rd.active AND rd.activated_at <= cand.fire_at
@@ -56,7 +65,8 @@ func (r *Repository) ClaimDueAppointmentNotices(ctx context.Context, now time.Ti
 			RETURNING notice_id, account_id
 		)
 		SELECT cand.notice_id, cand.fire_at, cand.appointment_id, cand.consultation_id, cand.starts_at,
-		       (EXTRACT(EPOCH FROM (cand.starts_at - cand.fire_at)) / 60)::int, cand.doctor_name, cand.note, cand.first_name,
+		       (EXTRACT(EPOCH FROM (cand.starts_at - cand.fire_at)) / 60)::int, cand.doctor_name, cand.note,
+		       CASE WHEN cand.child_id IS NULL AND claimed.account_id <> cand.owner_id THEN cand.person_name ELSE cand.first_name END,
 		       claimed.account_id, a.reminder_detail
 		FROM claimed
 		JOIN cand ON cand.notice_id = claimed.notice_id

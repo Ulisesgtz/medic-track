@@ -41,24 +41,25 @@ type noticeResponse struct {
 } // @name AppointmentNoticeResponse
 
 type appointmentResponse struct {
-	ID               string           `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	ID string `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
 	// ConsultationID is null for an appointment added without a consultation.
-	ConsultationID   *string          `json:"consultationId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
-	ChildID          string           `json:"childId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
-	DoctorName       string           `json:"doctorName" example:"Dra. Laura López"`
-	ConsultDate      string           `json:"consultDate" example:"2026-09-28"`
-	StartsAt         string           `json:"startsAt" example:"2026-10-09T16:30:00Z"`
-	UtcOffsetMinutes int              `json:"utcOffsetMinutes" example:"-360"`
-	Note             string           `json:"note" example:""`
+	ConsultationID *string `json:"consultationId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	// ChildID is null for a person's own appointment (specs/058).
+	ChildID          *string `json:"childId" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	DoctorName       string  `json:"doctorName" example:"Dra. Laura López"`
+	ConsultDate      string  `json:"consultDate" example:"2026-09-28"`
+	StartsAt         string  `json:"startsAt" example:"2026-10-09T16:30:00Z"`
+	UtcOffsetMinutes int     `json:"utcOffsetMinutes" example:"-360"`
+	Note             string  `json:"note" example:""`
 	// Location is the place as the parent wrote it, LocationURL an optional https link (Google Maps).
-	Location    string `json:"location" example:"Consultorio 302, Av. Vallarta 1234"`
-	LocationURL string `json:"locationUrl" example:"https://maps.app.goo.gl/abc"`
-	Status           string           `json:"status" enums:"scheduled,done,canceled,unmarked" example:"scheduled"`
-	StatusBy         *string          `json:"statusBy" example:"Ana"`
-	StatusAt         *string          `json:"statusAt"`
-	CreatedBy        string           `json:"createdBy" example:"Ana"`
-	Notices          []noticeResponse `json:"notices"`
-	MyReminders      bool             `json:"myReminders" example:"true"`
+	Location    string           `json:"location" example:"Consultorio 302, Av. Vallarta 1234"`
+	LocationURL string           `json:"locationUrl" example:"https://maps.app.goo.gl/abc"`
+	Status      string           `json:"status" enums:"scheduled,done,canceled,unmarked" example:"scheduled"`
+	StatusBy    *string          `json:"statusBy" example:"Ana"`
+	StatusAt    *string          `json:"statusAt"`
+	CreatedBy   string           `json:"createdBy" example:"Ana"`
+	Notices     []noticeResponse `json:"notices"`
+	MyReminders bool             `json:"myReminders" example:"true"`
 	// CanEdit: the session can do everything AND the owner's plan is paid.
 	CanEdit bool `json:"canEdit" example:"true"`
 	// CanMark: the session can do everything (marking a state never needs the plan).
@@ -153,7 +154,7 @@ func actorPtr(id uuid.UUID) *uuid.UUID {
 
 func toResponse(a Appointment, level access.Level, now time.Time) appointmentResponse {
 	out := appointmentResponse{
-		ID: a.ID.String(), ChildID: a.ChildID.String(), DoctorName: a.DoctorName,
+		ID: a.ID.String(), DoctorName: a.DoctorName,
 		ConsultDate: a.ConsultDate, StartsAt: formatTime(a.StartsAt), UtcOffsetMinutes: a.UtcOffsetMinutes, Note: a.Note,
 		Location: a.Location, LocationURL: a.LocationURL,
 		Status: string(a.Derived), StatusAt: optTime(a.StatusAt), CreatedBy: a.CreatedBy, MyReminders: a.MyReminders,
@@ -163,6 +164,10 @@ func toResponse(a Appointment, level access.Level, now time.Time) appointmentRes
 	if a.ConsultationID != uuid.Nil {
 		id := a.ConsultationID.String()
 		out.ConsultationID = &id
+	}
+	if a.ChildID != uuid.Nil {
+		id := a.ChildID.String()
+		out.ChildID = &id
 	}
 	if a.StatusBy != "" {
 		by := a.StatusBy

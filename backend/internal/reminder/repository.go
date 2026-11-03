@@ -98,11 +98,15 @@ func (r *Repository) ClaimDueDoses(ctx context.Context, now time.Time, window ti
 			SELECT cand.id AS dose_id, a.id AS account_id, cand.scheduled_at
 			FROM cand
 			JOIN accounts a ON a.id = cand.owner_id
-			   OR EXISTS (
+			   OR (cand.child_id IS NOT NULL AND EXISTS (
 				SELECT 1 FROM family_members fm
 				WHERE fm.account_id = a.id AND fm.family_account_id = cand.owner_id AND fm.status = 'active'
 				  AND (fm.role <> 'child' OR fm.child_id = cand.child_id)
-			   )
+			   ))
+			   -- A person's own dose (specs/058): besides the person, only who asked for its reminders and still sees it.
+			   OR (cand.child_id IS NULL
+			       AND EXISTS (SELECT 1 FROM own_consultation_reminder_optins o WHERE o.consultation_id = cand.consultation_id AND o.account_id = a.id)
+			       AND (`+access.OwnLevelSQL("cand.owner_id")+`) >= 1)
 			WHERE EXISTS (
 				SELECT 1 FROM reminder_devices rd
 				WHERE rd.account_id = a.id AND rd.active AND rd.activated_at <= cand.scheduled_at
@@ -122,7 +126,9 @@ func (r *Repository) ClaimDueDoses(ctx context.Context, now time.Time, window ti
 			WHERE id IN (SELECT dose_id FROM claimed) AND reminder_sent_at IS NULL
 			RETURNING id
 		)
-		SELECT cand.id, cand.scheduled_at, cand.consultation_id, cand.name, cand.first_name, claimed.account_id, a.reminder_detail
+		SELECT cand.id, cand.scheduled_at, cand.consultation_id, cand.name,
+		       CASE WHEN cand.child_id IS NULL AND claimed.account_id <> cand.owner_id THEN cand.person_name ELSE cand.first_name END,
+		       claimed.account_id, a.reminder_detail
 		FROM claimed
 		JOIN cand ON cand.id = claimed.dose_id
 		JOIN accounts a ON a.id = claimed.account_id
@@ -201,6 +207,10 @@ func (r *Repository) MarkTakenByAction(ctx context.Context, doseID, deviceID uui
 		JOIN children ch ON ch.id = c.child_id
 		WHERE d.id = $1 AND rd.id = $2 AND rd.active AND rd.account_id IS NOT NULL`)
 	if errors.Is(err, pgx.ErrNoRows) {
+		// A dose of a person's own consultation (specs/058) has no child: its own access rule.
+		if done, err := r.markOwnConsultationTaken(ctx, doseID, deviceID); done || err != nil {
+			return err
+		}
 		table = "supplement_doses"
 		accountID, childID, err = r.doseAndDevice(ctx, doseID, deviceID, `
 			SELECT rd.account_id, ch.id
@@ -238,6 +248,36 @@ func (r *Repository) MarkTakenByAction(ctx context.Context, doseID, deviceID uui
 func (r *Repository) doseAndDevice(ctx context.Context, doseID, deviceID uuid.UUID, query string) (accountID, childID uuid.UUID, err error) {
 	err = r.pool.QueryRow(ctx, query, doseID, deviceID).Scan(&accountID, &childID)
 	return accountID, childID, err
+}
+
+// markOwnConsultationTaken marks a dose of a person's own consultation (specs/058) from the "Tomada" button, as the account of
+// the device that got the reminder and only while it can still see and mark it (the person, or a Tutor while it is shared).
+// done is false when the dose is not one of an own consultation (the caller goes on looking).
+func (r *Repository) markOwnConsultationTaken(ctx context.Context, doseID, deviceID uuid.UUID) (done bool, err error) {
+	var accountID, consultationID uuid.UUID
+	err = r.pool.QueryRow(ctx, `
+		SELECT rd.account_id, c.id
+		FROM reminder_devices rd, doses d
+		JOIN medications m ON m.id = d.medication_id
+		JOIN consultations c ON c.id = m.consultation_id AND c.child_id IS NULL
+		WHERE d.id = $1 AND rd.id = $2 AND rd.active AND rd.account_id IS NOT NULL`, doseID, deviceID).Scan(&accountID, &consultationID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return true, fmt.Errorf("finding the dose and the device: %w", err)
+	}
+	level, err := access.NewRepository(r.pool).OfAccountOnConsultation(ctx, accountID, consultationID)
+	if err != nil {
+		return true, fmt.Errorf("checking access to the consultation: %w", err)
+	}
+	if !level.AtLeast(access.Mark) {
+		return true, ErrInvalidActionToken
+	}
+	if _, err := r.pool.Exec(ctx, `UPDATE doses SET taken = true, taken_by_account_id = $2, taken_at = now() WHERE id = $1 AND NOT taken`, doseID, accountID); err != nil {
+		return true, fmt.Errorf("marking dose taken: %w", err)
+	}
+	return true, nil
 }
 
 // markOwnSupplementTaken marks a dose of a person's own routine (no child) from the "Tomada" button: only the device of the routine's
