@@ -108,6 +108,15 @@ export const LIMIT_MOTIVES: Record<PlanLimitReason, LimitMotive> = {
       row('Familia', 'Solo tú', 'Hasta 4 personas'),
     ],
   },
+  own_consultations: {
+    title: 'Tus propias consultas',
+    line: 'Intentaste registrar una consulta tuya. Tus consultas, con sus tomas, avisos, historial y PDF, son del plan completo; lo de tus hijos sigue igual.',
+    rows: [
+      row('Tus consultas', NO, 'Con tomas, calendario y avisos'),
+      row('Compartirlas con tu familia', NO, 'Solo si tú lo decides'),
+      row('Suplementos y actividades', NO, 'Hasta 10 de cada tipo por hijo y 10 tuyos'),
+    ],
+  },
   child_device: {
     title: 'Acceso del hijo',
     line: 'Intentaste darle acceso a un teléfono de tu hijo. Con el plan completo, cada hijo ve y marca sus tomas y actividades en su propio teléfono.',

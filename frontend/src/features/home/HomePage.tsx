@@ -16,6 +16,7 @@ import { TuDia } from './TuDia'
 import { HomeSkeleton } from './HomeSkeleton'
 import { AccountMenu } from './AccountMenu'
 import { MoreLinks } from './MoreLinks'
+import { SharedProfilesLinks } from '../profile/SharedProfilesLinks'
 
 /**
  * The parent's home page (spec 055, the design `specs/055-rediseno-inicio/referencia/Inicio PediTrack.dc.html`): the greeting and
@@ -161,6 +162,7 @@ export function HomePage() {
             {account && <Greeting account={account} variant="desktop" />}
             {account && <TuDia account={account} variant="desktop" />}
             {childrenSection('desktop')}
+            {account && <SharedProfilesLinks account={account} variant="desktop" />}
             {account && <MoreLinks account={account} variant="desktop" />}
           </div>
           {dialogs}
@@ -188,6 +190,7 @@ export function HomePage() {
         )}
         {account && <TuDia account={account} variant="phone" />}
         {childrenSection('phone')}
+        {account && <SharedProfilesLinks account={account} variant="phone" />}
         {account && <MoreLinks account={account} variant="phone" />}
         {dialogs}
       </main>

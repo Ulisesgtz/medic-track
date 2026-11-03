@@ -4,7 +4,7 @@ import { formatAgeLong } from '../../shared/age'
 import { Notice } from '../../shared/ui/Notice'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
-import { useChildAccess } from '../family/useChildAccess'
+import { subjectAccessOf, subjectHref, subjectKey, type Subject } from '../../shared/subject'
 import { AppShell } from '../home/AppShell'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { ExportEntry } from '../pdfExport/ExportEntry'
@@ -29,34 +29,47 @@ const countText = (n: number) => `${n} ${n === 1 ? 'consulta' : 'consultas'}`
  * A free account doesn't get the search: it sees the plan notice (decided by the account's plan, and by the server's
  * 422 if the plan was not known yet) and goes back to its list, which is untouched.
  */
-export function HistoryPage() {
-  const { childId = '' } = useParams<{ childId: string }>()
-  // The criteria belong to one child: a different child is a different screen (its criteria are read again).
-  return <HistoryScreen key={childId} childId={childId} />
+export function HistoryPage({ own = false }: { own?: boolean }) {
+  const { childId = '', accountId } = useParams<{ childId: string; accountId: string }>()
+  const me = useCurrentAccount().data?.id
+  // A child's history, or a person's own (specs/058): `/yo/historial` is the session's own, `/personas/:accountId/historial`
+  // somebody's shared with it.
+  const personId = own ? me : accountId
+  const subject: Subject | undefined = personId ? { kind: 'person', accountId: personId } : childId ? { kind: 'child', childId } : undefined
+  if (!subject) return null
+  // The criteria belong to one child or person: another one is a different screen (its criteria are read again).
+  return <HistoryScreen key={subjectKey(subject)} subject={subject} />
 }
 
-function HistoryScreen({ childId }: { childId: string }) {
+function HistoryScreen({ subject }: { subject: Subject }) {
   const navigate = useNavigate()
   const { isDesktop } = useSidebarSession()
   const accountQuery = useCurrentAccount()
-  const child = accountQuery.data?.children.find((c) => c.id === childId)
-  // Specs/032: searching is the paid plan's — of the child's FAMILY (a Tutor on a free account in a paid family searches).
-  const free = useChildAccess(accountQuery.data, childId).isFree
+  const account = accountQuery.data
+  const childId = subject.kind === 'child' ? subject.childId : undefined
+  const child = account?.children.find((c) => c.id === childId)
+  // A person: themselves, or somebody who shares their consultations with the session (specs/058).
+  const own = subject.kind === 'person' && subject.accountId === account?.id
+  const personName =
+    subject.kind === 'person' ? (own ? account?.firstName : account?.sharedProfiles?.find((p) => p.accountId === subject.accountId)?.firstName) : undefined
+  const name = child?.firstName ?? personName
+  // Specs/032: searching is the paid plan's — of the child's FAMILY (a Tutor on a free account in a paid family searches). Specs/058:
+  // of one's own things; for somebody else's shared history the server decides (by that person's plan).
+  const access = subjectAccessOf(account, subject)
+  const free = subject.kind === 'person' && !own ? false : access.isFree
   // Nothing is asked of the server until the plan is known (a free account is never asked); if the account itself can't
   // be read the server decides, with its 422.
   const canSearch = !free && (accountQuery.isSuccess || accountQuery.isError)
 
-  const { criteria, applied, update, clear } = useHistoryCriteria(childId)
-  const search = useHistorySearch(childId, applied, canSearch)
-  const options = useHistoryOptions(childId, canSearch)
+  const { criteria, applied, update, clear } = useHistoryCriteria(subjectKey(subject))
+  const search = useHistorySearch(subject, applied, canSearch)
+  const options = useHistoryOptions(subject, canSearch)
   const [filtersOpen, setFiltersOpen] = useState(false)
 
-  const childPath = `/children/${childId}`
+  const childPath = subjectHref(subject, account?.id)
   const planNotice = free || isPlanLimit(search.error) || isPlanLimit(options.error)
   const variant = isDesktop ? 'desktop' : 'phone'
   const childLabel = child ? `${child.firstName} ${child.lastName}` : undefined
-
-  if (!childId) return null
 
   if (planNotice) {
     return (
@@ -65,8 +78,8 @@ function HistoryScreen({ childId }: { childId: string }) {
           {/* specs/056: the same common header as the paid plan's History. */}
           <PageHeader
             variant={variant}
-            back={{ label: `← ${child?.firstName ?? 'Consultas'}`, to: childPath }}
-            title={child ? `Historial de ${child.firstName}` : 'Historial'}
+            back={{ label: `← ${name ?? 'Consultas'}`, to: childPath }}
+            title={name ? `Historial de ${name}` : 'Historial'}
             subtitle="Buscar y filtrar el historial es parte del plan completo."
           />
         </main>
@@ -143,12 +156,14 @@ function HistoryScreen({ childId }: { childId: string }) {
 
   const active = <ActiveCriteria criteria={criteria} onChange={update} onClear={clear} />
   // specs/050: «Exportar a PDF», once the account (and so the child's name and plan) is known; it offers the filters on screen.
+  // A person's own history is exported only by the person (specs/058): a Tutor it is shared with doesn't get the button.
+  const exportSubject = child ? { id: childId!, who: child } : own && account ? { id: subject, who: account } : null
   const exportEntry = (v: 'phone' | 'desktop') =>
-    child && (
+    exportSubject && (
       <ExportEntry
         variant={v}
-        childId={childId}
-        child={child}
+        childId={exportSubject.id}
+        child={exportSubject.who}
         free={free}
         filters={hasCriteria && !invalidRange ? toRequest(criteria) : null}
       />
@@ -168,8 +183,8 @@ function HistoryScreen({ childId }: { childId: string }) {
   const header = (v: 'phone' | 'desktop') => (
     <PageHeader
       variant={v}
-      back={{ label: `← ${child?.firstName ?? 'Consultas'}`, to: childPath }}
-      title={child ? `Historial de ${child.firstName}` : 'Historial'}
+      back={{ label: `← ${name ?? 'Consultas'}`, to: childPath }}
+      title={name ? `Historial de ${name}` : 'Historial'}
       subtitle={child ? `${childLabel} · ${formatAgeLong(child.birthDate)}` : undefined}
       actions={exportEntry(v) || undefined}
       search={<HistorySearchField variant={v} criteria={criteria} onChange={update} />}

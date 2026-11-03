@@ -43,4 +43,14 @@ export interface Account {
   // What dose reminders show; null until the tutor chooses on the first activation (specs/011).
   reminderDetail: 'detailed' | 'generic' | null
   family?: FamilyMembership
+  // Specs/058: whether the person shares their own consultations with the Tutors of their family, and the people who share
+  // theirs with this one. Optional: a backend that predates it doesn't send them.
+  consultationSharing?: { shared: boolean; changedAt: string | null }
+  sharedProfiles?: SharedProfile[]
+}
+
+/** Somebody of the family who shares their own consultations with the session (specs/058). */
+export interface SharedProfile {
+  accountId: string
+  firstName: string
 }

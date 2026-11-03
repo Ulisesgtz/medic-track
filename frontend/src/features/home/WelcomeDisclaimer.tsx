@@ -74,6 +74,10 @@ export function WelcomeDisclaimer({ account }: { account: Account | undefined })
         Las vacunas y las fotos de la cartilla de tu hijo son datos de salud: se guardan solo en tu cuenta y las personas
         que invites podrán verlas según su rol.
       </p>
+      <p>
+        También puedes registrar <strong>tus propias consultas</strong>. Son tuyas: solo tú las ves, salvo que tú decidas
+        compartirlas con los Tutores de tu familia; nunca las ve un Cuidador ni el teléfono de un hijo.
+      </p>
       {mutation.isError && (
         <p role="alert" className="font-semibold text-red-700">
           No pudimos guardar tu confirmación. Revisa tu conexión e inténtalo de nuevo.

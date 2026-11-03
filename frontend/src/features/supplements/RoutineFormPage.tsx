@@ -122,7 +122,7 @@ export function RoutineFormPage({ kind: creatingKind = 'supplement', personal: c
 
   const editing = routineId !== undefined
   const base = activity ? '/actividades' : '/suplementos'
-  const personalHome = activity ? '/mi-dia#actividades' : '/mi-dia#suplementos'
+  const personalHome = activity ? '/yo#actividades' : '/yo#suplementos'
   const noun = activity ? 'actividad' : 'suplemento'
   const backTo = editing ? `${base}/${routineId}` : personal ? personalHome : `/children/${childId}`
   const personalTitle = activity ? 'Mis actividades' : 'Mis suplementos'

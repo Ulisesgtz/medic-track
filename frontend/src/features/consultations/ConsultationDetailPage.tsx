@@ -9,7 +9,9 @@ import { useLocalDay } from '../../shared/useLocalDay'
 import { AppShell } from '../home/AppShell'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
-import { useChildAccess } from '../family/useChildAccess'
+import { OwnRemindersCard } from '../profile/SharingCards'
+import { PROFILE, backTo } from '../profile/profileText'
+import { newConsultationHref, subjectAccessOf, subjectHref, subjectKey, subjectOfConsultation } from '../../shared/subject'
 import { NewConsultationEntry } from './NewConsultationEntry'
 import { fetchChildOverview, fetchConsultationDetail, ConsultationApiError } from './api'
 import { sniffImageMimeType } from './imageMime'
@@ -140,23 +142,29 @@ export function ConsultationDetailPage() {
     // specs/013: a dose turns "sin registrar" on its own; asking again every minute shows it without reloading.
     refetchInterval: DOSE_REFETCH_MS,
   })
-  const childId = query.data?.childId
+  // A child's consultation, or a person's own (specs/058: no child; its account is the person's).
+  const subject = query.data ? subjectOfConsultation(query.data) : undefined
+  const childId = subject?.kind === 'child' ? subject.childId : undefined
   const accountQuery = useCurrentAccount()
-  const child = accountQuery.data?.children.find((c) => c.id === childId)
+  const account = accountQuery.data
+  const child = account?.children.find((c) => c.id === childId)
   // Specs/032: the plan is the child's family's, and only who can do everything edits, adds consultations or ends treatments.
-  const access = useChildAccess(accountQuery.data, childId)
+  // Specs/058: a person's own consultation, only the person; a Tutor it is shared with sees and marks.
+  const access = subjectAccessOf(account, subject)
   const today = useLocalDay()
   // Only the web's «Nueva consulta» needs it (specs/030: the free plan with a treatment running gets the plan notice).
   const overviewQuery = useQuery({
-    queryKey: ['overview', childId, today.from.toISOString()],
-    queryFn: async () => fetchChildOverview(childId!, today.from, today.to, await getToken()),
-    enabled: !!childId && isDesktop,
+    queryKey: ['overview', subject ? subjectKey(subject) : undefined, today.from.toISOString()],
+    queryFn: async () => fetchChildOverview(subject!, today.from, today.to, await getToken()),
+    enabled: !!subject && isDesktop && access.canAdd,
     retry: false,
     refetchInterval: DOSE_REFETCH_MS,
   })
 
-  const childPath = childId ? `/children/${childId}` : '/home'
-  const back = { label: child ? `← ${child.firstName}` : '← Volver', to: childPath }
+  const ownerPath = subject ? subjectHref(subject, account?.id) : '/home'
+  const sharedName = subject?.kind === 'person' ? account?.sharedProfiles?.find((p) => p.accountId === subject.accountId)?.firstName : undefined
+  const backLabel = child ? `← ${child.firstName}` : subject?.kind === 'person' ? (access.canAdd ? PROFILE.back : sharedName ? backTo(sharedName) : '← Volver') : '← Volver'
+  const back = { label: backLabel, to: ownerPath }
   const shell = (content: ReactNode) => (
     <AppShell activeChildId={childId}>
       {isDesktop ? (
@@ -229,8 +237,9 @@ export function ConsultationDetailPage() {
       </Link>
       {isDesktop && (
         <NewConsultationEntry
-          to={`${childPath}/consultations/new`}
-          blocked={access.isFree && treatment !== undefined && treatment !== null}
+          to={subject ? newConsultationHref(subject) : '/home'}
+          // specs/030 for a child (a treatment still running); specs/058 for one's own (the paid plan's).
+          blocked={access.isFree && (subject?.kind === 'person' || (treatment !== undefined && treatment !== null))}
           className="min-h-[52px] cursor-pointer rounded-2xl bg-confirmed px-6 text-[16px] font-extrabold text-white transition-colors hover:bg-emerald-800"
         >
           {DETAIL.newConsultation}
@@ -279,7 +288,9 @@ export function ConsultationDetailPage() {
       ))}
     </section>
   )
-  const appointment = <ConsultationAppointmentSection consultationId={consultation.id} childId={consultation.childId} />
+  const appointment = <ConsultationAppointmentSection consultationId={consultation.id} subject={subject} />
+  // A Tutor that sees somebody's own consultation chooses its reminders (specs/058); off until they turn them on.
+  const reminders = consultation.myReminders !== undefined && <OwnRemindersCard consultationId={consultation.id} on={consultation.myReminders} />
   const data = <ConsultationData key={consultation.id} consultation={consultation} desktop={isDesktop} onPhoto={() => setViewerOpen(true)} />
   const failed = appointmentFailed && <Notice tone="info">{DETAIL.appointmentFailed}</Notice>
   const viewer = viewerOpen && hasPhoto && <PhotoViewer src={photoSrc} onClose={() => setViewerOpen(false)} />
@@ -293,6 +304,7 @@ export function ConsultationDetailPage() {
           {treatmentSection}
           <aside className="sticky top-6 flex min-w-0 flex-col gap-4">
             {appointment}
+            {reminders}
             {data}
             {/* specs/022: the key of the treatment calendar, only in the web design. */}
             {hasCalendar && <CalendarLegendCard />}
@@ -309,6 +321,7 @@ export function ConsultationDetailPage() {
         {failed}
         {treatmentSection}
         {appointment}
+        {reminders}
         {data}
       </div>
       {viewer}

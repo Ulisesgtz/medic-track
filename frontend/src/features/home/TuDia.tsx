@@ -4,6 +4,7 @@ import { formatTime } from '../../shared/date'
 import { DayIcon } from '../../shared/ui/DayRow'
 import { useLocalDay } from '../../shared/useLocalDay'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
+import { usePersonOverview } from '../profile/hooks'
 import { useMarkDone, usePersonalRoutines } from '../supplements/hooks'
 import { MARKED_SHOWN_MS } from './ChildDayCard'
 import { personalDay, type PersonalNext } from './daySummary'
@@ -52,6 +53,8 @@ export function TuDia({ account, variant }: { account: Account; variant: Variant
   const day = useLocalDay()
   const supplements = usePersonalRoutines(account.id, 'supplement', day)
   const activities = usePersonalRoutines(account.id, 'activity', day)
+  // The doses of the person's own medications (specs/058); without them (an error) «Tu día» still shows the rest.
+  const own = usePersonOverview(account.id, day)
   const [planOpen, setPlanOpen] = useState(false)
   const [held, setHeld] = useState<{ name: string; time: string } | null>(null)
   useEffect(() => {
@@ -102,13 +105,13 @@ export function TuDia({ account, variant }: { account: Account; variant: Variant
     )
 
   const paidPlan = (supplements.data?.paidPlan ?? false) || (activities.data?.paidPlan ?? false)
-  const mine = personalDay(supplements.data?.routines ?? [], activities.data?.routines ?? [], paidPlan)
+  const mine = personalDay(supplements.data?.routines ?? [], activities.data?.routines ?? [], paidPlan, own.data?.doses ?? [])
 
   if (mine.mode === 'vacio')
     return (
       <p className={`rounded-2xl border-[1.5px] border-hint-edge text-[15px] leading-normal text-body ${desktop ? 'px-[18px] py-3.5' : 'px-4 py-3'}`}>
         {HOME.dayTitle} ·{' '}
-        <Link to="/mi-dia" className="font-bold text-action hover:underline">
+        <Link to="/yo" className="font-bold text-action hover:underline">
           {HOME.addOwn}
         </Link>
       </p>
@@ -191,7 +194,7 @@ export function TuDia({ account, variant }: { account: Account; variant: Variant
           {HOME.dayTitle}
         </h2>
         {desktop && mine.mode === 'todo' && allChip}
-        <Link to="/mi-dia" className={`inline-flex min-h-11 items-center text-[14px] font-bold text-action hover:underline ${desktop ? 'ml-auto' : ''}`}>
+        <Link to="/yo" className={`inline-flex min-h-11 items-center text-[14px] font-bold text-action hover:underline ${desktop ? 'ml-auto' : ''}`}>
           {HOME.seeAll}
         </Link>
       </div>

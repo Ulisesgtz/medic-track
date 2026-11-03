@@ -12,7 +12,9 @@ import { AppointmentHistoryPage } from './features/appointments/AppointmentHisto
 import { FakeCheckoutPage } from './features/plans/FakeCheckoutPage'
 import { PaymentReturnPage } from './features/plans/PaymentReturnPage'
 import { PlansPage } from './features/plans/PlansPage'
-import { MyDayPage } from './features/supplements/MyDayPage'
+import { ProfilePage } from './features/profile/ProfilePage'
+import { ProfileRedirect } from './features/profile/ProfileRedirect'
+import { SharedProfilePage } from './features/profile/SharedProfilePage'
 import { RoutineDetailPage } from './features/supplements/RoutineDetailPage'
 import { RoutineFormPage } from './features/supplements/RoutineFormPage'
 import { FamilyPage } from './features/family/FamilyPage'
@@ -134,17 +136,52 @@ function App() {
               </RequireSession>
             }
           />
+          {/* specs/058: the person's own profile — their consultations, supplements and activities. */}
           <Route
-            path="/mi-dia"
+            path="/yo"
             element={
               <RequireSession>
-                <MyDayPage />
+                <ProfilePage />
               </RequireSession>
             }
           />
-          {/* specs/056: «Mis suplementos» and «Mis actividades» are sections of «Mi día» now; old links and reminders still land. */}
-          <Route path="/mis-suplementos" element={<Navigate to="/mi-dia#suplementos" replace />} />
-          <Route path="/mis-actividades" element={<Navigate to="/mi-dia#actividades" replace />} />
+          <Route
+            path="/yo/consultas/nueva"
+            element={
+              <RequireSession>
+                <NewConsultationPage own />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/yo/historial"
+            element={
+              <RequireSession>
+                <HistoryPage own />
+              </RequireSession>
+            }
+          />
+          {/* Somebody of the family who shares their own consultations with the session (specs/058). */}
+          <Route
+            path="/personas/:accountId"
+            element={
+              <RequireSession>
+                <SharedProfilePage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/personas/:accountId/historial"
+            element={
+              <RequireSession>
+                <HistoryPage />
+              </RequireSession>
+            }
+          />
+          {/* specs/056 and 058: «Mi día», «Mis suplementos» and «Mis actividades» are the profile now; old links and reminders still land. */}
+          <Route path="/mi-dia" element={<ProfileRedirect />} />
+          <Route path="/mis-suplementos" element={<Navigate to="/yo#suplementos" replace />} />
+          <Route path="/mis-actividades" element={<Navigate to="/yo#actividades" replace />} />
           <Route
             path="/mis-suplementos/nueva"
             element={

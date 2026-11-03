@@ -29,7 +29,8 @@ export interface Appointment {
   id: string
   /** Null for an appointment added from the child's page, with no consultation. */
   consultationId: string | null
-  childId: string
+  /** Null for a person's own appointment (specs/058). */
+  childId: string | null
   doctorName: string
   /** The consultation's date, "YYYY-MM-DD". */
   consultDate: string

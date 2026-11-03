@@ -21,7 +21,7 @@ function renderAt(path: string) {
           <Route path="/actividades/:routineId" element={<RoutineDetailPage />} />
           <Route path="/suplementos/:routineId/editar" element={<RoutineFormPage />} />
           <Route path="/mis-suplementos/nueva" element={<RoutineFormPage kind="supplement" personal />} />
-          <Route path="/mi-dia" element={<div>MI DÍA</div>} />
+          <Route path="/yo" element={<div>MI DÍA</div>} />
           <Route path="/planes" element={<div>PLANES</div>} />
         </Routes>
       </MemoryRouter>
@@ -73,7 +73,7 @@ describe('RoutineDetailPage — a personal supplement', () => {
     api(mine())
     renderAt('/suplementos/r1')
     expect(await screen.findByRole('heading', { name: 'Omega 3', level: 1 })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '← Mi día' })).toHaveAttribute('href', '/mi-dia#suplementos')
+    expect(screen.getByRole('link', { name: '← Mi perfil' })).toHaveAttribute('href', '/yo#suplementos')
     expect(within(screen.getByRole('main')).getByText('Mis suplementos', { selector: 'span' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Tus avisos' })).toBeInTheDocument()
     expect(screen.getByText('Se activan en cada dispositivo por separado.')).toBeInTheDocument()
@@ -138,7 +138,7 @@ describe('RoutineDetailPage — a personal activity', () => {
     api(activity({ id: 'a1', childId: null }))
     renderAt('/actividades/a1')
     expect(await screen.findByRole('heading', { name: 'Tomar agua', level: 1 })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '← Mi día' })).toHaveAttribute('href', '/mi-dia#actividades')
+    expect(screen.getByRole('link', { name: '← Mi perfil' })).toHaveAttribute('href', '/yo#actividades')
     expect(screen.getByText('Mis actividades', { selector: 'span' })).toBeInTheDocument()
     expect(screen.getByRole('switch', { name: 'Tus avisos de esta actividad' })).toBeInTheDocument()
     expect(screen.getByText('A cada hora programada, en este dispositivo.')).toBeInTheDocument()

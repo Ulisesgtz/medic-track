@@ -105,6 +105,8 @@ export interface ExportPhotos {
 }
 
 export interface ExportData {
+  /** "person" for a person's own history (specs/058): `child` is then the person, with an empty birthDate, and there is no card. */
+  subject?: 'child' | 'person'
   child: ExportChild
   activeTreatment: ExportActiveTreatment | null
   nextAppointment: ExportAppointment | null

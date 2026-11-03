@@ -9,7 +9,7 @@ import { StickyActionBar } from '../../shared/ui/StickyActionBar'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { fetchConsultationDetail } from '../consultations/api'
-import { useChildAccess } from '../family/useChildAccess'
+import { subjectAccessOf, type SubjectRef } from '../../shared/subject'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { RoutinePageFrame } from '../supplements/RoutineFormPage'
 import { AppointmentApiError } from './api'
@@ -55,12 +55,17 @@ export function AppointmentFormPage() {
 
   const appointment = appointmentQuery.data
   const consultation = consultationQuery.data
-  const childId = params.childId ?? appointment?.childId ?? consultation?.childId
+  const childId = params.childId ?? appointment?.childId ?? consultation?.childId ?? undefined
   const consultationId = params.consultationId ?? appointment?.consultationId ?? undefined
+  // A person's own appointment (specs/058) has no child: it is the person's, and only they manage it.
+  const ownAccountId = consultation?.accountId ?? accountQuery.data?.id
+  const own = !childId && (consultation !== undefined || appointment !== undefined)
+  const subject: SubjectRef | undefined = childId ?? (own && ownAccountId ? { kind: 'person', accountId: ownAccountId } : undefined)
+  const home = childId ? `/children/${childId}` : own ? '/yo' : '/home'
   // An appointment already saved without a consultation keeps asking for its doctor when edited.
   const needsDoctor = standalone || (editing && appointment?.consultationId === null)
   const child = accountQuery.data?.children.find((c) => c.id === childId)
-  const access = useChildAccess(accountQuery.data, childId)
+  const access = subjectAccessOf(accountQuery.data, subject)
 
   const update = useUpdateAppointment(params.appointmentId ?? '')
   const create = useCreateAppointment(params.consultationId ?? '')
@@ -84,7 +89,7 @@ export function AppointmentFormPage() {
     setDirty(isDirty)
   }
 
-  const backTo = editing || standalone ? (childId ? `/children/${childId}` : '/home') : `/consultations/${consultationId}`
+  const backTo = editing || standalone ? home : `/consultations/${consultationId}`
   // specs/056 (design H4): «← Cancelar» (asking first when something was typed), the title and «Para Mateo».
   const discardQuestion = '¿Descartar la cita? Se perderá lo que capturaste.'
   const frame = (content: ReactNode) => (
@@ -142,7 +147,7 @@ export function AppointmentFormPage() {
       else await create.mutateAsync(input)
       dirtyRef.current = false
       // replace: "back" from the result lands on where the parent came from, not on an already-sent form.
-      navigate(editing || standalone ? `/children/${childId}` : `/consultations/${consultationId}`, { replace: true })
+      navigate(editing || standalone ? home : `/consultations/${consultationId}`, { replace: true })
     } catch (error) {
       if (error instanceof AppointmentApiError && error.kind === 'plan_required') setPlanOpen(true)
       else if (error instanceof AppointmentApiError && error.kind === 'exists') setNotice('Esta consulta ya tiene una próxima cita.')

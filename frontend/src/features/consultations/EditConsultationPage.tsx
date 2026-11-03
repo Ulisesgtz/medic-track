@@ -7,7 +7,7 @@ import { useUnsavedWork } from '../../shared/appVersion/unsavedWork'
 import { Notice } from '../../shared/ui/Notice'
 import { AppShell } from '../home/AppShell'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
-import { useChildAccess } from '../family/useChildAccess'
+import { subjectAccessOf, subjectKey, subjectOfConsultation } from '../../shared/subject'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { fetchConsultationDetail } from './api'
 import type { ConsultationDetail } from './types'
@@ -44,9 +44,11 @@ export function EditConsultationPage() {
     retry: false,
   })
   const accountQuery = useCurrentAccount()
-  const childId = query.data?.childId
+  // A child's consultation, or a person's own (specs/058).
+  const subject = query.data ? subjectOfConsultation(query.data) : undefined
+  const childId = subject?.kind === 'child' ? subject.childId : undefined
   const child = accountQuery.data?.children.find((c) => c.id === childId)
-  const access = useChildAccess(accountQuery.data, childId)
+  const access = subjectAccessOf(accountQuery.data, subject)
 
   const handleConflict = useCallback(
     async (kind: 'edit_conflict' | 'medication_has_marks') => {
@@ -75,7 +77,7 @@ export function EditConsultationPage() {
   const childLabel = child ? `${child.firstName} ${child.lastName} · ${formatAgeLong(child.birthDate)}` : undefined
 
   return (
-    <AppShell activeChildId={detail.childId}>
+    <AppShell activeChildId={childId}>
       <main className={isDesktop ? 'min-w-0 bg-canvas px-6 py-8 lg:px-12 lg:py-11' : 'mx-auto min-h-screen w-full max-w-[430px] bg-canvas pb-10'}>
         {notice && (
           <div className={isDesktop ? 'mx-auto mb-6 max-w-4xl' : 'px-6 pt-6'}>
@@ -94,10 +96,11 @@ export function EditConsultationPage() {
           onSuccess={() => {
             dirtyRef.current = false
             queryClient.invalidateQueries({ queryKey: ['consultation', detail.id] })
-            queryClient.invalidateQueries({ queryKey: ['consultations', detail.childId] })
+            const key = subject ? subjectKey(subject) : undefined
+            queryClient.invalidateQueries({ queryKey: ['consultations', key] })
             queryClient.invalidateQueries({ queryKey: ['overview'] })
-            queryClient.invalidateQueries({ queryKey: ['history', detail.childId] })
-            queryClient.invalidateQueries({ queryKey: ['history-options', detail.childId] })
+            queryClient.invalidateQueries({ queryKey: ['history', key] })
+            queryClient.invalidateQueries({ queryKey: ['history-options', key] })
             navigate(detailPath, { replace: true })
           }}
         />
@@ -121,5 +124,5 @@ function EditRound({ detail, ...props }: EditRoundProps) {
     flags: flagsOf(detail),
     symptoms: detail.symptoms,
   }))
-  return <ConsultationForm {...props} childId={detail.childId} edit={edit} />
+  return <ConsultationForm {...props} childId={subjectOfConsultation(detail) ?? ''} edit={edit} />
 }

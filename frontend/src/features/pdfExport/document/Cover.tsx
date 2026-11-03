@@ -18,12 +18,16 @@ export interface CoverProps {
 /** The first page (FR-012): who, what the PDF includes, the count, the running treatment, the next appointment and the contents. */
 export function Cover({ request, data, now, index, symptomNames }: CoverProps) {
   const { child } = data
-  const facts = [
-    { label: DOC.birth, value: day(child.birthDate) },
-    { label: DOC.age, value: ageText(child.birthDate, now) },
-    { label: DOC.height, value: child.height == null ? DOC.noData : DOC.heightValue(child.height) },
-    { label: DOC.weight, value: child.weight == null ? DOC.noData : DOC.weightValue(child.weight) },
-  ]
+  // A person's own history (specs/058) has no birth date, height or weight: only their name.
+  const facts =
+    data.subject === 'person'
+      ? []
+      : [
+          { label: DOC.birth, value: day(child.birthDate) },
+          { label: DOC.age, value: ageText(child.birthDate, now) },
+          { label: DOC.height, value: child.height == null ? DOC.noData : DOC.heightValue(child.height) },
+          { label: DOC.weight, value: child.weight == null ? DOC.noData : DOC.weightValue(child.weight) },
+        ]
   const contents: { key: SectionKey; label: string }[] = []
   if (request.sections.consultations && data.consultations.length > 0) contents.push({ key: 'consultations', label: DOC.contentsConsultations })
   if (request.sections.vaccinations && data.vaccinations.length > 0) contents.push({ key: 'card', label: DOC.contentsCard })
@@ -36,14 +40,16 @@ export function Cover({ request, data, now, index, symptomNames }: CoverProps) {
         <Text style={s.coverTitle}>{fullName(child)}</Text>
       </View>
 
-      <View style={[s.coverBlock, s.facts]}>
-        {facts.map((fact, i) => (
-          <View key={fact.label} style={i === 0 ? s.factFirst : s.fact}>
-            <Text style={s.factLabel}>{fact.label}</Text>
-            <Text style={s.factValue}>{fact.value}</Text>
-          </View>
-        ))}
-      </View>
+      {facts.length > 0 && (
+        <View style={[s.coverBlock, s.facts]}>
+          {facts.map((fact, i) => (
+            <View key={fact.label} style={i === 0 ? s.factFirst : s.fact}>
+              <Text style={s.factLabel}>{fact.label}</Text>
+              <Text style={s.factValue}>{fact.value}</Text>
+            </View>
+          ))}
+        </View>
+      )}
 
       <View style={s.coverBlock}>
         <Text style={s.eyebrow}>{DOC.includes}</Text>

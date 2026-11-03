@@ -1,5 +1,6 @@
 import { ApiError, type ValidationErrorDetail } from '../../shared/apiError'
 import { withAuthHeader } from '../../shared/auth/withAuthHeader'
+import { apiBase, type SubjectRef } from '../../shared/subject'
 import type { HistorySearchRequest } from './historyCriteria'
 import type { ChildOverview, ConsultationDetail, ConsultationSummary, Dose, HistoryOptions, Medication } from './types'
 
@@ -9,12 +10,12 @@ export type { ValidationErrorDetail }
 
 /** Discriminated error thrown by this feature's api functions. */
 export class ConsultationApiError extends ApiError<
-  'child_not_found' | 'consultation_not_found' | 'dose_not_found' | 'medication_not_found' | 'nothing_to_extend' | 'validation_error' | 'symptom_not_available' | 'plan_limit_active_treatment' | 'plan_limit_record_only' | 'plan_limit_history_search' | 'photo_limit_exceeded' | 'edit_conflict' | 'medication_has_marks' | 'unknown'
+  'child_not_found' | 'consultation_not_found' | 'dose_not_found' | 'medication_not_found' | 'nothing_to_extend' | 'validation_error' | 'symptom_not_available' | 'plan_limit_active_treatment' | 'plan_limit_record_only' | 'plan_limit_history_search' | 'plan_limit_own_consultations' | 'photo_limit_exceeded' | 'edit_conflict' | 'medication_has_marks' | 'unknown'
 > {}
 
-// contracts/get-consultations.md
-export async function fetchConsultations(childId: string, token: string | null): Promise<ConsultationSummary[]> {
-  const res = await fetch(`${API_BASE_URL}/children/${childId}/consultations`, { headers: withAuthHeader(token) })
+// contracts/get-consultations.md — a child's, or a person's own (specs/058: a `Subject` of kind person).
+export async function fetchConsultations(subject: SubjectRef, token: string | null): Promise<ConsultationSummary[]> {
+  const res = await fetch(`${API_BASE_URL}${apiBase(subject)}/consultations`, { headers: withAuthHeader(token) })
   const body = await res.json()
 
   if (res.ok) {
@@ -28,9 +29,9 @@ export async function fetchConsultations(childId: string, token: string | null):
 
 // contracts/get-overview.md — the doses inside [from, to) (the parent's local
 // "today") and the treatment still running.
-export async function fetchChildOverview(childId: string, from: Date, to: Date, token: string | null): Promise<ChildOverview> {
+export async function fetchChildOverview(subject: SubjectRef, from: Date, to: Date, token: string | null): Promise<ChildOverview> {
   const query = new URLSearchParams({ from: from.toISOString(), to: to.toISOString() })
-  const res = await fetch(`${API_BASE_URL}/children/${childId}/overview?${query}`, { headers: withAuthHeader(token) })
+  const res = await fetch(`${API_BASE_URL}${apiBase(subject)}/overview?${query}`, { headers: withAuthHeader(token) })
   const body = await res.json()
 
   if (res.ok) {
@@ -67,11 +68,11 @@ export interface CreateConsultationPayload {
 
 // contracts/post-consultations.md
 export async function createConsultation(
-  childId: string,
+  subject: SubjectRef,
   payload: CreateConsultationPayload,
   token: string | null,
 ): Promise<ConsultationDetail> {
-  const res = await fetch(`${API_BASE_URL}/children/${childId}/consultations`, {
+  const res = await fetch(`${API_BASE_URL}${apiBase(subject)}/consultations`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...withAuthHeader(token) },
     body: JSON.stringify(payload),
@@ -96,9 +97,13 @@ export async function createConsultation(
     throw new ConsultationApiError('photo_limit_exceeded', body.message ?? 'The account reached its limit of photos')
   }
   if (res.status === 422 && body.error === 'freemium_consultation_limit_exceeded') {
-    // The free plan: another treatment is still active, or "solo registro" (specs/030).
+    // The free plan: another treatment is still active, or "solo registro" (specs/030), or one's own consultations (specs/058).
     throw new ConsultationApiError(
-      body.reason === 'record_only' ? 'plan_limit_record_only' : 'plan_limit_active_treatment',
+      body.reason === 'record_only'
+        ? 'plan_limit_record_only'
+        : body.reason === 'own_consultations'
+          ? 'plan_limit_own_consultations'
+          : 'plan_limit_active_treatment',
       body.message ?? 'The free plan does not include this',
     )
   }
@@ -183,8 +188,8 @@ function historyError(status: number, body: { error?: string; reason?: string; m
 }
 
 // contracts/history-search.md — the paid plan's history. A POST so the typed text stays out of the address.
-export async function searchConsultations(childId: string, request: HistorySearchRequest, token: string | null): Promise<ConsultationSummary[]> {
-  const res = await fetch(`${API_BASE_URL}/children/${childId}/consultations/search`, {
+export async function searchConsultations(subject: SubjectRef, request: HistorySearchRequest, token: string | null): Promise<ConsultationSummary[]> {
+  const res = await fetch(`${API_BASE_URL}${apiBase(subject)}/consultations/search`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...withAuthHeader(token) },
     body: JSON.stringify(request),
@@ -198,8 +203,8 @@ export async function searchConsultations(childId: string, request: HistorySearc
 }
 
 // contracts/history-search.md — the doctors and medications already registered, for the filters' choice lists.
-export async function fetchHistoryOptions(childId: string, token: string | null): Promise<HistoryOptions> {
-  const res = await fetch(`${API_BASE_URL}/children/${childId}/history-options`, { headers: withAuthHeader(token) })
+export async function fetchHistoryOptions(subject: SubjectRef, token: string | null): Promise<HistoryOptions> {
+  const res = await fetch(`${API_BASE_URL}${apiBase(subject)}/history-options`, { headers: withAuthHeader(token) })
   const body = await res.json()
 
   if (res.ok) {
@@ -267,7 +272,47 @@ export async function extendTreatment(
     const nothing = (body.details as { message?: string }[] | undefined)?.some((d) => d.message === 'nothing_to_extend')
     throw new ConsultationApiError(nothing ? 'nothing_to_extend' : 'validation_error', body.message ?? 'Invalid request', body.details)
   }
+  if (res.status === 422 && body.error === 'freemium_consultation_limit_exceeded') {
+    // A person's own treatment is extended only on the paid plan (specs/058).
+    throw new ConsultationApiError('plan_limit_own_consultations', body.message ?? 'The free plan does not include this')
+  }
   throw new ConsultationApiError('unknown', body.message ?? 'Unexpected error extending the treatment')
+}
+
+/** Why sharing one's own consultations can't be turned on (specs/058): nobody to share with, or the family doesn't pay. */
+export type SharingUnavailable = 'no_family' | 'plan'
+
+export class SharingError extends Error {
+  readonly reason: SharingUnavailable | 'unknown'
+  constructor(reason: SharingUnavailable | 'unknown') {
+    super(`sharing: ${reason}`)
+    this.reason = reason
+  }
+}
+
+// specs/058 contracts/api.md — the switch «Compartir mis consultas con los Tutores de mi familia».
+export async function setConsultationSharing(accountId: string, shared: boolean, token: string | null): Promise<{ shared: boolean; changedAt: string | null }> {
+  const res = await fetch(`${API_BASE_URL}/accounts/${accountId}/consultation-sharing`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...withAuthHeader(token) },
+    body: JSON.stringify({ shared }),
+  })
+  const body = await res.json()
+  if (res.ok) return body
+  if (res.status === 422 && (body.reason === 'no_family' || body.reason === 'plan')) throw new SharingError(body.reason)
+  throw new SharingError('unknown')
+}
+
+// specs/058 contracts/api.md — a Tutor's reminders of another person's own consultation, shared with them.
+export async function setOwnReminders(consultationId: string, on: boolean, token: string | null): Promise<{ on: boolean }> {
+  const res = await fetch(`${API_BASE_URL}/consultations/${consultationId}/my-reminders`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...withAuthHeader(token) },
+    body: JSON.stringify({ on }),
+  })
+  const body = await res.json()
+  if (res.ok) return body
+  throw new ConsultationApiError('unknown', body.message ?? 'Could not save the reminders')
 }
 
 export async function updateDoseStatus(

@@ -144,32 +144,32 @@ y recibir su recordatorio; ningún hijo la muestra (quickstart 1–3, 10–12).
 
 ### Frontend
 
-- [ ] T024 [P] [US1] `frontend/src/shared/subject.ts` (+ prueba): tipo `Subject = { kind: 'child'; childId } | { kind: 'person';
+- [X] T024 [P] [US1] `frontend/src/shared/subject.ts` (+ prueba): tipo `Subject = { kind: 'child'; childId } | { kind: 'person';
   accountId }` y funciones puras para las rutas del API (`consultationsPath`, `overviewPath`, `appointmentsPath`, `searchPath`,
   `historyOptionsPath`, `exportPath`) y de la app (`profileHref`, `newConsultationHref`, `historyHref`).
-- [ ] T025 [P] [US1] `frontend/src/features/profile/profileText.ts` (+ `profileText.test.ts`, prueba de redacción: sin «debes»,
+- [X] T025 [P] [US1] `frontend/src/features/profile/profileText.ts` (+ `profileText.test.ts`, prueba de redacción: sin «debes»,
   «deberías», «riesgo», «alerta», «recomend…», como las demás): títulos del perfil, «Nueva consulta», aviso del plan, textos del
   perfil compartido y del interruptor (los usa la US2).
-- [ ] T026 [US1] API y tipos: `frontend/src/features/consultations/api.ts` y `types.ts` con las funciones por sujeto
+- [X] T026 [US1] API y tipos: `frontend/src/features/consultations/api.ts` y `types.ts` con las funciones por sujeto
   (`listConsultations(subject)`, `createConsultation(subject, body)`, `getOverview(subject, from, to)`), el detalle con `childId:
   string | null` y `accountId`; `frontend/src/features/appointments/api.ts` igual; `reason: "own_consultations"` en el aviso del
   plan (`FreemiumLimitModal` / `planCopy.ts`: el motivo y sus filas).
-- [ ] T027 [US1] `frontend/src/features/childDetail/`: parametrizar por `Subject` las partes que usa el perfil (`ChildDetailParts`,
+- [X] T027 [US1] `frontend/src/features/childDetail/`: parametrizar por `Subject` las partes que usa el perfil (`ChildDetailParts`,
   `ChildTodayCard`) sin cambiar lo que ve un hijo; la cartilla y «Acceso del hijo» solo para `kind: 'child'`.
-- [ ] T028 [US1] `frontend/src/features/profile/ProfilePage.tsx` (+ prueba): dos diseños con `useIsDesktop`, el sistema de la spec
+- [X] T028 [US1] `frontend/src/features/profile/ProfilePage.tsx` (+ prueba): dos diseños con `useIsDesktop`, el sistema de la spec
   056 (`PageHeader` con el nombre de pila, «Hoy» primero con las tomas de sus medicamentos + suplementos + actividades marcables,
   tratamiento activo y próxima cita, `SectionIndex` Consultas · Suplementos · Actividades, «Lo demás», «Nueva consulta» único
   sólido); lo de suplementos y actividades viene de `MyDayPage` (reutilizar sus partes de `features/supplements`). Plan
   gratuito: «Nueva consulta» con la marca «Plan completo» abre el aviso del plan (como `NewConsultationEntry`).
-- [ ] T029 [US1] `frontend/src/App.tsx`: `/yo` → `ProfilePage`, `/yo/consultas/nueva` → `NewConsultationPage` con sujeto
+- [X] T029 [US1] `frontend/src/App.tsx`: `/yo` → `ProfilePage`, `/yo/consultas/nueva` → `NewConsultationPage` con sujeto
   persona; `/mi-dia`, `/mis-suplementos`, `/mis-actividades` → `<Navigate to="/yo…" replace />` conservando el ancla;
   `/mis-suplementos/nueva` y `/mis-actividades/nueva` siguen; retirar `MyDayPage` (o dejarlo solo como partes) y mover sus pruebas.
-- [ ] T030 [US1] `NewConsultationPage`, `ConsultationDetailPage`, `EditConsultationPage` (`frontend/src/features/consultations/`)
+- [X] T030 [US1] `NewConsultationPage`, `ConsultationDetailPage`, `EditConsultationPage` (`frontend/src/features/consultations/`)
   con sujeto: el detalle de una consulta propia vuelve a `/yo` con «←», muestra editar, finalizar, recorrer y la cita solo si
   `accountId` es la cuenta de la sesión; sin datos del hijo. Pruebas de los dos sujetos.
-- [ ] T031 [US1] Inicio: `frontend/src/features/home/TuDia.tsx` y `ChildrenSidebar.tsx` enlazan a `/yo` (no a `/mi-dia`) y «Tu
+- [X] T031 [US1] Inicio: `frontend/src/features/home/TuDia.tsx` y `ChildrenSidebar.tsx` enlazan a `/yo` (no a `/mi-dia`) y «Tu
   día» suma las tomas del día de `GET /accounts/{id}/overview`; `MoreLinks` y textos que digan «Mi día» se actualizan. Pruebas.
-- [ ] T032 [US1] `npx vitest run --coverage` (> 90 %), `npm run build`, `npx eslint .`; commit de la fase.
+- [X] T032 [US1] `npx vitest run --coverage` (> 90 %), `npm run build`, `npx eslint .`; commit de la fase.
 
 **Punto de control**: la US1 sola ya es entregable (MVP).
 
@@ -206,14 +206,14 @@ y recibir su recordatorio; ningún hijo la muestra (quickstart 1–3, 10–12).
 
 ### Frontend
 
-- [ ] T039 [US2] `frontend/src/features/profile/SharingToggle.tsx` (+ prueba): el interruptor en el perfil propio, solo si la
+- [X] T039 [US2] `frontend/src/features/profile/SharingToggle.tsx` (+ prueba): el interruptor en el perfil propio, solo si la
   persona tiene familia; 422 → texto de `profileText.ts` según `reason`; refresca `GET /accounts/me`.
-- [ ] T040 [US2] `frontend/src/features/profile/SharedProfilePage.tsx` en `/personas/:accountId` (dos diseños): el nombre de la
+- [X] T040 [US2] `frontend/src/features/profile/SharedProfilePage.tsx` en `/personas/:accountId` (dos diseños): el nombre de la
   persona, «Hoy» con sus tomas, su tratamiento y cita, sus consultas; sin suplementos, actividades, «Nueva consulta» ni PDF; si
   responde 404 (le quitaron el acceso), un aviso neutral y vuelta al inicio. Pruebas.
-- [ ] T041 [US2] El inicio y la barra lateral muestran un acceso por cada `sharedProfiles`; el detalle de una consulta compartida
+- [X] T041 [US2] El inicio y la barra lateral muestran un acceso por cada `sharedProfiles`; el detalle de una consulta compartida
   muestra «Tus avisos» (`MyRemindersToggle` reutilizado o uno nuevo) y oculta lo que no le toca. Pruebas.
-- [ ] T042 [US2] vitest con cobertura, build, eslint; commit de la fase.
+- [X] T042 [US2] vitest con cobertura, build, eslint; commit de la fase.
 
 ---
 
@@ -232,17 +232,17 @@ y recibir su recordatorio; ningún hijo la muestra (quickstart 1–3, 10–12).
 - [X] T045 [P] [US3] Pruebas contra la base real: la búsqueda propia nunca devuelve consultas de hijos ni la del hijo las propias;
   el Tutor con el interruptor busca y no exporta (403/404); plan; `TestExport_ErrorLogsNeverCarryTheChoice` para la ruta propia;
   Swagger regenerado.
-- [ ] T046 [US3] Frontend: `HistoryPage`, `useHistory`, `historyCriteria` (`sessionStorage` por sujeto) y `HistoryEntry` con
+- [X] T046 [US3] Frontend: `HistoryPage`, `useHistory`, `historyCriteria` (`sessionStorage` por sujeto) y `HistoryEntry` con
   sujeto; ruta `/yo/historial` (y `/personas/:accountId/historial` para el Tutor, sin «Exportar a PDF»). Pruebas.
-- [ ] T047 [US3] `frontend/src/features/pdfExport/`: `ExportPanel`, `useExport`, `api.ts` y el documento con sujeto persona: sin la
+- [X] T047 [US3] `frontend/src/features/pdfExport/`: `ExportPanel`, `useExport`, `api.ts` y el documento con sujeto persona: sin la
   sección ni la casilla «Cartilla», portada con el nombre de la persona; «Exportar a PDF» solo en `/yo/historial`. Pruebas.
-- [ ] T048 [US3] vitest con cobertura, build, eslint, `go test ./... -cover`; commit de la fase.
+- [X] T048 [US3] vitest con cobertura, build, eslint, `go test ./... -cover`; commit de la fase.
 
 ---
 
 ## Fase 6: Pulido y cierre
 
-- [ ] T049 Subir `account.CurrentDisclaimerVersion` (`backend/internal/account/disclaimer.go`, fecha del día) y el texto de
+- [X] T049 Subir `account.CurrentDisclaimerVersion` (`backend/internal/account/disclaimer.go`, fecha del día) y el texto de
   `frontend/src/features/home/WelcomeDisclaimer.tsx` (la app también registra la salud de la persona de la cuenta; se comparte
   solo si ella lo decide); actualizar su prueba de redacción y lo que compare la versión.
 - [ ] T050 [P] E2E `frontend/e2e/consultas-del-titular.spec.ts` (Chromium, 390 y 1280 px, con los helpers de `e2e/helpers.ts`):

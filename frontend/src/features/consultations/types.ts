@@ -77,7 +77,10 @@ export interface ConsultationDetail {
   /** Saved only as a record (specs/024): no schedule, no doses. Optional: a backend that predates it doesn't send it. */
   recordOnly?: boolean
   id: string
-  childId: string
+  /** Null for a person's own consultation (specs/058). */
+  childId: string | null
+  /** The account it belongs to: the child's, or the person whose own consultation it is (specs/058). Absent from an older backend. */
+  accountId?: string
   doctorName: string
   consultDate: string
   photoBase64: string
@@ -89,6 +92,8 @@ export interface ConsultationDetail {
   createdAt?: string
   /** The last edit (specs/051): when, and the first name of who made it; null if never edited. */
   edited?: { at: string; by: string } | null
+  /** Only for someone who sees another person's own consultation (specs/058): whether they asked for its reminders. */
+  myReminders?: boolean
 }
 
 // Mirrors specs/006-resumen-detalle-hijo/contracts/get-overview.md.
@@ -114,7 +119,9 @@ export interface ActiveTreatment {
 }
 
 export interface ChildOverview {
-  childId: string
+  /** The child's; a person's own overview (specs/058) answers `accountId` instead. */
+  childId?: string
+  accountId?: string
   doses: OverviewDose[]
   activeTreatment: ActiveTreatment | null
 }

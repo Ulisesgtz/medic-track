@@ -3,11 +3,12 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MyDayPage } from './MyDayPage'
-import { TODAY, account, activity, at, callsOf, dose, list, routine, stubApi, stubWeb } from './supplements.test-utils'
-import type { PersonalRoutineList, Routine } from './types'
+import { ProfilePage } from './ProfilePage'
+import { ProfileRedirect } from './ProfileRedirect'
+import { TODAY, account, activity, at, callsOf, dose, list, routine, stubApi, stubWeb } from '../supplements/supplements.test-utils'
+import type { PersonalRoutineList, Routine } from '../supplements/types'
 
-// specs/056 (design B): «Mi día», the person's own page — «Hoy», the index and «Mis suplementos» / «Mis actividades».
+// specs/056 (design B) and 058: the person's own profile — «Hoy», their consultations, «Mis suplementos» / «Mis actividades».
 
 const mine = (over: Partial<Routine> = {}) =>
   routine({
@@ -20,9 +21,15 @@ const myActivity = (over: Partial<Routine> = {}) =>
   activity({ id: 'a1', childId: null, doses: [dose('x8', 8, { taken: true, status: 'taken' }), dose('x14', 14, { status: 'due' }), dose('x18', 18, { status: 'pending' })], ...over })
 const personalList = (routines: Routine[], over: Partial<PersonalRoutineList> = {}): PersonalRoutineList => ({ ...list(routines), noticeSeen: true, ...over })
 
+const noOverview = { accountId: 'a1', doses: [], activeTreatment: null }
+const noConsultations = { accountId: 'a1', consultations: [] }
+
 function api(supplements: Routine[], activities: Routine[] = [], over: Partial<PersonalRoutineList> = {}, extra: Parameters<typeof stubApi>[0] = {}) {
   return stubApi({
     'GET /accounts/me': { body: account() },
+    'GET /accounts/a1/overview': { body: noOverview },
+    'GET /accounts/a1/consultations': { body: noConsultations },
+    'GET /accounts/a1/appointments': { body: { next: null, history: [], paidPlan: true } },
     'GET /accounts/a1/routines': (url: URL) => ({ body: personalList(url.searchParams.get('kind') === 'activity' ? activities : supplements, over) }),
     'POST /accounts/a1/routines/notice-seen': { status: 204, body: undefined },
     'PATCH /routines/r1/doses/d2': { body: dose('d2', 14, { taken: true }) },
@@ -31,14 +38,17 @@ function api(supplements: Routine[], activities: Routine[] = [], over: Partial<P
   })
 }
 
-function renderAt(path = '/mi-dia') {
+function renderAt(path = '/yo') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
-          <Route path="/mi-dia" element={<MyDayPage />} />
-          <Route path="/mis-suplementos" element={<Navigate to="/mi-dia#suplementos" replace />} />
+          <Route path="/yo" element={<ProfilePage />} />
+          <Route path="/mi-dia" element={<ProfileRedirect />} />
+          <Route path="/mis-suplementos" element={<Navigate to="/yo#suplementos" replace />} />
+          <Route path="/yo/consultas/nueva" element={<div>NUEVA CONSULTA</div>} />
+          <Route path="/consultations/:id" element={<div>DETALLE CONSULTA</div>} />
           <Route path="/mis-suplementos/nueva" element={<div>NUEVO SUPLEMENTO</div>} />
           <Route path="/mis-actividades/nueva" element={<div>NUEVA ACTIVIDAD</div>} />
           <Route path="/suplementos/:routineId" element={<div>DETALLE SUPLEMENTO</div>} />
@@ -60,11 +70,11 @@ afterEach(() => {
 })
 const setup = () => userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
 
-describe('MyDayPage — phone', () => {
-  it('has the common header with the initials, «Mi día», the date and «Solo tú ves esto»', async () => {
+describe('ProfilePage — phone', () => {
+  it('has the common header with the initials, the first name, the date and «Solo tú ves esto»', async () => {
     api([mine()])
     renderAt()
-    expect(await screen.findByRole('heading', { level: 1, name: 'Mi día' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Ana' })).toBeInTheDocument()
     expect(await screen.findByText('AM')).toBeInTheDocument()
     expect(screen.getByText(/^martes 6 de octubre/)).toBeInTheDocument()
     expect(screen.getByText('Solo tú ves esto')).toBeInTheDocument()
@@ -96,7 +106,7 @@ describe('MyDayPage — phone', () => {
     renderAt()
 
     const index = await screen.findByRole('navigation', { name: 'Secciones' })
-    expect(within(index).getAllByRole('link').map((a) => a.textContent)).toEqual(['Suplementos', 'Actividades'])
+    expect(within(index).getAllByRole('link').map((a) => a.textContent)).toEqual(['Consultas', 'Suplementos', 'Actividades'])
     const sups = screen.getByRole('region', { name: 'Mis suplementos' })
     expect(await within(sups).findByRole('link', { name: /Omega 3/ })).toHaveAttribute('href', '/suplementos/r1')
     expect(within(sups).getByRole('link', { name: '+ Agregar suplemento' })).toHaveAttribute('href', '/mis-suplementos/nueva')
@@ -124,17 +134,75 @@ describe('MyDayPage — phone', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo guardar. Inténtalo de nuevo.')
   })
 
-  it('with nothing created, «Hoy» has the first steps — one solid button — and no empty sections', async () => {
+  it('with nothing created, «Hoy» has the first steps and «Nueva consulta» is the one solid button', async () => {
     api([], [], { noticeSeen: false })
     renderAt()
     const today = await screen.findByRole('region', { name: 'Hoy' })
     expect(within(today).getByText(/Aquí verás tus tomas y actividades del día/)).toBeInTheDocument()
     expect(within(today).getByRole('link', { name: 'Agregar mi primer suplemento' })).toHaveAttribute('href', '/mis-suplementos/nueva')
-    expect(within(today).getByRole('link', { name: 'Agregar mi primer suplemento' })).toHaveClass('bg-confirmed')
+    expect(within(today).getByRole('link', { name: 'Agregar mi primer suplemento' })).toHaveClass('border-action')
     expect(within(today).getByRole('link', { name: 'Agregar una actividad' })).toHaveClass('border-action')
+    expect(screen.getByRole('link', { name: 'Nueva consulta' })).toHaveClass('bg-confirmed')
     expect(screen.getByRole('note')).toHaveTextContent('Cómo funcionan')
-    expect(screen.queryByRole('navigation', { name: 'Secciones' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: 'Mis suplementos' })).not.toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Consultas' })).toHaveTextContent('Registra aquí tus propias consultas')
+  })
+
+  it('shows their own consultations, today’s doses of their medications and their treatment', async () => {
+    api([], [], {}, {
+      'GET /accounts/a1/overview': {
+        body: {
+          accountId: 'a1',
+          doses: [{ id: 'm1', kind: 'medication', consultationId: 'k1', medicationName: 'Amoxicilina', scheduledAt: at(14), taken: false, status: 'due', takenBy: null }],
+          activeTreatment: { medicationName: 'Amoxicilina', endsAt: '2026-10-09T20:00:00Z', otherCount: 0 },
+        },
+      },
+      'GET /accounts/a1/consultations': {
+        body: { accountId: 'a1', consultations: [{ id: 'k1', doctorName: 'Dr. Paz', consultDate: '2026-10-05', notes: '', symptomNames: [], medicationCount: 1 }] },
+      },
+    })
+    renderAt()
+    const today = await screen.findByRole('region', { name: 'Hoy' })
+    expect(await within(today).findByText('Amoxicilina')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Tratamiento activo' })).toHaveTextContent('Amoxicilina')
+    const consultations = screen.getByRole('region', { name: 'Consultas' })
+    expect(within(consultations).getByRole('link', { name: /Dr. Paz/ })).toHaveAttribute('href', '/consultations/k1')
+    expect(within(consultations).getByRole('link', { name: 'Buscar en el historial' })).toHaveAttribute('href', '/yo/historial')
+  })
+
+  it('on the free plan «Nueva consulta» opens the plan notice instead of the form', async () => {
+    stubApi({
+      'GET /accounts/me': { body: account({ plan: 'free' }) },
+      'GET /accounts/a1/overview': { body: noOverview },
+      'GET /accounts/a1/consultations': { body: noConsultations },
+      'GET /accounts/a1/appointments': { body: { next: null, history: [], paidPlan: false } },
+      'GET /accounts/a1/routines': { body: personalList([], { paidPlan: false }) },
+    })
+    renderAt()
+    await setup().click(await screen.findByRole('button', { name: 'Nueva consulta' }))
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Tus propias consultas')
+  })
+
+  it('with a family, the switch to share their consultations; turning it on asks the server', async () => {
+    const fetchMock = stubApi({
+      'GET /accounts/me': { body: account({ family: { role: 'tutor', ownerAccountId: 'o1', ownerName: 'Luis', plan: 'paid', readOnly: false } }) },
+      'GET /accounts/a1/overview': { body: noOverview },
+      'GET /accounts/a1/consultations': { body: noConsultations },
+      'GET /accounts/a1/appointments': { body: { next: null, history: [], paidPlan: true } },
+      'GET /accounts/a1/routines': { body: personalList([]) },
+      'PUT /accounts/a1/consultation-sharing': { status: 422, body: { error: 'sharing_unavailable', reason: 'plan' } },
+    })
+    renderAt()
+    const toggle = await screen.findByRole('switch', { name: 'Compartir mis consultas con los Tutores de mi familia' })
+    expect(toggle).toHaveAttribute('aria-checked', 'false')
+    await setup().click(toggle)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Compartirlas es parte del plan completo de la familia.')
+    expect(callsOf(fetchMock)).toContain('PUT /accounts/a1/consultation-sharing')
+  })
+
+  it('the old «Mi día» address lands on the profile', async () => {
+    api([mine()])
+    renderAt('/mi-dia')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Ana' })).toBeInTheDocument()
   })
 
   it('on the free plan with nothing created it shows the plan instead; what was created stays, with the plan mark to add', async () => {
@@ -168,7 +236,7 @@ describe('MyDayPage — phone', () => {
   })
 })
 
-describe('MyDayPage — web', () => {
+describe('ProfilePage — web', () => {
   beforeEach(() => stubWeb(true))
 
   it('has the sections at the left and «Resumen del día» at the right', async () => {
@@ -182,11 +250,12 @@ describe('MyDayPage — web', () => {
     expect(screen.getByText(/martes 6 de octubre ·/)).toBeInTheDocument()
   })
 
-  it('puts the first steps in a row, the activity before the solid button', async () => {
+  it('puts the first steps in a row, the activity before the supplement, and «Nueva consulta» at the header', async () => {
     api([], [])
     renderAt()
-    const solid = await screen.findByRole('link', { name: 'Agregar mi primer suplemento' })
-    const outline = screen.getByRole('link', { name: 'Agregar una actividad' })
-    expect(outline.compareDocumentPosition(solid) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const supplement = await screen.findByRole('link', { name: 'Agregar mi primer suplemento' })
+    const activityLink = screen.getByRole('link', { name: 'Agregar una actividad' })
+    expect(activityLink.compareDocumentPosition(supplement) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Nueva consulta' })).toHaveAttribute('href', '/yo/consultas/nueva')
   })
 })

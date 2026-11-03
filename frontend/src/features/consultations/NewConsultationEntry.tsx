@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
+import { FreemiumLimitModal, type PlanLimitReason } from '../account-signup/FreemiumLimitModal'
 
 interface NewConsultationEntryProps {
   /** The "Nueva consulta" page. */
@@ -10,6 +10,8 @@ interface NewConsultationEntryProps {
    * does at the child limit, instead of a form the server would refuse after the parent filled it in.
    */
   blocked: boolean
+  /** Which plan notice opens: by default a treatment still running; `own_consultations` for one's own (specs/058). */
+  reason?: PlanLimitReason
   className: string
   children: ReactNode
 }
@@ -18,7 +20,7 @@ interface NewConsultationEntryProps {
  * The "Nueva consulta" entry of the child's detail, in both designs. A link to the form, or — when the free plan
  * doesn't allow another consultation yet — a button that opens the plan pop-up. Same look either way (`className`).
  */
-export function NewConsultationEntry({ to, blocked, className, children }: NewConsultationEntryProps) {
+export function NewConsultationEntry({ to, blocked, reason = 'active_treatment', className, children }: NewConsultationEntryProps) {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -38,7 +40,7 @@ export function NewConsultationEntry({ to, blocked, className, children }: NewCo
         {children}
       </button>
       {open && (
-        <FreemiumLimitModal reason="active_treatment" onStayFree={close} onViewPlans={() => navigate('/planes')} opener={buttonRef} />
+        <FreemiumLimitModal reason={reason} onStayFree={close} onViewPlans={() => navigate('/planes')} opener={buttonRef} />
       )}
     </>
   )

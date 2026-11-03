@@ -58,6 +58,9 @@ describe('WelcomeDisclaimer', () => {
     expect(region).toHaveTextContent('solo repiten lo que tú escribiste')
     expect(region).toHaveTextContent('Las vacunas y las fotos de la cartilla de tu hijo son datos de salud')
     expect(region).toHaveTextContent('las personas que invites podrán verlas según su rol')
+    // specs/058: the person's own consultations are theirs, shared only if they decide.
+    expect(region).toHaveTextContent('tus propias consultas')
+    expect(region).toHaveTextContent('nunca las ve un Cuidador ni el teléfono de un hijo')
   })
 
   it('is not shown once the account acknowledged it, nor while there is no account yet', () => {

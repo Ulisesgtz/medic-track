@@ -490,7 +490,7 @@ describe('RoutineFormPage — nueva actividad', () => {
     renderAt('/mis-actividades/nueva')
     expect(await screen.findByText('Es una actividad personal: solo tú la ves y solo a ti te llegan sus avisos.')).toBeInTheDocument()
     expect(screen.getByText('Solo la ves tú.')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: '← Cancelar' })).toHaveAttribute('href', '/mi-dia#actividades')
+    expect(screen.getByRole('link', { name: '← Cancelar' })).toHaveAttribute('href', '/yo#actividades')
     const user = setup()
     await fill(user)
     await user.click(screen.getByRole('button', { name: 'Guardar actividad' }))
