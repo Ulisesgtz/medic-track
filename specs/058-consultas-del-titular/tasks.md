@@ -253,9 +253,9 @@ y recibir su recordatorio; ningún hijo la muestra (quickstart 1–3, 10–12).
   acceso a lo propio, las rutas nuevas, `0032`, `ownership` ya no es «consultations have no account_id»), `frontend/CLAUDE.md`
   (`/yo`, `Subject`, `features/profile`), `BACKLOG.md` (quitar la entrada del titular; anotar el aviso de privacidad pendiente del
   dueño), nota en `specs/004-…/spec.md` si hace falta.
-- [ ] T052 Verificación completa: `go vet ./...`, `go test ./... -cover` con y sin `pool_max_conns=4`, Swagger sin cambios tras
+- [X] T052 Verificación completa: `go vet ./...`, `go test ./... -cover` con y sin `pool_max_conns=4`, Swagger sin cambios tras
   regenerar, `govulncheck ./...`, `npx vitest run --coverage`, `npm run build`, `npx eslint .`, `npx playwright test --list`.
-- [ ] T053 `/code-review` sobre la rama, arreglar lo que salga, push y PR a `develop` (cuerpo en español con el SQL de la `0032` y
+- [X] T053 `/code-review` sobre la rama, arreglar lo que salga, push y PR a `develop` (cuerpo en español con el SQL de la `0032` y
   los pasos del dueño: aplicar la `0032` en DEV **antes** del merge y actualizar el aviso de privacidad); `ccd_pr` con auto-fix.
 
 ---
