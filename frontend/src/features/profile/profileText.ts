@@ -28,6 +28,7 @@ export const PROFILE = {
   remindersFailed: 'No se pudo guardar tu elección. Inténtalo de nuevo.',
   loadFailed: 'tus datos',
   sidebar: 'Mi perfil',
+  loadFailedDay: 'No pudimos cargar sus tomas de hoy.',
   sharedTitle: 'Compartido contigo',
 } as const
 

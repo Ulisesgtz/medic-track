@@ -8,7 +8,7 @@ import { consultationLine } from '../consultations/consultationLine'
 import { HistoryEntry } from '../consultations/HistoryEntry'
 import { RecordOnlyBadge } from '../consultations/RecordOnlyBadge'
 import type { ActiveTreatment, ConsultationSummary } from '../consultations/types'
-import type { SubjectRef } from '../../shared/subject'
+import { historyHref, type SubjectRef } from '../../shared/subject'
 import { useFamily } from '../family/useFamily'
 import { familyMembers } from '../home/homeText'
 import { useChildDay } from '../home/useChildDay'
@@ -114,7 +114,7 @@ export function ConsultationsSection({
   const size = desktop ? 'px-3.5 text-[14px]' : 'w-full px-4 text-[15px]'
   const actions = consultations.length > 0 && (
     <div className={desktop ? 'flex gap-2' : 'flex flex-col gap-2'}>
-      <HistoryEntry to={historyTo ?? `/children/${childId as string}/historial`} free={free} className={`${outline} ${size}`}>
+      <HistoryEntry to={historyTo ?? historyHref(childId, undefined)} free={free} className={`${outline} ${size}`}>
         {CHILD.search}
       </HistoryEntry>
       {child && (

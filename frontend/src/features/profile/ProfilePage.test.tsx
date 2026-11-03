@@ -199,6 +199,31 @@ describe('ProfilePage — phone', () => {
     expect(callsOf(fetchMock)).toContain('PUT /accounts/a1/consultation-sharing')
   })
 
+  it('the owner of a family with somebody in it gets the switch too (they have no `family` of their own)', async () => {
+    api([], [], {}, {
+      'GET /family': {
+        body: {
+          role: 'owner',
+          plan: 'paid',
+          readOnly: false,
+          owner: { id: 'a1', name: 'Ana' },
+          members: [{ id: 'm1', accountId: 'l1', name: 'Luis', role: 'tutor', canRemove: false }],
+          invitations: [],
+          capacity: { max: 4, used: 2 },
+        },
+      },
+    })
+    renderAt()
+    expect(await screen.findByRole('switch', { name: 'Compartir mis consultas con los Tutores de mi familia' })).toBeInTheDocument()
+  })
+
+  it('without a family there is no switch', async () => {
+    api([mine()])
+    renderAt()
+    await screen.findByRole('region', { name: 'Consultas' })
+    expect(screen.queryByRole('switch', { name: 'Compartir mis consultas con los Tutores de mi familia' })).not.toBeInTheDocument()
+  })
+
   it('the old «Mi día» address lands on the profile', async () => {
     api([mine()])
     renderAt('/mi-dia')

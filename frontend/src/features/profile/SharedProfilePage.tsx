@@ -10,7 +10,7 @@ import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { NextAppointmentCompact } from '../appointments/NextAppointmentCompact'
 import { ConsultationsSection, TreatmentCard } from '../childDetail/ChildDetailParts'
 import { TodayCardView } from '../childDetail/ChildTodayCard'
-import { fetchConsultations } from '../consultations/api'
+import { ConsultationApiError, fetchConsultations } from '../consultations/api'
 import { AppShell } from '../home/AppShell'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { usePersonOverview } from './hooks'
@@ -41,7 +41,9 @@ export function SharedProfilePage() {
     retry: false,
   })
 
-  const gone = (accountQuery.isSuccess && person === undefined) || overview.isError
+  // Only the server's refusal means they stopped sharing; any other failure is a retry of «Hoy».
+  const refused = overview.error instanceof ConsultationApiError && overview.error.kind === 'child_not_found'
+  const gone = (accountQuery.isSuccess && person === undefined) || refused
   const header = (
     <PageHeader
       variant={variant}
@@ -90,8 +92,8 @@ export function SharedProfilePage() {
   const today = (
     <TodayCardView
       variant={variant}
-      pending={!overview.isSuccess}
-      failed={null}
+      pending={!overview.isSuccess && !overview.isError}
+      failed={overview.isError ? { text: PROFILE.loadFailedDay, onRetry: () => void overview.refetch() } : null}
       doses={overview.data?.doses ?? []}
       activities={[]}
       toMark={(overview.data?.doses ?? []).filter((d) => !d.taken && d.status === 'due').length}

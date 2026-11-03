@@ -92,6 +92,15 @@ describe('SharedProfilePage', () => {
     expect(screen.getByRole('link', { name: '← Inicio' })).toHaveAttribute('href', '/home')
   })
 
+  it('a failure that is not a refusal is only a retry of «Hoy»', async () => {
+    stubWeb(false)
+    api({ 'GET /accounts/l1/overview': { status: 500, body: { error: 'internal_error' } } })
+    renderAt()
+    expect(await screen.findByText('No pudimos cargar sus tomas de hoy.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeInTheDocument()
+    expect(screen.queryByText('Ya no puedes ver estas consultas.')).not.toBeInTheDocument()
+  })
+
   it('and when the server stops answering for them', async () => {
     stubWeb(false)
     api({ 'GET /accounts/l1/overview': { status: 403, body: { error: 'forbidden' } } })

@@ -9,6 +9,7 @@ import { StickyActionBar } from '../../shared/ui/StickyActionBar'
 import { useLocalDay } from '../../shared/useLocalDay'
 import { subjectAccessOf, subjectKey, type Subject } from '../../shared/subject'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
+import { useFamily } from '../family/useFamily'
 import { NextAppointmentCompact } from '../appointments/NextAppointmentCompact'
 import { CHILD, activitiesDone, nameAtTime, summaryDoses } from '../childDetail/childDetailText'
 import { ConsultationsSection, DaySummaryView, TreatmentCard } from '../childDetail/ChildDetailParts'
@@ -110,6 +111,7 @@ export function ProfilePage() {
   const { hash } = useLocation()
   const { getToken } = useAuth()
   const account = useCurrentAccount().data
+  const family = useFamily().data
   const me: Subject | undefined = account ? { kind: 'person', accountId: account.id } : undefined
   const access = subjectAccessOf(account, me)
   const supplements = usePersonalRoutines(account?.id, 'supplement', day)
@@ -205,8 +207,10 @@ export function ProfilePage() {
       <RegistroCompacto kind="activity" personal sectionId="actividades" variant={variant} />
     </>
   )
-  // Only with a family there is somebody to share with (specs/058, research R5).
-  const sharing = account?.family !== undefined || (account?.consultationSharing?.shared ?? false)
+  // Only with a family there is somebody to share with (specs/058, research R5): the person is invited to one (`account.family`)
+  // or owns one with somebody in it (`/family` lists its members); once on, the switch stays to turn it off.
+  const ownsAFamily = family !== undefined && Array.isArray(family.members) && family.members.length > 0
+  const sharing = account?.family !== undefined || ownsAFamily || (account?.consultationSharing?.shared ?? false)
   const sharingCard = account && sharing && <SharingCard accountId={account.id} shared={account.consultationSharing?.shared ?? false} />
   const appointment = me && <NextAppointmentCompact childId={me} variant={variant} />
 
