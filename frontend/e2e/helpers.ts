@@ -125,8 +125,11 @@ export async function signUp(page: Page, data: SignupData = {}) {
  * minted with the secret key), then it is a normal signed-in browser. Retried while Clerk rate limits.
  */
 export async function signInAs(page: Page, emailAddress: string) {
-  await page.goto('/login')
-  await retryWhileRateLimited(() => clerk.signIn({ page, emailAddress }))
+  // Each try starts from a fresh /login: a refused sign-in can leave Clerk's browser state half way.
+  await retryWhileRateLimited(async () => {
+    await page.goto('/login')
+    await clerk.signIn({ page, emailAddress })
+  })
 }
 
 /** The signed-in page's session token, the same Bearer token the app sends to the backend. */
