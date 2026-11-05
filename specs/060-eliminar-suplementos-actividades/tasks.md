@@ -68,8 +68,8 @@
 
 - [X] T021 E2E frontend/e2e/eliminar-suplementos.spec.ts (Chromium, 390 y 1280 px): crear un suplemento de un hijo, eliminarlo, ya no está; marcar una toma de otro y comprobar que no hay botón; una actividad personal eliminada vuelve a `/yo#actividades`
 - [X] T022 [P] Docs: entrada en CLAUDE.md (raíz), backend/CLAUDE.md, frontend/CLAUDE.md; BACKLOG.md marca «Editar y eliminar suplementos y actividades» y «Editar consultas y medicamentos» (spec 051) como hechos
-- [ ] T023 Verificación: `go vet`, `go test ./...` con y sin `pool_max_conns=4`, Swagger sin cambios, `npx vitest run --coverage --testTimeout=30000 --maxWorkers=4` (> 90 %), `npx tsc -b`, `npm run build`, `npx eslint .`, `npx playwright test --list`
-- [ ] T024 `/code-review`, push y PR a `develop` (ccd_pr `get_status` + `set_monitor`); no se fusiona
+- [X] T023 Verificación: `go vet`, `go test ./...` con y sin `pool_max_conns=4`, Swagger sin cambios, `npx vitest run --coverage --testTimeout=30000 --maxWorkers=4` (> 90 %), `npx tsc -b`, `npm run build`, `npx eslint .`, `npx playwright test --list`
+- [X] T024 `/code-review`, push y PR a `develop` (ccd_pr `get_status` + `set_monitor`); no se fusiona
 
 ---
 

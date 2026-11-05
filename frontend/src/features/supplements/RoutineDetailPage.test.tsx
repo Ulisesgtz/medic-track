@@ -533,6 +533,8 @@ describe('RoutineDetailPage · eliminar (specs/060)', () => {
     await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Eliminar' }))
     expect(await screen.findByText('HIJO')).toBeInTheDocument()
     expect(callsOf(mock)).toContain('DELETE /routines/r1')
+    // The deleted routine is not asked for again (its query left the cache as the page left).
+    expect(callsOf(mock).filter((c) => c === 'GET /routines/r1')).toHaveLength(1)
   })
 
   it('is offered on a finished or paused one without marks, never with a mark or an answer without the field', async () => {
