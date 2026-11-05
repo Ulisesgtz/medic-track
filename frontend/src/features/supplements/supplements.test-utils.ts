@@ -34,6 +34,7 @@ export function routine(over: Partial<Routine> = {}): Routine {
     createdAt: new Date(2026, 9, 1, 9).toISOString(),
     myReminders: true,
     canEdit: true,
+    hasMarks: false,
     progress: { taken: 1, elapsed: 1, total: 6 },
     doses: [dose('d1', 8, { taken: true, takenBy: { name: 'Ana', at: at(8, 5), mine: true } })],
     nextDose: null,

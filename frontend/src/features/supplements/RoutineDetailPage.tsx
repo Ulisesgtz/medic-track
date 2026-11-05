@@ -9,8 +9,10 @@ import { useSidebarSession } from '../home/useSidebarSession'
 import { pageHeaderButton } from '../../shared/ui/pageHeaderButton'
 import { SupplementApiError } from './api'
 import { DayProgress } from './DayProgress'
+import { DeleteRoutineDialog } from './DeleteRoutineDialog'
+import { deleteCopy } from './deleteCopy'
 import { FinishRoutineDialog } from './FinishRoutineDialog'
-import { useFinishRoutine, usePauseRoutine, useResumeRoutine, useRoutine, useRoutineDoseToggle } from './hooks'
+import { useDeleteRoutine, useFinishRoutine, usePauseRoutine, useResumeRoutine, useRoutine, useRoutineDoseToggle } from './hooks'
 import { MyRemindersToggle } from './MyRemindersToggle'
 import { RealizadoButton } from './RealizadoButton'
 import { RoutineDoseChip } from './RoutineDoseChip'
@@ -175,11 +177,15 @@ export function RoutineDetailPage() {
   const [planOpen, setPlanOpen] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const finishButtonRef = useRef<HTMLButtonElement>(null)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
+  const deleteButtonRef = useRef<HTMLButtonElement>(null)
 
   const query = useRoutine(routineId, day)
   const pause = usePauseRoutine(routineId ?? '')
   const resume = useResumeRoutine(routineId ?? '')
   const finish = useFinishRoutine(routineId ?? '')
+  const remove = useDeleteRoutine(routineId ?? '')
 
   const routine = query.data
   const childId = routine?.childId ?? undefined
@@ -265,6 +271,23 @@ export function RoutineDetailPage() {
   }
 
   const finishLabel = activity ? 'Finalizar actividad' : 'Finalizar suplemento'
+  // specs/060: deleting is offered to who can do everything (any plan) while no dose is marked; the server decides again.
+  const removal = deleteCopy(kind, personal)
+  const canDelete = canManage && routine.hasMarks === false
+  const doDelete = () => {
+    setDeleteError(null)
+    remove.mutate(undefined, {
+      onSuccess: () => navigate(backTo, { replace: true }),
+      onError: (e) => {
+        if (e instanceof SupplementApiError && e.kind === 'routine_has_marks') {
+          // Somebody marked a dose meanwhile: the button goes away with the routine read again, and the sentence says why.
+          setDeleteOpen(false)
+          setActionError(removal.hasMarks)
+          void query.refetch()
+        } else setDeleteError(removal.failed)
+      },
+    })
+  }
   const dayCard = (
     <div className={`${card} flex flex-col gap-3.5 p-[22px]`}>
       <div className="flex items-center justify-between gap-3">
@@ -331,6 +354,21 @@ export function RoutineDetailPage() {
           </button>
         </div>
       )}
+      {canDelete && (
+        <div className="flex flex-wrap">
+          <button
+            ref={deleteButtonRef}
+            type="button"
+            onClick={() => {
+              setDeleteError(null)
+              setDeleteOpen(true)
+            }}
+            className={`flex-[1_1_100%] ${linkButton}`}
+          >
+            {removal.button}
+          </button>
+        </div>
+      )}
       {!ended && !canManage && !personal && (
         <p className="text-sm leading-normal text-slate-600">Un Tutor puede pausar, editar o finalizar {activity ? 'esta actividad' : 'este suplemento'}.</p>
       )}
@@ -384,6 +422,18 @@ export function RoutineDetailPage() {
           onConfirm={doFinish}
           onCancel={() => setFinishOpen(false)}
           opener={finishButtonRef}
+          personal={personal}
+        />
+      )}
+      {deleteOpen && (
+        <DeleteRoutineDialog
+          kind={kind}
+          name={routine.name}
+          busy={remove.isPending}
+          error={deleteError}
+          onConfirm={doDelete}
+          onCancel={() => setDeleteOpen(false)}
+          opener={deleteButtonRef}
           personal={personal}
         />
       )}

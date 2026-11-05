@@ -10,6 +10,7 @@ import {
   fetchPersonalRoutines,
   fetchRoutine,
   fetchRoutines,
+  deleteRoutine,
   finishRoutine,
   markRoutineDone,
   pauseRoutine,
@@ -121,6 +122,20 @@ export function useFinishRoutine(routineId: string) {
   const { getToken } = useAuth()
   const refresh = useRefreshAfterChange()
   return useMutation({ mutationFn: async () => finishRoutine(routineId, await getToken()), onSuccess: refresh })
+}
+
+/** specs/060: deletes a routine with no marked dose. Its detail leaves the cache (it no longer exists); the lists and «Hoy» reload. */
+export function useDeleteRoutine(routineId: string) {
+  const { getToken } = useAuth()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => deleteRoutine(routineId, await getToken()),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ['routine', routineId] })
+      queryClient.invalidateQueries({ queryKey: ['routines'] })
+      queryClient.invalidateQueries({ queryKey: ['overview'] })
+    },
+  })
 }
 
 /** «Tus avisos»: the session's own reminders of one routine, on or off. */

@@ -40,12 +40,12 @@
 
 **Prueba independiente**: un suplemento sin marcas se elimina y desaparece de la lista del hijo.
 
-- [ ] T012 [P] [US1] `hasMarks: boolean` en `Routine` (frontend/src/features/supplements/types.ts) y en el fixture de frontend/src/features/supplements/supplements.test-utils.ts (por omisión `false`)
-- [ ] T013 [P] [US1] `deleteRoutine(routineId, token)` (`DELETE /routines/{id}`, 204) y el kind `routine_has_marks` (409) en frontend/src/features/supplements/api.ts, con pruebas en frontend/src/features/supplements/api.test.ts
-- [ ] T014 [P] [US1] Textos en frontend/src/features/supplements/deleteCopy.ts (botón «Eliminar suplemento»/«Eliminar actividad», título «¿Eliminar <nombre>?», tres filas: qué se borra —tomas y avisos, para la familia o solo para ti—, que no se puede deshacer, y que para guardar el registro se usa «Finalizar»; «Eliminar», «Eliminando…», el mensaje del 409 y el error genérico) con prueba de redacción en frontend/src/features/supplements/deleteCopy.test.ts (sin palabras que evalúen; dice «No se puede deshacer»)
-- [ ] T015 [US1] `useDeleteRoutine(routineId)` en frontend/src/features/supplements/hooks.ts: al terminar `removeQueries(['routine', routineId])` e invalida `['routines']` y `['overview']`
-- [ ] T016 [US1] frontend/src/features/supplements/DeleteRoutineDialog.tsx sobre `ConfirmDialog` (`tone="ink"`, foco de regreso al botón) con su prueba frontend/src/features/supplements/DeleteRoutineDialog.test.tsx (personal y familia, suplemento y actividad)
-- [ ] T017 [US1] En frontend/src/features/supplements/RoutineDetailPage.tsx: botón de texto «Eliminar …» en la tarjeta de datos, visible con `canManage && !routine.hasMarks` en cualquier estado; abre el diálogo; al confirmar `navigate(backTo, { replace: true })`; pruebas en frontend/src/features/supplements/RoutineDetailPage.test.tsx (hijo → `/children/:id`, personal → `/yo#suplementos` y `/yo#actividades`, cancelar no llama al API, error genérico)
+- [X] T012 [P] [US1] `hasMarks: boolean` en `Routine` (frontend/src/features/supplements/types.ts) y en el fixture de frontend/src/features/supplements/supplements.test-utils.ts (por omisión `false`)
+- [X] T013 [P] [US1] `deleteRoutine(routineId, token)` (`DELETE /routines/{id}`, 204) y el kind `routine_has_marks` (409) en frontend/src/features/supplements/api.ts, con pruebas en frontend/src/features/supplements/api.test.ts
+- [X] T014 [P] [US1] Textos en frontend/src/features/supplements/deleteCopy.ts (botón «Eliminar suplemento»/«Eliminar actividad», título «¿Eliminar <nombre>?», tres filas: qué se borra —tomas y avisos, para la familia o solo para ti—, que no se puede deshacer, y que para guardar el registro se usa «Finalizar»; «Eliminar», «Eliminando…», el mensaje del 409 y el error genérico) con prueba de redacción en frontend/src/features/supplements/deleteCopy.test.ts (sin palabras que evalúen; dice «No se puede deshacer»)
+- [X] T015 [US1] `useDeleteRoutine(routineId)` en frontend/src/features/supplements/hooks.ts: al terminar `removeQueries(['routine', routineId])` e invalida `['routines']` y `['overview']`
+- [X] T016 [US1] frontend/src/features/supplements/DeleteRoutineDialog.tsx sobre `ConfirmDialog` (`tone="ink"`, foco de regreso al botón) con su prueba frontend/src/features/supplements/DeleteRoutineDialog.test.tsx (personal y familia, suplemento y actividad)
+- [X] T017 [US1] En frontend/src/features/supplements/RoutineDetailPage.tsx: botón de texto «Eliminar …» en la tarjeta de datos, visible con `canManage && !routine.hasMarks` en cualquier estado; abre el diálogo; al confirmar `navigate(backTo, { replace: true })`; pruebas en frontend/src/features/supplements/RoutineDetailPage.test.tsx (hijo → `/children/:id`, personal → `/yo#suplementos` y `/yo#actividades`, cancelar no llama al API, error genérico)
 
 **Punto de control**: MVP usable.
 
@@ -53,13 +53,13 @@
 
 ## Fase 4: Historia de Usuario 2 - Con marcas se finaliza (P2)
 
-- [ ] T018 [US2] En frontend/src/features/supplements/RoutineDetailPage.tsx: un 409 `routine_has_marks` cierra el diálogo, vuelve a leer la rutina y muestra el mensaje que sugiere finalizar; pruebas en frontend/src/features/supplements/RoutineDetailPage.test.tsx (con `hasMarks: true` no hay botón; 409 → mensaje)
+- [X] T018 [US2] En frontend/src/features/supplements/RoutineDetailPage.tsx: un 409 `routine_has_marks` cierra el diálogo, vuelve a leer la rutina y muestra el mensaje que sugiere finalizar; pruebas en frontend/src/features/supplements/RoutineDetailPage.test.tsx (con `hasMarks: true` no hay botón; 409 → mensaje)
 
 ---
 
 ## Fase 5: Historia de Usuario 3 - Solo quien puede todo (P3)
 
-- [ ] T019 [US3] Pruebas en frontend/src/features/supplements/RoutineDetailPage.test.tsx: un Cuidador (`canManage` falso) no ve «Eliminar»; con el plan vencido la dueña sí lo ve
+- [X] T019 [US3] Pruebas en frontend/src/features/supplements/RoutineDetailPage.test.tsx: un Cuidador (`canManage` falso) no ve «Eliminar»; con el plan vencido la dueña sí lo ve
 - [X] T020 [US3] Pruebas de nivel en backend/internal/supplement/delete_test.go: Cuidador → 403, la rutina personal de otra persona → 403; la tabla de backend/internal/server/router_test.go cubre los roles
 
 ---

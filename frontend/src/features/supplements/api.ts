@@ -22,6 +22,8 @@ export class SupplementApiError extends ApiError<
   | 'routine_not_active'
   /** «Realizado» found no dose left to mark in that day (409). */
   | 'nothing_to_mark'
+  /** Deleting found a marked dose: it is finished, not deleted (409, specs/060). */
+  | 'routine_has_marks'
   | 'unknown'
 > {
   /** For `routine_limit`: the maximum the server says. */
@@ -49,6 +51,7 @@ function errorFor(status: number, body: ErrorBody, fallback: string): Supplement
   if (status === 409 && body.error === 'routine_ended') return new SupplementApiError('routine_ended', message)
   if (status === 409 && body.error === 'nothing_to_mark') return new SupplementApiError('nothing_to_mark', message)
   if (status === 409 && body.error === 'routine_not_active') return new SupplementApiError('routine_not_active', message)
+  if (status === 409 && body.error === 'routine_has_marks') return new SupplementApiError('routine_has_marks', message)
   if (status === 422 && body.error === 'freemium_consultation_limit_exceeded' && body.reason === 'supplements') {
     return new SupplementApiError('plan_required', message)
   }
@@ -70,7 +73,7 @@ async function call<T>(method: string, path: string, token: string | null, body?
     headers: { ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...withAuthHeader(token) },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   })
-  // 204: nothing to read (the personal notice's «Entendido»).
+  // 204: nothing to read (the personal notice's «Entendido», a delete).
   const json = res.status === 204 ? undefined : await res.json()
   if (res.ok) return json as T
   throw errorFor(res.status, json ?? {}, fallback)
@@ -108,6 +111,11 @@ export function resumeRoutine(routineId: string, utcOffsetMinutes: number, token
 
 export function finishRoutine(routineId: string, token: string | null): Promise<Routine> {
   return call('POST', `/routines/${routineId}/finish`, token, undefined, 'Unexpected error finishing the routine')
+}
+
+/** DELETE /routines/{id} (specs/060): only while none of its doses is marked; 204. */
+export function deleteRoutine(routineId: string, token: string | null): Promise<void> {
+  return call('DELETE', `/routines/${routineId}`, token, undefined, 'Unexpected error deleting the routine')
 }
 
 /** PUT /routines/{id}/my-reminders: the session's own reminders of the routine, on or off. */
