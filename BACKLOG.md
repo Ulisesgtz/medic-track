@@ -13,7 +13,7 @@ y se elimina (o se marca) aquí.
 Preguntas que se hicieron durante la homologación a los mocks (`specs/007-homologar-pantallas-a-mocks/`) y que el usuario
 dejó pendientes (2026-09-21). No se construye nada de esto hasta que se responda.
 
-- **Editar consultas y medicamentos** — hoy son inmutables (spec 004, FR-014); solo se marcan las tomas, y desde 2026-09-20
+- ~~**Editar consultas y medicamentos**~~ — **hecho** en la spec 051 (ver abajo). Hoy son inmutables (spec 004, FR-014); solo se marcan las tomas, y desde 2026-09-20
   "Primera toma" (antes "Desde") es obligatoria al crear. Si se quiere poder corregir una consulta ya guardada hay que decidir: qué se edita
   (solo nombre y dosis, o también frecuencia, duración y hora de inicio); qué pasa con las tomas ya marcadas si cambia el
   horario (regenerarlas y perder las marcas, o que el cambio solo aplique a las tomas futuras); si también se edita doctor,
@@ -150,7 +150,7 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
 - ~~**El titular (padre o madre) con sus propias consultas y actividades, como los hijos**~~ — **hecho** en la spec 058 (`specs/058-consultas-del-titular/`): perfil `/yo`, privado por omisión con interruptor para los Tutores, plan completo, historial y PDF. Quedó fuera:
   - **«+ Agregar cita» propia sin consulta en el frontend**: el API ya la tiene (`POST /accounts/{id}/appointments`); el perfil muestra la próxima cita propia pero no hay pantalla para crear una suelta ni una lista de citas propias (las de sus consultas sí, desde el detalle de la consulta).
   - **Aviso de privacidad (documento legal)**: decir que la app guarda datos de salud del adulto y cómo los comparte; paso del dueño antes de lanzar.
-- **Editar y eliminar suplementos y actividades** (pedido del dueño, 2026-11-02) — hoy se editan, se pausan y se finalizan, pero no se borran (specs 033 y 035: «Finalizar» es definitivo y lo pasado queda). Se pide poder **eliminar** uno (por ejemplo, capturado por error), del hijo y personal. Por decidir: qué pasa con sus tomas ya marcadas y sus avisos, quién puede (dueña y Tutor), la confirmación neutral y si se borra de verdad o se oculta.
+- ~~**Editar y eliminar suplementos y actividades**~~ — **hecho** en la spec 060 (`specs/060-eliminar-suplementos-actividades/`, decidido 2026-11-04): se elimina de verdad **solo si ninguna toma está marcada** (con marcas se finaliza y su historial queda), lo hacen la dueña y un Tutor (lo personal, solo su dueña) en cualquier plan, con confirmación neutral; se borran también sus tomas y avisos. Editar ya existía (spec 033).
 - **Las consultas solo se editan, nunca se borran** (decisión del dueño, 2026-11-02) — la edición ya existe (spec 051); una consulta completa **no** se elimina. Solo se puede quitar un medicamento sin tomas marcadas al editar (spec 051).
 
 - La pantalla de detalle de hijo (consultas médicas, recetas, medicamentos, horarios de toma y

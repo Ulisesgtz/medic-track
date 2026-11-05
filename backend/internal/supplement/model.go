@@ -138,6 +138,8 @@ type RoutineView struct {
 	PaidPlan bool
 	// MyReminders: the session has not turned this routine's reminders off («Tus avisos»); filled by the service.
 	MyReminders bool
+	// HasMarks: some dose of it was marked, on any day; then it can't be deleted, only finished (specs/060).
+	HasMarks bool
 }
 
 // RoutineList is a child's routines with the numbers the section needs.

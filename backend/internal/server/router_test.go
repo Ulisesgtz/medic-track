@@ -274,6 +274,8 @@ func (w *world) routes() []struct {
 		{"pause routine", http.MethodPost, "/routines/" + w.routineA.String() + "/pause", "", http.StatusOK},
 		{"resume routine", http.MethodPost, "/routines/" + w.routineA.String() + "/resume", `{"utcOffsetMinutes":0}`, http.StatusUnprocessableEntity},
 		{"finish routine", http.MethodPost, "/routines/" + w.routineA.String() + "/finish", "", http.StatusOK},
+		// Specs/060: «mark routine dose» above marked one of its doses, so it is finished, never deleted.
+		{"delete routine", http.MethodDelete, "/routines/" + w.routineA.String(), "", http.StatusConflict},
 		// Specs/033, part 2: the next appointment. Reading, one's own reminders and marking never need the plan; creating and editing do (an empty form is a 400 first).
 		// Specs/047: an empty name is a 400 before the plan is asked; it is a Full route (a Caregiver gets 403).
 		{"list device links", http.MethodGet, "/children/" + w.childA.String() + "/device-links", "", http.StatusOK},
@@ -394,7 +396,7 @@ func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 // fullRoutes need the full level (the owner or a Tutor); every other protected route needs only Mark (see and mark).
 var (
 	ownRoutes  = map[string]bool{"search own consultations": true, "own history options": true, "export own history": true, "consultation sharing": true, "own consultations": true, "create own consultation": true, "own overview": true, "own appointments": true, "create own appointment": true, "get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true, "get subscription": true, "subscribe": true, "cancel subscription": true}
-	fullRoutes = map[string]bool{"add child": true, "create consultation": true, "edit consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "record vaccination": true, "correct vaccination": true, "delete vaccination": true, "save card photo": true, "delete card photo": true, "edit appointment": true, "create device link": true, "remove device link": true, "choose device reminders": true, "mark appointment": true}
+	fullRoutes = map[string]bool{"delete routine": true, "add child": true, "create consultation": true, "edit consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "record vaccination": true, "correct vaccination": true, "delete vaccination": true, "save card photo": true, "delete card photo": true, "edit appointment": true, "create device link": true, "remove device link": true, "choose device reminders": true, "mark appointment": true}
 )
 
 func (w *world) setOwnerPlan(t *testing.T, plan string) {

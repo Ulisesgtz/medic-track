@@ -7,6 +7,7 @@ import {
   fetchPersonalRoutines,
   fetchRoutine,
   fetchRoutines,
+  deleteRoutine,
   finishRoutine,
   markRoutineDone,
   pauseRoutine,
@@ -70,17 +71,19 @@ describe('requests', () => {
     await pauseRoutine('r1', null)
     await resumeRoutine('r1', -360, null)
     await finishRoutine('r1', null)
+    await deleteRoutine('r1', null)
     await setMyReminders('r1', false, null)
     await updateRoutineDose('r1', 'd1', true, null)
     expect(mock.mock.calls.map(([url, init]) => `${init.method} ${String(url).replace('http://localhost:8080', '')}`)).toEqual([
       'POST /routines/r1/pause',
       'POST /routines/r1/resume',
       'POST /routines/r1/finish',
+      'DELETE /routines/r1',
       'PUT /routines/r1/my-reminders',
       'PATCH /routines/r1/doses/d1',
     ])
     expect(JSON.parse(mock.mock.calls[1][1].body)).toEqual({ utcOffsetMinutes: -360 })
-    expect(JSON.parse(mock.mock.calls[3][1].body)).toEqual({ enabled: false })
+    expect(JSON.parse(mock.mock.calls[4][1].body)).toEqual({ enabled: false })
     expect(mock.mock.calls[0][1].headers['Content-Type']).toBeUndefined()
   })
 })

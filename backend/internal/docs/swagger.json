@@ -5020,6 +5020,56 @@
                     }
                 }
             },
+            "delete": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Only while none of its doses was marked (409 routine_has_marks: finish it instead, its history stays); then it\nand its doses, reminders and «Tus avisos» are gone for good. The owner or a Tutor (a person's own: only they), on\nany plan.",
+                "tags": [
+                    "supplements"
+                ],
+                "summary": "Delete a supplement or activity captured by mistake",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Routine UUID",
+                        "name": "routineId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't delete this routine",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such routine",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "It has marked doses (routine_has_marks)",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    }
+                }
+            },
             "patch": {
                 "security": [
                     {
@@ -8160,6 +8210,11 @@
                 "firstDate": {
                     "type": "string",
                     "example": "2026-10-01"
+                },
+                "hasMarks": {
+                    "description": "HasMarks: some dose was marked, on any day: it can't be deleted, only finished (specs/060).",
+                    "type": "boolean",
+                    "example": false
                 },
                 "id": {
                     "type": "string",

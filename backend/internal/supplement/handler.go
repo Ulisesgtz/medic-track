@@ -66,16 +66,18 @@ type routineResponse struct {
 	IntervalMinutes *int    `json:"intervalMinutes" example:"60"`
 	FirstDate       string  `json:"firstDate" example:"2026-10-01"`
 	EndDate         *string `json:"endDate" example:"2026-10-20"`
-	Status        string   `json:"status" enums:"active,paused,ended" example:"active"`
-	PausedAt      *string  `json:"pausedAt"`
-	EndedAt       *string  `json:"endedAt"`
+	Status          string  `json:"status" enums:"active,paused,ended" example:"active"`
+	PausedAt        *string `json:"pausedAt"`
+	EndedAt         *string `json:"endedAt"`
 	// CreatedBy is the first name of who created it (never an e-mail).
 	CreatedBy string `json:"createdBy" example:"Ana"`
 	CreatedAt string `json:"createdAt" example:"2026-10-01T14:00:00Z"`
 	// MyReminders: the session has not turned this routine's reminders off («Tus avisos»); each person decides for themselves.
 	MyReminders bool `json:"myReminders" example:"true"`
 	// CanEdit: the session can do everything AND the owner's plan is paid (so the app doesn't offer a button that would answer 422/403).
-	CanEdit  bool             `json:"canEdit" example:"true"`
+	CanEdit bool `json:"canEdit" example:"true"`
+	// HasMarks: some dose was marked, on any day: it can't be deleted, only finished (specs/060).
+	HasMarks bool             `json:"hasMarks" example:"false"`
 	Progress progressResponse `json:"progress"`
 	Doses    []doseResponse   `json:"doses"`
 	// NextDose: the next dose ahead of the window, for an active routine with no dose in it and always for an active activity at fixed hours.
@@ -179,7 +181,7 @@ func toRoutineResponse(v RoutineView, level access.Level, actor uuid.UUID) routi
 		WindowStart: optString(v.WindowStart), WindowEnd: optString(v.WindowEnd),
 		FirstDate: v.FirstDate, EndDate: optString(v.EndDate), Status: string(v.Status),
 		PausedAt: optTime(v.PausedAt), EndedAt: optTime(v.EndedAt), CreatedBy: v.CreatedBy, CreatedAt: formatTime(v.CreatedAt),
-		CanEdit: level == access.Full && v.PaidPlan, MyReminders: v.MyReminders,
+		CanEdit: level == access.Full && v.PaidPlan, MyReminders: v.MyReminders, HasMarks: v.HasMarks,
 		Progress: progressResponse{Taken: v.Progress.Taken, Elapsed: v.Progress.Elapsed, Total: v.Progress.Total},
 		Doses:    make([]doseResponse, 0, len(v.Doses)),
 	}

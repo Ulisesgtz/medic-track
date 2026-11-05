@@ -51,6 +51,8 @@ export interface Routine {
   myReminders: boolean
   /** The session can do everything AND the plan is paid: the buttons that would answer 422/403 are not offered. */
   canEdit: boolean
+  /** Some dose was marked (now): it can't be deleted, only finished (specs/060). Optional for an answer from before the field. */
+  hasMarks?: boolean
   progress: RoutineProgress
   /** Only the doses of the asked window. */
   doses: RoutineDose[]

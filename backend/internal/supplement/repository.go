@@ -40,7 +40,8 @@ const routineSelect = `
 	       r.paused_at, r.ended_at, r.generated_until, r.created_at, c.first_name,
 	       CASE WHEN r.child_id IS NULL AND (owner.plan = 'paid' OR EXISTS (
 		       SELECT 1 FROM family_members fm JOIN accounts fo ON fo.id = fm.family_account_id
-		       WHERE fm.account_id = owner.id AND fm.status = 'active' AND fo.plan = 'paid')) THEN 'paid' ELSE owner.plan::text END
+		       WHERE fm.account_id = owner.id AND fm.status = 'active' AND fo.plan = 'paid')) THEN 'paid' ELSE owner.plan::text END,
+	       EXISTS (SELECT 1 FROM supplement_doses sd WHERE sd.routine_id = r.id AND sd.taken)
 	FROM supplement_routines r
 	JOIN accounts c ON c.id = r.created_by_account_id
 	JOIN accounts owner ON owner.id = r.account_id`
@@ -61,7 +62,7 @@ func scanRoutine(row pgx.Row) (scanned, error) {
 	v := &s.view
 	err := row.Scan(&v.ID, &v.AccountID, &v.ChildID, &kind, &v.Name, &v.Note, &period, &times, &weekdays, &windowStart,
 		&windowEnd, &intervalMinutes, &v.FirstDate, &endDate, &offset, &status, &v.PausedAt, &v.EndedAt, &s.generatedUntil,
-		&v.CreatedAt, &v.CreatedBy, &plan)
+		&v.CreatedAt, &v.CreatedBy, &plan, &v.HasMarks)
 	if err != nil {
 		return s, err
 	}

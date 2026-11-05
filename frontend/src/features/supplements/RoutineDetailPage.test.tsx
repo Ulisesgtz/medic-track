@@ -18,6 +18,7 @@ function renderDetail(path = '/suplementos/r1') {
           <Route path="/actividades/:routineId/editar" element={<div>EDITAR ACTIVIDAD</div>} />
           <Route path="/children/:childId" element={<div>HIJO</div>} />
           <Route path="/home" element={<div>HOME</div>} />
+          <Route path="/yo" element={<div>YO</div>} />
           <Route path="/planes" element={<div>PLANES</div>} />
         </Routes>
       </MemoryRouter>
@@ -33,6 +34,7 @@ const active = routine({
   firstDate: '2026-10-02',
   endDate: '2026-10-20',
   progress: { taken: 12, elapsed: 13, total: 19 },
+  hasMarks: true,
   doses: [
     dose('a', 6, { taken: true, takenBy: { name: 'Rosa', at: at(6, 10), mine: false } }),
     dose('b', 14, { status: 'due' }),
@@ -335,7 +337,7 @@ describe('RoutineDetailPage · actividad', () => {
   })
 
   it('does not offer a Caregiver to take back a mark that is not theirs', async () => {
-    api(activity(), {}, caregiverAccount)
+    api(activity({ hasMarks: true }), {}, caregiverAccount)
     renderDetail(open)
     expect(await screen.findByText('Un Tutor puede pausar, editar o finalizar esta actividad.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Quitar la última marca' })).not.toBeInTheDocument()
@@ -502,5 +504,95 @@ describe('RoutineDetailPage · actividad', () => {
     api(activity(), { 'GET /routines/a1': { status: 403, body: { error: 'forbidden' } } })
     renderDetail(open)
     expect(await screen.findByText(/No se encontró esta actividad\./)).toBeInTheDocument()
+  })
+})
+
+describe('RoutineDetailPage · eliminar (specs/060)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(TODAY)
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
+  const setup = () => userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  const fresh = routine({ id: 'r1', name: 'Zinc', hasMarks: false, doses: [dose('d1', 8)] })
+
+  it('deletes one with no marks only after the neutral confirmation, and goes back to the child', async () => {
+    const mock = api(fresh, { 'DELETE /routines/r1': { status: 204, body: undefined } })
+    renderDetail()
+    const user = setup()
+    await user.click(await screen.findByRole('button', { name: 'Eliminar suplemento' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByRole('heading', { name: '¿Eliminar Zinc?' })).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }))
+    expect(callsOf(mock)).not.toContain('DELETE /routines/r1')
+
+    await user.click(screen.getByRole('button', { name: 'Eliminar suplemento' }))
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Eliminar' }))
+    expect(await screen.findByText('HIJO')).toBeInTheDocument()
+    expect(callsOf(mock)).toContain('DELETE /routines/r1')
+    // The deleted routine is not asked for again (its query left the cache as the page left).
+    expect(callsOf(mock).filter((c) => c === 'GET /routines/r1')).toHaveLength(1)
+  })
+
+  it('is offered on a finished or paused one without marks, never with a mark or an answer without the field', async () => {
+    api(routine({ id: 'r1', name: 'Zinc', status: 'ended', endedAt: new Date(2026, 9, 1).toISOString(), hasMarks: false, doses: [] }))
+    const first = renderDetail()
+    expect(await screen.findByRole('button', { name: 'Eliminar suplemento' })).toBeInTheDocument()
+    first.unmount()
+
+    api(routine({ id: 'r1', name: 'Zinc', hasMarks: true }))
+    const second = renderDetail()
+    expect(await screen.findByRole('button', { name: 'Finalizar suplemento' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Eliminar suplemento' })).not.toBeInTheDocument()
+    second.unmount()
+
+    api(routine({ id: 'r1', name: 'Zinc', hasMarks: undefined }))
+    renderDetail()
+    expect(await screen.findByRole('button', { name: 'Finalizar suplemento' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Eliminar suplemento' })).not.toBeInTheDocument()
+  })
+
+  it('says a dose was marked meanwhile and suggests finishing; the routine is read again', async () => {
+    const mock = api(fresh, { 'DELETE /routines/r1': { status: 409, body: { error: 'routine_has_marks' } } })
+    renderDetail()
+    const user = setup()
+    await user.click(await screen.findByRole('button', { name: 'Eliminar suplemento' }))
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Eliminar' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Este suplemento ya tiene tomas marcadas, así que no se puede eliminar. Puedes finalizarlo.')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await waitFor(() => expect(callsOf(mock).filter((c) => c === 'GET /routines/r1').length).toBeGreaterThan(1))
+  })
+
+  it('keeps the dialog open when it could not delete', async () => {
+    api(fresh, { 'DELETE /routines/r1': { status: 500, body: {} } })
+    renderDetail()
+    const user = setup()
+    await user.click(await screen.findByRole('button', { name: 'Eliminar suplemento' }))
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Eliminar' }))
+    expect(await within(await screen.findByRole('dialog')).findByRole('alert')).toHaveTextContent('No se pudo eliminar. Inténtalo de nuevo.')
+  })
+
+  it('a Caregiver never sees it, and reads that a Tutor can delete it', async () => {
+    api(fresh, {}, caregiverAccount)
+    renderDetail()
+    expect(await screen.findByRole('heading', { name: 'Zinc', level: 1 })).toBeInTheDocument()
+    expect(screen.getByText('Un Tutor puede pausar, editar, finalizar o eliminar este suplemento.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Eliminar suplemento' })).not.toBeInTheDocument()
+  })
+
+  it('the person’s own activity, also with the plan lapsed, goes back to their profile', async () => {
+    const mock = api(activity({ childId: null, canEdit: false, hasMarks: false }), { 'DELETE /routines/a1': { status: 204, body: undefined } }, account({ plan: 'free' }))
+    renderDetail('/actividades/a1')
+    const user = setup()
+    await user.click(await screen.findByRole('button', { name: 'Eliminar actividad' }))
+    const dialog = await screen.findByRole('dialog')
+    expect(within(dialog).getByText('La actividad, todos sus horarios y sus avisos.')).toBeInTheDocument()
+    await user.click(within(dialog).getByRole('button', { name: 'Eliminar' }))
+    expect(await screen.findByText('YO')).toBeInTheDocument()
+    expect(callsOf(mock)).toContain('DELETE /routines/a1')
   })
 })

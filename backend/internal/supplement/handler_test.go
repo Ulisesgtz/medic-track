@@ -98,6 +98,7 @@ func newEnv(t *testing.T, plan account.Plan) *env {
 	r.With(fullRoutine).Post("/routines/{routineId}/pause", h.PauseRoutine)
 	r.With(fullRoutine).Post("/routines/{routineId}/resume", h.ResumeRoutine)
 	r.With(fullRoutine).Post("/routines/{routineId}/finish", h.FinishRoutine)
+	r.With(fullRoutine).Delete("/routines/{routineId}", h.DeleteRoutine)
 	e.router = r
 	return e
 }
