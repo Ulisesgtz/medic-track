@@ -251,6 +251,8 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(fullRoutine).Post("/routines/{routineId}/pause", d.Supplement.PauseRoutine)
 		r.With(fullRoutine).Post("/routines/{routineId}/resume", d.Supplement.ResumeRoutine)
 		r.With(fullRoutine).Post("/routines/{routineId}/finish", d.Supplement.FinishRoutine)
+		// Specs/060: delete one captured by mistake — only with no marked dose (otherwise it is finished), any plan.
+		r.With(fullRoutine).Delete("/routines/{routineId}", d.Supplement.DeleteRoutine)
 
 		// The person's own routines (specs/033, part 3): only their own account, never through a child.
 		r.With(ownsAccount).Get("/accounts/{accountId}/routines", d.Supplement.ListPersonalRoutines)

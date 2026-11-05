@@ -137,11 +137,11 @@ func TestGenerate(t *testing.T) {
 func TestGenerateBadData(t *testing.T) {
 	from, to := utc("2026-10-05 00:00"), utc("2026-10-07 00:00")
 	for name, r := range map[string]Routine{
-		"bad first date":    {Period: PeriodDaily, Times: []string{"08:00"}, FirstDate: "nope"},
-		"bad end date":      {Period: PeriodDaily, Times: []string{"08:00"}, FirstDate: "2026-10-05", EndDate: "nope"},
-		"bad window start":  {Period: PeriodWindow, WindowStart: "xx", WindowEnd: "10:00", IntervalMinutes: 30, FirstDate: "2026-10-05"},
-		"bad window end":    {Period: PeriodWindow, WindowStart: "08:00", WindowEnd: "yy", IntervalMinutes: 30, FirstDate: "2026-10-05"},
-		"no interval":       {Period: PeriodWindow, WindowStart: "08:00", WindowEnd: "10:00", FirstDate: "2026-10-05"},
+		"bad first date":   {Period: PeriodDaily, Times: []string{"08:00"}, FirstDate: "nope"},
+		"bad end date":     {Period: PeriodDaily, Times: []string{"08:00"}, FirstDate: "2026-10-05", EndDate: "nope"},
+		"bad window start": {Period: PeriodWindow, WindowStart: "xx", WindowEnd: "10:00", IntervalMinutes: 30, FirstDate: "2026-10-05"},
+		"bad window end":   {Period: PeriodWindow, WindowStart: "08:00", WindowEnd: "yy", IntervalMinutes: 30, FirstDate: "2026-10-05"},
+		"no interval":      {Period: PeriodWindow, WindowStart: "08:00", WindowEnd: "10:00", FirstDate: "2026-10-05"},
 	} {
 		if got := Generate(r, from, to); len(got) != 0 {
 			t.Errorf("%s: want nothing, got %v", name, got)

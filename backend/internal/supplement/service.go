@@ -169,6 +169,11 @@ func (s *Service) Finish(ctx context.Context, routineID uuid.UUID, actor uuid.UU
 	return s.viewToday(ctx, routineID, 0, actor)
 }
 
+// Delete removes a routine with no marked dose (specs/060).
+func (s *Service) Delete(ctx context.Context, routineID uuid.UUID) error {
+	return s.repo.Delete(ctx, routineID)
+}
+
 // SetMyReminders turns the session's own reminders of the routine on or off.
 func (s *Service) SetMyReminders(ctx context.Context, routineID, accountID uuid.UUID, enabled bool) error {
 	return s.repo.SetMuted(ctx, routineID, accountID, !enabled)

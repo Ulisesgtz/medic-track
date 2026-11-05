@@ -56,6 +56,7 @@ func newPersonalEnv(t *testing.T, plan account.Plan) *personalEnv {
 	r.With(fullRoutine).Post("/routines/{routineId}/pause", h.PauseRoutine)
 	r.With(fullRoutine).Post("/routines/{routineId}/resume", h.ResumeRoutine)
 	r.With(fullRoutine).Post("/routines/{routineId}/finish", h.FinishRoutine)
+	r.With(fullRoutine).Delete("/routines/{routineId}", h.DeleteRoutine)
 	e.router = r
 
 	var care uuid.UUID
@@ -63,7 +64,9 @@ func newPersonalEnv(t *testing.T, plan account.Plan) *personalEnv {
 	return &personalEnv{env: e, careAccountID: care}
 }
 
-func (e *personalEnv) personalPath(account uuid.UUID) string { return "/accounts/" + account.String() + "/routines" }
+func (e *personalEnv) personalPath(account uuid.UUID) string {
+	return "/accounts/" + account.String() + "/routines"
+}
 
 func (e *personalEnv) createPersonal(t *testing.T, clerkID string, account uuid.UUID, name string) string {
 	t.Helper()

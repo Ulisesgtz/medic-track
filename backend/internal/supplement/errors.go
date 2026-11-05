@@ -20,6 +20,8 @@ var (
 	ErrNothingToMark = errors.New("nothing to mark")
 	// ErrPlanRequired: the owner account is not on the paid plan (creating, editing and resuming are the paid plan's).
 	ErrPlanRequired = errors.New("the plan is not paid")
+	// ErrRoutineHasMarks: a routine with a marked dose is never deleted, only finished (specs/060: its history stays).
+	ErrRoutineHasMarks = errors.New("routine has marked doses")
 )
 
 // RoutineLimitError wraps ErrRoutineLimit with the actual limit.

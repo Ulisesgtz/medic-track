@@ -40,6 +40,7 @@ func TestRepository_DatabaseUnavailable(t *testing.T) {
 	require.Error(t, repo.Resume(ctx, id, 0))
 	require.Error(t, repo.Update(ctx, id, valid))
 	require.Error(t, repo.Finish(ctx, id))
+	require.Error(t, repo.Delete(ctx, id))
 	require.Error(t, repo.SetMuted(ctx, id, actor, true))
 	_, err = repo.MutedAmong(ctx, actor, []uuid.UUID{id})
 	require.Error(t, err)
@@ -65,6 +66,7 @@ func TestService_DatabaseUnavailable(t *testing.T) {
 	require.Error(t, err)
 	_, err = svc.Finish(ctx, id, actor)
 	require.Error(t, err)
+	require.Error(t, svc.Delete(ctx, id))
 	require.Error(t, svc.SetMyReminders(ctx, id, actor, true))
 	_, err = svc.MarkDose(ctx, id, id, true, supplement.Actor{AccountID: actor})
 	require.Error(t, err)
@@ -89,6 +91,7 @@ func TestHandlers_DatabaseUnavailableAnswer500(t *testing.T) {
 	r.Post("/routines/{routineId}/pause", h.PauseRoutine)
 	r.Post("/routines/{routineId}/resume", h.ResumeRoutine)
 	r.Post("/routines/{routineId}/finish", h.FinishRoutine)
+	r.Delete("/routines/{routineId}", h.DeleteRoutine)
 
 	child, routine, dose := uuid.NewString(), uuid.NewString(), uuid.NewString()
 	from := time.Now().UTC().Truncate(24 * time.Hour)
@@ -104,6 +107,7 @@ func TestHandlers_DatabaseUnavailableAnswer500(t *testing.T) {
 		"pause":  httptest.NewRequest(http.MethodPost, "/routines/"+routine+"/pause", nil),
 		"resume": httptest.NewRequest(http.MethodPost, "/routines/"+routine+"/resume", strings.NewReader(`{"utcOffsetMinutes":0}`)),
 		"finish": httptest.NewRequest(http.MethodPost, "/routines/"+routine+"/finish", nil),
+		"delete": httptest.NewRequest(http.MethodDelete, "/routines/"+routine, nil),
 	} {
 		rec := httptest.NewRecorder()
 		r.ServeHTTP(rec, req)
@@ -129,6 +133,7 @@ func TestHandlers_UnknownRoutinesAndChildrenAreNotFound(t *testing.T) {
 	r.Post("/routines/{routineId}/pause", h.PauseRoutine)
 	r.Post("/routines/{routineId}/resume", h.ResumeRoutine)
 	r.Post("/routines/{routineId}/finish", h.FinishRoutine)
+	r.Delete("/routines/{routineId}", h.DeleteRoutine)
 	r.Put("/routines/{routineId}/my-reminders", h.SetMyReminders)
 
 	from := time.Now().UTC().Truncate(24 * time.Hour)
@@ -144,6 +149,8 @@ func TestHandlers_UnknownRoutinesAndChildrenAreNotFound(t *testing.T) {
 		"resume": httptest.NewRequest(http.MethodPost, "/routines/"+unknown+"/resume", strings.NewReader(`{"utcOffsetMinutes":0}`)),
 		"finish": httptest.NewRequest(http.MethodPost, "/routines/"+unknown+"/finish", nil),
 		"remind": httptest.NewRequest(http.MethodPut, "/routines/"+unknown+"/my-reminders", strings.NewReader(`{"enabled":true}`)),
+		"delete": httptest.NewRequest(http.MethodDelete, "/routines/"+unknown, nil),
+		"bad id": httptest.NewRequest(http.MethodDelete, "/routines/not-a-uuid", nil),
 	} {
 		rec := httptest.NewRecorder()
 		r.ServeHTTP(rec, req)

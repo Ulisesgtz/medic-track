@@ -187,6 +187,41 @@ func (r *Repository) Finish(ctx context.Context, routineID uuid.UUID) error {
 	return commit(ctx, tx)
 }
 
+// Delete removes a routine captured by mistake (specs/060): only if none of its doses was ever marked (ErrRoutineHasMarks —
+// then it is finished, and its history stays). One transaction: the owner account and the routine are locked as for every
+// change, and its doses `FOR UPDATE`, so a mark at the same moment either lands first (and the delete is refused) or waits and
+// finds the dose gone. Everything of it goes: the reminders sent to people and to a child's phone, «Tus avisos», the doses
+// and the routine. Any plan: correcting one's own record is never charged (Principio IV).
+func (r *Repository) Delete(ctx context.Context, routineID uuid.UUID) error {
+	tx, _, err := r.lockRoutine(ctx, routineID)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var marked bool
+	if err := tx.QueryRow(ctx, `
+		SELECT coalesce(bool_or(taken), false) FROM (SELECT taken FROM supplement_doses WHERE routine_id = $1 FOR UPDATE) d`,
+		routineID).Scan(&marked); err != nil {
+		return fmt.Errorf("locking the doses: %w", err)
+	}
+	if marked {
+		return ErrRoutineHasMarks
+	}
+	for _, statement := range []string{
+		`DELETE FROM supplement_dose_reminders WHERE dose_id IN (SELECT id FROM supplement_doses WHERE routine_id = $1)`,
+		`DELETE FROM child_supplement_dose_reminders WHERE dose_id IN (SELECT id FROM supplement_doses WHERE routine_id = $1)`,
+		`DELETE FROM supplement_doses WHERE routine_id = $1`,
+		`DELETE FROM supplement_muted WHERE routine_id = $1`,
+		`DELETE FROM supplement_routines WHERE id = $1`,
+	} {
+		if _, err := tx.Exec(ctx, statement, routineID); err != nil {
+			return fmt.Errorf("deleting the routine: %w", err)
+		}
+	}
+	return commit(ctx, tx)
+}
+
 // SetMuted turns the reminders of this routine off (muted) or on for ONE person («Tus avisos»): nobody else's change. Only an
 // active routine has reminders to turn off (ErrRoutineNotActive otherwise). Idempotent.
 func (r *Repository) SetMuted(ctx context.Context, routineID, accountID uuid.UUID, muted bool) error {

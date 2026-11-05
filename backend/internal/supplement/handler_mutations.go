@@ -48,6 +48,8 @@ func (h *Handler) writeMutationError(ctx context.Context, w http.ResponseWriter,
 		h.responder.WriteJSON(ctx, w, http.StatusConflict, map[string]string{"error": "routine_ended", "message": "The routine has ended"}, actorPtr(actor))
 	case errors.Is(err, ErrNothingToMark):
 		h.responder.WriteJSON(ctx, w, http.StatusConflict, map[string]string{"error": "nothing_to_mark", "message": "There is no dose left to mark in that window"}, actorPtr(actor))
+	case errors.Is(err, ErrRoutineHasMarks):
+		h.responder.WriteJSON(ctx, w, http.StatusConflict, map[string]string{"error": "routine_has_marks", "message": "A routine with marked doses is finished, not deleted"}, actorPtr(actor))
 	case errors.Is(err, ErrRoutineNotActive):
 		h.responder.WriteJSON(ctx, w, http.StatusConflict, map[string]string{"error": "routine_not_active", "message": "The routine is not active"}, actorPtr(actor))
 	default:
@@ -203,6 +205,34 @@ func (h *Handler) FinishRoutine(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.writeRoutine(w, r, view)
+}
+
+// DeleteRoutine handles DELETE /routines/{routineId} (specs/060).
+//
+//	@Summary		Delete a supplement or activity captured by mistake
+//	@Description	Only while none of its doses was marked (409 routine_has_marks: finish it instead, its history stays); then it
+//	@Description	and its doses, reminders and «Tus avisos» are gone for good. The owner or a Tutor (a person's own: only they), on
+//	@Description	any plan.
+//	@Tags			supplements
+//	@Param			routineId	path	string	true	"Routine UUID"
+//	@Success		204
+//	@Failure		404	{object}	errorDoc	"No such routine"
+//	@Failure		409	{object}	errorDoc	"It has marked doses (routine_has_marks)"
+//	@Security		ClerkSession
+//	@Failure		401	{object}	errorDoc	"No valid Clerk session"
+//	@Failure		403	{object}	errorDoc	"The session can't delete this routine"
+//	@Router			/routines/{routineId} [delete]
+func (h *Handler) DeleteRoutine(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	id, ok := h.routineIDParam(w, r)
+	if !ok {
+		return
+	}
+	if err := h.service.Delete(ctx, id); err != nil {
+		h.writeMutationError(ctx, w, err, actorOf(ctx), "Could not delete the routine")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // SetMyReminders handles PUT /routines/{routineId}/my-reminders.

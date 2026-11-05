@@ -1935,6 +1935,11 @@ definitions:
       firstDate:
         example: "2026-10-01"
         type: string
+      hasMarks:
+        description: 'HasMarks: some dose was marked, on any day: it can''t be deleted,
+          only finished (specs/060).'
+        example: false
+        type: boolean
       id:
         example: a1b2c3d4-0000-0000-0000-000000000000
         type: string
@@ -6055,6 +6060,41 @@ paths:
       tags:
       - reminders
   /routines/{routineId}:
+    delete:
+      description: |-
+        Only while none of its doses was marked (409 routine_has_marks: finish it instead, its history stays); then it
+        and its doses, reminders and «Tus avisos» are gone for good. The owner or a Tutor (a person's own: only they), on
+        any plan.
+      parameters:
+      - description: Routine UUID
+        in: path
+        name: routineId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "403":
+          description: The session can't delete this routine
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "404":
+          description: No such routine
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "409":
+          description: It has marked doses (routine_has_marks)
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Delete a supplement or activity captured by mistake
+      tags:
+      - supplements
     get:
       description: The routine with the doses of [from, to) (one calendar month, at
         most 62 days) and its progress.
