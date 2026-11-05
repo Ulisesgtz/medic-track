@@ -34,6 +34,7 @@ const active = routine({
   firstDate: '2026-10-02',
   endDate: '2026-10-20',
   progress: { taken: 12, elapsed: 13, total: 19 },
+  hasMarks: true,
   doses: [
     dose('a', 6, { taken: true, takenBy: { name: 'Rosa', at: at(6, 10), mine: false } }),
     dose('b', 14, { status: 'due' }),
@@ -336,7 +337,7 @@ describe('RoutineDetailPage · actividad', () => {
   })
 
   it('does not offer a Caregiver to take back a mark that is not theirs', async () => {
-    api(activity(), {}, caregiverAccount)
+    api(activity({ hasMarks: true }), {}, caregiverAccount)
     renderDetail(open)
     expect(await screen.findByText('Un Tutor puede pausar, editar o finalizar esta actividad.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Quitar la última marca' })).not.toBeInTheDocument()
@@ -575,10 +576,11 @@ describe('RoutineDetailPage · eliminar (specs/060)', () => {
     expect(await within(await screen.findByRole('dialog')).findByRole('alert')).toHaveTextContent('No se pudo eliminar. Inténtalo de nuevo.')
   })
 
-  it('a Caregiver never sees it', async () => {
+  it('a Caregiver never sees it, and reads that a Tutor can delete it', async () => {
     api(fresh, {}, caregiverAccount)
     renderDetail()
     expect(await screen.findByRole('heading', { name: 'Zinc', level: 1 })).toBeInTheDocument()
+    expect(screen.getByText('Un Tutor puede pausar, editar, finalizar o eliminar este suplemento.')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Eliminar suplemento' })).not.toBeInTheDocument()
   })
 

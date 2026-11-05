@@ -13,6 +13,8 @@ export interface DeleteCopy {
   /** The server refused: a dose was marked meanwhile (409 routine_has_marks). */
   hasMarks: string
   failed: string
+  /** What a Caregiver reads instead of the buttons: a Tutor can also delete it while nothing is marked. */
+  tutorNote: (deletable: boolean) => string
 }
 
 export function deleteCopy(kind: RoutineKind, personal: boolean): DeleteCopy {
@@ -35,5 +37,7 @@ export function deleteCopy(kind: RoutineKind, personal: boolean): DeleteCopy {
       ? 'Esta actividad ya tiene marcas de «Realizado», así que no se puede eliminar. Puedes finalizarla.'
       : 'Este suplemento ya tiene tomas marcadas, así que no se puede eliminar. Puedes finalizarlo.',
     failed: 'No se pudo eliminar. Inténtalo de nuevo.',
+    tutorNote: (deletable) =>
+      `Un Tutor puede pausar, editar${deletable ? ', finalizar o eliminar' : ' o finalizar'} ${activity ? 'esta actividad' : 'este suplemento'}.`,
   }
 }

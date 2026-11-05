@@ -370,7 +370,7 @@ export function RoutineDetailPage() {
         </div>
       )}
       {!ended && !canManage && !personal && (
-        <p className="text-sm leading-normal text-slate-600">Un Tutor puede pausar, editar o finalizar {activity ? 'esta actividad' : 'este suplemento'}.</p>
+        <p className="text-sm leading-normal text-slate-600">{removal.tutorNote(routine.hasMarks === false)}</p>
       )}
       {actionError && (
         <p role="alert" className="text-[13px] font-semibold text-red-700">

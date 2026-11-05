@@ -3,7 +3,17 @@ import { deleteCopy } from './deleteCopy'
 
 const all = [deleteCopy('supplement', false), deleteCopy('supplement', true), deleteCopy('activity', false), deleteCopy('activity', true)]
 
-const sentences = (c: ReturnType<typeof deleteCopy>) => [c.button, c.title('Zinc'), ...c.rows.flatMap((r) => [r.k, r.v]), c.confirm, c.busy, c.hasMarks, c.failed]
+const sentences = (c: ReturnType<typeof deleteCopy>) => [
+  c.button,
+  c.title('Zinc'),
+  ...c.rows.flatMap((r) => [r.k, r.v]),
+  c.confirm,
+  c.busy,
+  c.hasMarks,
+  c.failed,
+  c.tutorNote(true),
+  c.tutorNote(false),
+]
 
 describe('deleteCopy', () => {
   it('never judges: no evaluating or alarming words (Principio I)', () => {
@@ -26,5 +36,10 @@ describe('deleteCopy', () => {
     expect(deleteCopy('activity', true).rows[0].v).toBe('La actividad, todos sus horarios y sus avisos.')
     expect(deleteCopy('activity', false).button).toBe('Eliminar actividad')
     expect(deleteCopy('supplement', true).title('Omega 3')).toBe('¿Eliminar Omega 3?')
+  })
+
+  it('tells a Caregiver a Tutor can delete it only while nothing is marked', () => {
+    expect(deleteCopy('supplement', false).tutorNote(true)).toBe('Un Tutor puede pausar, editar, finalizar o eliminar este suplemento.')
+    expect(deleteCopy('activity', false).tutorNote(false)).toBe('Un Tutor puede pausar, editar o finalizar esta actividad.')
   })
 })
