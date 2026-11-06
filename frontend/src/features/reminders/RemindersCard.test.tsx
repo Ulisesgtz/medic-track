@@ -47,6 +47,7 @@ describe('RemindersCard', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
     clearPushEnv()
+    localStorage.clear()
   })
 
   it('renders nothing without an account', () => {
@@ -120,6 +121,8 @@ describe('RemindersCard', () => {
     expect(JSON.parse(patch.body)).toEqual({ reminderDetail: 'generic' })
     expect(queryClient.getQueryData<Account>(['accounts', 'me'])?.reminderDetail).toBe('generic')
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    // bugfix/061: the device remembers they were turned on for this account.
+    expect(localStorage.getItem('recordatorios-activos')).toBe('a1')
   })
 
   it('cancelling the choice turns nothing on', async () => {
@@ -206,6 +209,56 @@ describe('RemindersCard', () => {
     expect(await screen.findByRole('button', { name: 'Activar recordatorios' })).toBeInTheDocument()
   })
 
+  // bugfix/061: an update of the app (or the API being deployed) never turns reminders off.
+  it('stays on when the API cannot be reached but they were on here for this same account', async () => {
+    localStorage.setItem('recordatorios-activos', 'a1')
+    stubPushEnv({ permission: 'granted', subscribed: true })
+    stubBackend({ 'POST /accounts/a1/reminder-devices': { status: 503 } })
+    renderCard({ ...account, reminderDetail: 'generic' })
+    expect(await screen.findByText('Activos en este dispositivo.')).toBeInTheDocument()
+  })
+
+  it('subscribes again without asking when the browser lost the subscription but reminders were on here', async () => {
+    localStorage.setItem('recordatorios-activos', 'a1')
+    const env = stubPushEnv({ permission: 'granted', subscribed: false })
+    const fetchMock = stubBackend()
+    renderCard({ ...account, reminderDetail: 'generic' })
+    expect(await screen.findByText('Activos en este dispositivo.')).toBeInTheDocument()
+    expect(env.requestPermission).not.toHaveBeenCalled()
+    expect(env.pushManager.subscribe).toHaveBeenCalledOnce()
+    expect(callsTo(fetchMock, 'POST', '/accounts/a1/reminder-devices')).toHaveLength(1)
+  })
+
+  it('brings nothing back for another account, without the permission, or when subscribing again fails', async () => {
+    localStorage.setItem('recordatorios-activos', 'someone-else')
+    const env = stubPushEnv({ permission: 'granted', subscribed: false })
+    stubBackend()
+    const first = renderCard({ ...account, reminderDetail: 'generic' })
+    expect(await screen.findByRole('button', { name: 'Activar recordatorios' })).toBeInTheDocument()
+    expect(env.pushManager.subscribe).not.toHaveBeenCalled()
+    first.unmount()
+
+    localStorage.setItem('recordatorios-activos', 'a1')
+    const blocked = stubPushEnv({ permission: 'default', subscribed: false })
+    const second = renderCard({ ...account, reminderDetail: 'generic' })
+    expect(await screen.findByRole('button', { name: 'Activar recordatorios' })).toBeInTheDocument()
+    expect(blocked.pushManager.subscribe).not.toHaveBeenCalled()
+    second.unmount()
+
+    const failing = stubPushEnv({ permission: 'granted', subscribed: false })
+    failing.pushManager.subscribe.mockRejectedValue(new Error('needs a gesture'))
+    renderCard({ ...account, reminderDetail: 'generic' })
+    expect(await screen.findByRole('button', { name: 'Activar recordatorios' })).toBeInTheDocument()
+  })
+
+  it('a subscription found on load is remembered as on for this account', async () => {
+    stubPushEnv({ permission: 'granted', subscribed: true })
+    stubBackend()
+    renderCard({ ...account, reminderDetail: 'generic' })
+    expect(await screen.findByText('Activos en este dispositivo.')).toBeInTheDocument()
+    expect(localStorage.getItem('recordatorios-activos')).toBe('a1')
+  })
+
   it('when on: change what they show, and turn them off', async () => {
     const env = stubPushEnv({ permission: 'granted', subscribed: true })
     const fetchMock = stubBackend({ 'PATCH /accounts/a1/reminder-settings': { body: { ...account, reminderDetail: 'detailed' } } })
@@ -224,6 +277,8 @@ describe('RemindersCard', () => {
     expect(await screen.findByRole('button', { name: 'Activar recordatorios' })).toBeInTheDocument()
     expect(env.subscription.unsubscribe).toHaveBeenCalled()
     expect(callsTo(fetchMock, 'POST', '/remove')).toHaveLength(1)
+    // Turned off by the person: nothing brings it back by itself.
+    expect(localStorage.getItem('recordatorios-activos')).toBeNull()
   })
 
   it('says so when turning off or changing fails', async () => {

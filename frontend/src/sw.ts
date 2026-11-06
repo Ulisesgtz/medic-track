@@ -9,6 +9,7 @@ import {
   parsePayload,
   TAKEN_ACTION,
   targetUrl,
+  UNKNOWN_REMINDER,
   type ReminderPayload,
 } from './features/reminders/notification'
 
@@ -26,7 +27,11 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('push', (event) => {
   const payload = parsePayload(() => event.data?.json())
-  if (!payload) return
+  // Every push shows a notification, even one this version can't read: iOS revokes the subscription of an app that doesn't.
+  if (!payload) {
+    event.waitUntil(self.registration.showNotification(UNKNOWN_REMINDER.title, UNKNOWN_REMINDER.options))
+    return
+  }
   const { title, options } = buildNotification(payload)
   event.waitUntil(self.registration.showNotification(title, options))
 })
@@ -34,7 +39,10 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   const payload = event.notification.data as ReminderPayload | undefined
   event.notification.close()
-  if (!payload) return
+  if (!payload) {
+    event.waitUntil(focusOrOpen(self.clients, self.location.origin, '/home'))
+    return
+  }
 
   if (event.action === TAKEN_ACTION && payload.actionToken) {
     event.waitUntil(

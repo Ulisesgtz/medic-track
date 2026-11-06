@@ -1,5 +1,6 @@
 import { base64UrlToUint8Array } from './deviceSupport'
 import { removeDevice } from './api'
+import { forgetReminders } from './deviceChoice'
 
 // The browser side of a reminder device: the service worker registration and its push subscription.
 
@@ -58,6 +59,8 @@ export async function unsubscribeThisDevice(accountId: string, token: string | n
  * For logout: best effort and never longer than `ms` — signing out must not wait on the network.
  */
 export async function unsubscribeOnLogout(accountId: string, token: string | null, ms = 3_000): Promise<void> {
+  // Signing out turns reminders off on this device: nothing is brought back by itself for the next person (bugfix/061).
+  forgetReminders()
   if (!('serviceWorker' in navigator)) return
   try {
     await withTimeout(unsubscribeThisDevice(accountId, token), ms)

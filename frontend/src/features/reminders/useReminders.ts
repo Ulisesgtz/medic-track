@@ -3,6 +3,7 @@ import { useAuth } from '@clerk/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Account } from '../home/types'
 import { fetchReminderConfig, registerDevice, updateReminderDetail, type ReminderDetail } from './api'
+import { forgetReminders, rememberRemindersOn, remindersOnFor } from './deviceChoice'
 import { detectDeviceSupport } from './deviceSupport'
 import { currentSubscription, subscribe, unsubscribeThisDevice } from './pushDevice'
 
@@ -30,16 +31,35 @@ export function useReminders(account: Account | undefined) {
   })
 
   const accountId = account?.id
+  const vapidKey = config.data?.available ? config.data.vapidPublicKey : undefined
   useEffect(() => {
-    if (support !== 'ready' || !accountId) return
+    if (support !== 'ready' || !accountId || !vapidKey) return
     let cancelled = false
     async function sync() {
-      const subscription = await currentSubscription()
-      if (!subscription || Notification.permission !== 'granted') return false
+      if (Notification.permission !== 'granted') return false
+      const mine = remindersOnFor() === accountId
+      let subscription = await currentSubscription()
+      if (!subscription) {
+        // bugfix/061: the browser lost it (iOS does after an update or a push that showed nothing) but the person never turned
+        // reminders off here and the permission is still granted: subscribe again, without asking anything.
+        if (!mine) return false
+        try {
+          subscription = await subscribe(vapidKey as string)
+        } catch {
+          return false
+        }
+      }
       // A subscription already in this browser may have been registered by another tutor (whose session
       // ended without our logout). Registering it again moves it to this account (the backend's upsert),
       // so this browser never shows "on" while delivering someone else's reminders.
-      await registerDevice(accountId as string, subscription.toJSON(), await getToken())
+      try {
+        await registerDevice(accountId as string, subscription.toJSON(), await getToken())
+      } catch {
+        // The API couldn't be reached (it may be being deployed). If reminders were on here for this same account, the server
+        // already has this device: they are still on, and the next visit registers it again.
+        return mine
+      }
+      rememberRemindersOn(accountId as string)
       return true
     }
     sync()
@@ -50,7 +70,7 @@ export function useReminders(account: Account | undefined) {
     }
     // getToken is left out on purpose: its identity isn't stable, and this must run once per account.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [support, accountId])
+  }, [support, accountId, vapidKey])
 
   let state: ReminderState
   if (support !== 'ready') state = support
@@ -80,6 +100,7 @@ export function useReminders(account: Account | undefined) {
       // The choice first: once the device is registered, its reminders say what the tutor chose.
       if (detail && detail !== account.reminderDetail) await saveDetail(detail)
       await registerDevice(account.id, subscription.toJSON(), await getToken())
+      rememberRemindersOn(account.id)
       setSubscribed(true)
     } catch {
       // Never leave a subscription the backend doesn't have: the next visit would register it silently.
@@ -96,6 +117,7 @@ export function useReminders(account: Account | undefined) {
     setError(null)
     try {
       await unsubscribeThisDevice(account.id, await getToken())
+      forgetReminders()
       setSubscribed(false)
     } catch {
       setError('No pudimos desactivar los recordatorios. Revisa tu conexión e inténtalo de nuevo.')
