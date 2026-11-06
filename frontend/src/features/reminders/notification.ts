@@ -195,6 +195,16 @@ export async function markTaken(fetchFn: typeof fetch, apiBaseUrl: string, token
 }
 
 /** Shown when "Tomada" couldn't mark the dose (no connection, reminder too old). */
+/**
+ * bugfix/061: a push this version of the app doesn't understand (sent by a newer API while the phone still runs the old service
+ * worker) still shows something. iOS takes the push subscription away from an app that receives a push and shows nothing, and
+ * the person had to turn reminders on again after an update. Neutral words; a tap opens the app.
+ */
+export const UNKNOWN_REMINDER: ReminderNotification = {
+  title: 'PediTrack',
+  options: { body: 'Tienes un aviso nuevo. Ábrelo en la app.', tag: 'peditrack-aviso', icon: '/icon-192.png' },
+}
+
 export const MARK_FAILED: ReminderNotification = {
   title: 'No se pudo marcar la toma',
   options: { body: 'Ábrela en la app para marcarla.', tag: 'dose-mark-failed', icon: '/icon-192.png' },

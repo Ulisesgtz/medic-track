@@ -71,7 +71,9 @@ describe('pushDevice', () => {
     await expect(done).resolves.toBeUndefined()
   })
 
-  it('unsubscribeOnLogout returns at once in a browser without service workers', async () => {
+  it('unsubscribeOnLogout returns at once in a browser without service workers, and forgets the choice', async () => {
+    localStorage.setItem('recordatorios-activos', 'a1')
     await expect(unsubscribeOnLogout('a1', 'tok')).resolves.toBeUndefined()
+    expect(localStorage.getItem('recordatorios-activos')).toBeNull()
   })
 })

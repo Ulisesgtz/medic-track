@@ -5,6 +5,7 @@ import {
   focusOrOpen,
   markTaken,
   MARK_FAILED,
+  UNKNOWN_REMINDER,
   parsePayload,
   TAKEN_ACTION,
   targetUrl,
@@ -143,5 +144,8 @@ describe('markTaken', () => {
   it('has a Spanish fallback notification', () => {
     expect(MARK_FAILED.title).toBe('No se pudo marcar la toma')
     expect(MARK_FAILED.options.body).toBe('Ábrela en la app para marcarla.')
+    // bugfix/061: a push this version can't read still shows something neutral (iOS revokes a subscription that shows nothing).
+    expect(UNKNOWN_REMINDER.title).toBe('PediTrack')
+    expect(UNKNOWN_REMINDER.options.body).toBe('Tienes un aviso nuevo. Ábrelo en la app.')
   })
 })
