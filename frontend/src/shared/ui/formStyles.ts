@@ -39,3 +39,9 @@ export const fieldRoutine = `min-h-12 w-full min-w-0 ${BORDER_WIDTH} rounded-[14
 
 /** The routine form's multi-line note: the same radius, with the vertical padding of a text area. */
 export const fieldRoutineMultiline = `w-full min-w-0 ${BORDER_WIDTH} rounded-[14px] bg-surface px-4 py-3 text-base leading-normal font-medium text-ink placeholder:text-slate-500 focus:border-2 focus:border-ink focus:outline-none`
+
+/** The medicine cabinet's form (specs/062, mock «Botiquín»): 52 px tall, 14 px radius, a 1.5 px slate border. */
+export const fieldCabinet = `min-h-[52px] w-full min-w-0 ${BORDER_WIDTH} rounded-[14px] border-calendar-muted bg-surface px-3.5 text-base text-ink placeholder:text-calendar-muted focus:border-2 focus:border-ink focus:outline-none`
+
+/** The same field holding what the box's photo or the prescription proposed: 2 px action border on hint. */
+export const fieldCabinetProposed = 'min-h-[52px] w-full min-w-0 rounded-[14px] border-2 border-action bg-hint px-3.5 text-base text-ink focus:border-ink focus:outline-none'
