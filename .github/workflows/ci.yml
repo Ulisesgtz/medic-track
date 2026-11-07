@@ -15,7 +15,9 @@ env:
 jobs:
   backend-coverage:
     name: Backend — tests + >90% coverage gate
-    runs-on: ubuntu-latest
+    # Pinned, never ubuntu-latest: on 2026-11-07 GitHub moved ubuntu-latest to 26.04 and Playwright's WebKit (built for 24.04)
+    # stopped launching (libicudata.so.74 missing) — every PR failed for a reason outside the code. Move it on purpose.
+    runs-on: ubuntu-24.04
     services:
       postgres:
         image: postgres:18
@@ -82,7 +84,9 @@ jobs:
 
   frontend-coverage:
     name: Frontend — unit tests + >90% coverage gate
-    runs-on: ubuntu-latest
+    # Pinned, never ubuntu-latest: on 2026-11-07 GitHub moved ubuntu-latest to 26.04 and Playwright's WebKit (built for 24.04)
+    # stopped launching (libicudata.so.74 missing) — every PR failed for a reason outside the code. Move it on purpose.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -112,7 +116,9 @@ jobs:
 
   frontend-e2e:
     name: E2E ${{ matrix.name }}
-    runs-on: ubuntu-latest
+    # Pinned, never ubuntu-latest: on 2026-11-07 GitHub moved ubuntu-latest to 26.04 and Playwright's WebKit (built for 24.04)
+    # stopped launching (libicudata.so.74 missing) — every PR failed for a reason outside the code. Move it on purpose.
+    runs-on: ubuntu-24.04
     # The suite is split in five jobs (~2 min of tests each instead of ~12 in one): Chromium, which runs every spec, in three shards,
     # and Firefox and WebKit, which run only the CROSS_BROWSER_SPECS of playwright.config.ts. Each job has its own API and database
     # and installs only its browser. The «Frontend — Playwright E2E gate» job below sums them up.
@@ -280,7 +286,9 @@ jobs:
     name: Frontend — Playwright E2E gate
     needs: frontend-e2e
     if: always()
-    runs-on: ubuntu-latest
+    # Pinned, never ubuntu-latest: on 2026-11-07 GitHub moved ubuntu-latest to 26.04 and Playwright's WebKit (built for 24.04)
+    # stopped launching (libicudata.so.74 missing) — every PR failed for a reason outside the code. Move it on purpose.
+    runs-on: ubuntu-24.04
     steps:
       - name: All E2E jobs passed
         run: test "${{ needs.frontend-e2e.result }}" = "success"
