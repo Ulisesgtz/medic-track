@@ -28,7 +28,7 @@ for (const design of designs) {
       await expect(page.getByRole('heading', { name: 'Botiquín', level: 1 })).toBeVisible()
       await page.getByRole('main').getByRole('link', { name: '+ Agregar al botiquín' }).click()
 
-      await page.getByLabel('Nombre').fill('Paracetamol infantil')
+      await page.getByLabel('Nombre', { exact: true }).fill('Paracetamol infantil')
       await page.getByLabel(/Concentración/).fill('160 mg/5 ml')
       await page.getByLabel('Cantidad').fill('2')
       await page.getByRole('button', { name: 'frascos' }).click()
@@ -63,7 +63,7 @@ for (const design of designs) {
       await page.goto(`/consultations/${owner.consultationId}`)
       await page.getByRole('link', { name: 'Agregar Amoxicilina al botiquín' }).click()
       await expect(page.getByText('Desde la consulta del')).toBeVisible()
-      await expect(page.getByLabel('Nombre')).toHaveValue('Amoxicilina')
+      await expect(page.getByLabel('Nombre', { exact: true })).toHaveValue('Amoxicilina')
       await page.getByLabel('Cantidad').fill('1')
       await page.getByRole('button', { name: 'tabletas' }).click()
       await page.getByLabel('Mes').selectOption('1')

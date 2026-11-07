@@ -276,15 +276,18 @@ export function CabinetFormPage() {
             {CABINET.quantity}
           </label>
           <div className={`flex gap-2 ${desktop ? 'flex-col' : 'items-center'}`}>
-            <input
-              id="cabinet-quantity"
-              inputMode="numeric"
-              value={values.quantity}
-              placeholder="0"
-              onChange={(e) => set('quantity', e.target.value.replace(/\D/g, '').slice(0, 3))}
-              className={`${fieldCabinet} ${desktop ? '' : 'w-24 flex-none'}`}
-              aria-invalid={!!errors.quantity}
-            />
+            {/* The field is `w-full` inside its own 96 px box on the phone: with both widths on the input the unit chips got squeezed to nothing and overlapped. */}
+            <div className={desktop ? '' : 'w-24 flex-none'}>
+              <input
+                id="cabinet-quantity"
+                inputMode="numeric"
+                value={values.quantity}
+                placeholder="0"
+                onChange={(e) => set('quantity', e.target.value.replace(/\D/g, '').slice(0, 3))}
+                className={fieldCabinet}
+                aria-invalid={!!errors.quantity}
+              />
+            </div>
             <div role="group" aria-label={CABINET.unit} className="grid flex-1 grid-cols-2 gap-1.5">
               {CABINET_UNITS.map((u) => {
                 const on = values.unit === u
