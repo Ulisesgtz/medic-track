@@ -184,6 +184,22 @@ The appointment is saved by **its own call after the consultation** (`Consultati
 
 `shared/catalog` has `fetchVaccines`/`useVaccines` (public). `PhotoViewer` takes an optional `label` (default «Foto de la receta», so the consultation detail doesn't change). Tests choose the role through `child({ role, readOnly, plan })`: the owner, a Tutor of a paid family, a Caregiver, a Child-role member and a Tutor of a lapsed family are all covered. E2E: `cartilla.spec.ts` (Chromium only, 390 and 1280 px: a Tutor's whole flow with dates and the repeated dose, photos with the 10-photo cap and the blank-image reading, a Caregiver with two sessions who sees and can't write — also by the API —, and another family's person who gets 403), with `vaccinationViaApi` and `vaccinePhotoViaApi` in `e2e/helpers.ts`. `WelcomeDisclaimer` carries the sentence about vaccines and photos (`CurrentDisclaimerVersion` was bumped).
 
+## `src/features/medicineCabinet/` — botiquín de la casa (spec 062)
+
+Built from the delivered mock (`specs/062-botiquin/referencia/Botiquín PediTrack.dc.html`; deviations in `referencia/desviaciones.md`). **The expiry date is only a datum** (Principio I): «Caduca: mar 2027» with the quantity's style, the list alphabetical, never a color or a word about using it.
+
+| File | Role |
+|---|---|
+| `cabinetText.ts` (+ `cabinetLogic.test.ts`) | **Every sentence** (`CABINET`, `quantityText`, `expiresLine`, `listCount`, `addedBy`, `fromConsultation`…); the test forbids «caducad», «vencid», «se puede usar», «tirar»… |
+| `cabinetAccess.ts` | `cabinetAccess(account)` → `ownerId` (the family's owner: `family?.ownerAccountId ?? id`), `canView` (not a Child-role member), `canEdit` (owner, or Tutor of a paid family), `canAdd` (+ paid plan), `isFree`. The server decides again |
+| `CabinetPage.tsx`, `CabinetParts.tsx` | `/botiquin`: header «Botiquín · De toda la familia», search by name without accents (in the phone), «7 medicamentos» / «2 de 7 medicamentos», rows (phone 84 px: thumb, name, strength · quantity, «Caduca: …»; web grid `56px 1.6fr 1fr 1fr 1fr 24px` with «Agregado por …»), skeleton, empty state with the button inside, «Vista de Cuidadora»; «+ Agregar al botiquín» the one solid button (with the plan lapsed it opens `FreemiumLimitModal reason="medicine_cabinet"`) |
+| `CabinetFormPage.tsx`, `cabinetForm.ts`, `parseMedicineText.ts` | `/botiquin/nuevo` and `/botiquin/:itemId/editar`: the box's photo (phone «Tomar foto» with `capture` + «Elegir de la galería» without it; web «Elegir foto»), reduced with `shrinkPhoto`, read with `useOcrSuggestion` **in the phone**; `parseMedicineText` (pure: strength «160 mg/5 ml», expiry only after CAD/EXP/Vence, the likeliest name line) **proposes** into the empty fields only (`applyProposal`; never the quantity), marked «Leído de tu foto» with `fieldCabinetProposed` until edited; states reading / read / no text. Fields from `formStyles.ts` (`fieldCabinet`). From a consultation the router's state brings `{consultationId, name, consultDate, doctor}` («De la receta», «← Consulta»). `useUnsavedWork`; 422 plan → the modal keeping what was typed; 422 cap → a sentence |
+| `CabinetItemPage.tsx` | `/botiquin/:itemId`: the photo (opens `PhotoViewer label="Foto de la caja"`), the data card, «Agregado por / Editado por», «Editar» (outline) and «Quitar del botiquín» (text + the family's `ConfirmDialog`) for who can edit |
+| `CabinetEntry.tsx`, `AddToCabinetLink.tsx` | The home's «Checa tus medicamentos» (under «Tus hijos»; on the free plan with nothing saved it carries «Plan completo» and opens the notice) and the consultation detail's «Agregar al botiquín» per medication (`MedicationCard cabinet`, under the name on the phone, at its right on the web). `ChildrenSidebar` has «Botiquín» under «Familia» |
+| `api.ts`, `hooks.ts`, `types.ts` | `CabinetApiError` (`plan_required`/`limit`/`validation_error`/`not_found`/`forbidden`); queries `['cabinet', ownerId]`, `['cabinet-item', id]`, `['cabinet-photo', id]` (asked only when shown) |
+
+E2E: `botiquin.spec.ts` (Chromium, 390 and 1280 px: the owner adds, finds, edits and removes; the shortcut from a consultation; a Caregiver who sees and gets 403; the free plan's notice).
+
 ## `src/features/plans/` — planes y plan completo (spec 034)
 
 | File | Role |

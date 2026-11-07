@@ -1,3 +1,5 @@
+import { cabinetAccess } from '../medicineCabinet/cabinetAccess'
+import { CABINET } from '../medicineCabinet/cabinetText'
 import { PROFILE, sharedEntry } from '../profile/profileText'
 import { useRef, useState } from 'react'
 import { Link, useMatch } from 'react-router-dom'
@@ -28,6 +30,7 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
   const account = query.data
   const onHome = useMatch('/home') !== null
   const onFamilyPage = useMatch('/familia') !== null
+  const onCabinetPage = useMatch('/botiquin/*') !== null
   const onPlansPage = useMatch('/planes') !== null
   // Specs/033 part 3, 056 and 058: the person's own profile, apart from the children — one entry, «Mi perfil».
   const onMyDay = [useMatch('/yo/*'), useMatch('/mis-suplementos/*'), useMatch('/mis-actividades/*')].some((m) => m !== null)
@@ -102,6 +105,16 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
       >
         <span className={`text-base font-extrabold ${onFamilyPage ? 'text-white' : 'text-hint-border'}`}>Familia</span>
       </Link>
+      {/* specs/062: the family's medicine cabinet, in the Familia group (not for a Child-role member). */}
+      {cabinetAccess(account).canView && (
+        <Link
+          to="/botiquin"
+          aria-current={onCabinetPage ? 'page' : undefined}
+          className={`flex min-h-12 items-center justify-between rounded-2xl px-4 transition-colors duration-200 ${onCabinetPage ? 'bg-action' : 'hover:bg-ink-soft'}`}
+        >
+          <span className={`text-base font-extrabold ${onCabinetPage ? 'text-white' : 'text-hint-border'}`}>{CABINET.sidebar}</span>
+        </Link>
+      )}
 
       {account && (
         <nav aria-label="Personal" className="flex flex-col gap-2.5 border-t border-ink-edge pt-5">

@@ -31,6 +31,9 @@ import { ChildTodayPage } from './features/childDevice/phone/ChildTodayPage'
 import { RedeemPage } from './features/childDevice/phone/RedeemPage'
 import { readCredential } from './features/childDevice/phone/storage'
 import { VaccinationCardPage } from './features/vaccinations/VaccinationCardPage'
+import { CabinetPage } from './features/medicineCabinet/CabinetPage'
+import { CabinetFormPage } from './features/medicineCabinet/CabinetFormPage'
+import { CabinetItemPage } from './features/medicineCabinet/CabinetItemPage'
 
 const queryClient = new QueryClient()
 
@@ -77,6 +80,39 @@ function App() {
             element={
               <RequireSession>
                 <ChildDetailPage />
+              </RequireSession>
+            }
+          />
+          {/* specs/062: the family's medicine cabinet. */}
+          <Route
+            path="/botiquin"
+            element={
+              <RequireSession>
+                <CabinetPage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/botiquin/nuevo"
+            element={
+              <RequireSession>
+                <CabinetFormPage key="new" />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/botiquin/:itemId"
+            element={
+              <RequireSession>
+                <CabinetItemPage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/botiquin/:itemId/editar"
+            element={
+              <RequireSession>
+                <CabinetFormPage key="edit" />
               </RequireSession>
             }
           />

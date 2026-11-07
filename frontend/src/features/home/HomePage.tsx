@@ -16,6 +16,7 @@ import { TuDia } from './TuDia'
 import { HomeSkeleton } from './HomeSkeleton'
 import { AccountMenu } from './AccountMenu'
 import { MoreLinks } from './MoreLinks'
+import { CabinetEntry } from '../medicineCabinet/CabinetEntry'
 import { SharedProfilesLinks } from '../profile/SharedProfilesLinks'
 
 /**
@@ -162,6 +163,7 @@ export function HomePage() {
             {account && <Greeting account={account} variant="desktop" />}
             {account && <TuDia account={account} variant="desktop" />}
             {childrenSection('desktop')}
+            {account && <CabinetEntry account={account} />}
             {account && <SharedProfilesLinks account={account} variant="desktop" />}
             {account && <MoreLinks account={account} variant="desktop" />}
           </div>
@@ -190,6 +192,7 @@ export function HomePage() {
         )}
         {account && <TuDia account={account} variant="phone" />}
         {childrenSection('phone')}
+        {account && <CabinetEntry account={account} />}
         {account && <SharedProfilesLinks account={account} variant="phone" />}
         {account && <MoreLinks account={account} variant="phone" />}
         {dialogs}

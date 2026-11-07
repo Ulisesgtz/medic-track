@@ -108,6 +108,15 @@ export const LIMIT_MOTIVES: Record<PlanLimitReason, LimitMotive> = {
       row('Familia', 'Solo tú', 'Hasta 4 personas'),
     ],
   },
+  medicine_cabinet: {
+    title: 'Botiquín de la casa',
+    line: 'Intentaste agregar un medicamento al botiquín. El botiquín de la familia es del plan completo.',
+    rows: [
+      row('Botiquín de la casa', NO, 'Las medicinas que tienen en casa, para toda la familia'),
+      row('Familia', 'Solo tú', 'Hasta 4 personas'),
+      row('Suplementos y actividades', NO, 'Hasta 10 de cada tipo por hijo y 10 tuyos'),
+    ],
+  },
   own_consultations: {
     title: 'Tus propias consultas',
     line: 'Intentaste registrar una consulta tuya. Tus consultas, con sus tomas, avisos, historial y PDF, son del plan completo; lo de tus hijos sigue igual.',

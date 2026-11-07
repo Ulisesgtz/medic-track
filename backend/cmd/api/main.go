@@ -37,8 +37,8 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/access"
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
 	"github.com/Ulisesgtz/medic-track/backend/internal/appointment"
-	"github.com/Ulisesgtz/medic-track/backend/internal/vaccination"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
+	"github.com/Ulisesgtz/medic-track/backend/internal/cabinet"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
@@ -59,6 +59,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/retention"
 	"github.com/Ulisesgtz/medic-track/backend/internal/server"
 	"github.com/Ulisesgtz/medic-track/backend/internal/supplement"
+	"github.com/Ulisesgtz/medic-track/backend/internal/vaccination"
 )
 
 func main() {
@@ -242,6 +243,7 @@ func main() {
 		ChildDevice:     childDeviceHandler,
 		Appointment:     appointmentHandler,
 		Vaccination:     vaccinationHandler,
+		Cabinet:         cabinet.NewHandler(cabinet.NewService(cabinet.NewRepository(pool)), responder),
 		HistoryExport:   historyExportHandler,
 		Payments:        paymentsHandler,
 		Ops:             opsHandler,

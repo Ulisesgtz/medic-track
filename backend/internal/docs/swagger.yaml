@@ -239,6 +239,119 @@ definitions:
         example: true
         type: boolean
     type: object
+  CabinetErrorResponse:
+    properties:
+      error:
+        example: item_not_found
+        type: string
+      message:
+        type: string
+    type: object
+  CabinetExpires:
+    properties:
+      day:
+        example: 12
+        type: integer
+      month:
+        example: 3
+        type: integer
+      year:
+        example: 2027
+        type: integer
+    type: object
+  CabinetItem:
+    properties:
+      canEdit:
+        description: 'CanEdit: the session may edit and remove (owner or Tutor of
+          a paid family).'
+        example: true
+        type: boolean
+      createdAt:
+        example: "2026-11-06T18:00:00Z"
+        type: string
+      createdBy:
+        example: Ana
+        type: string
+      expires:
+        $ref: '#/definitions/CabinetExpires'
+      hasPhoto:
+        example: true
+        type: boolean
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      name:
+        example: Paracetamol infantil
+        type: string
+      note:
+        type: string
+      quantity:
+        example: 2
+        type: integer
+      strength:
+        example: 160 mg/5 ml
+        type: string
+      unit:
+        example: bottle
+        type: string
+      updatedAt:
+        example: "2026-11-07T18:00:00Z"
+        type: string
+      updatedBy:
+        example: Luis
+        type: string
+    type: object
+  CabinetItemInput:
+    properties:
+      expires:
+        $ref: '#/definitions/CabinetExpires'
+      name:
+        example: Paracetamol infantil
+        type: string
+      note:
+        type: string
+      photoBase64:
+        description: 'PhotoBase64 when creating: absent or "" = no photo. When editing:
+          absent = unchanged, "" = removed.'
+        type: string
+      quantity:
+        example: 2
+        type: integer
+      strength:
+        example: 160 mg/5 ml
+        type: string
+      unit:
+        enum:
+        - box
+        - tablet
+        - bottle
+        - ml
+        example: bottle
+        type: string
+    type: object
+  CabinetList:
+    properties:
+      canAdd:
+        example: true
+        type: boolean
+      canEdit:
+        description: 'CanEdit: the session may edit and remove; CanAdd: it may also
+          add (and the family owner is on the paid plan).'
+        example: true
+        type: boolean
+      items:
+        items:
+          $ref: '#/definitions/CabinetItem'
+        type: array
+      limit:
+        example: 200
+        type: integer
+    type: object
+  CabinetPhoto:
+    properties:
+      photoBase64:
+        type: string
+    type: object
   ChildDeviceErrorResponse:
     properties:
       error:
@@ -3244,6 +3357,238 @@ paths:
       summary: The doctors and medications of a person's own consultations
       tags:
       - consultations
+  /accounts/{accountId}/medicine-cabinet:
+    get:
+      description: Alphabetical by name, never by the expiry date (which is only a
+        datum). `accountId` is the family owner's.
+      parameters:
+      - description: The family owner's account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/CabinetList'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+        "403":
+          description: The session is not in this family
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: The family's medicine cabinet
+      tags:
+      - cabinet
+    post:
+      consumes:
+      - application/json
+      description: The paid plan (the family owner's) and at most 200 medicines per
+        family.
+      parameters:
+      - description: The family owner's account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: The medicine
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/CabinetItemInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/CabinetItem'
+        "400":
+          description: An invalid field
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+        "403":
+          description: The session can't change this cabinet
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+        "422":
+          description: Free plan (reason medicine_cabinet) or cabinet_limit_exceeded
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Add a medicine to the family's cabinet
+      tags:
+      - cabinet
+  /accounts/{accountId}/medicine-cabinet/{itemId}:
+    delete:
+      description: For good, with its photo. Any plan.
+      parameters:
+      - description: The family owner's account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: Medicine UUID
+        in: path
+        name: itemId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+        "403":
+          description: The session can't change this cabinet
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+        "404":
+          description: No such medicine in this cabinet
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Remove a medicine from the cabinet
+      tags:
+      - cabinet
+    get:
+      parameters:
+      - description: The family owner's account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: Medicine UUID
+        in: path
+        name: itemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/CabinetItem'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+        "403":
+          description: The session is not in this family
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+        "404":
+          description: No such medicine in this cabinet
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: One medicine of the family's cabinet
+      tags:
+      - cabinet
+    put:
+      consumes:
+      - application/json
+      description: Any plan. `photoBase64` absent keeps the photo, "" removes it.
+        Stamps who edited it and when.
+      parameters:
+      - description: The family owner's account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: Medicine UUID
+        in: path
+        name: itemId
+        required: true
+        type: string
+      - description: The medicine
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/CabinetItemInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/CabinetItem'
+        "400":
+          description: An invalid field
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+        "403":
+          description: The session can't change this cabinet
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+        "404":
+          description: No such medicine in this cabinet
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Correct a medicine
+      tags:
+      - cabinet
+  /accounts/{accountId}/medicine-cabinet/{itemId}/photo:
+    get:
+      parameters:
+      - description: The family owner's account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: Medicine UUID
+        in: path
+        name: itemId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/CabinetPhoto'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+        "403":
+          description: The session is not in this family
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+        "404":
+          description: No such medicine or it has no photo
+          schema:
+            $ref: '#/definitions/CabinetErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: The photo of a medicine's box
+      tags:
+      - cabinet
   /accounts/{accountId}/overview:
     get:
       description: |-
