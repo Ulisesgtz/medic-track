@@ -70,6 +70,13 @@ describe('CabinetPage', () => {
     expect(mock.mock.calls.some(([u]) => String(u).includes('/accounts/owner/medicine-cabinet'))).toBe(true)
   })
 
+  it('a Child-role member is told it is the adults’ and nothing is asked', async () => {
+    const mock = api(account({ family: { role: 'child', ownerAccountId: 'owner', ownerName: 'Ana', plan: 'paid', readOnly: false } }))
+    renderAt('/botiquin', <CabinetPage />, '/botiquin')
+    expect(await screen.findByText(/El botiquín lo ven las personas adultas de la familia/)).toBeInTheDocument()
+    expect(mock.mock.calls.some(([u]) => String(u).includes('medicine-cabinet'))).toBe(false)
+  })
+
   it('the plan lapsed: what was saved stays and «Agregar» opens the plan notice', async () => {
     api(account({ plan: 'free' }), { items: MEDS, canAdd: false, canEdit: true, limit: 200 })
     renderAt('/botiquin', <CabinetPage />, '/botiquin')

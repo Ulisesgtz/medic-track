@@ -46,7 +46,6 @@ export function CabinetPage() {
       </button>
     ) : null
 
-  const state = !accountQuery.data || query.isPending ? (query.isError ? 'error' : 'ready') : query.isError ? 'error' : 'ready'
 
   const loading = (
     <div aria-busy="true" aria-label={CABINET.loading} className={`${card} overflow-hidden`}>
@@ -113,10 +112,18 @@ export function CabinetPage() {
       title={CABINET.title}
       subtitle={CABINET.subtitle}
       actions={!empty && query.isSuccess ? addButton(!desktop) ?? undefined : undefined}
-      state={state === 'error' ? 'error' : undefined}
+      state={query.isError ? 'error' : undefined}
       errorWhat={CABINET.loadFailed}
       onRetry={() => void query.refetch()}
     >
+      {accountQuery.data && !access.canView && (
+        <p className={`${card} p-6 text-base leading-relaxed text-body`}>
+          {CABINET.notAvailable}{' '}
+          <Link to="/home" className="font-bold text-action hover:underline">
+            {CABINET.backHome.replace('← ', '')}
+          </Link>
+        </p>
+      )}
       {access.canView && !canEdit && query.isSuccess && <CaregiverNote desktop={desktop} />}
       {content}
       {planOpen && <FreemiumLimitModal reason="medicine_cabinet" opener={addRef} onStayFree={() => setPlanOpen(false)} onViewPlans={() => navigate('/planes')} />}

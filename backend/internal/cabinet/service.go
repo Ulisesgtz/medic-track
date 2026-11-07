@@ -25,14 +25,9 @@ func (s *Service) List(ctx context.Context, accountID uuid.UUID) ([]Item, bool, 
 	return items, paid, err
 }
 
-// Get is one medicine and whether the owner is on the paid plan.
-func (s *Service) Get(ctx context.Context, accountID, itemID uuid.UUID) (Item, bool, error) {
-	it, err := s.repo.Get(ctx, accountID, itemID)
-	if err != nil {
-		return Item{}, false, err
-	}
-	paid, err := s.repo.PaidPlan(ctx, accountID)
-	return it, paid, err
+// Get is one medicine of the family's cabinet.
+func (s *Service) Get(ctx context.Context, accountID, itemID uuid.UUID) (Item, error) {
+	return s.repo.Get(ctx, accountID, itemID)
 }
 
 // Create validates and adds a medicine; photoBase64 "" means no photo.

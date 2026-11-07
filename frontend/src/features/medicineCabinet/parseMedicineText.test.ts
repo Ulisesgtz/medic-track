@@ -18,6 +18,12 @@ describe('parseMedicineText (specs/062 R4)', () => {
     expect(parseMedicineText('Amoxicilina\nCAD 31/02/2027').expires).toBeUndefined()
     expect(parseMedicineText('Amoxicilina\nCAD 13/2027').expires).toBeUndefined()
     expect(parseMedicineText('Amoxicilina\nCAD pronto').expires).toBeUndefined()
+    // A word that only starts like one (expectorante) neither hides the real date nor is taken for packaging.
+    expect(parseMedicineText('AMBROXOL EXPECTORANTE\nJarabe\nCAD 03/2027')).toEqual({
+      name: 'Ambroxol Expectorante',
+      expires: { year: 2027, month: 3, day: null },
+    })
+    expect(parseMedicineText('Zinc\nEXP lote 7\nCAD 05/2028').expires).toEqual({ year: 2028, month: 5, day: null })
   })
 
   it('reads the strength with its units', () => {

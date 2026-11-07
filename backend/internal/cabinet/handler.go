@@ -265,7 +265,7 @@ func (h *Handler) GetItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	actor, full := levelOf(ctx)
-	it, _, err := h.service.Get(ctx, accountID, itemID)
+	it, err := h.service.Get(ctx, accountID, itemID)
 	if err != nil {
 		h.writeError(ctx, w, err, actor, "Could not read the medicine")
 		return

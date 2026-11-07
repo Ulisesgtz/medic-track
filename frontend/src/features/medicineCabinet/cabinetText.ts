@@ -75,6 +75,7 @@ export const CABINET = {
   removeBody: 'Se quita del botiquín de la familia. No se puede deshacer.',
   removeFailed: 'No se pudo quitar. Inténtalo de nuevo.',
   notFound: 'No se encontró este medicamento.',
+  notAvailable: 'El botiquín lo ven las personas adultas de la familia.',
   backToList: 'Volver al botiquín',
   shortcut: 'Agregar al botiquín',
   required: {

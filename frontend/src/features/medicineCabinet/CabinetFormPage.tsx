@@ -77,7 +77,11 @@ export function CabinetFormPage() {
     }
   }, [itemQuery.data])
 
-  // The reading of a new photo finished: propose what it found into the empty fields.
+  // The reading of a new photo finished: propose what it found into the fields still empty at that moment.
+  const valuesRef = useRef(values)
+  useEffect(() => {
+    valuesRef.current = values
+  })
   const reading = ocr.isRunning
   const wasReading = useRef(false)
   useEffect(() => {
@@ -87,13 +91,10 @@ export function CabinetFormPage() {
     }
     if (!wasReading.current) return
     wasReading.current = false
-    const found = parseMedicineText(ocr.suggestion)
-    setValues((current) => {
-      const { values: next, proposed: filled } = applyProposal(current, found)
-      setProposed(filled)
-      setPhoto(filled.length > 0 ? 'read' : 'noText')
-      return next
-    })
+    const { values: next, proposed: filled } = applyProposal(valuesRef.current, parseMedicineText(ocr.suggestion))
+    setValues(next)
+    setProposed(filled)
+    setPhoto(filled.length > 0 ? 'read' : 'noText')
   }, [reading, ocr.suggestion])
 
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview])
@@ -234,14 +235,20 @@ export function CabinetFormPage() {
   )
 
   const select = (id: string, value: string, onChange: (v: string) => void, options: { value: string; label: string }[], placeholder: string, f: ProposedField) => (
-    <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={`${fieldClass(f)} cursor-pointer appearance-none bg-[length:12px] pr-8`}>
-      <option value="">{placeholder}</option>
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
+    <span className="relative flex">
+      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} className={`${fieldClass(f)} cursor-pointer appearance-none pr-8`}>
+        <option value="">{placeholder}</option>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      {/* The mock's ▾: appearance-none takes the native arrow away. */}
+      <span aria-hidden="true" className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-action">
+        ▾
+      </span>
+    </span>
   )
 
   const fields = (

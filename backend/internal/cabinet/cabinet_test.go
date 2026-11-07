@@ -156,14 +156,14 @@ func TestRepository_AlphabeticalEditRemovePhoto(t *testing.T) {
 
 	require.NoError(t, svc.Delete(ctx, owner, it.ID))
 	require.ErrorIs(t, svc.Delete(ctx, owner, it.ID), cabinet.ErrItemNotFound)
-	_, _, err = svc.Get(ctx, owner, it.ID)
+	_, err = svc.Get(ctx, owner, it.ID)
 	require.ErrorIs(t, err, cabinet.ErrItemNotFound)
 	_, err = svc.Update(ctx, owner, it.ID, owner, edit, nil)
 	require.ErrorIs(t, err, cabinet.ErrItemNotFound)
 
 	// Another family's medicine is never reached.
 	stranger := newAccount(t, pool, account.PlanPaid)
-	_, _, err = svc.Get(ctx, stranger, items[0].ID)
+	_, err = svc.Get(ctx, stranger, items[0].ID)
 	require.ErrorIs(t, err, cabinet.ErrItemNotFound)
 	_, err = svc.Create(ctx, owner, owner, cabinet.Input{}, "")
 	require.Error(t, err)

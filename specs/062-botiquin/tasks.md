@@ -87,8 +87,8 @@
 - [X] T027 E2E `frontend/e2e/botiquin.spec.ts` (Chromium, 390 y 1280 px): dueña agrega a mano y busca; editar y quitar; atajo desde una consulta; Tutor y Cuidador (dos sesiones; el Cuidador recibe 403 del API); plan gratuito
 - [X] T028 Medir la app contra el mock a 390 y 1280 px y escribir `specs/062-botiquin/referencia/desviaciones.md`
 - [X] T029 [P] Docs: `CLAUDE.md` (raíz), `backend/CLAUDE.md` (paquete, rutas, migración 0033), `frontend/CLAUDE.md`, `BACKLOG.md` (marcar el botiquín hecho; dejar lo de fuera)
-- [ ] T030 Verificación: `go vet`, `go test ./...` con y sin `pool_max_conns=4`, Swagger sin cambios, `govulncheck`, `npx vitest run --coverage`, `npx tsc -b`, `npm run build`, `npx eslint .`, `npx playwright test --list`
-- [ ] T031 `/code-review`, push y PR a `develop` (ccd_pr `get_status` + `set_monitor`); recordar al dueño aplicar la `0033` en DEV; no fusionar
+- [X] T030 Verificación: `go vet`, `go test ./...` con y sin `pool_max_conns=4`, Swagger sin cambios, `govulncheck`, `npx vitest run --coverage`, `npx tsc -b`, `npm run build`, `npx eslint .`, `npx playwright test --list`
+- [X] T031 `/code-review`, push y PR a `develop` (ccd_pr `get_status` + `set_monitor`); recordar al dueño aplicar la `0033` en DEV; no fusionar
 
 ---
 

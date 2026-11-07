@@ -17,10 +17,10 @@ const MONTH_WORDS: Record<string, number> = {
 const STRENGTH = /(\d+(?:[.,]\d+)?)\s*(mg|mcg|µg|g|ml|ui|%)(?:\s*\/\s*(\d+(?:[.,]\d+)?)\s*(ml|g|mg))?(?![a-z])/i
 
 /** The words a box puts before its expiry date. A date with none of them is never guessed. */
-const EXPIRY_WORD = /(?:cad(?:ucidad|uca)?|exp(?:ira|iry|iration)?|vence|venc(?:imiento)?|vto)\.?\s*[:.]?\s*/i
+const EXPIRY_WORD = /\b(?:cad(?:ucidad|uca)?|exp(?:ira|iry|iration)?|vence|venc(?:imiento)?|vto)\b\.?\s*[:.]?\s*/gi
 
 /** Words of the packaging, not of the name. */
-const PACKAGING = /\b(tabletas?|c[aá]psulas?|suspensi[oó]n|jarabe|soluci[oó]n|contiene|hecho en|lote|reg\.?|v[ií]a oral|caja con|frasco con|uso pedi[aá]trico|cad|exp|venc)/i
+const PACKAGING = /\b(tabletas?|c[aá]psulas?|suspensi[oó]n|jarabe|soluci[oó]n|contiene|hecho en|lote|reg|v[ií]a oral|caja con|frasco con|uso pedi[aá]trico|cad|exp|venc)\b/i
 
 const fullYear = (y: string) => (y.length === 2 ? 2000 + Number(y) : Number(y))
 
@@ -33,10 +33,16 @@ function validDate(year: number, month: number, day: number | null): Expires | u
   return { year, month, day }
 }
 
+/** Every expiry word of the text, in order: the first one followed by a date wins (a word without one doesn't hide the next). */
 function parseExpiry(text: string): Expires | undefined {
-  const at = text.search(EXPIRY_WORD)
-  if (at < 0) return undefined
-  const rest = text.slice(at).replace(EXPIRY_WORD, '').slice(0, 24).toLowerCase()
+  for (const m of text.matchAll(EXPIRY_WORD)) {
+    const found = dateAt(text.slice((m.index ?? 0) + m[0].length, (m.index ?? 0) + m[0].length + 24).toLowerCase())
+    if (found) return found
+  }
+  return undefined
+}
+
+function dateAt(rest: string): Expires | undefined {
   let m = rest.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/)
   if (m) return validDate(fullYear(m[3]), Number(m[2]), Number(m[1]))
   m = rest.match(/^(\d{1,2})[/.-](\d{4}|\d{2})\b/)
