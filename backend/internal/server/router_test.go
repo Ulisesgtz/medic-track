@@ -22,6 +22,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
 	"github.com/Ulisesgtz/medic-track/backend/internal/appointment"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw/authmwtest"
+	"github.com/Ulisesgtz/medic-track/backend/internal/cabinet"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
@@ -166,6 +167,7 @@ func newWorld(t *testing.T) *world {
 		Appointment: appointment.NewHandler(appointment.NewService(appointment.NewRepository(pool)), responder),
 		ChildDevice: childdevice.NewHandler(childdevice.NewService(childdevice.NewRepository(pool)), responder),
 		Vaccination: vaccination.NewHandler(vaccination.NewService(vaccination.NewRepository(pool)), responder),
+		Cabinet:     cabinet.NewHandler(cabinet.NewService(cabinet.NewRepository(pool)), responder),
 		HistoryExport: historyexport.NewHandler(historyexport.NewService(historyexport.NewRepository(pool), consultation.NewRepository(pool),
 			vaccination.NewRepository(pool)), responder),
 		Ownership:      ownership.NewRepository(pool),
@@ -241,6 +243,13 @@ func (w *world) routes() []struct {
 		{"create personal routine", http.MethodPost, "/accounts/" + w.accountA.String() + "/routines", `{}`, http.StatusBadRequest},
 		{"personal routines notice", http.MethodPost, "/accounts/" + w.accountA.String() + "/routines/notice-seen", "", http.StatusNoContent},
 		{"add child", http.MethodPost, "/accounts/" + w.accountA.String() + "/children", `{}`, http.StatusBadRequest},
+		// Specs/062: the family's medicine cabinet, by its owner account. An empty form is a 400; a medicine that is not there, a 404.
+		{"list cabinet", http.MethodGet, "/accounts/" + w.accountA.String() + "/medicine-cabinet", "", http.StatusOK},
+		{"add to cabinet", http.MethodPost, "/accounts/" + w.accountA.String() + "/medicine-cabinet", `{}`, http.StatusBadRequest},
+		{"cabinet item", http.MethodGet, "/accounts/" + w.accountA.String() + "/medicine-cabinet/" + uuid.NewString(), "", http.StatusNotFound},
+		{"edit cabinet item", http.MethodPut, "/accounts/" + w.accountA.String() + "/medicine-cabinet/" + uuid.NewString(), `{}`, http.StatusBadRequest},
+		{"remove cabinet item", http.MethodDelete, "/accounts/" + w.accountA.String() + "/medicine-cabinet/" + uuid.NewString(), "", http.StatusNotFound},
+		{"cabinet photo", http.MethodGet, "/accounts/" + w.accountA.String() + "/medicine-cabinet/" + uuid.NewString() + "/photo", "", http.StatusNotFound},
 		{"accept disclaimer", http.MethodPost, "/accounts/" + w.accountA.String() + "/disclaimer-acceptance", `{}`, http.StatusBadRequest},
 		{"reminder settings", http.MethodPatch, "/accounts/" + w.accountA.String() + "/reminder-settings", `{}`, http.StatusBadRequest},
 		{"register reminder device", http.MethodPost, "/accounts/" + w.accountA.String() + "/reminder-devices", `{}`, http.StatusBadRequest},
@@ -395,8 +404,10 @@ func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 // ownRoutes are the person's own account (their notice, reminder settings and devices): never a family's.
 // fullRoutes need the full level (the owner or a Tutor); every other protected route needs only Mark (see and mark).
 var (
-	ownRoutes  = map[string]bool{"search own consultations": true, "own history options": true, "export own history": true, "consultation sharing": true, "own consultations": true, "create own consultation": true, "own overview": true, "own appointments": true, "create own appointment": true, "get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true, "get subscription": true, "subscribe": true, "cancel subscription": true}
-	fullRoutes = map[string]bool{"delete routine": true, "add child": true, "create consultation": true, "edit consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "record vaccination": true, "correct vaccination": true, "delete vaccination": true, "save card photo": true, "delete card photo": true, "edit appointment": true, "create device link": true, "remove device link": true, "choose device reminders": true, "mark appointment": true}
+	ownRoutes = map[string]bool{"search own consultations": true, "own history options": true, "export own history": true, "consultation sharing": true, "own consultations": true, "create own consultation": true, "own overview": true, "own appointments": true, "create own appointment": true, "get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true, "get subscription": true, "subscribe": true, "cancel subscription": true}
+	// cabinetRoutes: the family's medicine cabinet (specs/062), not for a Child-role member.
+	cabinetRoutes = map[string]bool{"list cabinet": true, "cabinet item": true, "cabinet photo": true}
+	fullRoutes    = map[string]bool{"add to cabinet": true, "edit cabinet item": true, "remove cabinet item": true, "delete routine": true, "add child": true, "create consultation": true, "edit consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "record vaccination": true, "correct vaccination": true, "delete vaccination": true, "save card photo": true, "delete card photo": true, "edit appointment": true, "create device link": true, "remove device link": true, "choose device reminders": true, "mark appointment": true}
 )
 
 func (w *world) setOwnerPlan(t *testing.T, plan string) {
@@ -464,7 +475,8 @@ func TestRouter_AChildRoleMemberSeesAndMarksTheirChildAndNothingElse(t *testing.
 	for _, rt := range w.routes() {
 		t.Run(rt.name, func(t *testing.T) {
 			rec := w.do(t, rt.method, rt.path, token, rt.body)
-			if ownRoutes[rt.name] || fullRoutes[rt.name] {
+			// The family's medicine cabinet (specs/062) is the adults': a Child-role member doesn't see it either.
+			if ownRoutes[rt.name] || fullRoutes[rt.name] || cabinetRoutes[rt.name] {
 				require.Equal(t, http.StatusForbidden, rec.Code, rec.Body.String())
 				return
 			}
