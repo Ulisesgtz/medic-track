@@ -16,6 +16,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
 	"github.com/Ulisesgtz/medic-track/backend/internal/appointment"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
+	"github.com/Ulisesgtz/medic-track/backend/internal/cabinet"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
@@ -46,6 +47,8 @@ type Deps struct {
 	ChildDevice *childdevice.Handler
 	// Vaccination: the child's vaccination card, the doses a parent records by hand (specs/046).
 	Vaccination *vaccination.Handler
+	// Cabinet: the family's medicine cabinet (specs/062).
+	Cabinet *cabinet.Handler
 	// HistoryExport: the data of the history's PDF (specs/050). Nil = the route is not registered.
 	HistoryExport *historyexport.Handler
 	// Payments: the subscription of the full plan (specs/045). Nil = the charge is not available in this environment: none of its routes
@@ -163,6 +166,8 @@ func NewRouter(d Deps) *chi.Mux {
 	fullAppointment := authmw.RequireAccess(d.Responder, "appointmentId", access.Full, d.Access.OnAppointment)
 	// Adding a child to a family (its owner account): the owner or one of its Tutors.
 	fullAccount := authmw.RequireAccess(d.Responder, "accountId", access.Full, d.Access.OnAccount)
+	// The family's medicine cabinet (specs/062), by its owner account: Mark = see it (a Caregiver, a Tutor of a lapsed family).
+	seesAccount := authmw.RequireAccess(d.Responder, "accountId", access.Mark, d.Access.OnAccount)
 	// A person's own consultations (specs/058): Full = the person themself; Mark = a Tutor of their family while they share
 	// them (see, mark and search); nobody else, whatever their role.
 	seesPerson := authmw.RequireAccess(d.Responder, "accountId", access.Mark, d.Access.OnPerson)
@@ -175,6 +180,12 @@ func NewRouter(d Deps) *chi.Mux {
 		r.Post("/accounts", d.Account.CreateAccount)
 		r.With(ownsAccount).Get("/accounts/{accountId}", d.Account.GetAccount)
 		r.With(fullAccount).Post("/accounts/{accountId}/children", d.Account.AddChild)
+		r.With(seesAccount).Get("/accounts/{accountId}/medicine-cabinet", d.Cabinet.ListItems)
+		r.With(fullAccount).Post("/accounts/{accountId}/medicine-cabinet", d.Cabinet.CreateItem)
+		r.With(seesAccount).Get("/accounts/{accountId}/medicine-cabinet/{itemId}", d.Cabinet.GetItem)
+		r.With(fullAccount).Put("/accounts/{accountId}/medicine-cabinet/{itemId}", d.Cabinet.UpdateItem)
+		r.With(fullAccount).Delete("/accounts/{accountId}/medicine-cabinet/{itemId}", d.Cabinet.DeleteItem)
+		r.With(seesAccount).Get("/accounts/{accountId}/medicine-cabinet/{itemId}/photo", d.Cabinet.GetPhoto)
 		r.With(ownsAccount).Post("/accounts/{accountId}/disclaimer-acceptance", d.Account.AcceptDisclaimer)
 		r.With(ownsAccount).Patch("/accounts/{accountId}/reminder-settings", d.Account.UpdateReminderSettings)
 		r.With(ownsAccount).Post("/accounts/{accountId}/reminder-devices", d.Reminder.RegisterDevice)

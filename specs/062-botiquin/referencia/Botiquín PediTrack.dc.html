@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--color-ink:#04252b;--color-ink-soft:#0b3b44;--color-action:#0e7490;--color-bright:#22d3ee;--color-confirmed:#047857;--color-confirmed-soft:#d1fae5;--color-confirmed-strong:#065f46;--color-pending-soft:#fef3c7;--color-canvas:#f8feff;--color-surface:#ffffff;--color-hint:#ecfeff;--color-hint-border:#a5f3fc;--color-hint-edge:#cffafe;--color-body:#1f3d44;--color-muted:#475569;--color-cal-muted:#64748b;--color-skel:#e2eef0}
+*{box-sizing:border-box}
+body{margin:0;background:#dfe8ea;font-family:'Figtree',system-ui,sans-serif;color:#04252b}
+button,input{font-family:inherit}
+a{color:#0e7490;text-decoration:none}
+a:hover{color:#04252b;text-decoration:underline}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #0e7490;outline-offset:2px}
+input::placeholder{color:#64748b}
+</style>
+</helmet>
+
+<div style="padding:56px;display:flex;flex-direction:column;gap:72px">
+  <div style="max-width:900px;display:flex;flex-direction:column;gap:10px">
+    <p style="margin:0;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-action)">PediTrack · Botiquín de la casa · propuesta 6 nov 2026</p>
+    <h1 style="margin:0;font-size:38px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Botiquín de la casa</h1>
+    <p style="margin:0;font-size:16px;line-height:1.55;color:var(--color-body);text-wrap:pretty">Un registro compartido de las medicinas que la familia tiene en casa. Plan completo. Cada pantalla va en dos diseños: teléfono (390 px) y web (1280 px con barra lateral de 280 px). La caducidad es un dato más: mismo tamaño, peso y color que la cantidad. La lista va en orden alfabético.</p>
+  </div>
+
+  <sc-for list="{{ grupos }}" as="g" hint-placeholder-count="1">
+    <div style="display:flex;flex-direction:column;gap:40px">
+      <div style="display:flex;flex-direction:column;gap:4px;padding-bottom:12px;border-bottom:2px solid var(--color-ink)">
+        <h2 style="margin:0;font-size:28px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">{{ g.t }}</h2>
+        <span style="font-size:15px;color:var(--color-body)">{{ g.d }}</span>
+      </div>
+
+      <sc-for list="{{ g.estados }}" as="s" hint-placeholder-count="1">
+        <div id="{{ s.id }}" style="display:flex;flex-direction:column;gap:18px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span style="padding:4px 11px;border-radius:999px;background:var(--color-ink);color:#ffffff;font-size:13px;font-weight:800">{{ s.id }}</span>
+            <span style="font-size:20px;font-weight:800;color:var(--color-ink)">{{ s.label }}</span>
+            <span style="font-size:14px;color:var(--color-body)">{{ s.quien }}</span>
+          </div>
+          <div style="display:flex;gap:48px;align-items:flex-start">
+
+            <div style="display:flex;flex-direction:column;gap:10px;flex:none">
+              <span style="font-size:13px;font-weight:800;color:var(--color-muted)">{{ s.id }}t · Teléfono</span>
+              <div data-screen-label="{{ s.id }} teléfono" style="width:410px;padding:10px;border-radius:50px;background:var(--color-ink);box-shadow:0 20px 50px rgba(4,37,43,0.22)">
+                <div style="position:relative;width:390px;height:844px;border-radius:40px;overflow:hidden;background:var(--color-canvas);display:flex;flex-direction:column">
+                  <div style="flex:none;height:47px;padding:4px 30px 0;display:flex;align-items:center;justify-content:space-between;font-size:15px;font-weight:700;color:var(--color-ink)"><span>10:24</span><span style="display:flex;gap:5px"><span style="width:18px;height:10px;border-radius:2px;background:var(--color-ink)"></span><span style="width:24px;height:11px;border-radius:3px;border:1.5px solid var(--color-ink)"></span></span></div>
+                  <div style="flex:1;min-height:0;overflow-y:auto;padding:0 20px 40px;display:grid;grid-template-columns:minmax(0,1fr);grid-auto-rows:max-content;align-content:start;gap:20px">
+
+                    <sc-if value="{{ s.kInicio }}">
+                      <header style="padding-top:8px;display:flex;flex-direction:column;gap:2px">
+                        <span style="font-size:13px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-action)">Viernes 6 nov</span>
+                        <h1 style="margin:0;font-size:28px;line-height:1.15;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Hola, Ana</h1>
+                      </header>
+                      <div style="height:220px;border-radius:22px;border:1.5px dashed var(--color-hint-border);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--color-muted)">Tus hijos y Tu día, sin cambios</div>
+                      <button type="button" style="min-height:76px;padding:14px 16px;border:none;border-radius:22px;background:var(--color-surface);box-shadow:0 8px 20px rgba(4,37,43,0.07);display:flex;align-items:center;gap:14px;text-align:left;cursor:pointer">
+                        <span style="flex:none;width:44px;height:44px;border-radius:12px;background:var(--color-hint);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="7" width="17" height="13" rx="2.5"></rect><path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M12 10.5v6M9 13.5h6"></path></svg></span>
+                        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:800;color:var(--color-ink)">Checa tus medicamentos</span><span style="font-size:14px;color:var(--color-body)">{{ s.entSub }}</span></span>
+                        <sc-if value="{{ s.free }}"><span style="flex:none;padding:4px 10px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:12px;font-weight:800">Plan completo</span></sc-if>
+                        <sc-if value="{{ s.full }}"><span aria-hidden="true" style="flex:none;font-size:22px;font-weight:800;color:var(--color-action)">›</span></sc-if>
+                      </button>
+                    </sc-if>
+
+                    <sc-if value="{{ s.hdr }}">
+                      <header style="display:flex;flex-direction:column;gap:4px">
+                        <a href="#" style="align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;font-size:15px;font-weight:700">{{ s.back }}</a>
+                        <h1 style="margin:0;font-size:28px;line-height:1.15;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink);text-wrap:balance">{{ s.titulo }}</h1>
+                        <sc-if value="{{ s.sub }}"><span style="font-size:15px;color:var(--color-body)">{{ s.sub }}</span></sc-if>
+                        <sc-if value="{{ s.addTop }}"><button type="button" style="margin-top:12px;min-height:52px;padding:0 24px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer">+ Agregar al botiquín</button></sc-if>
+                        <sc-if value="{{ s.detAcc }}"><div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px"><button type="button" style="min-height:44px;padding:0 18px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Editar</button><button type="button" style="min-height:44px;padding:0 12px;border:none;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Quitar del botiquín</button></div></sc-if>
+                        <sc-if value="{{ s.cuid }}"><div role="note" style="margin-top:12px;padding:14px 16px;border-radius:16px;border:1.5px solid var(--color-hint-border);background:var(--color-surface);font-size:14px;line-height:1.5;color:var(--color-body)"><strong style="color:var(--color-ink)">Vista de Cuidadora.</strong> Puedes ver el botiquín. Agregar y editar lo hace la familia.</div></sc-if>
+                      </header>
+                    </sc-if>
+
+                    <sc-if value="{{ s.kLista }}">
+                      <sc-if value="{{ s.conBuscar }}">
+                        <div style="position:relative">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" style="position:absolute;left:14px;top:14px"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+                          <input type="search" aria-label="Buscar por nombre" placeholder="Buscar por nombre" value="{{ s.q }}" onChange="{{ s.onQ }}" style="width:100%;height:48px;padding:0 14px 0 44px;border-radius:14px;border:1.5px solid #64748b;background:#ffffff;font-size:16px;color:#04252b">
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ s.loading }}">
+                        <div aria-busy="true" aria-label="Cargando el botiquín" style="background:var(--color-surface);border-radius:22px;box-shadow:0 8px 20px rgba(4,37,43,0.07);overflow:hidden">
+                          <sc-for list="{{ skel }}" as="k" hint-placeholder-count="5"><div style="min-height:84px;padding:12px 16px;display:flex;align-items:center;gap:14px;border-top:{{ k.bt }}"><span style="flex:none;width:56px;height:56px;border-radius:12px;background:var(--color-skel)"></span><span style="flex:1;display:flex;flex-direction:column;gap:7px"><span style="width:160px;height:16px;border-radius:5px;background:var(--color-skel)"></span><span style="width:120px;height:12px;border-radius:5px;background:var(--color-skel)"></span><span style="width:100px;height:12px;border-radius:5px;background:var(--color-skel)"></span></span></div></sc-for>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ s.hayLista }}">
+                        <div style="display:flex;flex-direction:column;gap:8px">
+                          <span style="font-size:14px;font-weight:700;color:var(--color-muted)">{{ s.cuenta }}</span>
+                          <div style="background:var(--color-surface);border-radius:22px;box-shadow:0 8px 20px rgba(4,37,43,0.07);overflow:hidden">
+                            <sc-for list="{{ s.lista }}" as="m" hint-placeholder-count="5">
+                              <a href="#" style="min-height:84px;padding:12px 16px;display:flex;align-items:center;gap:14px;text-decoration:none;border-top:{{ m.bt }}">
+                                <sc-if value="{{ m.foto }}"><span aria-hidden="true" style="flex:none;width:56px;height:56px;border-radius:12px;border:1px solid var(--color-hint-border);background:repeating-linear-gradient(135deg,#ecfeff 0 7px,#cffafe 7px 14px);display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;font-size:10px;font-weight:800;color:var(--color-action)">foto</span></sc-if>
+                                <sc-if value="{{ m.sinFoto }}"><span aria-hidden="true" style="flex:none;width:56px;height:56px;border-radius:12px;border:1.5px dashed var(--color-hint-border);background:var(--color-canvas);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="7" width="17" height="13" rx="2.5"></rect><path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M12 10.5v6M9 13.5h6"></path></svg></span></sc-if>
+                                <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:800;color:var(--color-ink)">{{ m.n }}</span><span style="font-size:14px;color:var(--color-body)">{{ m.sub }}</span><span style="font-size:14px;color:var(--color-body)">{{ m.cad }}</span></span>
+                                <span aria-hidden="true" style="flex:none;font-size:22px;font-weight:800;color:var(--color-action)">›</span>
+                              </a>
+                            </sc-for>
+                          </div>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ s.sinRes }}"><p style="margin:0;padding:20px;border-radius:22px;border:1.5px dashed var(--color-hint-border);font-size:15px;line-height:1.5;color:var(--color-body)">Ningún medicamento del botiquín se llama «{{ s.q }}».</p></sc-if>
+                      <sc-if value="{{ s.vacio }}">
+                        <div style="padding:32px 20px;border-radius:22px;border:1.5px dashed var(--color-hint-border);display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center">
+                          <span style="width:56px;height:56px;border-radius:16px;background:var(--color-hint);display:flex;align-items:center;justify-content:center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="7" width="17" height="13" rx="2.5"></rect><path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M12 10.5v6M9 13.5h6"></path></svg></span>
+                          <span style="font-size:17px;font-weight:800;color:var(--color-ink)">Aún no hay medicamentos en el botiquín</span>
+                          <button type="button" style="align-self:stretch;min-height:52px;padding:0 24px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer">+ Agregar al botiquín</button>
+                        </div>
+                      </sc-if>
+                    </sc-if>
+
+                    <sc-if value="{{ s.kForm }}">
+                      <sc-if value="{{ s.desdeConsulta }}"><div role="note" style="padding:14px 16px;border-radius:16px;background:var(--color-hint);border:1.5px solid var(--color-hint-border);font-size:14px;line-height:1.5;color:var(--color-body)"><strong style="color:var(--color-ink)">Desde la consulta del 18 oct</strong> · Dra. Laura Cázares. El nombre viene de la receta; puedes cambiarlo.</div></sc-if>
+                      <section aria-label="Foto de la caja" style="display:flex;flex-direction:column;gap:10px">
+                        <span style="font-size:14px;font-weight:700;color:var(--color-ink)">Foto de la caja <span style="font-weight:500;color:var(--color-muted)">(opcional)</span></span>
+                        <sc-if value="{{ s.fNone }}">
+                          <div style="padding:16px;border-radius:18px;border:1.5px dashed var(--color-hint-border);background:var(--color-surface);display:flex;flex-direction:column;gap:10px">
+                            <span style="font-size:14px;line-height:1.5;color:var(--color-body)">Con foto, la app lee el texto de la caja en tu teléfono y te propone los datos.</span>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                              <button type="button" style="min-height:44px;padding:0 12px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Tomar foto</button>
+                              <button type="button" style="min-height:44px;padding:0 12px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Elegir de la galería</button>
+                            </div>
+                          </div>
+                        </sc-if>
+                        <sc-if value="{{ s.fFoto }}">
+                          <div aria-live="polite" style="padding:14px;border-radius:18px;border:1.5px solid {{ s.fBorde }};background:{{ s.fFondo }};display:flex;gap:14px;align-items:flex-start">
+                            <span aria-hidden="true" style="flex:none;width:72px;height:96px;border-radius:12px;border:1px solid var(--color-hint-border);background:repeating-linear-gradient(135deg,#ecfeff 0 7px,#cffafe 7px 14px);display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px;font-size:10px;font-weight:800;color:var(--color-action)">foto</span>
+                            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+                              <sc-if value="{{ s.fLeyendo }}">
+                                <span style="font-size:16px;font-weight:800;color:var(--color-ink)">Leyendo la foto…</span>
+                                <span style="font-size:14px;line-height:1.5;color:var(--color-body)">El texto se lee en tu teléfono. Mientras, puedes capturar a mano.</span>
+                                <div role="progressbar" aria-label="Leyendo la foto" style="margin-top:4px;height:6px;border-radius:999px;background:var(--color-hint-edge);overflow:hidden"><div style="width:45%;height:100%;border-radius:999px;background:var(--color-action)"></div></div>
+                              </sc-if>
+                              <sc-if value="{{ s.fLeido }}">
+                                <span style="font-size:16px;font-weight:800;color:var(--color-ink)">Leído de tu foto · revísalo</span>
+                                <span style="font-size:14px;line-height:1.5;color:var(--color-body)">Propusimos nombre, concentración y caducidad. Nada se guarda hasta que tocas Guardar.</span>
+                              </sc-if>
+                              <sc-if value="{{ s.fSin }}">
+                                <span style="font-size:16px;font-weight:800;color:var(--color-ink)">No encontramos texto</span>
+                                <span style="font-size:14px;line-height:1.5;color:var(--color-body)">Captúralo a mano. La foto se guarda con el medicamento.</span>
+                              </sc-if>
+                              <button type="button" style="align-self:flex-start;min-height:44px;padding:0;border:none;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Cambiar foto</button>
+                            </div>
+                          </div>
+                        </sc-if>
+                      </section>
+
+                      <div style="display:flex;flex-direction:column;gap:18px">
+                        <div style="display:flex;flex-direction:column;gap:6px">
+                          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:14px;font-weight:700;color:var(--color-ink)">Nombre</span><sc-if value="{{ s.nomTag }}"><span style="padding:2px 9px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:12px;font-weight:800">{{ s.nomTag }}</span></sc-if></div>
+                          <div style="min-height:52px;padding:0 14px;border-radius:14px;border:{{ s.nomBd }};background:{{ s.nomBg }};display:flex;align-items:center;font-size:16px;color:{{ s.nomCol }}">{{ s.nom }}</div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:6px">
+                          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:14px;font-weight:700;color:var(--color-ink)">Concentración <span style="font-weight:500;color:var(--color-muted)">(opcional)</span></span><sc-if value="{{ s.leidoTag }}"><span style="padding:2px 9px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:12px;font-weight:800">Leído de tu foto</span></sc-if></div>
+                          <div style="min-height:52px;padding:0 14px;border-radius:14px;border:{{ s.concBd }};background:{{ s.concBg }};display:flex;align-items:center;font-size:16px;color:{{ s.concCol }}">{{ s.conc }}</div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:6px">
+                          <span style="font-size:14px;font-weight:700;color:var(--color-ink)">Cantidad</span>
+                          <div style="display:flex;gap:8px;align-items:center">
+                            <div style="flex:none;width:96px;min-height:52px;padding:0 14px;border-radius:14px;border:1.5px solid #64748b;background:#ffffff;display:flex;align-items:center;font-size:16px;color:#64748b">0</div>
+                            <div role="group" aria-label="Unidad" style="flex:1;display:grid;grid-template-columns:repeat(2,1fr);gap:6px">
+                              <sc-for list="{{ s.units }}" as="u" hint-placeholder-count="4"><button type="button" aria-pressed="{{ u.on }}" onClick="{{ u.onClick }}" style="min-height:44px;padding:0 8px;border-radius:12px;border:1.5px solid {{ u.bd }};background:{{ u.bg }};color:{{ u.col }};font-size:14px;font-weight:800;cursor:pointer">{{ u.u }}</button></sc-for>
+                            </div>
+                          </div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:6px">
+                          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:14px;font-weight:700;color:var(--color-ink)">Caducidad</span><sc-if value="{{ s.leidoTag }}"><span style="padding:2px 9px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:12px;font-weight:800">Leído de tu foto</span></sc-if></div>
+                          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+                            <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:700;color:var(--color-muted)">Mes</span><div style="min-height:52px;padding:0 12px;border-radius:14px;border:{{ s.cadBd }};background:{{ s.cadBg }};display:flex;align-items:center;justify-content:space-between;font-size:16px;color:{{ s.mesCol }}"><span>{{ s.mes }}</span><span aria-hidden="true" style="color:var(--color-action)">▾</span></div></div>
+                            <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:700;color:var(--color-muted)">Año</span><div style="min-height:52px;padding:0 12px;border-radius:14px;border:{{ s.cadBd }};background:{{ s.cadBg }};display:flex;align-items:center;justify-content:space-between;font-size:16px;color:{{ s.mesCol }}"><span>{{ s.anio }}</span><span aria-hidden="true" style="color:var(--color-action)">▾</span></div></div>
+                            <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:700;color:var(--color-muted)">Día (opcional)</span><div style="min-height:52px;padding:0 12px;border-radius:14px;border:1.5px solid #64748b;background:#ffffff;display:flex;align-items:center;justify-content:space-between;font-size:16px;color:#64748b"><span>—</span><span aria-hidden="true" style="color:var(--color-action)">▾</span></div></div>
+                          </div>
+                        </div>
+                        <div style="display:flex;flex-direction:column;gap:6px">
+                          <span style="font-size:14px;font-weight:700;color:var(--color-ink)">Nota <span style="font-weight:500;color:var(--color-muted)">(opcional)</span></span>
+                          <div style="min-height:88px;padding:14px;border-radius:14px;border:1.5px solid #64748b;background:#ffffff;font-size:16px;color:#64748b">Dónde está guardado, quién lo abrió…</div>
+                        </div>
+                        <div style="height:96px"></div>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ s.kDet }}">
+                      <button type="button" aria-label="Abrir la foto de la caja" style="position:relative;height:240px;border-radius:22px;border:1px solid var(--color-hint-border);background:repeating-linear-gradient(135deg,#ecfeff 0 10px,#cffafe 10px 20px);cursor:pointer;padding:0"><span style="position:absolute;right:12px;bottom:12px;min-height:36px;padding:0 14px;border-radius:999px;background:var(--color-surface);color:var(--color-action);font-size:14px;font-weight:800;display:inline-flex;align-items:center">Ver foto</span></button>
+                      <div style="background:var(--color-surface);border-radius:22px;box-shadow:0 8px 20px rgba(4,37,43,0.07);overflow:hidden">
+                        <sc-for list="{{ datos }}" as="d" hint-placeholder-count="4"><div style="padding:14px 16px;display:flex;flex-direction:column;gap:2px;border-top:{{ d.bt }}"><span style="font-size:13px;font-weight:700;color:var(--color-muted)">{{ d.l }}</span><span style="font-size:17px;font-weight:700;line-height:1.45;color:var(--color-ink)">{{ d.v }}</span></div></sc-for>
+                      </div>
+                      <span style="font-size:14px;color:var(--color-muted)">Agregado por Ana · 6 nov</span>
+                    </sc-if>
+
+                    <sc-if value="{{ s.kCons }}">
+                      <header style="display:flex;flex-direction:column;gap:4px">
+                        <a href="#" style="align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;font-size:15px;font-weight:700">← Mateo</a>
+                        <span style="font-size:13px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-action)">18 oct 2026</span>
+                        <h1 style="margin:0;font-size:28px;line-height:1.15;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Dra. Laura Cázares</h1>
+                      </header>
+                      <h2 style="margin:0;font-size:20px;font-weight:800;color:var(--color-ink)">Tratamiento · hoy, viernes 6 nov</h2>
+                      <sc-for list="{{ consMeds }}" as="m" hint-placeholder-count="2">
+                        <article style="background:var(--color-surface);border-radius:22px;box-shadow:0 8px 20px rgba(4,37,43,0.07);padding:16px;display:flex;flex-direction:column;gap:10px">
+                          <div style="display:flex;gap:12px;align-items:flex-start">
+                            <span aria-hidden="true" style="flex:none;width:28px;height:28px;border-radius:50%;background:{{ m.color }};color:#ffffff;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center">{{ m.num }}</span>
+                            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+                              <span style="font-size:17px;font-weight:800;color:var(--color-ink)">{{ m.name }} <span style="font-weight:500;color:var(--color-body)">· {{ m.dosis }}</span></span>
+                              <span style="font-size:14px;color:var(--color-body)">{{ m.freq }}</span>
+                              <button type="button" style="align-self:flex-start;min-height:44px;padding:0;border:none;background:transparent;color:var(--color-action);font-size:14px;font-weight:800;display:inline-flex;align-items:center;gap:6px;cursor:pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="7" width="17" height="13" rx="2.5"></rect><path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M12 10.5v6M9 13.5h6"></path></svg>Agregar al botiquín</button>
+                            </div>
+                          </div>
+                          <div style="height:1px;background:var(--color-hint-edge)"></div>
+                          <sc-for list="{{ m.rows }}" as="r" hint-placeholder-count="2">
+                            <div style="display:flex;align-items:center;gap:10px;min-height:52px">
+                              <span style="flex:none;width:58px;font-size:11px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-action)">{{ r.g }}</span>
+                              <span style="flex:1;font-size:16px;font-weight:800;color:var(--color-ink)">{{ r.h }}</span>
+                              <sc-if value="{{ r.ok }}"><span style="flex:none;min-height:44px;padding:0 12px;border-radius:14px;background:var(--color-confirmed-soft);color:var(--color-confirmed-strong);font-size:14px;font-weight:800;display:inline-flex;align-items:center">✓ {{ r.at }} · por {{ r.by }}</span></sc-if>
+                              <sc-if value="{{ r.marcar }}"><button type="button" style="flex:none;min-height:44px;min-width:92px;padding:0 16px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Marcar</button></sc-if>
+                            </div>
+                          </sc-for>
+                        </article>
+                      </sc-for>
+                    </sc-if>
+                  </div>
+
+                  <sc-if value="{{ s.kForm }}">
+                    <div style="position:absolute;left:0;right:0;bottom:0;padding:14px 20px 34px;background:var(--color-surface);box-shadow:0 -8px 20px rgba(4,37,43,0.08)">
+                      <button type="button" style="width:100%;min-height:52px;padding:0 24px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer">Guardar en el botiquín</button>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ s.visor }}">
+                    <div role="dialog" aria-label="Foto de Paracetamol infantil" style="position:absolute;inset:0;background:var(--color-ink);display:flex;flex-direction:column;padding:57px 20px 34px;gap:16px">
+                      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="font-size:16px;font-weight:800;color:#ffffff">Paracetamol infantil</span><button type="button" style="flex:none;min-height:44px;padding:0 18px;border:2px solid #a5f3fc;border-radius:14px;background:transparent;color:#ffffff;font-size:15px;font-weight:800;cursor:pointer">Cerrar</button></div>
+                      <div style="flex:1;border-radius:16px;background:repeating-linear-gradient(135deg,#0b3b44 0 12px,#0e4a55 12px 24px);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#a5f3fc">Foto de la caja</div>
+                      <span style="text-align:center;font-size:13px;color:#a5f3fc">Pellizca para acercar</span>
+                    </div>
+                  </sc-if>
+                  <sc-if value="{{ s.confirm }}">
+                    <div style="position:absolute;inset:0;background:rgba(4,37,43,0.5);display:flex;align-items:flex-end">
+                      <div role="dialog" aria-label="Quitar del botiquín" style="width:100%;padding:12px 20px 34px;border-radius:28px 28px 0 0;background:var(--color-surface);display:flex;flex-direction:column;gap:14px">
+                        <span style="align-self:center;width:40px;height:5px;border-radius:999px;background:var(--color-skel)"></span>
+                        <h2 style="margin:6px 0 0;font-size:22px;line-height:1.25;font-weight:900;color:var(--color-ink)">¿Quitar Paracetamol infantil?</h2>
+                        <p style="margin:0;font-size:16px;line-height:1.5;color:var(--color-body)">Se quita del botiquín de la familia. No se puede deshacer.</p>
+                        <button type="button" style="margin-top:6px;min-height:52px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer">Quitar del botiquín</button>
+                        <button type="button" style="min-height:44px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Cancelar</button>
+                      </div>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:10px;flex:none">
+              <span style="font-size:13px;font-weight:800;color:var(--color-muted)">{{ s.id }}w · Web</span>
+              <div data-screen-label="{{ s.id }} web" style="position:relative;width:1280px;min-height:844px;display:flex;background:var(--color-canvas);box-shadow:0 20px 50px rgba(4,37,43,0.18);border-radius:16px;overflow:hidden">
+                <aside style="width:280px;flex-shrink:0;background:var(--color-ink);padding:28px 24px;display:flex;flex-direction:column;gap:24px">
+                  <div style="display:flex;align-items:center;gap:10px">
+                    <svg width="34" height="34" viewBox="0 0 64 64" role="img" aria-label="PediTrack"><defs><clipPath id="bqC{{ s.id }}"><rect x="21" y="5" width="22" height="54" rx="11"></rect></clipPath></defs><rect width="64" height="64" rx="15" fill="#22d3ee"></rect><g transform="rotate(-45 32 32)" clip-path="url(#bqC{{ s.id }})"><rect x="21" y="5" width="22" height="54" fill="#ffffff"></rect><rect x="21" y="32" width="22" height="27" fill="#047857"></rect><rect x="21" y="30.6" width="22" height="2.8" fill="#22d3ee"></rect></g></svg>
+                    <span style="font-size:18px;font-weight:900;letter-spacing:-0.03em;color:#ffffff">Pedi<span style="color:#67e8f9">Track</span></span>
+                  </div>
+                  <nav style="display:flex;flex-direction:column;gap:6px">
+                    <a href="#" style="min-height:48px;padding:0 16px;border-radius:16px;background:{{ s.nvI.bg }};display:flex;align-items:center;font-size:16px;font-weight:{{ s.nvI.w }};color:{{ s.nvI.c }};text-decoration:none">Inicio</a>
+                    <span style="padding:12px 16px 4px;font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#67e8f9">Tus hijos</span>
+                    <a href="#" style="min-height:48px;padding:0 16px;border-radius:16px;background:{{ s.nvM.bg }};display:flex;align-items:center;justify-content:space-between;text-decoration:none"><span style="font-size:16px;font-weight:{{ s.nvM.w }};color:{{ s.nvM.c }}">Mateo</span><span style="font-size:13px;font-weight:600;color:#cffafe">5a 6m</span></a>
+                    <a href="#" style="min-height:48px;padding:0 16px;border-radius:16px;display:flex;align-items:center;justify-content:space-between;text-decoration:none"><span style="font-size:16px;font-weight:700;color:#a5f3fc">Sofía</span><span style="font-size:13px;font-weight:600;color:#67e8f9">1a 2m</span></a>
+                    <span style="padding:12px 16px 4px;font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#67e8f9">Familia</span>
+                    <a href="#" style="min-height:48px;padding:0 16px;border-radius:16px;background:{{ s.nvB.bg }};display:flex;align-items:center;justify-content:space-between;gap:8px;text-decoration:none"><span style="font-size:16px;font-weight:{{ s.nvB.w }};color:{{ s.nvB.c }}">Botiquín</span><sc-if value="{{ s.free }}"><span style="padding:2px 8px;border-radius:999px;border:1px solid #67e8f9;color:#cffafe;font-size:11px;font-weight:800">Plan completo</span></sc-if></a>
+                    <span style="padding:12px 16px 4px;font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#67e8f9">Personal</span>
+                    <a href="#" style="min-height:48px;padding:0 16px;border-radius:16px;display:flex;align-items:center;font-size:16px;font-weight:700;color:#a5f3fc;text-decoration:none">Mi día</a>
+                  </nav>
+                  <div style="margin-top:auto;padding-top:16px;border-top:1px solid var(--color-ink-soft);display:flex;align-items:center;gap:12px">
+                    <span style="flex:none;width:38px;height:38px;border-radius:50%;background:var(--color-action);color:#ffffff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center">{{ s.uIni }}</span>
+                    <span style="display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700;color:#ffffff">{{ s.uNombre }}</span><span style="font-size:12px;color:#67e8f9">{{ s.uRol }}</span></span>
+                  </div>
+                </aside>
+
+                <main style="flex:1;min-width:0;padding:28px 48px 56px">
+                  <div style="max-width:904px;margin:0 auto;display:flex;flex-direction:column;gap:24px">
+
+                    <sc-if value="{{ s.kInicio }}">
+                      <header style="padding-top:16px;display:flex;flex-direction:column;gap:3px">
+                        <span style="font-size:13px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-action)">Viernes 6 nov</span>
+                        <h1 style="margin:0;font-size:34px;line-height:1.15;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Hola, Ana</h1>
+                      </header>
+                      <div style="height:260px;border-radius:22px;border:1.5px dashed var(--color-hint-border);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--color-muted)">Tus hijos y Tu día, sin cambios</div>
+                      <button type="button" style="max-width:560px;min-height:76px;padding:14px 20px;border:none;border-radius:22px;background:var(--color-surface);box-shadow:0 8px 20px rgba(4,37,43,0.07);display:flex;align-items:center;gap:16px;text-align:left;cursor:pointer">
+                        <span style="flex:none;width:44px;height:44px;border-radius:12px;background:var(--color-hint);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="7" width="17" height="13" rx="2.5"></rect><path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M12 10.5v6M9 13.5h6"></path></svg></span>
+                        <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:800;color:var(--color-ink)">Checa tus medicamentos</span><span style="font-size:15px;color:var(--color-body)">{{ s.entSub }}</span></span>
+                        <sc-if value="{{ s.free }}"><span style="flex:none;padding:4px 10px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:12px;font-weight:800">Plan completo</span></sc-if>
+                        <sc-if value="{{ s.full }}"><span aria-hidden="true" style="flex:none;font-size:22px;font-weight:800;color:var(--color-action)">›</span></sc-if>
+                      </button>
+                    </sc-if>
+
+                    <sc-if value="{{ s.hdr }}">
+                      <header style="display:flex;flex-direction:column;gap:6px">
+                        <a href="#" style="align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;font-size:15px;font-weight:700">{{ s.back }}</a>
+                        <div style="display:flex;align-items:center;gap:24px">
+                          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                            <h1 style="margin:0;font-size:34px;line-height:1.15;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink);text-wrap:balance">{{ s.titulo }}</h1>
+                            <sc-if value="{{ s.sub }}"><span style="font-size:16px;color:var(--color-body)">{{ s.sub }}</span></sc-if>
+                          </div>
+                          <div style="flex:none;display:flex;gap:10px;align-items:center">
+                            <sc-if value="{{ s.addTop }}"><button type="button" style="min-height:52px;padding:0 24px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer">+ Agregar al botiquín</button></sc-if>
+                            <sc-if value="{{ s.detAcc }}"><button type="button" style="min-height:44px;padding:0 12px;border:none;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Quitar del botiquín</button><button type="button" style="min-height:44px;padding:0 18px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Editar</button></sc-if>
+                          </div>
+                        </div>
+                        <sc-if value="{{ s.cuid }}"><div role="note" style="margin-top:10px;padding:14px 18px;border-radius:16px;border:1.5px solid var(--color-hint-border);background:var(--color-surface);font-size:15px;color:var(--color-body)"><strong style="color:var(--color-ink)">Vista de Cuidadora.</strong> Puedes ver el botiquín. Agregar y editar lo hace la familia.</div></sc-if>
+                      </header>
+                    </sc-if>
+
+                    <sc-if value="{{ s.kLista }}">
+                      <sc-if value="{{ s.conBuscar }}">
+                        <div style="position:relative;width:420px">
+                          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.2" stroke-linecap="round" aria-hidden="true" style="position:absolute;left:14px;top:14px"><circle cx="11" cy="11" r="6.5"></circle><path d="M16 16l4.5 4.5"></path></svg>
+                          <input type="search" aria-label="Buscar por nombre" placeholder="Buscar por nombre" value="{{ s.q }}" onChange="{{ s.onQ }}" style="width:100%;height:48px;padding:0 14px 0 44px;border-radius:14px;border:1.5px solid #64748b;background:#ffffff;font-size:16px;color:#04252b">
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ s.loading }}">
+                        <div aria-busy="true" aria-label="Cargando el botiquín" style="background:var(--color-surface);border-radius:22px;box-shadow:0 8px 20px rgba(4,37,43,0.07);overflow:hidden">
+                          <sc-for list="{{ skel }}" as="k" hint-placeholder-count="5"><div style="min-height:76px;padding:10px 20px;display:grid;grid-template-columns:56px minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 24px;gap:20px;align-items:center;border-top:{{ k.bt }}"><span style="width:56px;height:56px;border-radius:12px;background:var(--color-skel)"></span><span style="width:200px;height:16px;border-radius:5px;background:var(--color-skel)"></span><span style="width:90px;height:14px;border-radius:5px;background:var(--color-skel)"></span><span style="width:120px;height:14px;border-radius:5px;background:var(--color-skel)"></span><span style="width:110px;height:14px;border-radius:5px;background:var(--color-skel)"></span><span></span></div></sc-for>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ s.hayLista }}">
+                        <div style="display:flex;flex-direction:column;gap:8px">
+                          <span style="font-size:14px;font-weight:700;color:var(--color-muted)">{{ s.cuenta }}</span>
+                          <div style="background:var(--color-surface);border-radius:22px;box-shadow:0 8px 20px rgba(4,37,43,0.07);overflow:hidden">
+                            <sc-for list="{{ s.lista }}" as="m" hint-placeholder-count="5">
+                              <a href="#" style="min-height:76px;padding:10px 20px;display:grid;grid-template-columns:56px minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) 24px;gap:20px;align-items:center;text-decoration:none;border-top:{{ m.bt }}" style-hover="background:#f8feff">
+                                <sc-if value="{{ m.foto }}"><span aria-hidden="true" style="width:56px;height:56px;border-radius:12px;border:1px solid var(--color-hint-border);background:repeating-linear-gradient(135deg,#ecfeff 0 7px,#cffafe 7px 14px);display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px;font-size:10px;font-weight:800;color:var(--color-action)">foto</span></sc-if>
+                                <sc-if value="{{ m.sinFoto }}"><span aria-hidden="true" style="width:56px;height:56px;border-radius:12px;border:1.5px dashed var(--color-hint-border);background:var(--color-canvas);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round"><rect x="3.5" y="7" width="17" height="13" rx="2.5"></rect><path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M12 10.5v6M9 13.5h6"></path></svg></span></sc-if>
+                                <span style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:17px;font-weight:800;color:var(--color-ink)">{{ m.n }}</span><span style="font-size:14px;color:var(--color-body)">{{ m.cTxt }}</span></span>
+                                <span style="font-size:15px;color:var(--color-body)">{{ m.q }}</span>
+                                <span style="font-size:15px;color:var(--color-body)">{{ m.cad }}</span>
+                                <span style="font-size:14px;color:var(--color-muted)">{{ m.by }}</span>
+                                <span aria-hidden="true" style="font-size:22px;font-weight:800;color:var(--color-action)">›</span>
+                              </a>
+                            </sc-for>
+                          </div>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ s.sinRes }}"><p style="margin:0;padding:24px;border-radius:22px;border:1.5px dashed var(--color-hint-border);font-size:16px;color:var(--color-body)">Ningún medicamento del botiquín se llama «{{ s.q }}».</p></sc-if>
+                      <sc-if value="{{ s.vacio }}">
+                        <div style="padding:56px 24px;border-radius:22px;border:1.5px dashed var(--color-hint-border);display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center">
+                          <span style="width:64px;height:64px;border-radius:18px;background:var(--color-hint);display:flex;align-items:center;justify-content:center"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="7" width="17" height="13" rx="2.5"></rect><path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M12 10.5v6M9 13.5h6"></path></svg></span>
+                          <span style="font-size:19px;font-weight:800;color:var(--color-ink)">Aún no hay medicamentos en el botiquín</span>
+                          <button type="button" style="min-height:52px;padding:0 28px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer">+ Agregar al botiquín</button>
+                        </div>
+                      </sc-if>
+                    </sc-if>
+
+                    <sc-if value="{{ s.kForm }}">
+                      <sc-if value="{{ s.desdeConsulta }}"><div role="note" style="padding:14px 18px;border-radius:16px;background:var(--color-hint);border:1.5px solid var(--color-hint-border);font-size:15px;color:var(--color-body)"><strong style="color:var(--color-ink)">Desde la consulta del 18 oct</strong> · Dra. Laura Cázares. El nombre viene de la receta; puedes cambiarlo.</div></sc-if>
+                      <div style="display:grid;grid-template-columns:300px minmax(0,1fr);gap:32px;align-items:start">
+                        <section aria-label="Foto de la caja" style="display:flex;flex-direction:column;gap:10px">
+                          <span style="font-size:14px;font-weight:700;color:var(--color-ink)">Foto de la caja <span style="font-weight:500;color:var(--color-muted)">(opcional)</span></span>
+                          <sc-if value="{{ s.fNone }}">
+                            <div style="padding:20px;border-radius:22px;border:1.5px dashed var(--color-hint-border);background:var(--color-surface);display:flex;flex-direction:column;gap:12px">
+                              <div style="height:180px;border-radius:14px;background:var(--color-canvas);display:flex;align-items:center;justify-content:center"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="7" width="17" height="13" rx="2.5"></rect><path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M12 10.5v6M9 13.5h6"></path></svg></div>
+                              <span style="font-size:14px;line-height:1.5;color:var(--color-body)">Con foto, la app lee el texto de la caja en tu equipo y te propone los datos.</span>
+                              <button type="button" style="min-height:44px;padding:0 16px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Elegir foto</button>
+                            </div>
+                          </sc-if>
+                          <sc-if value="{{ s.fFoto }}">
+                            <div aria-live="polite" style="padding:16px;border-radius:22px;border:1.5px solid {{ s.fBorde }};background:{{ s.fFondo }};display:flex;flex-direction:column;gap:12px">
+                              <span aria-hidden="true" style="height:220px;border-radius:14px;border:1px solid var(--color-hint-border);background:repeating-linear-gradient(135deg,#ecfeff 0 10px,#cffafe 10px 20px);display:flex;align-items:flex-end;justify-content:center;padding-bottom:10px;font-size:12px;font-weight:800;color:var(--color-action)">foto</span>
+                              <sc-if value="{{ s.fLeyendo }}">
+                                <span style="font-size:16px;font-weight:800;color:var(--color-ink)">Leyendo la foto…</span>
+                                <span style="font-size:14px;line-height:1.5;color:var(--color-body)">El texto se lee en tu equipo. Mientras, puedes capturar a mano.</span>
+                                <div role="progressbar" aria-label="Leyendo la foto" style="height:6px;border-radius:999px;background:var(--color-hint-edge);overflow:hidden"><div style="width:45%;height:100%;border-radius:999px;background:var(--color-action)"></div></div>
+                              </sc-if>
+                              <sc-if value="{{ s.fLeido }}">
+                                <span style="font-size:16px;font-weight:800;color:var(--color-ink)">Leído de tu foto · revísalo</span>
+                                <span style="font-size:14px;line-height:1.5;color:var(--color-body)">Propusimos nombre, concentración y caducidad. Nada se guarda hasta que haces clic en Guardar.</span>
+                              </sc-if>
+                              <sc-if value="{{ s.fSin }}">
+                                <span style="font-size:16px;font-weight:800;color:var(--color-ink)">No encontramos texto</span>
+                                <span style="font-size:14px;line-height:1.5;color:var(--color-body)">Captúralo a mano. La foto se guarda con el medicamento.</span>
+                              </sc-if>
+                              <button type="button" style="align-self:flex-start;min-height:44px;padding:0;border:none;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Cambiar foto</button>
+                            </div>
+                          </sc-if>
+                        </section>
+
+                        <div style="max-width:560px;display:flex;flex-direction:column;gap:20px">
+                          <div style="display:flex;flex-direction:column;gap:6px">
+                            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:14px;font-weight:700;color:var(--color-ink)">Nombre</span><sc-if value="{{ s.nomTag }}"><span style="padding:2px 9px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:12px;font-weight:800">{{ s.nomTag }}</span></sc-if></div>
+                            <div style="min-height:52px;padding:0 14px;border-radius:14px;border:{{ s.nomBd }};background:{{ s.nomBg }};display:flex;align-items:center;font-size:16px;color:{{ s.nomCol }}">{{ s.nom }}</div>
+                          </div>
+                          <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px">
+                            <div style="display:flex;flex-direction:column;gap:6px">
+                              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:14px;font-weight:700;color:var(--color-ink)">Concentración <span style="font-weight:500;color:var(--color-muted)">(opcional)</span></span><sc-if value="{{ s.leidoTag }}"><span style="padding:2px 9px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:12px;font-weight:800">Leído de tu foto</span></sc-if></div>
+                              <div style="min-height:52px;padding:0 14px;border-radius:14px;border:{{ s.concBd }};background:{{ s.concBg }};display:flex;align-items:center;font-size:16px;color:{{ s.concCol }}">{{ s.conc }}</div>
+                            </div>
+                            <div style="display:flex;flex-direction:column;gap:6px">
+                              <span style="font-size:14px;font-weight:700;color:var(--color-ink)">Cantidad</span>
+                              <div style="min-height:52px;padding:0 14px;border-radius:14px;border:1.5px solid #64748b;background:#ffffff;display:flex;align-items:center;font-size:16px;color:#64748b">0</div>
+                            </div>
+                          </div>
+                          <div style="display:flex;flex-direction:column;gap:6px">
+                            <span style="font-size:14px;font-weight:700;color:var(--color-ink)">Unidad</span>
+                            <div role="group" aria-label="Unidad" style="display:flex;gap:8px">
+                              <sc-for list="{{ s.units }}" as="u" hint-placeholder-count="4"><button type="button" aria-pressed="{{ u.on }}" onClick="{{ u.onClick }}" style="min-height:44px;min-width:96px;padding:0 16px;border-radius:12px;border:1.5px solid {{ u.bd }};background:{{ u.bg }};color:{{ u.col }};font-size:15px;font-weight:800;cursor:pointer">{{ u.u }}</button></sc-for>
+                            </div>
+                          </div>
+                          <div style="display:flex;flex-direction:column;gap:6px">
+                            <div style="display:flex;align-items:center;gap:8px"><span style="font-size:14px;font-weight:700;color:var(--color-ink)">Caducidad</span><sc-if value="{{ s.leidoTag }}"><span style="padding:2px 9px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:12px;font-weight:800">Leído de tu foto</span></sc-if></div>
+                            <div style="display:grid;grid-template-columns:repeat(3,160px);gap:12px">
+                              <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:700;color:var(--color-muted)">Mes</span><div style="min-height:52px;padding:0 14px;border-radius:14px;border:{{ s.cadBd }};background:{{ s.cadBg }};display:flex;align-items:center;justify-content:space-between;font-size:16px;color:{{ s.mesCol }}"><span>{{ s.mes }}</span><span aria-hidden="true" style="color:var(--color-action)">▾</span></div></div>
+                              <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:700;color:var(--color-muted)">Año</span><div style="min-height:52px;padding:0 14px;border-radius:14px;border:{{ s.cadBd }};background:{{ s.cadBg }};display:flex;align-items:center;justify-content:space-between;font-size:16px;color:{{ s.mesCol }}"><span>{{ s.anio }}</span><span aria-hidden="true" style="color:var(--color-action)">▾</span></div></div>
+                              <div style="display:flex;flex-direction:column;gap:4px"><span style="font-size:12px;font-weight:700;color:var(--color-muted)">Día (opcional)</span><div style="min-height:52px;padding:0 14px;border-radius:14px;border:1.5px solid #64748b;background:#ffffff;display:flex;align-items:center;justify-content:space-between;font-size:16px;color:#64748b"><span>—</span><span aria-hidden="true" style="color:var(--color-action)">▾</span></div></div>
+                            </div>
+                          </div>
+                          <div style="display:flex;flex-direction:column;gap:6px">
+                            <span style="font-size:14px;font-weight:700;color:var(--color-ink)">Nota <span style="font-weight:500;color:var(--color-muted)">(opcional)</span></span>
+                            <div style="min-height:96px;padding:14px;border-radius:14px;border:1.5px solid #64748b;background:#ffffff;font-size:16px;color:#64748b">Dónde está guardado, quién lo abrió…</div>
+                          </div>
+                          <div style="padding-top:8px;display:flex;justify-content:flex-end;gap:12px">
+                            <button type="button" style="min-height:52px;padding:0 22px;border:2px solid var(--color-action);border-radius:16px;background:transparent;color:var(--color-action);font-size:16px;font-weight:800;cursor:pointer">Cancelar</button>
+                            <button type="button" style="min-height:52px;padding:0 24px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer">Guardar en el botiquín</button>
+                          </div>
+                        </div>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ s.kDet }}">
+                      <div style="display:grid;grid-template-columns:360px minmax(0,1fr);gap:32px;align-items:start">
+                        <button type="button" aria-label="Abrir la foto de la caja" style="position:relative;height:440px;border-radius:22px;border:1px solid var(--color-hint-border);background:repeating-linear-gradient(135deg,#ecfeff 0 12px,#cffafe 12px 24px);cursor:pointer;padding:0"><span style="position:absolute;right:14px;bottom:14px;min-height:40px;padding:0 16px;border-radius:999px;background:var(--color-surface);color:var(--color-action);font-size:14px;font-weight:800;display:inline-flex;align-items:center">Ver foto</span></button>
+                        <div style="display:flex;flex-direction:column;gap:14px">
+                          <div style="background:var(--color-surface);border-radius:22px;box-shadow:0 8px 20px rgba(4,37,43,0.07);overflow:hidden">
+                            <sc-for list="{{ datos }}" as="d" hint-placeholder-count="4"><div style="min-height:64px;padding:14px 24px;display:grid;grid-template-columns:160px minmax(0,1fr);gap:16px;align-items:baseline;border-top:{{ d.bt }}"><span style="font-size:14px;font-weight:700;color:var(--color-muted)">{{ d.l }}</span><span style="font-size:17px;font-weight:700;line-height:1.45;color:var(--color-ink)">{{ d.v }}</span></div></sc-for>
+                          </div>
+                          <span style="font-size:14px;color:var(--color-muted)">Agregado por Ana · 6 nov</span>
+                        </div>
+                      </div>
+                    </sc-if>
+
+                    <sc-if value="{{ s.kCons }}">
+                      <header style="display:flex;flex-direction:column;gap:6px">
+                        <a href="#" style="align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;font-size:15px;font-weight:700">← Mateo</a>
+                        <span style="font-size:13px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-action)">18 oct 2026</span>
+                        <h1 style="margin:0;font-size:34px;line-height:1.15;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Dra. Laura Cázares</h1>
+                      </header>
+                      <div style="display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:28px;align-items:start">
+                        <section aria-label="Tratamiento" style="display:flex;flex-direction:column;gap:14px">
+                          <h2 style="margin:0;font-size:21px;font-weight:800;color:var(--color-ink)">Tratamiento · hoy, viernes 6 nov</h2>
+                          <sc-for list="{{ consMeds }}" as="m" hint-placeholder-count="2">
+                            <article style="background:var(--color-surface);border-radius:22px;box-shadow:0 8px 20px rgba(4,37,43,0.07);padding:18px 20px;display:flex;flex-direction:column;gap:10px">
+                              <div style="display:flex;gap:12px;align-items:flex-start">
+                                <span aria-hidden="true" style="flex:none;width:28px;height:28px;border-radius:50%;background:{{ m.color }};color:#ffffff;font-size:14px;font-weight:900;display:flex;align-items:center;justify-content:center">{{ m.num }}</span>
+                                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:800;color:var(--color-ink)">{{ m.name }} <span style="font-weight:500;color:var(--color-body)">· {{ m.dosis }}</span></span><span style="font-size:14px;color:var(--color-body)">{{ m.freq }}</span></div>
+                                <button type="button" style="flex:none;min-height:44px;padding:0 4px;border:none;background:transparent;color:var(--color-action);font-size:14px;font-weight:800;display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin-top:-8px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="7" width="17" height="13" rx="2.5"></rect><path d="M8.5 7V5.5A1.5 1.5 0 0 1 10 4h4a1.5 1.5 0 0 1 1.5 1.5V7M12 10.5v6M9 13.5h6"></path></svg>Agregar al botiquín</button>
+                              </div>
+                              <div style="height:1px;background:var(--color-hint-edge)"></div>
+                              <sc-for list="{{ m.rows }}" as="r" hint-placeholder-count="2">
+                                <div style="display:flex;align-items:center;gap:12px;min-height:52px">
+                                  <span style="flex:none;width:64px;font-size:11px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-action)">{{ r.g }}</span>
+                                  <span style="flex:1;font-size:16px;font-weight:800;color:var(--color-ink)">{{ r.h }}</span>
+                                  <sc-if value="{{ r.ok }}"><span style="flex:none;min-height:44px;padding:0 12px;border-radius:14px;background:var(--color-confirmed-soft);color:var(--color-confirmed-strong);font-size:14px;font-weight:800;display:inline-flex;align-items:center">✓ {{ r.at }} · por {{ r.by }}</span></sc-if>
+                                  <sc-if value="{{ r.marcar }}"><button type="button" style="flex:none;min-height:44px;min-width:92px;padding:0 16px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Marcar</button></sc-if>
+                                </div>
+                              </sc-for>
+                            </article>
+                          </sc-for>
+                        </section>
+                        <div style="height:240px;border-radius:22px;border:1.5px dashed var(--color-hint-border);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--color-muted)">Próxima cita y datos, sin cambios</div>
+                      </div>
+                    </sc-if>
+                  </div>
+                </main>
+
+                <sc-if value="{{ s.visor }}">
+                  <div role="dialog" aria-label="Foto de Paracetamol infantil" style="position:absolute;inset:0;background:var(--color-ink);display:flex;flex-direction:column;padding:24px 40px 32px;gap:16px">
+                    <div style="display:flex;align-items:center;justify-content:space-between"><span style="font-size:18px;font-weight:800;color:#ffffff">Paracetamol infantil</span><button type="button" style="min-height:44px;padding:0 20px;border:2px solid #a5f3fc;border-radius:14px;background:transparent;color:#ffffff;font-size:15px;font-weight:800;cursor:pointer">Cerrar</button></div>
+                    <div style="flex:1;align-self:center;width:560px;border-radius:16px;background:repeating-linear-gradient(135deg,#0b3b44 0 14px,#0e4a55 14px 28px);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#a5f3fc">Foto de la caja</div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ s.confirm }}">
+                  <div style="position:absolute;inset:0;background:rgba(4,37,43,0.5);display:flex;align-items:center;justify-content:center">
+                    <div role="dialog" aria-label="Quitar del botiquín" style="width:480px;padding:28px;border-radius:22px;background:var(--color-surface);box-shadow:0 24px 60px rgba(4,37,43,0.3);display:flex;flex-direction:column;gap:14px">
+                      <h2 style="margin:0;font-size:22px;font-weight:900;color:var(--color-ink)">¿Quitar Paracetamol infantil?</h2>
+                      <p style="margin:0;font-size:16px;line-height:1.5;color:var(--color-body)">Se quita del botiquín de la familia. No se puede deshacer.</p>
+                      <div style="margin-top:8px;display:flex;justify-content:flex-end;gap:12px">
+                        <button type="button" style="min-height:44px;padding:0 20px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Cancelar</button>
+                        <button type="button" style="min-height:48px;padding:0 22px;border:none;border-radius:14px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer">Quitar del botiquín</button>
+                      </div>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-for>
+
+  <section id="medidas" style="max-width:1100px;display:flex;flex-direction:column;gap:20px;padding:32px;border-radius:22px;background:var(--color-surface)">
+    <h2 style="margin:0;font-size:28px;font-weight:900;color:var(--color-ink)">Medidas para construirlo</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <h3 style="margin:0;font-size:18px;font-weight:800;color:var(--color-ink)">Teléfono · 390 px</h3>
+        <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:15px;line-height:1.5;color:var(--color-body)">
+          <li>Márgenes laterales 20 px; zona segura superior 47 px; separación entre bloques 20 px.</li>
+          <li>Encabezado: «← Inicio» 15/700, alto 44. Título 28/900, interlínea 1.15. Subtítulo 15/400. Botón sólido debajo, ancho completo, 52 alto, radio 16, 16/800.</li>
+          <li>Buscador: 48 alto, radio 14, borde 1.5 px #64748b, texto 16, ícono a 14 px.</li>
+          <li>Fila de medicamento: mínimo 84 alto, relleno 12/16, miniatura 56×56 radio 12, separación 14. Nombre 17/800 tinta; concentración · cantidad y «Caduca: …» 14/400 #1f3d44. Divisor 1 px #cffafe. Toda la fila es el área táctil.</li>
+          <li>Formulario: etiqueta 14/700, campos 52 alto radio 14 borde 1.5 px #64748b; campo propuesto: borde 2 px #0e7490 y fondo #ecfeff. Chips de unidad 44 alto, 2 columnas. Caducidad en 3 columnas (mes, año, día opcional).</li>
+          <li>Barra «Guardar» fija: relleno 14 arriba, 20 lados, 34 abajo; sombra superior 0 −8 20 rgba(4,37,43,.08).</li>
+          <li>Detalle: foto 350×240 radio 22; datos con etiqueta 13/700 y valor 17/700. Hoja de confirmación: radio 28 arriba, título 22/900, botones 52 y 44.</li>
+        </ul>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <h3 style="margin:0;font-size:18px;font-weight:800;color:var(--color-ink)">Web · 1280 px</h3>
+        <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:15px;line-height:1.5;color:var(--color-body)">
+          <li>Barra lateral 280 px; «Botiquín» en el grupo Familia, fila 48 alto. Contenido con relleno 28/48 y ancho máximo 904.</li>
+          <li>Encabezado: título 34/900, subtítulo 16/400; acciones a la derecha. Botón sólido 52 alto.</li>
+          <li>Buscador 420 × 48.</li>
+          <li>Fila: mínimo 76 alto, relleno 10/20, columnas 56 · 1.6fr · 1fr · 1fr · 1fr · 24 con separación 20 (foto, nombre + concentración, cantidad, caducidad, agregado por, ›). Cantidad y caducidad 15/400 #1f3d44.</li>
+          <li>Formulario: columna de foto 300 px + campos (máx. 560), separación 32. Concentración y cantidad en dos columnas; caducidad 3 × 160. Botones al final, a la derecha.</li>
+          <li>Detalle: foto 360×440 + tarjeta de datos con filas de 64 alto (etiqueta 160 px).</li>
+          <li>Diálogo de confirmación 480 px, radio 22, relleno 28.</li>
+        </ul>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;padding-top:16px;border-top:1px solid var(--color-hint-edge);font-size:15px;line-height:1.5;color:var(--color-body)">
+      <span><strong style="color:var(--color-ink)">Orden:</strong> alfabético por nombre. Nunca por fecha de caducidad.</span>
+      <span><strong style="color:var(--color-ink)">Fecha:</strong> «Caduca: mar 2027» o «Caduca: 12 mar 2027», con el mismo estilo que la cantidad. Sin colores, íconos ni etiquetas según la fecha.</span>
+      <span><strong style="color:var(--color-ink)">Lectura de la foto:</strong> en el equipo. Solo propone nombre, concentración y caducidad; la cantidad siempre se captura a mano.</span>
+      <span><strong style="color:var(--color-ink)">Atajo de la consulta:</strong> botón de texto con ícono, 44 alto, sin borde, bajo el nombre (teléfono) o a la derecha del nombre (web). «Marcar» conserva su contorno.</span>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { q: {}, unit: {} };
+  renderVals() {
+    const MEDS = [
+      { n: 'Amoxicilina', c: '250 mg/5 ml', q: '1 frasco', cad: 'Caduca: feb 2027', foto: true, by: 'Ana · 18 oct' },
+      { n: 'Ibuprofeno suspensión', c: '100 mg/5 ml', q: '1 frasco', cad: 'Caduca: 12 ago 2026', foto: true, by: 'Luis · 2 sep' },
+      { n: 'Loratadina', c: '5 mg/5 ml', q: '1 frasco', cad: 'Caduca: ene 2028', foto: false, by: 'Ana · 14 jul' },
+      { n: 'Paracetamol', c: '500 mg', q: '20 tabletas', cad: 'Caduca: nov 2026', foto: true, by: 'Luis · 30 may' },
+      { n: 'Paracetamol infantil', c: '160 mg/5 ml', q: '2 frascos', cad: 'Caduca: mar 2027', foto: true, by: 'Ana · 6 nov' },
+      { n: 'Pomada de óxido de zinc', c: '', q: '1 caja', cad: 'Caduca: jun 2027', foto: false, by: 'Ana · 30 may' },
+      { n: 'Suero oral', c: '', q: '4 cajas', cad: 'Caduca: 3 sep 2027', foto: false, by: 'Luis · 21 abr' }
+    ];
+    const norm = t => (t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const nv = on => on ? { bg: '#0e7490', c: '#ffffff', w: 800 } : { bg: 'transparent', c: '#a5f3fc', w: 700 };
+    const BD = '1.5px solid #64748b', BDP = '2px solid #0e7490';
+    const ana = { uIni: 'AM', uNombre: 'Ana Morales', uRol: 'Dueña · plan completo' };
+    const rosa = { uIni: 'RL', uNombre: 'Rosa Luna', uRol: 'Cuidadora' };
+
+    const lista = (o) => Object.assign({ kLista: true, hdr: true, back: '← Inicio', titulo: 'Botiquín', sub: 'De toda la familia' }, o);
+    const form = (o) => Object.assign({ kForm: true, hdr: true, back: '← Botiquín', titulo: 'Agregar al botiquín', foto: 'none' }, o);
+    const det = (o) => Object.assign({ kDet: true, hdr: true, back: '← Botiquín', titulo: 'Paracetamol infantil', sub: '160 mg/5 ml', detAcc: true }, o);
+
+    const grupos = [
+      { t: 'Pantalla 1 · Entrada en el Inicio', d: 'Una fila en el Inicio, debajo de Tus hijos y Tu día.', estados: [
+        { id: '1a', label: 'Plan completo', quien: 'Dueña · abre el Botiquín', kInicio: true, nav: 'inicio', entSub: '7 medicamentos en el botiquín' },
+        { id: '1b', label: 'Plan gratuito', quien: 'Dueña · abre el aviso de Plan completo que ya existe', kInicio: true, nav: 'inicio', free: true, entSub: 'Las medicinas que tienen en casa', uRol: 'Dueña · plan gratuito' }
+      ]},
+      { t: 'Pantalla 2 · Botiquín', d: 'Lista compartida por toda la familia. «+ Agregar al botiquín» es el único botón sólido.', estados: [
+        lista({ id: '2a', label: 'Con medicamentos', quien: 'Dueña · escribe en el buscador para filtrar' }),
+        lista({ id: '2b', label: 'Cargando', quien: 'Esqueletos con la altura final de las filas', loading: true }),
+        lista({ id: '2c', label: 'Vacío', quien: 'Sin buscador; el botón va dentro del estado vacío', vacio: true }),
+        lista({ id: '2d', label: 'Buscando', quien: 'Filtra por nombre, sin distinguir acentos', qInit: 'paracet' }),
+        lista({ id: '2e', label: 'Vista de Cuidadora', quien: 'Rosa · solo ve la lista', cuid: true })
+      ]},
+      { t: 'Pantalla 3 · Agregar al botiquín', d: 'Página completa. En el teléfono «Guardar» queda fijo abajo.', estados: [
+        form({ id: '3a', label: 'A mano, sin foto', quien: 'Todos los campos vacíos' }),
+        form({ id: '3b', label: 'Leyendo la foto', quien: 'Los campos se pueden llenar mientras tanto', foto: 'leyendo' }),
+        form({ id: '3c', label: 'Leído de tu foto', quien: 'Propone nombre, concentración y caducidad; el padre revisa', foto: 'leido' }),
+        form({ id: '3d', label: 'Sin texto leído', quien: 'La foto se queda; se captura a mano', foto: 'sin' })
+      ]},
+      { t: 'Pantalla 4 · Detalle del medicamento', d: 'Sin botón sólido: Editar con contorno, Quitar como texto.', estados: [
+        det({ id: '4a', label: 'Detalle', quien: 'Dueña' }),
+        det({ id: '4b', label: 'Visor de la foto', quien: 'Se abre al tocar la foto', visor: true }),
+        det({ id: '4c', label: 'Quitar del botiquín', quien: 'Confirmación neutral', confirm: true }),
+        det({ id: '4d', label: 'Vista de Cuidadora', quien: 'Rosa · sin Editar ni Quitar', detAcc: false, cuid: true })
+      ]},
+      { t: 'Pantalla 5 · Atajo desde la consulta', d: 'Acción de texto dentro de la tarjeta del medicamento de la receta.', estados: [
+        { id: '5a', label: 'Tarjeta en el Detalle de la consulta', quien: 'Marcar conserva su contorno; el atajo no lleva borde', kCons: true, nav: 'mateo' },
+        form({ id: '5b', label: 'Formulario con el nombre puesto', quien: 'Viene de Amoxicilina · editable', back: '← Consulta', desdeConsulta: true, nav: 'mateo' })
+      ]}
+    ];
+
+    grupos.forEach(g => { g.estados = g.estados.map(s0 => {
+      const s = Object.assign({}, s0.cuid ? rosa : ana, s0);
+      const nav = s.nav || 'botiquin';
+      s.nvI = nv(nav === 'inicio'); s.nvM = nv(nav === 'mateo'); s.nvB = nv(nav === 'botiquin');
+      s.full = s.kInicio && !s.free;
+      if (s.kLista) {
+        const q = this.state.q[s.id] ?? s.qInit ?? '';
+        s.q = q;
+        s.onQ = e => { const v = e.target.value; this.setState(st => ({ q: Object.assign({}, st.q, { [s.id]: v }) })); };
+        const f = MEDS.filter(m => norm(m.n).includes(norm(q.trim())));
+        s.conBuscar = !s.vacio;
+        s.addTop = !s.cuid && !s.vacio;
+        s.hayLista = !s.loading && !s.vacio && f.length > 0;
+        s.sinRes = !s.loading && !s.vacio && f.length === 0;
+        s.cuenta = q.trim() ? `${f.length} de ${MEDS.length} medicamentos` : `${MEDS.length} medicamentos`;
+        s.lista = f.map((m, i) => Object.assign({}, m, { sinFoto: !m.foto, bt: i ? '1px solid #cffafe' : 'none', sub: m.c ? `${m.c} · ${m.q}` : m.q, cTxt: m.c || '—', by: 'Agregado por ' + m.by }));
+      }
+      if (s.kForm) {
+        const ft = s.foto;
+        s.fNone = ft === 'none'; s.fFoto = !s.fNone;
+        s.fLeyendo = ft === 'leyendo'; s.fLeido = ft === 'leido'; s.fSin = ft === 'sin';
+        s.fBorde = s.fLeido ? '#0e7490' : (s.fSin ? '#64748b' : '#a5f3fc');
+        s.fFondo = s.fLeido ? '#ecfeff' : '#ffffff';
+        const leido = s.fLeido;
+        s.leidoTag = leido;
+        if (leido) { s.nom = 'Paracetamol infantil'; s.nomTag = 'Leído de tu foto'; }
+        else if (s.desdeConsulta) { s.nom = 'Amoxicilina'; s.nomTag = 'De la receta'; }
+        else { s.nom = 'Como viene en la caja'; s.nomTag = ''; }
+        const nomLleno = leido || s.desdeConsulta;
+        s.nomCol = nomLleno ? '#04252b' : '#64748b'; s.nomBd = nomLleno ? BDP : BD; s.nomBg = nomLleno ? '#ecfeff' : '#ffffff';
+        s.conc = leido ? '160 mg/5 ml' : 'p. ej. 160 mg/5 ml';
+        s.concCol = leido ? '#04252b' : '#64748b'; s.concBd = leido ? BDP : BD; s.concBg = leido ? '#ecfeff' : '#ffffff';
+        s.mes = leido ? 'mar' : 'Mes'; s.anio = leido ? '2027' : 'Año';
+        s.mesCol = leido ? '#04252b' : '#64748b'; s.cadBd = leido ? BDP : BD; s.cadBg = leido ? '#ecfeff' : '#ffffff';
+        const sel = this.state.unit[s.id];
+        s.units = ['cajas', 'tabletas', 'frascos', 'ml'].map(u => {
+          const on = sel === u;
+          return { u, on, bg: on ? '#04252b' : '#ffffff', bd: on ? '#04252b' : '#64748b', col: on ? '#ffffff' : '#04252b',
+            onClick: () => this.setState(st => ({ unit: Object.assign({}, st.unit, { [s.id]: on ? null : u }) })) };
+        });
+      }
+      return s;
+    }); });
+
+    const datos = [
+      { l: 'Concentración', v: '160 mg/5 ml' },
+      { l: 'Cantidad', v: '2 frascos' },
+      { l: 'Caduca', v: 'mar 2027' },
+      { l: 'Nota', v: 'Uno abierto, en el cajón de la cocina.' }
+    ].map((d, i) => Object.assign(d, { bt: i ? '1px solid #cffafe' : 'none' }));
+
+    const consMeds = [
+      { num: '1', color: '#0e7490', name: 'Amoxicilina', dosis: '5 ml', freq: 'Cada 8 h · 7 días', rows: [{ g: 'Mañana', h: '08:00', ok: true, at: '08:04', by: 'Ana' }, { g: 'Tarde', h: '16:00', marcar: true }] },
+      { num: '2', color: '#04252b', name: 'Paracetamol infantil', dosis: '5 ml', freq: 'Cada 8 h · 3 días', rows: [{ g: 'Mañana', h: '09:00', ok: true, at: '09:10', by: 'Luis' }, { g: 'Tarde', h: '17:00', marcar: true }] }
+    ];
+
+    const skel = [0, 1, 2, 3, 4].map(i => ({ bt: i ? '1px solid #cffafe' : 'none' }));
+    return { grupos, datos, consMeds, skel };
+  }
+}
+</script>
+</body>
+</html>

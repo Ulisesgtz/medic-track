@@ -9,6 +9,7 @@ import { useLocalDay } from '../../shared/useLocalDay'
 import { AppShell } from '../home/AppShell'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
+import { cabinetAccess } from '../medicineCabinet/cabinetAccess'
 import { OwnRemindersCard } from '../profile/SharingCards'
 import { PROFILE, backTo } from '../profile/profileText'
 import { newConsultationHref, subjectAccessOf, subjectHref, subjectKey, subjectOfConsultation } from '../../shared/subject'
@@ -284,6 +285,7 @@ export function ConsultationDetailPage() {
           today={todayKey}
           recordOnly={recordOnly}
           canManage={access.canAdd}
+          cabinet={cabinetAccess(account).canAdd ? { consultDate: consultation.consultDate, doctor: consultation.doctorName } : undefined}
         />
       ))}
     </section>

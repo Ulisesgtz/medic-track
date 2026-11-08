@@ -863,6 +863,362 @@ const docTemplate = `{
                 }
             }
         },
+        "/accounts/{accountId}/medicine-cabinet": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Alphabetical by name, never by the expiry date (which is only a datum). ` + "`" + `accountId` + "`" + ` is the family owner's.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cabinet"
+                ],
+                "summary": "The family's medicine cabinet",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The family owner's account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetList"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session is not in this family",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The paid plan (the family owner's) and at most 200 medicines per family.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cabinet"
+                ],
+                "summary": "Add a medicine to the family's cabinet",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The family owner's account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The medicine",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CabinetItemInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetItem"
+                        }
+                    },
+                    "400": {
+                        "description": "An invalid field",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't change this cabinet",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Free plan (reason medicine_cabinet) or cabinet_limit_exceeded",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}/medicine-cabinet/{itemId}": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cabinet"
+                ],
+                "summary": "One medicine of the family's cabinet",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The family owner's account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Medicine UUID",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetItem"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session is not in this family",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such medicine in this cabinet",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Any plan. ` + "`" + `photoBase64` + "`" + ` absent keeps the photo, \"\" removes it. Stamps who edited it and when.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cabinet"
+                ],
+                "summary": "Correct a medicine",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The family owner's account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Medicine UUID",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The medicine",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CabinetItemInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetItem"
+                        }
+                    },
+                    "400": {
+                        "description": "An invalid field",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't change this cabinet",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such medicine in this cabinet",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "For good, with its photo. Any plan.",
+                "tags": [
+                    "cabinet"
+                ],
+                "summary": "Remove a medicine from the cabinet",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The family owner's account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Medicine UUID",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't change this cabinet",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such medicine in this cabinet",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}/medicine-cabinet/{itemId}/photo": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "cabinet"
+                ],
+                "summary": "The photo of a medicine's box",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "The family owner's account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Medicine UUID",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetPhoto"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session is not in this family",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such medicine or it has no photo",
+                        "schema": {
+                            "$ref": "#/definitions/CabinetErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/accounts/{accountId}/overview": {
             "get": {
                 "security": [
@@ -5895,6 +6251,160 @@ const docTemplate = `{
                 "paidPlan": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "CabinetErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "item_not_found"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "CabinetExpires": {
+            "type": "object",
+            "properties": {
+                "day": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "month": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "year": {
+                    "type": "integer",
+                    "example": 2027
+                }
+            }
+        },
+        "CabinetItem": {
+            "type": "object",
+            "properties": {
+                "canEdit": {
+                    "description": "CanEdit: the session may edit and remove (owner or Tutor of a paid family).",
+                    "type": "boolean",
+                    "example": true
+                },
+                "createdAt": {
+                    "type": "string",
+                    "example": "2026-11-06T18:00:00Z"
+                },
+                "createdBy": {
+                    "type": "string",
+                    "example": "Ana"
+                },
+                "expires": {
+                    "$ref": "#/definitions/CabinetExpires"
+                },
+                "hasPhoto": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Paracetamol infantil"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "strength": {
+                    "type": "string",
+                    "example": "160 mg/5 ml"
+                },
+                "unit": {
+                    "type": "string",
+                    "example": "bottle"
+                },
+                "updatedAt": {
+                    "type": "string",
+                    "example": "2026-11-07T18:00:00Z"
+                },
+                "updatedBy": {
+                    "type": "string",
+                    "example": "Luis"
+                }
+            }
+        },
+        "CabinetItemInput": {
+            "type": "object",
+            "properties": {
+                "expires": {
+                    "$ref": "#/definitions/CabinetExpires"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Paracetamol infantil"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "photoBase64": {
+                    "description": "PhotoBase64 when creating: absent or \"\" = no photo. When editing: absent = unchanged, \"\" = removed.",
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "strength": {
+                    "type": "string",
+                    "example": "160 mg/5 ml"
+                },
+                "unit": {
+                    "type": "string",
+                    "enum": [
+                        "box",
+                        "tablet",
+                        "bottle",
+                        "ml"
+                    ],
+                    "example": "bottle"
+                }
+            }
+        },
+        "CabinetList": {
+            "type": "object",
+            "properties": {
+                "canAdd": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "canEdit": {
+                    "description": "CanEdit: the session may edit and remove; CanAdd: it may also add (and the family owner is on the paid plan).",
+                    "type": "boolean",
+                    "example": true
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/CabinetItem"
+                    }
+                },
+                "limit": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "CabinetPhoto": {
+            "type": "object",
+            "properties": {
+                "photoBase64": {
+                    "type": "string"
                 }
             }
         },

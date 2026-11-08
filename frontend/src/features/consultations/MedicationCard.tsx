@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { formatDayMonth } from '../../shared/date'
+import { AddToCabinetLink } from '../medicineCabinet/AddToCabinetLink'
 import { DETAIL, scheduleLine } from './consultationDetailText'
 import { DoseRow } from './DoseRow'
 import { dosesOfDay, longDay, medBg } from './treatmentDays'
@@ -30,6 +31,8 @@ interface MedicationCardProps {
    * only marks doses). The server enforces it; this keeps the buttons from being offered. Absent = yes.
    */
   canManage?: boolean
+  /** specs/062: when the session can add to the family's medicine cabinet, the consultation's date and doctor for the shortcut. */
+  cabinet?: { consultDate: string; doctor: string }
 }
 
 const outline =
@@ -51,7 +54,7 @@ function HistoryLine({ children }: { children: string }) {
  * its toggle; then its history (extended, ended) as grey lines and «Finalizar» / «Recorrer» with outline, only for who can and
  * only when they apply. Progress and the end/extend state always count the whole medication.
  */
-export function MedicationCard({ consultationId, medication, number, variant, day, today, recordOnly = false, canManage = true }: MedicationCardProps) {
+export function MedicationCard({ consultationId, medication, number, variant, day, today, recordOnly = false, canManage = true, cabinet }: MedicationCardProps) {
   const desktop = variant === 'desktop'
   const doses = day ? dosesOfDay(medication, day) : []
 
@@ -107,7 +110,9 @@ export function MedicationCard({ consultationId, medication, number, variant, da
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <h3 className={`font-extrabold text-ink [overflow-wrap:anywhere] ${desktop ? 'text-[18px]' : 'text-[17px]'}`}>{medication.name}</h3>
           <p className="text-[14px] text-body">{scheduleLine(medication.frequencyHours, medication.durationDays, recordOnly ? null : medication.startTime)}</p>
+          {cabinet && !desktop && <AddToCabinetLink from={{ consultationId, name: medication.name, ...cabinet }} />}
         </div>
+        {cabinet && desktop && <AddToCabinetLink from={{ consultationId, name: medication.name, ...cabinet }} />}
         {desktop && hasDoses && <ProgressBar doses={medication.doses} align="right" className="w-[200px] shrink-0" />}
       </div>
 

@@ -11,6 +11,8 @@ import {
   fieldRoutine,
   fieldRoutineMultiline,
   labelClass,
+  fieldCabinet,
+  fieldCabinetProposed,
 } from './formStyles'
 
 // The classes each screen had before they moved here (BACKLOG, "Unificar estilos de formulario"). Moving them was meant to
@@ -75,6 +77,12 @@ describe('formStyles', () => {
     expect(fieldBorder(true, 'border-bright-soft')).toBe('border-red-600')
     expect(fieldBorder(false)).toBe('border-slate-300')
     expect(fieldBorder(false, 'border-bright-soft')).toBe('border-bright-soft')
+  })
+
+  it('the medicine cabinet fields are the mock design: 52 px, 14 px radius, slate border; proposed in action on hint (specs/062)', () => {
+    expect(fieldCabinet).toContain('min-h-[52px]')
+    expect(fieldCabinet).toContain('border-calendar-muted')
+    expect(fieldCabinetProposed).toContain('border-action bg-hint')
   })
 
   it('label and error keep the project sizes: 13 px, error in red-700', () => {
