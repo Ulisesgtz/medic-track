@@ -194,7 +194,7 @@ description: "Lista de tareas: editar los datos del hijo (spec 064)"
   - `npm run build`, `npx eslint .`, `npx tsc -b`.
   - `npx playwright test --list`.
 - [X] T029 Correr `/code-review` sobre la rama, arreglar los hallazgos y volver a verificar.
-- [ ] T030 Push, PR a `develop` con el SQL de la `0035` en «Antes del merge», y luego `get_status` y `set_monitor` del PR.
+- [X] T030 Push, PR a `develop` con el SQL de la `0035` en «Antes del merge», y luego `get_status` y `set_monitor` del PR.
 
 **Commit**: `feat(064): E2E, documentación y hallazgos del code review`
 
