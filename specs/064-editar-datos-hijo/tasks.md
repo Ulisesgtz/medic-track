@@ -26,31 +26,31 @@ description: "Lista de tareas: editar los datos del hijo (spec 064)"
 
 ## Fase 2: Fundamental (backend; bloquea todo)
 
-- [ ] T003 [P] En `backend/internal/account/service.go`, exportar la regla del nombre como `ValidateName(name string) string`. Hoy es `validateNameFormat`: solo letras con acentos y ñ, espacios, guiones y apóstrofes, 1–100 caracteres. Debe devolver el mensaje fijo de error o `""`. Actualizar los llamadores y las pruebas.
-- [ ] T004 [P] En `backend/internal/account/model.go`, agregar a `Child` los campos `CorrectedAt *time.Time` y `CorrectedBy *string`. En `backend/internal/account/repository.go`, las 4 lecturas de `children` (líneas ~110, ~174, ~249, ~301) usan alias `c` y agregan `LEFT JOIN accounts kb ON kb.id = c.corrected_by_account_id`, escaneando `c.corrected_at` y `kb.first_name`. En `backend/internal/account/handler.go`, agregar a `childResponse` `CorrectedAt *string json:"correctedAt"` (RFC 3339) y `CorrectedBy *string json:"correctedBy"`, y llenarlos donde se arma la respuesta. Agregar pruebas en `repository_test.go` y `handler_test.go`: un hijo nunca corregido trae `null`; uno corregido trae la fecha y el nombre de pila.
-- [ ] T005 [P] En `backend/internal/growth/repository.go`:
+- [X] T003 [P] En `backend/internal/account/service.go`, exportar la regla del nombre como `ValidateName(name string) string`. Hoy es `validateNameFormat`: solo letras con acentos y ñ, espacios, guiones y apóstrofes, 1–100 caracteres. Debe devolver el mensaje fijo de error o `""`. Actualizar los llamadores y las pruebas.
+- [X] T004 [P] En `backend/internal/account/model.go`, agregar a `Child` los campos `CorrectedAt *time.Time` y `CorrectedBy *string`. En `backend/internal/account/repository.go`, las 4 lecturas de `children` (líneas ~110, ~174, ~249, ~301) usan alias `c` y agregan `LEFT JOIN accounts kb ON kb.id = c.corrected_by_account_id`, escaneando `c.corrected_at` y `kb.first_name`. En `backend/internal/account/handler.go`, agregar a `childResponse` `CorrectedAt *string json:"correctedAt"` (RFC 3339) y `CorrectedBy *string json:"correctedBy"`, y llenarlos donde se arma la respuesta. Agregar pruebas en `repository_test.go` y `handler_test.go`: un hijo nunca corregido trae `null`; uno corregido trae la fecha y el nombre de pila.
+- [X] T005 [P] En `backend/internal/growth/repository.go`:
   - Agregar `InsertInTx(ctx, tx pgx.Tx, childID, accountID, actor uuid.UUID, c Cleaned) (*Measurement, error)`. Revisa el tope de `MaxPerChild` (500 → `ErrLimit`) y hace el insert. La fila del hijo ya debe estar bloqueada por quien llama.
   - `Create` bloquea con `SELECT account_id, birth_date … FOR UPDATE`. Si `c.MeasuredOn` queda antes de `birth_date`, devuelve el error de validación de «antes del nacimiento» (el mismo campo y mensaje que `Validate`). Luego llama a `InsertInTx`.
   - `Update` pasa a una transacción: bloquea el hijo con `SELECT birth_date FROM children WHERE id = $1 FOR SHARE`, hace la misma revisión y luego la actualización.
   - En `growth_test.go`: si el nacimiento cambia a una fecha posterior entre la validación y la escritura, el insert se rechaza.
-- [ ] T006 [P] En `backend/internal/vaccination/repository.go`, `Create` y `Update` bloquean el hijo con `SELECT birth_date FROM children WHERE id = $1 FOR SHARE` al inicio de su transacción. Si `applied_on` queda antes de `birth_date`, devuelven el error de validación existente del campo de fecha («antes del nacimiento»). Agregar pruebas equivalentes a las de T005 en las pruebas de `vaccination`.
-- [ ] T007 Crear `backend/internal/childprofile/model.go` y `errors.go`:
+- [X] T006 [P] En `backend/internal/vaccination/repository.go`, `Create` y `Update` bloquean el hijo con `SELECT birth_date FROM children WHERE id = $1 FOR SHARE` al inicio de su transacción. Si `applied_on` queda antes de `birth_date`, devuelven el error de validación existente del campo de fecha («antes del nacimiento»). Agregar pruebas equivalentes a las de T005 en las pruebas de `vaccination`.
+- [X] T007 Crear `backend/internal/childprofile/model.go` y `errors.go`:
   - Modelo: `Input{FirstName, LastName, BirthDate string; Height, Weight *float64; Measurement *MeasurementInput{MeasuredOn string}}`.
   - Errores: `ErrNotFound`, `ErrPlanRequired`, `PlanLimitChildIdentity = "child_identity"`, `ConflictError{MeasurementCount, VaccinationCount int; Measurements, Vaccinations []string}` (fechas `YYYY-MM-DD` ascendentes, hasta 20 de cada una) y `ValidationErrors` con campos `firstName`, `lastName`, `birthDate`, `height`, `weight`, `measurement`, `measurement.measuredOn`, `measurement.weightKg` y `measurement.heightCm`, con mensajes fijos que nunca repiten lo escrito.
-- [ ] T008 Crear `backend/internal/childprofile/validate.go`, puro:
+- [X] T008 Crear `backend/internal/childprofile/validate.go`, puro:
   - Recorta el nombre y el apellido y los valida con `account.ValidateName`.
   - `birthDate` en formato `YYYY-MM-DD`, no posterior a mañana en UTC.
   - `height` y `weight` son `nil` o `> 0`.
   - Si viene `measurement`: al menos uno de `height` o `weight` no `nil`; si no, error en `measurement`. Valida con `growth.Validate` usando el nacimiento **nuevo** y `today` (rangos 0.3–200 kg y 30–220 cm, la fecha hasta mañana en UTC y no antes del nacimiento), y mapea sus errores a `measurement.*`.
   - Pruebas en `backend/internal/childprofile/validate_test.go` para cada regla.
-- [ ] T009 Crear `backend/internal/childprofile/repository.go`, con `Update(ctx, childID, actor uuid.UUID, c Cleaned) (*account.Child, error)` en **una** transacción, usando solo `tx`:
+- [X] T009 Crear `backend/internal/childprofile/repository.go`, con `Update(ctx, childID, actor uuid.UUID, c Cleaned) (*account.Child, error)` en **una** transacción, usando solo `tx`:
   1. `SELECT c.account_id, c.first_name, c.last_name, c.birth_date, c.height::float8, c.weight::float8, a.plan FROM children c JOIN accounts a ON a.id = c.account_id WHERE c.id = $1 FOR UPDATE OF c`. Sin filas → `ErrNotFound`.
   2. Si cambia el nombre, el apellido o la fecha y `plan <> 'paid'` → `ErrPlanRequired`, sin escribir.
   3. Si la fecha cambia, buscar las medidas (`measured_on < $new`) y las vacunas (`applied_on < $new`) del hijo, ordenadas por fecha. Si hay alguna → `ConflictError` con los conteos totales y hasta 20 fechas de cada una.
   4. Si algún campo cambió → `UPDATE children SET …, corrected_by_account_id = $actor, corrected_at = now()`. Si nada cambió, no se escribe ni se sella.
   5. Si viene la medida → `growth.InsertInTx`, que puede devolver `growth.ErrLimit`.
   6. Releer el hijo con el autor de la corrección y hacer commit.
-- [ ] T010 Crear `backend/internal/childprofile/service.go` (`Update` = validar con la fecha de hoy inyectable + repositorio) y `handler.go`:
+- [X] T010 Crear `backend/internal/childprofile/service.go` (`Update` = validar con la fecha de hoy inyectable + repositorio) y `handler.go`:
   - `UpdateChild` para `PUT /children/{childId}`. Toma el actor de la sesión como los demás manejadores con `fullChild`.
   - Escribe **todo** por `*httpx.Responder`:
     - 200 con el `childResponse` de `account`. Si hace falta, exportar un armador `account.ChildResponseFrom(Child)` o mover el tipo para que los dos lo usen.
@@ -61,7 +61,7 @@ description: "Lista de tareas: editar los datos del hijo (spec 064)"
     - 422 `growth_limit_exceeded`.
   - Comentarios de Swagger (`@Summary`, `@Param`, `@Success`, `@Failure`).
   - Los nombres y los valores nunca van en los mensajes que llegan a `error_logs`.
-- [ ] T011 Crear `backend/internal/childprofile/childprofile_test.go`, contra la base real:
+- [X] T011 Crear `backend/internal/childprofile/childprofile_test.go`, contra la base real:
   - La talla y el peso en el plan gratuito.
   - Vaciar la talla.
   - Cambio de identidad en el plan gratuito → 422, sin cambiar nada; el peso que venía en la misma petición tampoco cambia.
@@ -77,10 +77,10 @@ description: "Lista de tareas: editar los datos del hijo (spec 064)"
   - Concurrencia: una gorutina cambia el nacimiento a una fecha posterior mientras otra anota una medida anterior a esa fecha. Nunca queda una medida antes del nacimiento.
   - `error_logs` no contiene nombres ni valores.
   - Correr con y sin `pool_max_conns=4`.
-- [ ] T012 Registrar `r.With(fullChild).Put("/children/{childId}", d.ChildProfile.UpdateChild)` en `backend/internal/server/router.go`, junto a las rutas del hijo y **nunca** en `/child-device`. Agregar `ChildProfile` a las dependencias.
+- [X] T012 Registrar `r.With(fullChild).Put("/children/{childId}", d.ChildProfile.UpdateChild)` en `backend/internal/server/router.go`, junto a las rutas del hijo y **nunca** en `/child-device`. Agregar `ChildProfile` a las dependencias.
   - En `backend/internal/server/router_test.go`, filas por rol: dueña 200, Tutor de familia de pago 200, Cuidador 403, Tutor de familia vencida 403, integrante Hijo 403, otra cuenta (el mismo resultado que las demás rutas `fullChild`), y una credencial del teléfono del hijo que no alcanza la ruta.
   - Cablear en `backend/cmd/api/main.go`.
-- [ ] T013 Regenerar Swagger (`swag init`, el mismo comando que `backend/CLAUDE.md`) y correr `go vet ./...` y `go test ./... -cover`. La cobertura de `childprofile` debe ser > 90 %.
+- [X] T013 Regenerar Swagger (`swag init`, el mismo comando que `backend/CLAUDE.md`) y correr `go vet ./...` y `go test ./... -cover`. La cobertura de `childprofile` debe ser > 90 %.
 
 **Commit**: `feat(064): editar los datos del hijo — backend`
 

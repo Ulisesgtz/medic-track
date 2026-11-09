@@ -25,7 +25,7 @@ Nivel completo sobre el hijo (`fullChild`): la dueña y un Tutor de una familia 
 | Estado | Cuándo | Cuerpo |
 |---|---|---|
 | 200 | Guardado, o sin cambios | El hijo (`childResponse`, ver abajo) |
-| 400 `validation_error` | Nombre o apellido inválido, fecha futura o mal escrita, talla o peso no positivos; medida con fecha inválida, sin valores o fuera de rango | `{ "error": "validation_error", "fields": [{ "field": "firstName" \| "lastName" \| "birthDate" \| "height" \| "weight" \| "measurement" \| "measurement.measuredOn" \| "measurement.weightKg" \| "measurement.heightCm", "message": "…" }] }` (mensajes fijos, sin repetir lo escrito) |
+| 400 `validation_error` | Nombre o apellido inválido, fecha futura o mal escrita, talla o peso no positivos; medida con fecha inválida, sin valores o fuera de rango | `{ "error": "validation_error", "message": "…", "details": [{ "field": "firstName" \| "lastName" \| "birthDate" \| "height" \| "weight" \| "measurement" \| "measurement.measuredOn" \| "measurement.weightKg" \| "measurement.heightCm", "message": "…" }] }` (mensajes fijos, sin repetir lo escrito) |
 | 403 | Sin nivel completo | El de `fullChild` |
 | 404 | El hijo no existe | — |
 | 409 `birth_date_conflict` | La fecha nueva queda después de medidas o vacunas ya anotadas | `{ "error": "birth_date_conflict", "measurementCount": 2, "measurements": ["2022-03-03", "2022-04-14"], "vaccinationCount": 1, "vaccinations": ["2022-03-10"] }` (fechas ascendentes, hasta 20 de cada una) |

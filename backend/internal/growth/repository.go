@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -74,8 +75,13 @@ func (r *Repository) List(ctx context.Context, childID uuid.UUID) ([]Measurement
 	return out, rows.Err()
 }
 
+// beforeBirth is the error of a measurement dated before the child's birth, the same one Validate gives. The repository checks it
+// again with the child's row locked, because the birth date can be corrected (specs/064-editar-datos-hijo) between the validation
+// and the write.
+var beforeBirth = ValidationErrors{{Field: "measuredOn", Message: "La fecha no puede ser anterior al nacimiento."}}
+
 // Create writes a measurement down in one transaction with the child's row locked, so simultaneous requests can't pass the cap of
-// MaxPerChild together.
+// MaxPerChild together, and the date is checked against the birth date nobody can change meanwhile.
 func (r *Repository) Create(ctx context.Context, childID, actor uuid.UUID, c Cleaned) (*Measurement, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -84,11 +90,29 @@ func (r *Repository) Create(ctx context.Context, childID, actor uuid.UUID, c Cle
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	var accountID uuid.UUID
-	if err := tx.QueryRow(ctx, `SELECT account_id FROM children WHERE id = $1 FOR UPDATE`, childID).Scan(&accountID); errors.Is(err, pgx.ErrNoRows) {
+	var birth time.Time
+	if err := tx.QueryRow(ctx, `SELECT account_id, birth_date FROM children WHERE id = $1 FOR UPDATE`, childID).Scan(&accountID, &birth); errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrChildNotFound
 	} else if err != nil {
 		return nil, fmt.Errorf("locking the child: %w", err)
 	}
+	if c.MeasuredOn.Before(birth) {
+		return nil, beforeBirth
+	}
+	m, err := InsertInTx(ctx, tx, childID, accountID, actor, c)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("committing the measurement: %w", err)
+	}
+	return m, nil
+}
+
+// InsertInTx writes a measurement down inside tx, whose caller already locked the child's row FOR UPDATE and checked the date
+// against the birth: it counts against MaxPerChild (ErrLimit) and inserts. Also used by the correction of the child's data
+// (specs/064-editar-datos-hijo), to write its measurement in the same transaction.
+func InsertInTx(ctx context.Context, tx pgx.Tx, childID, accountID, actor uuid.UUID, c Cleaned) (*Measurement, error) {
 	var count int
 	if err := tx.QueryRow(ctx, `SELECT count(*) FROM growth_measurements WHERE child_id = $1`, childID).Scan(&count); err != nil {
 		return nil, fmt.Errorf("counting the measurements: %w", err)
@@ -97,7 +121,7 @@ func (r *Repository) Create(ctx context.Context, childID, actor uuid.UUID, c Cle
 		return nil, ErrLimit
 	}
 	var id uuid.UUID
-	err = tx.QueryRow(ctx, `
+	err := tx.QueryRow(ctx, `
 		INSERT INTO growth_measurements (child_id, account_id, measured_on, weight_kg, height_cm, note, created_by_account_id)
 		VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
 		childID, accountID, c.MeasuredOn, c.WeightKg, c.HeightCm, c.Note, actor).Scan(&id)
@@ -108,15 +132,27 @@ func (r *Repository) Create(ctx context.Context, childID, actor uuid.UUID, c Cle
 	if err != nil {
 		return nil, fmt.Errorf("reading the measurement: %w", err)
 	}
-	if err := tx.Commit(ctx); err != nil {
-		return nil, fmt.Errorf("committing the measurement: %w", err)
-	}
 	return &m, nil
 }
 
-// Update corrects a measurement of the child (all of it is replaced) and stamps who corrected it and when.
+// Update corrects a measurement of the child (all of it is replaced) and stamps who corrected it and when, with the child's row
+// locked FOR SHARE so its birth date can't change between the check and the write.
 func (r *Repository) Update(ctx context.Context, childID, id, actor uuid.UUID, c Cleaned) (*Measurement, error) {
-	m, err := scanMeasurement(r.pool.QueryRow(ctx, `
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("starting transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var birth time.Time
+	if err := tx.QueryRow(ctx, `SELECT birth_date FROM children WHERE id = $1 FOR SHARE`, childID).Scan(&birth); errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	} else if err != nil {
+		return nil, fmt.Errorf("locking the child: %w", err)
+	}
+	if c.MeasuredOn.Before(birth) {
+		return nil, beforeBirth
+	}
+	m, err := scanMeasurement(tx.QueryRow(ctx, `
 		WITH updated AS (
 			UPDATE growth_measurements
 			SET measured_on = $3, weight_kg = $4, height_cm = $5, note = $6, corrected_by_account_id = $7, corrected_at = now()
@@ -134,6 +170,9 @@ func (r *Repository) Update(ctx context.Context, childID, id, actor uuid.UUID, c
 	}
 	if err != nil {
 		return nil, fmt.Errorf("correcting the measurement: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("committing the correction: %w", err)
 	}
 	return &m, nil
 }
