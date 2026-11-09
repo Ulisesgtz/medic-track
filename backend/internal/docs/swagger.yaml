@@ -1441,6 +1441,220 @@ definitions:
         example: 2
         type: integer
     type: object
+  GrowthChart:
+    properties:
+      birthDate:
+        example: "2025-06-10"
+        type: string
+      points:
+        $ref: '#/definitions/GrowthChartPoints'
+      reference:
+        allOf:
+        - $ref: '#/definitions/GrowthReference'
+        description: Reference is null until a WHO table is chosen for the child.
+      referenceSex:
+        example: male
+        type: string
+    type: object
+  GrowthChartPoint:
+    properties:
+      measuredOn:
+        example: "2026-11-03"
+        type: string
+      months:
+        example: 16.8
+        type: number
+      value:
+        example: 12.4
+        type: number
+    type: object
+  GrowthChartPoints:
+    properties:
+      height:
+        items:
+          $ref: '#/definitions/GrowthChartPoint'
+        type: array
+      weight:
+        items:
+          $ref: '#/definitions/GrowthChartPoint'
+        type: array
+    type: object
+  GrowthCorrection:
+    properties:
+      at:
+        example: "2026-11-08T18:00:00Z"
+        type: string
+      by:
+        $ref: '#/definitions/GrowthPersonName'
+    type: object
+  GrowthCurve:
+    properties:
+      curves:
+        items:
+          $ref: '#/definitions/GrowthCurvePoint'
+        type: array
+      maxMonths:
+        example: 120
+        type: integer
+    type: object
+  GrowthCurvePoint:
+    properties:
+      months:
+        example: 0
+        type: integer
+      p3:
+        example: 2.5
+        type: number
+      p15:
+        example: 2.9
+        type: number
+      p50:
+        example: 3.3
+        type: number
+      p85:
+        example: 3.9
+        type: number
+      p97:
+        example: 4.3
+        type: number
+    type: object
+  GrowthErrorResponse:
+    properties:
+      error:
+        example: measurement_not_found
+        type: string
+      message:
+        type: string
+    type: object
+  GrowthList:
+    properties:
+      birthDate:
+        example: "2025-06-10"
+        type: string
+      canEdit:
+        description: 'CanEdit: the session can write down, correct and remove (the
+          owner, a Tutor of a paid family).'
+        type: boolean
+      chartAvailable:
+        description: 'ChartAvailable: the family has the paid plan, so the chart answers.'
+        type: boolean
+      measurements:
+        items:
+          $ref: '#/definitions/GrowthMeasurement'
+        type: array
+      referenceSex:
+        example: male
+        type: string
+      registered:
+        allOf:
+        - $ref: '#/definitions/GrowthRegistered'
+        description: Registered is the weight and height written when the child was
+          added, without a date (never drawn); null if none.
+    type: object
+  GrowthMeasurement:
+    properties:
+      corrected:
+        $ref: '#/definitions/GrowthCorrection'
+      createdAt:
+        example: "2026-11-03T18:00:00Z"
+        type: string
+      createdBy:
+        $ref: '#/definitions/GrowthPersonName'
+      heightCm:
+        example: 86
+        type: number
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      measuredOn:
+        example: "2026-11-03"
+        type: string
+      note:
+        type: string
+      weightKg:
+        example: 12.4
+        type: number
+    type: object
+  GrowthMeasurementInput:
+    properties:
+      heightCm:
+        example: 86
+        type: number
+      measuredOn:
+        example: "2026-11-03"
+        type: string
+      note:
+        example: en ayunas
+        type: string
+      weightKg:
+        example: 12.4
+        type: number
+    type: object
+  GrowthPersonName:
+    properties:
+      name:
+        example: Ana
+        type: string
+    type: object
+  GrowthPlanLimitResponse:
+    properties:
+      error:
+        example: freemium_consultation_limit_exceeded
+        type: string
+      message:
+        type: string
+      reason:
+        example: growth_chart
+        type: string
+    type: object
+  GrowthReference:
+    properties:
+      available:
+        description: Available is false while the WHO curves are switched off (WHO_GROWTH_REFERENCE_ENABLED);
+          the curves are then empty.
+        type: boolean
+      height:
+        $ref: '#/definitions/GrowthCurve'
+      source:
+        example: 'OMS: Patrones de Crecimiento Infantil (2006) y Referencia de Crecimiento
+          2007'
+        type: string
+      weight:
+        $ref: '#/definitions/GrowthCurve'
+    type: object
+  GrowthReferenceInput:
+    properties:
+      sex:
+        example: female
+        type: string
+    type: object
+  GrowthRegistered:
+    properties:
+      heightCm:
+        example: 85
+        type: number
+      weightKg:
+        example: 12
+        type: number
+    type: object
+  GrowthValidationResponse:
+    properties:
+      details:
+        items:
+          properties:
+            field:
+              example: measuredOn
+              type: string
+            message:
+              type: string
+          type: object
+        type: array
+      error:
+        example: validation_error
+        type: string
+      message:
+        type: string
+    type: object
   HistoryOptionsResponse:
     properties:
       doctors:
@@ -4930,6 +5144,257 @@ paths:
       summary: The data of a child's history PDF
       tags:
       - history-export
+  /children/{childId}/growth-chart:
+    get:
+      description: |-
+        The plan is decided first: without the paid plan, 422 `freemium_consultation_limit_exceeded` with reason
+        `growth_chart` and no data. `reference` is null until a WHO table is chosen; `reference.available` is false (no
+        curves) while the WHO curves are switched off. Only the published P3–P97; never the child's percentile.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/GrowthChart'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+        "403":
+          description: The session has no access to this child
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+        "422":
+          description: The family is not on the paid plan
+          schema:
+            $ref: '#/definitions/GrowthPlanLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: 'The growth chart: the child''s points and the WHO reference curves
+        (paid plan)'
+      tags:
+      - growth
+  /children/{childId}/growth-measurements:
+    get:
+      description: |-
+        The most recent first, with the signup's weight and height apart (no date) and the chosen WHO table. Every plan.
+        Nothing here says where a child stands.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/GrowthList'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+        "403":
+          description: The session has no access to this child
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: 'A child''s growth record: the measurements written down'
+      tags:
+      - growth
+    post:
+      consumes:
+      - application/json
+      description: |-
+        A date (not in the future, not before the birth) and the weight in kg (0.3–200, 2 decimals) and/or the height in cm
+        (30–220, 1 decimal), with an optional note (≤ 300). Every plan. 422 `growth_limit_exceeded` past 500 per child.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: The measurement
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/GrowthMeasurementInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/GrowthMeasurement'
+        "400":
+          description: An invalid field or a malformed body
+          schema:
+            $ref: '#/definitions/GrowthValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+        "403":
+          description: The session can't write measurements for this child
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+        "422":
+          description: The cap of measurements (growth_limit_exceeded)
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Write down a measurement
+      tags:
+      - growth
+  /children/{childId}/growth-measurements/{measurementId}:
+    delete:
+      description: No trash and no undo. Every plan.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: Measurement UUID
+        in: path
+        name: measurementId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+        "403":
+          description: The session can't remove measurements of this child
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+        "404":
+          description: No such measurement for this child
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Remove a measurement for good
+      tags:
+      - growth
+    put:
+      consumes:
+      - application/json
+      description: The whole measurement is sent and replaces the one saved; it keeps
+        who corrected it last and when. Every plan.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: Measurement UUID
+        in: path
+        name: measurementId
+        required: true
+        type: string
+      - description: The measurement
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/GrowthMeasurementInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/GrowthMeasurement'
+        "400":
+          description: An invalid field or a malformed body
+          schema:
+            $ref: '#/definitions/GrowthValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+        "403":
+          description: The session can't correct measurements of this child
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+        "404":
+          description: No such measurement for this child
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Correct a measurement
+      tags:
+      - growth
+  /children/{childId}/growth-reference:
+    put:
+      consumes:
+      - application/json
+      description: Only to pick the WHO curves of the chart. Every plan.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: female or male
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/GrowthReferenceInput'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Not female or male, or a malformed body
+          schema:
+            $ref: '#/definitions/GrowthValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+        "403":
+          description: The session can't change this child
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/GrowthErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Choose the child's WHO table (girls or boys)
+      tags:
+      - growth
   /children/{childId}/history-options:
     get:
       description: |-

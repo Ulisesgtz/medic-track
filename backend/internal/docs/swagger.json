@@ -3144,6 +3144,382 @@
                 }
             }
         },
+        "/children/{childId}/growth-chart": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The plan is decided first: without the paid plan, 422 `freemium_consultation_limit_exceeded` with reason\n`growth_chart` and no data. `reference` is null until a WHO table is chosen; `reference.available` is false (no\ncurves) while the WHO curves are switched off. Only the published P3–P97; never the child's percentile.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "growth"
+                ],
+                "summary": "The growth chart: the child's points and the WHO reference curves (paid plan)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthChart"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session has no access to this child",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "The family is not on the paid plan",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthPlanLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/children/{childId}/growth-measurements": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The most recent first, with the signup's weight and height apart (no date) and the chosen WHO table. Every plan.\nNothing here says where a child stands.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "growth"
+                ],
+                "summary": "A child's growth record: the measurements written down",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthList"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session has no access to this child",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "A date (not in the future, not before the birth) and the weight in kg (0.3–200, 2 decimals) and/or the height in cm\n(30–220, 1 decimal), with an optional note (≤ 300). Every plan. 422 `growth_limit_exceeded` past 500 per child.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "growth"
+                ],
+                "summary": "Write down a measurement",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The measurement",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/GrowthMeasurementInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthMeasurement"
+                        }
+                    },
+                    "400": {
+                        "description": "An invalid field or a malformed body",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't write measurements for this child",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "The cap of measurements (growth_limit_exceeded)",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/children/{childId}/growth-measurements/{measurementId}": {
+            "put": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The whole measurement is sent and replaces the one saved; it keeps who corrected it last and when. Every plan.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "growth"
+                ],
+                "summary": "Correct a measurement",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Measurement UUID",
+                        "name": "measurementId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The measurement",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/GrowthMeasurementInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthMeasurement"
+                        }
+                    },
+                    "400": {
+                        "description": "An invalid field or a malformed body",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't correct measurements of this child",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such measurement for this child",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "No trash and no undo. Every plan.",
+                "tags": [
+                    "growth"
+                ],
+                "summary": "Remove a measurement for good",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Measurement UUID",
+                        "name": "measurementId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't remove measurements of this child",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such measurement for this child",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/children/{childId}/growth-reference": {
+            "put": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Only to pick the WHO curves of the chart. Every plan.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "growth"
+                ],
+                "summary": "Choose the child's WHO table (girls or boys)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "female or male",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/GrowthReferenceInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Not female or male, or a malformed body",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't change this child",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/GrowthErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/children/{childId}/history-options": {
             "get": {
                 "security": [
@@ -7905,6 +8281,315 @@
                 "received": {
                     "type": "integer",
                     "example": 2
+                }
+            }
+        },
+        "GrowthChart": {
+            "type": "object",
+            "properties": {
+                "birthDate": {
+                    "type": "string",
+                    "example": "2025-06-10"
+                },
+                "points": {
+                    "$ref": "#/definitions/GrowthChartPoints"
+                },
+                "reference": {
+                    "description": "Reference is null until a WHO table is chosen for the child.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/GrowthReference"
+                        }
+                    ]
+                },
+                "referenceSex": {
+                    "type": "string",
+                    "example": "male"
+                }
+            }
+        },
+        "GrowthChartPoint": {
+            "type": "object",
+            "properties": {
+                "measuredOn": {
+                    "type": "string",
+                    "example": "2026-11-03"
+                },
+                "months": {
+                    "type": "number",
+                    "example": 16.8
+                },
+                "value": {
+                    "type": "number",
+                    "example": 12.4
+                }
+            }
+        },
+        "GrowthChartPoints": {
+            "type": "object",
+            "properties": {
+                "height": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/GrowthChartPoint"
+                    }
+                },
+                "weight": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/GrowthChartPoint"
+                    }
+                }
+            }
+        },
+        "GrowthCorrection": {
+            "type": "object",
+            "properties": {
+                "at": {
+                    "type": "string",
+                    "example": "2026-11-08T18:00:00Z"
+                },
+                "by": {
+                    "$ref": "#/definitions/GrowthPersonName"
+                }
+            }
+        },
+        "GrowthCurve": {
+            "type": "object",
+            "properties": {
+                "curves": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/GrowthCurvePoint"
+                    }
+                },
+                "maxMonths": {
+                    "type": "integer",
+                    "example": 120
+                }
+            }
+        },
+        "GrowthCurvePoint": {
+            "type": "object",
+            "properties": {
+                "months": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "p15": {
+                    "type": "number",
+                    "example": 2.9
+                },
+                "p3": {
+                    "type": "number",
+                    "example": 2.5
+                },
+                "p50": {
+                    "type": "number",
+                    "example": 3.3
+                },
+                "p85": {
+                    "type": "number",
+                    "example": 3.9
+                },
+                "p97": {
+                    "type": "number",
+                    "example": 4.3
+                }
+            }
+        },
+        "GrowthErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "measurement_not_found"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "GrowthList": {
+            "type": "object",
+            "properties": {
+                "birthDate": {
+                    "type": "string",
+                    "example": "2025-06-10"
+                },
+                "canEdit": {
+                    "description": "CanEdit: the session can write down, correct and remove (the owner, a Tutor of a paid family).",
+                    "type": "boolean"
+                },
+                "chartAvailable": {
+                    "description": "ChartAvailable: the family has the paid plan, so the chart answers.",
+                    "type": "boolean"
+                },
+                "measurements": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/GrowthMeasurement"
+                    }
+                },
+                "referenceSex": {
+                    "type": "string",
+                    "example": "male"
+                },
+                "registered": {
+                    "description": "Registered is the weight and height written when the child was added, without a date (never drawn); null if none.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/GrowthRegistered"
+                        }
+                    ]
+                }
+            }
+        },
+        "GrowthMeasurement": {
+            "type": "object",
+            "properties": {
+                "corrected": {
+                    "$ref": "#/definitions/GrowthCorrection"
+                },
+                "createdAt": {
+                    "type": "string",
+                    "example": "2026-11-03T18:00:00Z"
+                },
+                "createdBy": {
+                    "$ref": "#/definitions/GrowthPersonName"
+                },
+                "heightCm": {
+                    "type": "number",
+                    "example": 86
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "measuredOn": {
+                    "type": "string",
+                    "example": "2026-11-03"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "weightKg": {
+                    "type": "number",
+                    "example": 12.4
+                }
+            }
+        },
+        "GrowthMeasurementInput": {
+            "type": "object",
+            "properties": {
+                "heightCm": {
+                    "type": "number",
+                    "example": 86
+                },
+                "measuredOn": {
+                    "type": "string",
+                    "example": "2026-11-03"
+                },
+                "note": {
+                    "type": "string",
+                    "example": "en ayunas"
+                },
+                "weightKg": {
+                    "type": "number",
+                    "example": 12.4
+                }
+            }
+        },
+        "GrowthPersonName": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "Ana"
+                }
+            }
+        },
+        "GrowthPlanLimitResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "freemium_consultation_limit_exceeded"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string",
+                    "example": "growth_chart"
+                }
+            }
+        },
+        "GrowthReference": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "description": "Available is false while the WHO curves are switched off (WHO_GROWTH_REFERENCE_ENABLED); the curves are then empty.",
+                    "type": "boolean"
+                },
+                "height": {
+                    "$ref": "#/definitions/GrowthCurve"
+                },
+                "source": {
+                    "type": "string",
+                    "example": "OMS: Patrones de Crecimiento Infantil (2006) y Referencia de Crecimiento 2007"
+                },
+                "weight": {
+                    "$ref": "#/definitions/GrowthCurve"
+                }
+            }
+        },
+        "GrowthReferenceInput": {
+            "type": "object",
+            "properties": {
+                "sex": {
+                    "type": "string",
+                    "example": "female"
+                }
+            }
+        },
+        "GrowthRegistered": {
+            "type": "object",
+            "properties": {
+                "heightCm": {
+                    "type": "number",
+                    "example": 85
+                },
+                "weightKg": {
+                    "type": "number",
+                    "example": 12
+                }
+            }
+        },
+        "GrowthValidationResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "field": {
+                                "type": "string",
+                                "example": "measuredOn"
+                            },
+                            "message": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "error": {
+                    "type": "string",
+                    "example": "validation_error"
+                },
+                "message": {
+                    "type": "string"
                 }
             }
         },
