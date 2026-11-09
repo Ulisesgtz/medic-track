@@ -19,6 +19,7 @@ export type PlanLimitReason =
   | 'child_device'
   | 'own_consultations'
   | 'medicine_cabinet'
+  | 'growth_chart'
 
 interface FreemiumLimitModalProps {
   /** Why the plan stopped the parent; the child limit when omitted. */

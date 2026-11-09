@@ -13,6 +13,8 @@ import { NextAppointmentCompact } from '../appointments/NextAppointmentCompact'
 import { ChildTodayCard } from '../childDetail/ChildTodayCard'
 import { CartillaSection, ConsultationsSection, DaySummaryCard, MoreRows, TreatmentCard } from '../childDetail/ChildDetailParts'
 import { CHILD, childSubtitle } from '../childDetail/childDetailText'
+import { GrowthSection } from '../growth/GrowthSection'
+import { GROWTH } from '../growth/growthText'
 import { RegistroCompacto } from '../supplements/RegistroCompacto'
 import { fetchChildOverview, fetchConsultations, ConsultationApiError } from './api'
 import { NewConsultationEntry } from './NewConsultationEntry'
@@ -23,6 +25,7 @@ const SECTIONS = [
   { id: 'suplementos', label: CHILD.supplements },
   { id: 'actividades', label: CHILD.activities },
   { id: 'cartilla', label: CHILD.cartilla },
+  { id: 'crecimiento', label: GROWTH.title },
 ]
 
 /**
@@ -129,6 +132,7 @@ export function ChildDetailPage() {
       <RegistroCompacto kind="supplement" childId={childId} sectionId="suplementos" variant={variant} />
       <RegistroCompacto kind="activity" childId={childId} sectionId="actividades" variant={variant} />
       <CartillaSection childId={childId} canAdd={access.canAdd} variant={variant} />
+      <GrowthSection childId={childId} variant={variant} />
     </>
   )
   const appointment = <NextAppointmentCompact childId={childId} variant={variant} />

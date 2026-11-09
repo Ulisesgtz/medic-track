@@ -35,12 +35,12 @@
 
 ## Fase 3: Historia 1 - Anotar el peso y la talla (P1) 🎯 MVP
 
-- [ ] T011 [P] [US1] `frontend/src/features/growth/types.ts`, `api.ts` (+ prueba; `GrowthApiError` con `plan_required`, `limit`, `validation_error`, `not_found`, `forbidden`) y `hooks.ts` (`['growth', childId]`, `['growth-chart', childId]`, mutaciones que invalidan ambas)
-- [ ] T012 [P] [US1] `growthText.ts` (todas las frases) + `growthText.test.ts` (prohíbe «normal», «bajo», «alto», «riesgo», «sobrepeso», «desnutri», «obes», «por debajo», «por encima», «debería», «percentil de») y `growthAge.ts` («6 semanas», «7 meses», «1 año 5 meses», «4 años 2 meses») + prueba
-- [ ] T013 [P] [US1] `growthForm.ts` (valores, coma o punto decimal, validación igual al servidor, cuerpo del POST/PUT, `isDirty`) + prueba
-- [ ] T014 [US1] `GrowthPage.tsx` (`/children/:childId/crecimiento`, `PageHeader`): lista de la más reciente a la más antigua con fecha, edad, peso, talla y nota; estado vacío; el bloque del registro sin fecha con «Anotarla con fecha»; «Anotar medida» para `canEdit`; teléfono y web separados; pruebas
-- [ ] T015 [US1] `GrowthFormPage.tsx` (`/children/:childId/crecimiento/nueva`): fecha, peso, talla, nota; `StickyActionBar` en el teléfono; `useUnsavedWork`; errores del servidor por campo; 422 de tope con una frase; pruebas
-- [ ] T016 [US1] `GrowthSection.tsx` en el detalle del hijo (`features/childDetail/`, teléfono y web, en el índice junto a Cartilla): «Última: 12.4 kg · 86 cm, 3 nov» o «Aún no hay medidas»; rutas en `frontend/src/App.tsx` (`RequireSession` + `AppShell`); pruebas
+- [X] T011 [P] [US1] `frontend/src/features/growth/types.ts`, `api.ts` (+ prueba; `GrowthApiError` con `plan_required`, `limit`, `validation_error`, `not_found`, `forbidden`) y `hooks.ts` (`['growth', childId]`, `['growth-chart', childId]`, mutaciones que invalidan ambas)
+- [X] T012 [P] [US1] `growthText.ts` (todas las frases) + `growthText.test.ts` (prohíbe «normal», «bajo», «alto», «riesgo», «sobrepeso», «desnutri», «obes», «por debajo», «por encima», «debería», «percentil de») y `growthAge.ts` («6 semanas», «7 meses», «1 año 5 meses», «4 años 2 meses») + prueba
+- [X] T013 [P] [US1] `growthForm.ts` (valores, coma o punto decimal, validación igual al servidor, cuerpo del POST/PUT, `isDirty`) + prueba
+- [X] T014 [US1] `GrowthPage.tsx` (`/children/:childId/crecimiento`, `PageHeader`): lista de la más reciente a la más antigua con fecha, edad, peso, talla y nota; estado vacío; el bloque del registro sin fecha con «Anotarla con fecha»; «Anotar medida» para `canEdit`; teléfono y web separados; pruebas
+- [X] T015 [US1] `GrowthFormPage.tsx` (`/children/:childId/crecimiento/nueva`): fecha, peso, talla, nota; `StickyActionBar` en el teléfono; `useUnsavedWork`; errores del servidor por campo; 422 de tope con una frase; pruebas
+- [X] T016 [US1] `GrowthSection.tsx` en el detalle del hijo (`features/childDetail/`, teléfono y web, en el índice junto a Cartilla): «Última: 12.4 kg · 86 cm, 3 nov» o «Aún no hay medidas»; rutas en `frontend/src/App.tsx` (`RequireSession` + `AppShell`); pruebas
 
 **Punto de control**: commit «feat(063): crecimiento — anotar y ver la lista».
 
@@ -48,9 +48,9 @@
 
 ## Fase 4: Historia 2 y 3 - La curva y la tabla de la OMS (P2)
 
-- [ ] T017 [US2] `GrowthChart.tsx` (SVG propio): eje de edad (meses hasta 24, años después), eje kg/cm, ventana y «Ver todo», cinco curvas grises rotuladas P3…P97, puntos `action` unidos y tocables (44 px) con «fecha · valor · edad», nota del límite de la referencia, texto fijo de FR-009 y la fuente; tabla alternativa debajo; teléfono 260 px de alto y web 720×360; pruebas
-- [ ] T018 [US2] En `GrowthPage.tsx`: «Ver la curva» con «Peso» / «Talla»; plan gratuito → marca «Plan completo» y `FreemiumLimitModal reason="growth_chart"` (motivo nuevo en `features/account-signup/FreemiumLimitModal.tsx` y `features/plans/planCopy.ts`); 422 del servidor también abre el aviso; `available=false` → solo los puntos y «La referencia de la OMS aún no está disponible»; pruebas
-- [ ] T019 [US3] Elección «Niña · Niño» en la gráfica cuando falta (`PUT …/growth-reference`), cambiarla después; Cuidador ve los puntos sin curvas y la frase de que una persona adulta la elige; pruebas
+- [X] T017 [US2] `GrowthChart.tsx` (SVG propio): eje de edad (meses hasta 24, años después), eje kg/cm, ventana y «Ver todo», cinco curvas grises rotuladas P3…P97, puntos `action` unidos y tocables (44 px) con «fecha · valor · edad», nota del límite de la referencia, texto fijo de FR-009 y la fuente; tabla alternativa debajo; teléfono 260 px de alto y web 720×360; pruebas
+- [X] T018 [US2] En `GrowthPage.tsx`: «Ver la curva» con «Peso» / «Talla»; plan gratuito → marca «Plan completo» y `FreemiumLimitModal reason="growth_chart"` (motivo nuevo en `features/account-signup/FreemiumLimitModal.tsx` y `features/plans/planCopy.ts`); 422 del servidor también abre el aviso; `available=false` → solo los puntos y «La referencia de la OMS aún no está disponible»; pruebas
+- [X] T019 [US3] Elección «Niña · Niño» en la gráfica cuando falta (`PUT …/growth-reference`), cambiarla después; Cuidador ve los puntos sin curvas y la frase de que una persona adulta la elige; pruebas
 
 **Punto de control**: commit «feat(063): crecimiento — la gráfica».
 
@@ -58,7 +58,7 @@
 
 ## Fase 5: Historia 4 - Corregir y quitar (P3)
 
-- [ ] T020 [US4] `GrowthFormPage.tsx` en modo editar (`/children/:childId/crecimiento/:measurementId/editar`) y «Corregida el … por …» en la fila; «Quitar» con `ConfirmDialog` neutral; sin botones para Mark; pruebas
+- [X] T020 [US4] `GrowthFormPage.tsx` en modo editar (`/children/:childId/crecimiento/:measurementId/editar`) y «Corregida el … por …» en la fila; «Quitar» con `ConfirmDialog` neutral; sin botones para Mark; pruebas
 
 **Punto de control**: commit.
 
