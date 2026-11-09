@@ -94,23 +94,23 @@ description: "Lista de tareas: editar los datos del hijo (spec 064)"
 
 **Prueba independiente**: con una cuenta del plan gratuito, corregir el peso con la casilla marcada, volver al detalle y ver el valor nuevo y «Corregido el …», y ver la medida en «Crecimiento».
 
-- [ ] T014 [P] [US1] En `frontend/src/features/home/types.ts`, agregar a `Child` `correctedAt?: string | null` y `correctedBy?: string | null`.
-- [ ] T015 [P] [US1] Crear `frontend/src/features/childProfile/api.ts`:
+- [X] T014 [P] [US1] En `frontend/src/features/home/types.ts`, agregar a `Child` `correctedAt?: string | null` y `correctedBy?: string | null`.
+- [X] T015 [P] [US1] Crear `frontend/src/features/childProfile/api.ts`:
   - `updateChild(childId, body)` hace `PUT /children/{childId}` con el cliente existente.
   - Define `ChildProfileApiError` con los tipos `validation_error` (con `fields`), `birth_date_conflict` (con sus conteos y fechas), `plan_required`, `limit`, `forbidden` y `not_found`.
   - Crear `hooks.ts` con `useUpdateChild(childId)`. Al terminar invalida la cuenta (la clave que usa `useAccount`), `['growth', childId]`, `['growth-chart', childId]`, el resumen del hijo y la cartilla.
-- [ ] T016 [P] [US1] Crear `frontend/src/features/childProfile/childProfileText.ts` con **todos** los textos:
+- [X] T016 [P] [US1] Crear `frontend/src/features/childProfile/childProfileText.ts` con **todos** los textos:
   - Título «Editar datos», etiquetas, «Anotarlo también como medida de hoy», «Guardar cambios».
   - «Corregido el {fecha} por {nombre}» (fecha corta como en `growthText`).
   - Los errores fijos, el aviso del conflicto («Hay 2 medidas (3 mar 2022, 14 abr 2022) y 1 vacuna (10 mar 2022) anotadas antes de esa fecha. Corrígelas primero o elige otra fecha.»), la marca «Plan completo» y la frase para el Tutor.
   - Prueba de redacción en `childProfileText.test.ts` contra «normal», «bajo», «alto», «riesgo», «sobrepeso», «debería»…
-- [ ] T017 [P] [US1] Crear `frontend/src/features/childProfile/editChildForm.ts`, puro:
+- [X] T017 [P] [US1] Crear `frontend/src/features/childProfile/editChildForm.ts`, puro:
   - Valores iniciales desde el `Child`.
   - Lectura de decimales con coma o punto.
   - `identityChanged(initial, values)` y `measuresChanged(initial, values)`.
   - El cuerpo del `PUT`: vacío → `null`; `measurement` solo con la casilla marcada, y `measuredOn` = hoy del teléfono `YYYY-MM-DD`.
   - Pruebas en `editChildForm.test.ts`.
-- [ ] T018 [US1] Crear `frontend/src/features/childProfile/EditChildPage.tsx` (`/children/:childId/editar`), con dos diseños por `useIsDesktop` (sin clases `lg:`).
+- [X] T018 [US1] Crear `frontend/src/features/childProfile/EditChildPage.tsx` (`/children/:childId/editar`), con dos diseños por `useIsDesktop` (sin clases `lg:`).
   - Usa el marco de las páginas de formulario (`RoutinePageFrame` + `PageHeader`) y `StickyActionBar` con «Guardar cambios» en el teléfono.
   - `useUnsavedWork` mientras haya cambios.
   - Campos: nombre, apellido, fecha (`max` = hoy del teléfono), talla (cm) y peso (kg) con `inputMode="decimal"`.
@@ -119,9 +119,9 @@ description: "Lista de tareas: editar los datos del hijo (spec 064)"
   - Al guardar, `navigate` al detalle del hijo con `replace`.
   - Quien no tiene nivel completo (sin `canAdd`) ve el estado de solo lectura y no el formulario.
   - Sigue `specs/005-identidad-visual-front-end/design-tokens.md`.
-- [ ] T019 [US1] En `frontend/src/App.tsx`, agregar la ruta `/children/:childId/editar` dentro de `RequireSession` y `AppShell`, como las de crecimiento.
-- [ ] T020 [US1] En `frontend/src/features/childDetail/ChildDetailParts.tsx` (`MoreRows`), agregar la fila «Editar datos» (enlace a `/children/:childId/editar`) en los dos diseños, solo con `canAdd`. Su valor es «Corregido el … por …» si el hijo lo tiene. `ChildDetailPage.tsx` pasa el hijo o sus campos.
-- [ ] T021 [US1] Agregar pruebas de `frontend/src/features/childProfile/EditChildPage.test.tsx` en ambos diseños:
+- [X] T019 [US1] En `frontend/src/App.tsx`, agregar la ruta `/children/:childId/editar` dentro de `RequireSession` y `AppShell`, como las de crecimiento.
+- [X] T020 [US1] En `frontend/src/features/childDetail/ChildDetailParts.tsx` (`MoreRows`), agregar la fila «Editar datos» (enlace a `/children/:childId/editar`) en los dos diseños, solo con `canAdd`. Su valor es «Corregido el … por …» si el hijo lo tiene. `ChildDetailPage.tsx` pasa el hijo o sus campos.
+- [X] T021 [US1] Agregar pruebas de `frontend/src/features/childProfile/EditChildPage.test.tsx` en ambos diseños:
   - Carga los valores.
   - Corrige y vacía.
   - La casilla aparece solo con cambios y manda `measurement`.
@@ -141,14 +141,14 @@ description: "Lista de tareas: editar los datos del hijo (spec 064)"
 
 **Prueba independiente**: una cuenta de pago corrige el nombre y la fecha y los ve en el inicio y el detalle. Una cuenta gratuita ve «Plan completo». Una fecha posterior a una medida muestra el aviso con su fecha.
 
-- [ ] T022 [P] [US2] En `frontend/src/features/account-signup/FreemiumLimitModal.tsx`, agregar `child_identity` a `PlanLimitReason`. En `frontend/src/features/plans/planCopy.ts`, agregar su fila de comparación («Corregir nombre y fecha de nacimiento»). Actualizar las pruebas del modal y de `planCopy`.
-- [ ] T023 [US2] En `EditChildPage.tsx`:
+- [X] T022 [P] [US2] En `frontend/src/features/account-signup/FreemiumLimitModal.tsx`, agregar `child_identity` a `PlanLimitReason`. En `frontend/src/features/plans/planCopy.ts`, agregar su fila de comparación («Corregir nombre y fecha de nacimiento»). Actualizar las pruebas del modal y de `planCopy`.
+- [X] T023 [US2] En `EditChildPage.tsx`:
   - Con el plan del hijo distinto de `paid`, el nombre, el apellido y la fecha van `disabled`, con la marca «Plan completo».
   - La dueña (`role` `owner`) abre `FreemiumLimitModal reason="child_identity"` al tocar la marca. Un Tutor ve en su lugar la frase fija de que la dueña de la familia tiene el plan.
   - Las reglas del nombre son las de `account-signup/validation.ts` (`nameValidation`, `nameError`).
   - El 422 `child_identity` del servidor abre el mismo modal sin perder lo escrito.
   - El 409 `birth_date_conflict` muestra el aviso bajo la fecha, con los conteos y las fechas formateadas.
-- [ ] T024 [US2] Agregar pruebas en `EditChildPage.test.tsx`, ambos diseños:
+- [X] T024 [US2] Agregar pruebas en `EditChildPage.test.tsx`, ambos diseños:
   - Campos bloqueados en el plan gratuito.
   - El modal para la dueña y la frase para el Tutor.
   - Identidad editable en el plan de pago, con su cuerpo.
@@ -164,7 +164,7 @@ description: "Lista de tareas: editar los datos del hijo (spec 064)"
 
 **Objetivo**: solo el nivel completo ve la entrada y el formulario; el servidor lo hace cumplir (T012).
 
-- [ ] T025 [US3] En `ChildDetailPage.test.tsx` y `EditChildPage.test.tsx`: un Cuidador y un Tutor de familia vencida (`readOnly`) no ven «Editar datos», y si abren la dirección ven el estado de solo lectura sin formulario. Un Tutor de familia de pago sí edita, y ve «Corregido el … por Luis».
+- [X] T025 [US3] En `ChildDetailPage.test.tsx` y `EditChildPage.test.tsx`: un Cuidador y un Tutor de familia vencida (`readOnly`) no ven «Editar datos», y si abren la dirección ven el estado de solo lectura sin formulario. Un Tutor de familia de pago sí edita, y ve «Corregido el … por Luis».
 
 **Commit**: `feat(064): editar los datos del hijo — quién puede`
 

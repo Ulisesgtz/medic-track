@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
+import { CHILD_PROFILE, correctedLine } from '../childProfile/childProfileText'
 import { formatDateShort, formatTime } from '../../shared/date'
 import { DayIcon } from '../../shared/ui/DayRow'
 import { ChildAccessBlock } from '../childDevice/parent/ChildAccessBlock'
@@ -257,8 +258,9 @@ export function DaySummaryView({ rows }: { rows: { t: string; v: string }[] }) {
 }
 
 /**
- * «Lo demás» (design A): «Acceso del hijo» (the row opens the block of specs/047 right under it — there is no page for it) and
- * «Familia que lo ve» (to /familia). Rows of 52 px on the phone, a strip of two on the web.
+ * «Lo demás» (design A): «Acceso del hijo» (the row opens the block of specs/047 right under it — there is no page for it),
+ * «Familia que lo ve» (to /familia) and, for who can, «Editar datos» (to /children/:childId/editar, specs/064) with «Corregido el
+ * … por …» when the child's data was corrected. Rows of 52 px on the phone, a strip on the web.
  */
 export function MoreRows({
   childId,
@@ -266,12 +268,15 @@ export function MoreRows({
   canAdd,
   free,
   variant,
+  corrected,
 }: {
   childId: string
   childName: string
   canAdd: boolean
   free: boolean
   variant: Variant
+  /** The last correction of the child's data (specs/064), if any. */
+  corrected?: { at: string; by: string } | null
 }) {
   const [accessOpen, setAccessOpen] = useState(false)
   const links = useDeviceLinks(childId).data?.links
@@ -284,7 +289,7 @@ export function MoreRows({
     <>
       <nav
         aria-label={CHILD.more}
-        className={desktop ? 'grid grid-cols-2 border-y border-hint-edge' : 'mt-2 flex flex-col border-t border-hint-edge'}
+        className={desktop ? `grid ${canAdd ? 'grid-cols-3' : 'grid-cols-2'} border-y border-hint-edge` : 'mt-2 flex flex-col border-t border-hint-edge'}
       >
         {canAdd && (
           <button type="button" aria-expanded={accessOpen} onClick={() => setAccessOpen((o) => !o)} className={`${row} w-full cursor-pointer text-left`}>
@@ -296,6 +301,12 @@ export function MoreRows({
           <span className="text-[15px] font-bold text-ink">{CHILD.familyWhoSees}</span>
           {members !== null && <span className="text-[14px] text-body">{familyMembers(members)}</span>}
         </Link>
+        {canAdd && (
+          <Link to={`/children/${childId}/editar`} className={row}>
+            <span className="text-[15px] font-bold text-ink">{CHILD_PROFILE.rowLabel}</span>
+            {corrected && <span className="text-right text-[14px] text-body">{correctedLine(corrected.at, corrected.by)}</span>}
+          </Link>
+        )}
       </nav>
       {accessOpen && <ChildAccessBlock childId={childId} childName={childName} />}
     </>

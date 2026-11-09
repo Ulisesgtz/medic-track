@@ -14,6 +14,9 @@ export interface Child {
   role?: FamilyRole
   plan?: string
   readOnly?: boolean
+  // Specs/064: the last correction of the child's data (when, and the first name of who); null if never corrected.
+  correctedAt?: string | null
+  correctedBy?: string | null
 }
 
 export type FamilyRole = 'owner' | 'tutor' | 'caregiver' | 'child'

@@ -136,7 +136,8 @@ export function ChildDetailPage() {
     </>
   )
   const appointment = <NextAppointmentCompact childId={childId} variant={variant} />
-  const more = <MoreRows childId={childId} childName={childName} canAdd={access.canAdd} free={access.isFree} variant={variant} />
+  const corrected = child?.correctedAt && child.correctedBy ? { at: child.correctedAt, by: child.correctedBy } : null
+  const more = <MoreRows childId={childId} childName={childName} canAdd={access.canAdd} free={access.isFree} variant={variant} corrected={corrected} />
 
   if (isDesktop) {
     return (
