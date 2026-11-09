@@ -117,6 +117,15 @@ export const LIMIT_MOTIVES: Record<PlanLimitReason, LimitMotive> = {
       row('Suplementos y actividades', NO, 'Hasta 10 de cada tipo por hijo y 10 tuyos'),
     ],
   },
+  growth_chart: {
+    title: 'Gráfica de crecimiento',
+    line: 'Intentaste ver la gráfica de crecimiento. Anotar las medidas es de todos los planes; la gráfica con la referencia de la OMS es del plan completo.',
+    rows: [
+      row('Gráfica de crecimiento', NO, 'Peso y talla sobre la referencia de la OMS'),
+      row('Medidas de peso y talla', 'Anotarlas y verlas', 'Anotarlas, verlas y graficarlas'),
+      row('Familia', 'Solo tú', 'Hasta 4 personas'),
+    ],
+  },
   own_consultations: {
     title: 'Tus propias consultas',
     line: 'Intentaste registrar una consulta tuya. Tus consultas, con sus tomas, avisos, historial y PDF, son del plan completo; lo de tus hijos sigue igual.',

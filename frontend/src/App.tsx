@@ -34,6 +34,8 @@ import { VaccinationCardPage } from './features/vaccinations/VaccinationCardPage
 import { CabinetPage } from './features/medicineCabinet/CabinetPage'
 import { CabinetFormPage } from './features/medicineCabinet/CabinetFormPage'
 import { CabinetItemPage } from './features/medicineCabinet/CabinetItemPage'
+import { GrowthPage } from './features/growth/GrowthPage'
+import { GrowthFormPage } from './features/growth/GrowthFormPage'
 
 const queryClient = new QueryClient()
 
@@ -113,6 +115,30 @@ function App() {
             element={
               <RequireSession>
                 <CabinetFormPage key="edit" />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/children/:childId/crecimiento"
+            element={
+              <RequireSession>
+                <GrowthPage />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/children/:childId/crecimiento/nueva"
+            element={
+              <RequireSession>
+                <GrowthFormPage key="new" />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/children/:childId/crecimiento/:measurementId/editar"
+            element={
+              <RequireSession>
+                <GrowthFormPage key="edit" />
               </RequireSession>
             }
           />

@@ -23,6 +23,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/appointment"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw/authmwtest"
 	"github.com/Ulisesgtz/medic-track/backend/internal/cabinet"
+	"github.com/Ulisesgtz/medic-track/backend/internal/growth"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
@@ -168,6 +169,7 @@ func newWorld(t *testing.T) *world {
 		ChildDevice: childdevice.NewHandler(childdevice.NewService(childdevice.NewRepository(pool)), responder),
 		Vaccination: vaccination.NewHandler(vaccination.NewService(vaccination.NewRepository(pool)), responder),
 		Cabinet:     cabinet.NewHandler(cabinet.NewService(cabinet.NewRepository(pool)), responder),
+		Growth:      growth.NewHandler(growth.NewService(growth.NewRepository(pool)), responder),
 		HistoryExport: historyexport.NewHandler(historyexport.NewService(historyexport.NewRepository(pool), consultation.NewRepository(pool),
 			vaccination.NewRepository(pool)), responder),
 		Ownership:      ownership.NewRepository(pool),
@@ -305,6 +307,13 @@ func (w *world) routes() []struct {
 		{"save card photo", http.MethodPost, "/children/" + w.childA.String() + "/vaccine-card-photos", `{}`, http.StatusBadRequest},
 		{"get card photo", http.MethodGet, "/children/" + w.childA.String() + "/vaccine-card-photos/" + uuid.NewString(), "", http.StatusNotFound},
 		{"delete card photo", http.MethodDelete, "/children/" + w.childA.String() + "/vaccine-card-photos/" + uuid.NewString(), "", http.StatusNotFound},
+		// Specs/063: the growth record; the owner is on the free plan here, so the chart reaches the handler and is the paid plan's.
+		{"list growth", http.MethodGet, "/children/" + w.childA.String() + "/growth-measurements", "", http.StatusOK},
+		{"add growth", http.MethodPost, "/children/" + w.childA.String() + "/growth-measurements", `{}`, http.StatusBadRequest},
+		{"correct growth", http.MethodPut, "/children/" + w.childA.String() + "/growth-measurements/" + uuid.NewString(), `{}`, http.StatusBadRequest},
+		{"remove growth", http.MethodDelete, "/children/" + w.childA.String() + "/growth-measurements/" + uuid.NewString(), "", http.StatusNotFound},
+		{"choose growth table", http.MethodPut, "/children/" + w.childA.String() + "/growth-reference", `{"sex":"female"}`, http.StatusNoContent},
+		{"growth chart", http.MethodGet, "/children/" + w.childA.String() + "/growth-chart", "", http.StatusUnprocessableEntity},
 		{"get subscription", http.MethodGet, "/accounts/" + w.accountA.String() + "/subscription", "", http.StatusOK},
 		{"subscribe", http.MethodPost, "/accounts/" + w.accountA.String() + "/subscription", "", http.StatusCreated},
 		{"cancel subscription", http.MethodPost, "/accounts/" + w.accountA.String() + "/subscription/cancel", "", http.StatusOK},
@@ -407,7 +416,7 @@ var (
 	ownRoutes = map[string]bool{"search own consultations": true, "own history options": true, "export own history": true, "consultation sharing": true, "own consultations": true, "create own consultation": true, "own overview": true, "own appointments": true, "create own appointment": true, "get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true, "get subscription": true, "subscribe": true, "cancel subscription": true}
 	// cabinetRoutes: the family's medicine cabinet (specs/062), not for a Child-role member.
 	cabinetRoutes = map[string]bool{"list cabinet": true, "cabinet item": true, "cabinet photo": true}
-	fullRoutes    = map[string]bool{"add to cabinet": true, "edit cabinet item": true, "remove cabinet item": true, "delete routine": true, "add child": true, "create consultation": true, "edit consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "record vaccination": true, "correct vaccination": true, "delete vaccination": true, "save card photo": true, "delete card photo": true, "edit appointment": true, "create device link": true, "remove device link": true, "choose device reminders": true, "mark appointment": true}
+	fullRoutes    = map[string]bool{"add growth": true, "correct growth": true, "remove growth": true, "choose growth table": true, "add to cabinet": true, "edit cabinet item": true, "remove cabinet item": true, "delete routine": true, "add child": true, "create consultation": true, "edit consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "record vaccination": true, "correct vaccination": true, "delete vaccination": true, "save card photo": true, "delete card photo": true, "edit appointment": true, "create device link": true, "remove device link": true, "choose device reminders": true, "mark appointment": true}
 )
 
 func (w *world) setOwnerPlan(t *testing.T, plan string) {

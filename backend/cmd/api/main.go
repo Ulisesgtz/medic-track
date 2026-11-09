@@ -39,6 +39,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/appointment"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
 	"github.com/Ulisesgtz/medic-track/backend/internal/cabinet"
+	"github.com/Ulisesgtz/medic-track/backend/internal/growth"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
@@ -107,6 +108,11 @@ func main() {
 	// The child's vaccination card (specs/046): the doses a parent records by hand and the photos of the paper card.
 	vaccinationRepo := vaccination.NewRepository(pool)
 	vaccinationHandler := vaccination.NewHandler(vaccination.NewService(vaccinationRepo), responder)
+	// The growth record (specs/063). The WHO curves are drawn only with WHO_GROWTH_REFERENCE_ENABLED=true: WHO's terms ask for
+	// written permission before using its tables in a paid product (specs/063, research R1).
+	growthService := growth.NewService(growth.NewRepository(pool))
+	growthService.SetReferenceEnabled(os.Getenv("WHO_GROWTH_REFERENCE_ENABLED") == "true")
+	growthHandler := growth.NewHandler(growthService, responder)
 	// The history's PDF (specs/050): one read-only answer with everything the document shows; the PDF is made on the phone.
 	historyExportHandler := historyexport.NewHandler(historyexport.NewService(historyexport.NewRepository(pool), consultationRepo, vaccinationRepo), responder)
 
@@ -244,6 +250,7 @@ func main() {
 		Appointment:     appointmentHandler,
 		Vaccination:     vaccinationHandler,
 		Cabinet:         cabinet.NewHandler(cabinet.NewService(cabinet.NewRepository(pool)), responder),
+		Growth:          growthHandler,
 		HistoryExport:   historyExportHandler,
 		Payments:        paymentsHandler,
 		Ops:             opsHandler,
