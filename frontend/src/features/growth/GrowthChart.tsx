@@ -49,7 +49,7 @@ export function GrowthChart({ chart, indicator, desktop }: GrowthChartProps) {
         <svg
           viewBox={`0 0 ${W} ${H}`}
           width="100%"
-          role="img"
+          role="group"
           aria-label={`${indicator === 'weight' ? GROWTH.weight : GROWTH.height}: ${points.length} medidas`}
           className="block h-auto"
         >
@@ -91,7 +91,22 @@ export function GrowthChart({ chart, indicator, desktop }: GrowthChartProps) {
             <polyline points={points.map((p) => `${px(p.months)},${py(p.value)}`).join(' ')} fill="none" className="stroke-action" strokeWidth={2} />
           )}
           {points.map((p, i) => (
-            <g key={`${p.measuredOn}-${i}`} onClick={() => setPicked(i === picked ? null : i)} className="cursor-pointer" data-testid="growth-point">
+            <g
+              key={`${p.measuredOn}-${i}`}
+              role="button"
+              tabIndex={0}
+              aria-pressed={i === picked}
+              aria-label={pointLabel(p.measuredOn, indicator, p.value, ageAt(chart.birthDate, p.measuredOn))}
+              onClick={() => setPicked(i === picked ? null : i)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setPicked(i === picked ? null : i)
+                }
+              }}
+              className="cursor-pointer focus:outline-none [&:focus-visible>circle:last-child]:stroke-ink"
+              data-testid="growth-point"
+            >
               <circle cx={px(p.months)} cy={py(p.value)} r={22} fill="transparent" />
               <circle cx={px(p.months)} cy={py(p.value)} r={i === picked ? 6 : 4.5} className="fill-action stroke-surface" strokeWidth={2} />
             </g>

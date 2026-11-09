@@ -66,10 +66,10 @@
 
 ## Fase 6: Pulido
 
-- [ ] T021 E2E `frontend/e2e/crecimiento.spec.ts` (Chromium, 390 y 1280 px): anotar y ver en la lista; plan gratuito → aviso del plan; plan completo → elegir la tabla y ver la gráfica; corregir y quitar; Cuidador sin botones (403 del API). Usar `getByLabel(…, { exact: true })`
-- [ ] T022 [P] Docs: `CLAUDE.md` (raíz), `backend/CLAUDE.md` (paquete, rutas, migración 0034, `WHO_GROWTH_REFERENCE_ENABLED`), `frontend/CLAUDE.md`, `DEPLOY.md` (la variable), `BACKLOG.md` (curvas hechas; pendientes: permiso de la OMS, gráfica en el PDF, perímetro cefálico)
-- [ ] T023 Verificación: `go vet`, `go test ./...` con y sin `pool_max_conns=4`, Swagger sin cambios, `govulncheck`, `npx vitest run --coverage`, `npx tsc -b`, `npm run build`, `npx eslint .`, `npx playwright test --list`; ver la pantalla en el navegador local a 390 y 1280
-- [ ] T024 `/code-review`, push y PR a `develop` (ccd_pr `get_status` + `set_monitor`); recordar al dueño aplicar la `0034` en DEV y pedir el permiso de la OMS; no fusionar
+- [X] T021 E2E `frontend/e2e/crecimiento.spec.ts` (Chromium, 390 y 1280 px): anotar y ver en la lista; plan gratuito → aviso del plan; plan completo → elegir la tabla y ver la gráfica; corregir y quitar; Cuidador sin botones (403 del API). Usar `getByLabel(…, { exact: true })`
+- [X] T022 [P] Docs: `CLAUDE.md` (raíz), `backend/CLAUDE.md` (paquete, rutas, migración 0034, `WHO_GROWTH_REFERENCE_ENABLED`), `frontend/CLAUDE.md`, `DEPLOY.md` (la variable), `BACKLOG.md` (curvas hechas; pendientes: permiso de la OMS, gráfica en el PDF, perímetro cefálico)
+- [X] T023 Verificación: `go vet`, `go test ./...` con y sin `pool_max_conns=4`, Swagger sin cambios, `govulncheck`, `npx vitest run --coverage`, `npx tsc -b`, `npm run build`, `npx eslint .`, `npx playwright test --list`; ver la pantalla en el navegador local a 390 y 1280
+- [X] T024 `/code-review`, push y PR a `develop` (ccd_pr `get_status` + `set_monitor`); recordar al dueño aplicar la `0034` en DEV y pedir el permiso de la OMS; no fusionar
 
 ---
 

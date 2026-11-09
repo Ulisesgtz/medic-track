@@ -57,6 +57,8 @@ export const GROWTH = {
   boys: 'Niño',
   tableIs: (sex: 'female' | 'male') => `Tabla de la OMS: ${sex === 'female' ? 'niña' : 'niño'}`,
   changeTable: 'Cambiar',
+  tableFailed: 'No pudimos guardar la tabla. Inténtalo de nuevo.',
+  chartFamilyPlan: 'La gráfica con la referencia de la OMS es parte del plan completo de la familia.',
   tableFromAdult: 'Una persona adulta de la familia con acceso completo puede elegir la tabla de la OMS para dibujar las curvas.',
   referenceOff: 'La referencia de la OMS aún no está disponible; la gráfica muestra solo las medidas anotadas.',
   noPoints: (indicator: Indicator) => (indicator === 'weight' ? 'Aún no hay medidas de peso.' : 'Aún no hay medidas de talla.'),

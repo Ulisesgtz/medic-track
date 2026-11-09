@@ -71,6 +71,37 @@ describe('GrowthPage', () => {
     expect(within(section).queryAllByTestId('curve-p50')).toHaveLength(0)
   })
 
+  it('says when the table couldn’t be saved', async () => {
+    stubApi({
+      'GET /accounts/me': { body: owner },
+      [`GET ${BASE}/growth-measurements`]: { body: list() },
+      [`GET ${BASE}/growth-chart`]: { body: chart({ referenceSex: null, reference: null }) },
+      [`PUT ${BASE}/growth-reference`]: { status: 500, body: {} },
+    })
+    renderAt(PATH, <GrowthPage />, ROUTE)
+    await userEvent.setup().click(await screen.findByRole('button', { name: 'Niño' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('No pudimos guardar la tabla.')
+  })
+
+  it('a point is reached by keyboard and says its date, value and age', async () => {
+    api()
+    renderAt(PATH, <GrowthPage />, ROUTE)
+    const point = await screen.findByRole('button', { name: '03 nov 2025 · 10.2 kg · 16 meses' })
+    point.focus()
+    const user = userEvent.setup()
+    await user.keyboard('{Enter}')
+    expect(point).toHaveAttribute('aria-pressed', 'true')
+    await user.keyboard(' ')
+    expect(point).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('who can’t act on the plan is told the chart is the family’s plan, without the plan notice', async () => {
+    api({ acc: caregiverAccount, growth: list({ canEdit: false, chartAvailable: false }) })
+    renderAt(PATH, <GrowthPage />, ROUTE)
+    expect(await screen.findByText(/plan completo de la familia/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Ver la gráfica/ })).not.toBeInTheDocument()
+  })
+
   it('changing the table shows the choice again', async () => {
     api()
     renderAt(PATH, <GrowthPage />, ROUTE)

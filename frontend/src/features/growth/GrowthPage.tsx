@@ -68,6 +68,11 @@ export function GrowthPage() {
           {GROWTH.boys}
         </button>
       </div>
+      {setSex.isError && (
+        <p role="alert" className="text-[14px] text-body">
+          {GROWTH.tableFailed}
+        </p>
+      )}
     </div>
   )
 
@@ -90,7 +95,9 @@ export function GrowthPage() {
   const chartSection = (
     <section aria-label={GROWTH.chartTitle} className={`${card} flex flex-col gap-3.5 ${desktop ? 'p-6' : 'p-4'}`}>
       <h2 className="text-[17px] font-extrabold text-ink">{GROWTH.chartTitle}</h2>
-      {!chartAvailable || planBlocked ? (
+      {(!chartAvailable || planBlocked) && !canEdit ? (
+        <p className="text-[14px] leading-normal text-body">{GROWTH.chartFamilyPlan}</p>
+      ) : !chartAvailable || planBlocked ? (
         <button ref={planRef} type="button" onClick={() => setPlanOpen(true)} className={`${outline} justify-between gap-3`}>
           <span>{GROWTH.showChart}</span>
           <span className={badge}>{GROWTH.planBadge}</span>

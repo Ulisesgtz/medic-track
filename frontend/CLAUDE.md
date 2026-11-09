@@ -200,6 +200,22 @@ Built from the delivered mock (`specs/062-botiquin/referencia/Botiquín PediTrac
 
 E2E: `botiquin.spec.ts` (Chromium, 390 and 1280 px: the owner adds, finds, edits and removes; the shortcut from a consultation; a Caregiver who sees and gets 403; the free plan's notice).
 
+## `src/features/growth/` — curvas de crecimiento (spec 063)
+
+No mock: built from the visual system. **Records and draws, never evaluates** (Principio I): no percentile of the child, no «normal/bajo/alto», no colors of alert, no trends.
+
+| File | Role |
+|---|---|
+| `growthText.ts` (+ `growthLogic.test.ts`) | **Every sentence** (`GROWTH`, `valuesLine`, `lastLine`, `authorLine`, `countLine`, `pointLabel`); the test forbids «normal», «bajo», «alto», «riesgo», «sobrepeso», «percentil de»… |
+| `growthAge.ts`, `growthForm.ts`, `chartScale.ts` | Pure: the age at a measurement from YYYY-MM-DD («6 semanas», «16 meses», «2 años 1 mes»); the form's values, checks (the server's, comma or point) and body; the chart's axes (`xMaxFor`: two years, then whole years; `yRangeFor`) |
+| `GrowthPage.tsx` | `/children/:childId/crecimiento`: the chart card (phone first; web at the left with the list at the right): «Peso» / «Talla», the WHO table choice («Niña · Niño», only `canEdit`; a Caregiver is told who chooses), the referenceOff sentence, the fixed sentence; on the free plan «Ver la gráfica» with «Plan completo» opens `FreemiumLimitModal reason="growth_chart"` and the chart is **never asked**. The signup's values without a date apart («Anotarla con fecha», router state), the list newest first with the age, the note, «Anotada por / Corregida el … por …», «Corregir» and «Quitar» (`ConfirmDialog` in `ink`) for who can |
+| `GrowthChart.tsx` | Own SVG (no library): grey P3–P97 polylines named only «P3…P97», the child's points in `action` (a 44 px hit area; a tap shows «fecha · valor · edad»), the source, the note past the reference's last month, and a `<table>` with the same points |
+| `GrowthFormPage.tsx` | `/children/:childId/crecimiento/nueva` and `/…/:measurementId/editar`: date (`min` birth, `max` today), weight and height (decimal), note; `StickyActionBar`; `useUnsavedWork`; the server's field errors, the 500 cap sentence |
+| `GrowthSection.tsx` | «Crecimiento» in the child's detail (and the `SectionIndex`): «Última: 12.4 kg · 86 cm, 03 nov 2026» or «Aún no hay medidas» |
+| `api.ts`, `hooks.ts`, `types.ts` | `GrowthApiError` (`plan_required`/`limit`/`validation_error`/`not_found`/`forbidden`); queries `['growth', childId]` and `['growth-chart', childId]` (only with `chartAvailable`) |
+
+E2E: `crecimiento.spec.ts` (Chromium, 390 and 1280 px: the owner's whole flow, the free plan's notice and the 422 of the API, a Caregiver who sees and gets 403).
+
 ## `src/features/plans/` — planes y plan completo (spec 034)
 
 | File | Role |
