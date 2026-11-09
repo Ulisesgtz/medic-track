@@ -71,7 +71,10 @@ export function EditChildPage() {
   const leave = (e: { preventDefault: () => void }) => {
     if (dirty && !window.confirm(CHILD_PROFILE.leaveConfirm)) e.preventDefault()
   }
-  const set = (field: keyof ChildValues, value: string) => setValues((v) => ({ ...v, [field]: value }))
+  const set = (field: keyof ChildValues, value: string) => {
+    setValues((v) => ({ ...v, [field]: value }))
+    if (field === 'birthDate') setConflict(null)
+  }
   const today = localToday()
 
   const submit = () => {
@@ -120,22 +123,17 @@ export function EditChildPage() {
     </div>
   )
 
+  // Only the owner reaches the form on a free family: an invited person of a family that doesn't pay is read-only.
   const identityNote = freeIdentity && (
-    <div className="flex flex-col gap-2">
-      {access.role === 'owner' ? (
-        <button
-          ref={planRef}
-          type="button"
-          onClick={() => setPlanOpen(true)}
-          className="flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-2xl border-[1.5px] border-hint-border bg-surface px-4 py-3 text-left text-[14px] leading-normal text-body"
-        >
-          <span>{CHILD_PROFILE.identityPlan}</span>
-          <span className={badge}>{CHILD_PROFILE.planBadge}</span>
-        </button>
-      ) : (
-        <p className="text-[14px] leading-normal text-body">{CHILD_PROFILE.identityFamilyPlan}</p>
-      )}
-    </div>
+    <button
+      ref={planRef}
+      type="button"
+      onClick={() => setPlanOpen(true)}
+      className="flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-2xl border-[1.5px] border-hint-border bg-surface px-4 py-3 text-left text-[14px] leading-normal text-body"
+    >
+      <span>{CHILD_PROFILE.identityPlan}</span>
+      <span className={badge}>{CHILD_PROFILE.planBadge}</span>
+    </button>
   )
 
   const form = (

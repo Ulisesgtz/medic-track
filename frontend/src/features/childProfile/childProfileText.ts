@@ -23,7 +23,6 @@ export const CHILD_PROFILE = {
   leaveConfirm: 'Tienes cambios sin guardar. ¿Salir sin guardarlos?',
   planBadge: 'Plan completo',
   identityPlan: 'Corregir el nombre y la fecha de nacimiento es del plan completo. La talla y el peso se corrigen en cualquier plan.',
-  identityFamilyPlan: 'Corregir el nombre y la fecha de nacimiento es del plan completo, que contrata la dueña de la familia.',
   readOnly: 'Puedes ver los datos de este hijo. Los corrigen la dueña de la familia y los Tutores.',
   notFound: 'No encontramos a este hijo.',
   loadFailed: 'los datos del hijo',

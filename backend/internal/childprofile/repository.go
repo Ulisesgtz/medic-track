@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -53,6 +54,13 @@ func (r *Repository) Update(ctx context.Context, childID, actor uuid.UUID, c Cle
 		return nil, fmt.Errorf("locking the child: %w", err)
 	}
 
+	// The signup never trimmed the names: «Mateo » saved and «Mateo» sent are the same name, kept as it was.
+	if strings.TrimSpace(cur.firstName) == c.FirstName {
+		c.FirstName = cur.firstName
+	}
+	if strings.TrimSpace(cur.lastName) == c.LastName {
+		c.LastName = cur.lastName
+	}
 	if identityChanged(cur, c) && !cur.paid {
 		return nil, ErrPlanRequired
 	}

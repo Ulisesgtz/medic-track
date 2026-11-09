@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -84,6 +84,8 @@ for (const web of [false, true]) {
       await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
       expect(await screen.findByRole('alert')).toHaveTextContent(/^Hay 1 medida \(.+\) anotada antes de esa fecha/)
       expect(bodyOf(mock, 'PUT /children/child-1')).toMatchObject({ firstName: 'Sofía', birthDate: '2024-07-01' })
+      fireEvent.change(screen.getByLabelText('Fecha de nacimiento'), { target: { value: '2024-06-01' } })
+      expect(screen.queryByRole('alert')).toBeNull()
 
       api(account({ children: [mateo] }), { status: 400, body: { error: 'validation_error', message: 'x', details: [{ field: 'lastName', message: 'Del servidor.' }] } })
       await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
@@ -142,17 +144,12 @@ for (const web of [false, true]) {
       expect((await screen.findAllByText(/Puedes ver los datos de este hijo/)).length).toBeGreaterThan(0)
     })
 
-    it('a Tutor of a paid family edits everything; one of a free family who could edit is told who has the plan', async () => {
+    it('a Tutor of a paid family edits everything', async () => {
       stubWeb(web)
       api(account({ plan: 'free', children: [{ ...mateo, role: 'tutor', plan: 'paid', accountId: 'owner' }] }))
       show()
       expect(await screen.findByLabelText('Nombre')).toBeEnabled()
-      vi.unstubAllGlobals()
-
-      stubWeb(web)
-      api(account({ plan: 'free', children: [{ ...mateo, role: 'tutor', plan: 'free', readOnly: false, accountId: 'owner' }] }))
-      const { container } = show()
-      expect(await within(container).findByText(/que contrata la dueña de la familia/)).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: /Plan completo/ })).toBeNull()
     })
 
     it('an unknown child', async () => {

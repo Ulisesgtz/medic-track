@@ -38,7 +38,7 @@ for (const design of designs) {
       await page.getByLabel('Nombre').fill('Mateo José')
       await page.getByLabel('Fecha de nacimiento').fill('2021-07-01')
       await page.getByRole('button', { name: 'Guardar cambios' }).click()
-      await expect(page.getByRole('alert')).toContainText(/Hay 1 medida \(.+2021\) anotada antes de esa fecha/)
+      await expect(page.getByText(/Hay 1 medida \(.+2021\) anotada antes de esa fecha/)).toBeVisible()
 
       await page.getByLabel('Fecha de nacimiento').fill('2021-03-10')
       await page.getByRole('button', { name: 'Guardar cambios' }).click()

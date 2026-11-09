@@ -428,3 +428,19 @@ func TestHandler_NoActorAndADatabaseFailureAreInternalErrors(t *testing.T) {
 	require.Equal(t, http.StatusInternalServerError, rec.Code)
 	require.False(t, strings.Contains(rec.Body.String(), "Mateo"))
 }
+
+// The signup never trimmed the names: a child saved as «Mateo » is not renamed by a form that sends «Mateo», so a free family can
+// still correct the weight (no plan asked) and the name keeps its spaces.
+func TestUpdate_ANameSavedWithSpacesIsTheSameName(t *testing.T) {
+	pool := testPool(t)
+	ctx := context.Background()
+	fam := newFamily(t, pool, account.PlanFree)
+	_, err := pool.Exec(ctx, `UPDATE children SET first_name = ' Mateo ', last_name = 'Prueba ' WHERE id = $1`, fam.childID)
+	require.NoError(t, err)
+	in := fam.input()
+	in.Weight = f(14)
+	saved, err := childprofile.NewService(childprofile.NewRepository(pool)).Update(ctx, fam.childID, fam.accountID, in)
+	require.NoError(t, err)
+	require.Equal(t, 14.0, *saved.Child.Weight)
+	require.Equal(t, " Mateo ", readChild(t, pool, fam.childID).first)
+}
