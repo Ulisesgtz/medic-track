@@ -17,8 +17,8 @@ description: "Lista de tareas: editar los datos del hijo (spec 064)"
 
 ## Fase 1: Configuración
 
-- [ ] T001 Crear `backend/migrations/0035_child_corrections.sql`. Agrega a `children` las columnas `corrected_by_account_id UUID NULL REFERENCES accounts (id)` y `corrected_at TIMESTAMPTZ NULL`, con el `CONSTRAINT children_correction_together CHECK ((corrected_by_account_id IS NULL) = (corrected_at IS NULL))`. Lleva un comentario en español al inicio (spec 064; no cambia ningún dato).
-- [ ] T002 Aplicar la `0035` en la base local (`DATABASE_URL=postgres://root:abcd1234@localhost:5432/pediTrack?sslmode=disable`). Mostrar el SQL completo al usuario para que lo aplique en DEV antes del merge.
+- [X] T001 Crear `backend/migrations/0035_child_corrections.sql`. Agrega a `children` las columnas `corrected_by_account_id UUID NULL REFERENCES accounts (id)` y `corrected_at TIMESTAMPTZ NULL`, con el `CONSTRAINT children_correction_together CHECK ((corrected_by_account_id IS NULL) = (corrected_at IS NULL))`. Lleva un comentario en español al inicio (spec 064; no cambia ningún dato).
+- [X] T002 Aplicar la `0035` en la base local (`DATABASE_URL=postgres://root:abcd1234@localhost:5432/pediTrack?sslmode=disable`). Mostrar el SQL completo al usuario para que lo aplique en DEV antes del merge.
 
 **Commit**: `feat(064): migración 0035 (quién corrigió al hijo)`
 
