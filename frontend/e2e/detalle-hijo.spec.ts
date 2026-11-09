@@ -38,7 +38,7 @@ for (const design of designs) {
       const main = page.getByRole('main')
 
       const index = main.getByRole('navigation', { name: 'Secciones' })
-      await expect(index.getByRole('link')).toHaveText(['Consultas', 'Suplementos', 'Actividades', 'Cartilla'])
+      await expect(index.getByRole('link')).toHaveText(['Consultas', 'Suplementos', 'Actividades', 'Cartilla', 'Crecimiento'])
       await index.getByRole('link', { name: 'Cartilla' }).click()
       await expect(main.getByRole('region', { name: 'Cartilla de vacunación' })).toBeInViewport()
 

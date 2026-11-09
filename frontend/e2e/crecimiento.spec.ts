@@ -22,7 +22,7 @@ for (const design of designs) {
 
       await page.getByRole('main').getByRole('link', { name: 'Anotar medida' }).click()
       await page.getByLabel('Fecha de la medida').fill('2023-03-20')
-      await page.getByLabel(/Peso \(kg\)/).fill('124')
+      await page.getByLabel(/Peso \(kg\)/).fill('250')
       await page.getByLabel(/Talla \(cm\)/).fill('88,5')
       await page.getByRole('button', { name: 'Guardar medida' }).click()
       await expect(page.getByText(/Escribe el peso en kilogramos/)).toBeVisible()
