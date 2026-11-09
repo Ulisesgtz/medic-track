@@ -316,6 +316,39 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
   (c) `retries: 2` en CI; (d) el backend (`clerkPrimaryEmail`) también reintenta 502/503/504. Queda abierto, si vuelve a
   pasar: respetar el `Retry-After` de Clerk, responder 503 en vez de 500, o reutilizar cuentas de prueba entre specs.
 
+- **CI con la imagen oficial de Playwright** (anotado 2026-11-08, tras el PR 80): los E2E fallaban por cosas ajenas al
+  código — la descarga de Firefox cortada por espejos de Ubuntu lentos (PR 79) y, el 2026-11-07, `ubuntu-latest` pasó a
+  Ubuntu 26.04 y WebKit dejó de abrir (`libicudata.so.74`). Ya se fijó `runs-on: ubuntu-24.04` en `.github/workflows/ci.yml`.
+  Lo siguiente: correr los jobs de E2E dentro de `mcr.microsoft.com/playwright:v<versión de @playwright/test>-noble`
+  (los navegadores y sus librerías ya vienen dentro: sin descarga ni `install-deps`), subiendo la etiqueta junto con
+  `@playwright/test`. Además, para que mis E2E nuevos no se prueben por primera vez en el CI: llaves de prueba de Clerk
+  en este equipo (`frontend/.env.local` y `backend/.env.local`, las pone el dueño) y correr `npx playwright test` antes
+  de cada push.
+
+## Escalar a muchos usuarios (anotado 2026-11-08)
+
+Pregunta del dueño: ¿aguanta la app un volumen grande de usuarios? Railway con varias réplicas ya reparte el tráfico (no
+hace falta un balanceador propio) y el API no guarda estado en memoria que importe entre peticiones, salvo lo de abajo.
+Nada urge con los usuarios de hoy; revisarlo antes de abrir al público:
+
+- **Prueba de carga con k6** (su propia spec): escenarios del inicio, «Tomas de hoy», marcar tomas y crear una consulta
+  con foto contra un entorno aparte (nunca DEV con datos de probadores ni producción), con cuentas de prueba y Clerk de
+  desarrollo; medir p95, errores y conexiones a Postgres, y fijar ahí cuántas réplicas y qué `pool_max_conns` usar.
+- **Límite de peticiones por dirección** (`internal/ratelimit`, 240/min): vive en la memoria de cada réplica (con N
+  réplicas el límite real es N×) y cuenta por IP, así que muchas familias detrás de la misma IP de su compañía de
+  teléfono (CGNAT) se lo reparten. Pasarlo a Redis o a Postgres y contar por cuenta cuando hay sesión, o dejarlo al
+  proxy de Cloudflare (WAF) y subir `TRUSTED_PROXY_HOPS`.
+- **Procesos en segundo plano con varias réplicas**: los recordatorios, el planificador de suplementos, los barridos de
+  pagos y la retención corren dentro de cada copia del API. El reclamo de tomas y el digest ya son seguros entre copias
+  (`FOR UPDATE SKIP LOCKED`, lease); revisar uno por uno los demás antes de subir réplicas, o moverlos a un solo
+  proceso trabajador.
+- **Fotos en Postgres** (`bytea`: recetas, cartilla, botiquín): con muchas cuentas engordan la base, los respaldos y la
+  memoria; es el punto «Almacenamiento de fotos de recetas en object storage» de la sección Backend (S3/R2).
+- **Envío de avisos push**: hoy 8 envíos a la vez por copia; con muchas tomas a la misma hora (08:00) los avisos se
+  atrasan. Medirlo en la prueba de carga y subir la concurrencia o repartirlo.
+- **Correo**: Resend gratis manda 100 al día (el tope compartido de `internal/mailer` es 95 para invitaciones); con más
+  familias hay que pasar al plan de pago de Resend y subir los topes de `internal/mailer`.
+
 ## Producto / Legal
 
 - Registro de marca ante el IMPI (clases 9+42) — ver memoria `peditrack-registro-marca-impi.md`.
