@@ -18,12 +18,12 @@ function wholeMonths(birth: string, on: string): number {
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
-/** «6 semanas» under three months, «7 meses» under two years, then «1 año 5 meses» / «4 años». */
+/** «6 semanas» under three months, «7 meses» under a year, then «1 año 1 mes» / «4 años» (the mock of spec 065). */
 export function ageAt(birth: string, on: string): string {
   const days = Math.max(0, Math.round((utcDay(on) - utcDay(birth)) / 86_400_000))
   const months = wholeMonths(birth, on)
   if (months < 3) return days < 7 ? plural(days, 'día', 'días') : plural(Math.floor(days / 7), 'semana', 'semanas')
-  if (months < 24) return plural(months, 'mes', 'meses')
+  if (months < 12) return plural(months, 'mes', 'meses')
   const years = Math.floor(months / 12)
   const rest = months % 12
   return rest === 0 ? plural(years, 'año', 'años') : `${plural(years, 'año', 'años')} ${plural(rest, 'mes', 'meses')}`

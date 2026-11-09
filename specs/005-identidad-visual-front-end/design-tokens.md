@@ -116,6 +116,11 @@ Eran literales (`text-[#…]`) repartidos por las pantallas; desde el refactor 0
 | `--color-skel` | `#e2eef0` | esqueletos de carga del inicio (spec 055) | — |
 | `--color-on-pending-chip` | `#78350f` | texto del chip «por marcar» del inicio (spec 055) | 8.9:1 sobre `--color-pending-soft` |
 | `--color-pending-dot` | `#b45309` | anillo del chip «por marcar» (decorativo, el texto dice el estado) | — |
+| `--color-line` | `#cfe8ec` | borde de las tarjetas de Crecimiento (spec 065) | — |
+| `--color-curve` | `#869ca3` | curvas de la OMS y eje X de la gráfica de crecimiento (solo líneas) | — |
+| `--color-grid` | `#e2eef0` | rejilla horizontal de la gráfica de crecimiento | — |
+| `--color-field-edge` | `#6b8f97` | borde de campo del formulario de medidas (spec 065) | 3.6:1 sobre blanco (componente) |
+| `--color-error` | `#b91c1c` | error de formulario y «Quitar» en Crecimiento (el `red-700` de Tailwind v4 con su valor exacto) | 6.47:1 sobre blanco |
 
 Los tres tonos pizarra del calendario llevan el valor **exacto** del diseño (spec 022): los `slate-500/700/800` de Tailwind v4 son oklch y salen 2–3 niveles distintos. `#451a03` (texto sobre ámbar, y fondo del botón de `TodayDosesBlock`) ya era `--color-on-pending`; `#065f46`, `--color-confirmed-strong`; `#92400e`, `--color-pending-strong`; `#a5f3fc`, `--color-hint-border`. El logo de Google (`GoogleSignupButton`) conserva los colores de su marca.
 
