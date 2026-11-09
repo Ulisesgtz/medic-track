@@ -172,20 +172,20 @@ description: "Lista de tareas: editar los datos del hijo (spec 064)"
 
 ## Fase 6: Pulido
 
-- [ ] T026 [P] Crear `frontend/e2e/editar-hijo.spec.ts` para 390 y 1280 px (`designs`), con los helpers de `frontend/e2e/helpers.ts` (`seedChild`, `setAccountPlan`, `secondPerson`, `inviteViaApi`, `acceptViaApi`). Casos:
+- [X] T026 [P] Crear `frontend/e2e/editar-hijo.spec.ts` para 390 y 1280 px (`designs`), con los helpers de `frontend/e2e/helpers.ts` (`seedChild`, `setAccountPlan`, `secondPerson`, `inviteViaApi`, `acceptViaApi`). Casos:
   1. La dueña corrige el peso con la casilla y lo ve en el detalle y en «Crecimiento».
   2. La dueña de pago corrige el nombre y la fecha; el nombre nuevo se ve en el detalle.
   3. Una fecha posterior a una medida muestra el aviso.
   4. Plan gratuito: los campos bloqueados y el `PUT` directo con otro nombre → 422 `child_identity`.
   5. Un Cuidador no ve la fila y su `PUT` → 403.
-- [ ] T027 [P] Documentación:
+- [X] T027 [P] Documentación:
   - Nota en `specs/001-registro-cuenta-usuario/spec.md`, junto a FR-006a: la spec 064 la reemplaza, con la decisión del 2026-11-09 (la identidad solo con el plan completo; el hijo sigue sin borrarse).
   - Actualizar el comentario de `account.Child` en `backend/internal/account/model.go`.
   - Una entrada `specs/064-editar-datos-hijo/` en `CLAUDE.md`.
   - El paquete `internal/childprofile`, la migración `0035` y la revisión bajo bloqueo en `backend/CLAUDE.md`.
   - La sección `features/childProfile/` en `frontend/CLAUDE.md`.
   - Marcar «Editar los datos del hijo» como hecho en `BACKLOG.md`.
-- [ ] T028 Verificación completa:
+- [X] T028 Verificación completa:
   - `go vet ./...`.
   - `go test ./... -cover`, con y sin `pool_max_conns=4`.
   - Swagger sin cambios después de regenerar.
