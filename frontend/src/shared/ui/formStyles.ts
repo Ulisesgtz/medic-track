@@ -43,5 +43,15 @@ export const fieldRoutineMultiline = `w-full min-w-0 ${BORDER_WIDTH} rounded-[14
 /** The medicine cabinet's form (specs/062, mock «Botiquín»): 52 px tall, 14 px radius, a 1.5 px slate border. */
 export const fieldCabinet = `min-h-[52px] w-full min-w-0 ${BORDER_WIDTH} rounded-[14px] border-calendar-muted bg-surface px-3.5 text-base text-ink placeholder:text-calendar-muted focus:border-2 focus:border-ink focus:outline-none`
 
+/**
+ * The growth record's form (specs/065, mock «Crecimiento» G1/G2): a 52 px box with a 14 px radius, a 1.5 px `field-edge` border and
+ * 17 px text that holds the input and its unit («kg», «cm»); with an error the border is 2 px `error`. The input inside is plain.
+ */
+export const fieldGrowth =
+  'flex min-h-[52px] w-full min-w-0 items-center gap-2 rounded-[14px] border-[1.5px] border-field-edge bg-surface px-3.5 text-[17px] text-ink focus-within:border-2 focus-within:border-ink'
+export const fieldGrowthError =
+  'flex min-h-[52px] w-full min-w-0 items-center gap-2 rounded-[14px] border-2 border-error bg-surface px-3.5 text-[17px] text-ink focus-within:border-ink'
+export const fieldGrowthInput = 'min-w-0 flex-1 bg-transparent text-[17px] text-ink outline-none placeholder:text-calendar-muted'
+
 /** The same field holding what the box's photo or the prescription proposed: 2 px action border on hint. */
 export const fieldCabinetProposed = 'min-h-[52px] w-full min-w-0 rounded-[14px] border-2 border-action bg-hint px-3.5 text-base text-ink focus:border-ink focus:outline-none'

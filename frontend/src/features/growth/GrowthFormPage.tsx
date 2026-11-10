@@ -4,7 +4,8 @@ import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { RoutinePageFrame } from '../supplements/RoutineFormPage'
 import { useUnsavedWork } from '../../shared/appVersion/unsavedWork'
-import { fieldCabinet } from '../../shared/ui/formStyles'
+import { formatAgeLong } from '../../shared/age'
+import { fieldGrowth, fieldGrowthError, fieldGrowthInput } from '../../shared/ui/formStyles'
 import { StickyActionBar } from '../../shared/ui/StickyActionBar'
 import { pageHeaderButton } from '../../shared/ui/pageHeaderButton'
 import { GrowthApiError } from './api'
@@ -12,9 +13,8 @@ import { EMPTY_VALUES, isDirty, toInput, validate, valuesOf, type GrowthErrors, 
 import { GROWTH } from './growthText'
 import { useGrowth, useSaveMeasurement } from './hooks'
 
-const label = 'text-[14px] font-bold text-ink'
-const errorText = 'text-[13px] font-semibold text-red-700'
-const optional = <span className="font-medium text-muted"> {GROWTH.optional}</span>
+const label = 'text-[15px] font-extrabold text-ink'
+const optional = <span className="font-medium text-body"> {GROWTH.optional}</span>
 
 /** The device's local day as YYYY-MM-DD (a measurement can't be dated after it). */
 function localToday(now = new Date()): string {
@@ -42,9 +42,11 @@ export function GrowthFormPage() {
   const save = useSaveMeasurement(childId, measurementId)
   const saved = editing ? growth.data?.measurements.find((m) => m.id === measurementId) : undefined
 
+  // A new measurement starts dated today, as the mock (G1); a correction starts from what was saved.
+  const blank: GrowthValues = editing ? EMPTY_VALUES : { ...EMPTY_VALUES, measuredOn: localToday() }
   const start: GrowthValues = registered
-    ? { ...EMPTY_VALUES, weight: registered.weightKg != null ? String(registered.weightKg) : '', height: registered.heightCm != null ? String(registered.heightCm) : '' }
-    : EMPTY_VALUES
+    ? { ...blank, weight: registered.weightKg != null ? String(registered.weightKg) : '', height: registered.heightCm != null ? String(registered.heightCm) : '' }
+    : blank
   const [initial, setInitial] = useState<GrowthValues>(start)
   const [values, setValues] = useState<GrowthValues>(start)
   const [errors, setErrors] = useState<GrowthErrors>({})
@@ -89,21 +91,36 @@ export function GrowthFormPage() {
     })
   }
 
-  const number = (id: string, field: 'weight' | 'height', text: string, errorKey: 'weightKg' | 'heightCm') => (
-    <div className="flex flex-col gap-1.5">
+  const errorLine = (id: string, text: string | undefined) =>
+    text ? (
+      <p id={id} role="alert" className="flex items-start gap-1.5 text-[14px] leading-[1.4] font-semibold text-error">
+        <span aria-hidden="true" className="mt-px flex size-[18px] flex-none items-center justify-center rounded-full bg-error text-[12px] font-black text-white">
+          !
+        </span>
+        {text}
+      </p>
+    ) : null
+
+  const number = (id: string, field: 'weight' | 'height', text: string, unit: string, errorKey: 'weightKg' | 'heightCm', example: string) => (
+    <div className="flex min-w-0 flex-col gap-1.5">
       <label htmlFor={id} className={label}>
         {text}
-        {optional}
       </label>
-      <input
-        id={id}
-        inputMode="decimal"
-        value={values[field]}
-        onChange={(e) => set(field, e.target.value.replace(/[^\d.,]/g, '').slice(0, 6))}
-        className={fieldCabinet}
-        aria-invalid={!!errors[errorKey]}
-      />
-      {errors[errorKey] && <p className={errorText}>{errors[errorKey]}</p>}
+      <div className={errors[errorKey] ? fieldGrowthError : fieldGrowth}>
+        <input
+          id={id}
+          inputMode="decimal"
+          value={values[field]}
+          placeholder={example}
+          onChange={(e) => set(field, e.target.value.replace(/[^\d.,]/g, '').slice(0, 6))}
+          className={fieldGrowthInput}
+          aria-invalid={!!errors[errorKey]}
+          aria-describedby={errors[errorKey] ? `${id}-error` : undefined}
+        />
+        <span aria-hidden="true" className="flex-none text-[15px] font-bold text-body">
+          {unit}
+        </span>
+      </div>
     </div>
   )
 
@@ -113,23 +130,32 @@ export function GrowthFormPage() {
         <label htmlFor="growth-date" className={label}>
           {GROWTH.date}
         </label>
-        <input
-          id="growth-date"
-          type="date"
-          min={birthDate || undefined}
-          max={today}
-          value={values.measuredOn}
-          onChange={(e) => set('measuredOn', e.target.value)}
-          className={`${fieldCabinet} appearance-none`}
-          aria-invalid={!!errors.measuredOn}
-        />
-        {errors.measuredOn && <p className={errorText}>{errors.measuredOn}</p>}
+        <div className={`${errors.measuredOn ? fieldGrowthError : fieldGrowth} ${desktop ? 'max-w-[260px]' : ''}`}>
+          <input
+            id="growth-date"
+            type="date"
+            min={birthDate || undefined}
+            max={today}
+            value={values.measuredOn}
+            onChange={(e) => set('measuredOn', e.target.value)}
+            className={`${fieldGrowthInput} appearance-none`}
+            aria-invalid={!!errors.measuredOn}
+            aria-describedby={errors.measuredOn ? 'growth-date-error' : undefined}
+          />
+        </div>
+        {errorLine('growth-date-error', errors.measuredOn)}
       </div>
-      <p className="text-[14px] leading-normal text-body">{GROWTH.bothOptional}</p>
-      <div className="grid grid-cols-2 gap-3">
-        {number('growth-weight', 'weight', GROWTH.weightLabel, 'weightKg')}
-        {number('growth-height', 'height', GROWTH.heightLabel, 'heightCm')}
+      <div className={`grid items-start gap-3 ${desktop ? 'grid-cols-[200px_200px] gap-4' : 'grid-cols-2'}`}>
+        {number('growth-weight', 'weight', GROWTH.weightLabel, GROWTH.kg, 'weightKg', GROWTH.weightExample)}
+        {number('growth-height', 'height', GROWTH.heightLabel, GROWTH.cm, 'heightCm', GROWTH.heightExample)}
       </div>
+      {errors.weightKg || errors.heightCm ? (
+        <div className="-mt-2.5 flex flex-col gap-1">
+          {errorLine('growth-weight-error', errors.weightKg)}
+          {errorLine('growth-height-error', errors.heightCm)}
+        </div>
+      ) : null}
+      <p className={`-mt-2 leading-[1.45] text-body ${desktop ? 'text-[15px]' : 'text-[14px]'}`}>{GROWTH.bothOptional}</p>
       <div className="flex flex-col gap-1.5">
         <label htmlFor="growth-note" className={label}>
           {GROWTH.note}
@@ -141,16 +167,16 @@ export function GrowthFormPage() {
           maxLength={300}
           placeholder={GROWTH.notePlaceholder}
           onChange={(e) => set('note', e.target.value)}
-          className="min-h-[88px] w-full min-w-0 rounded-[14px] border-[1.5px] border-calendar-muted bg-surface px-3.5 py-3.5 text-base leading-normal text-ink placeholder:text-calendar-muted focus:border-2 focus:border-ink focus:outline-none"
+          className="min-h-24 w-full min-w-0 rounded-[14px] border-[1.5px] border-field-edge bg-surface p-3.5 text-[17px] leading-normal text-ink placeholder:text-calendar-muted focus:border-2 focus:border-ink focus:outline-none"
         />
-        {errors.note && <p className={errorText}>{errors.note}</p>}
+        {errorLine('growth-note-error', errors.note)}
       </div>
     </div>
   )
 
   const saveButton = (
     <button ref={saveRef} type="button" disabled={save.isPending} onClick={submit} className={`${pageHeaderButton('primary', variant)} disabled:cursor-not-allowed disabled:opacity-60`}>
-      {save.isPending ? GROWTH.saving : editing ? GROWTH.saveEdit : GROWTH.save}
+      {save.isPending ? GROWTH.saving : GROWTH.save}
     </button>
   )
   const missing = editing && growth.isSuccess && !saved
@@ -163,8 +189,8 @@ export function GrowthFormPage() {
       backTo={backTo}
       backOnClick={leave}
       title={editing ? GROWTH.editTitle : GROWTH.addTitle}
-      subtitle={child?.firstName}
-      maxWidth="max-w-[640px]"
+      subtitle={child ? `${child.firstName} · ${formatAgeLong(child.birthDate)}` : undefined}
+      maxWidth="max-w-[904px]"
       state={growth.isError ? 'error' : editing && growth.isPending ? 'loading' : undefined}
       errorWhat={GROWTH.loadFailed}
       onRetry={() => void growth.refetch()}
@@ -178,9 +204,10 @@ export function GrowthFormPage() {
               {notice}
             </p>
           )}
-          {fields}
           {desktop ? (
-            <StickyActionBar variant="desktop">
+            <section className="flex max-w-[600px] flex-col gap-5 rounded-2xl border border-line bg-surface p-7">
+              {fields}
+              <StickyActionBar variant="desktop">
               <button
                 type="button"
                 onClick={(e) => {
@@ -191,10 +218,14 @@ export function GrowthFormPage() {
               >
                 {GROWTH.cancel}
               </button>
-              {saveButton}
-            </StickyActionBar>
+                {saveButton}
+              </StickyActionBar>
+            </section>
           ) : (
-            <StickyActionBar variant="phone">{saveButton}</StickyActionBar>
+            <>
+              {fields}
+              <StickyActionBar variant="phone">{saveButton}</StickyActionBar>
+            </>
           )}
         </>
       )}

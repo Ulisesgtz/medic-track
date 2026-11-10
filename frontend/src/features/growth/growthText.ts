@@ -91,6 +91,8 @@ export const GROWTH = {
   note: 'Nota',
   optional: '(opcional)',
   notePlaceholder: 'Por ejemplo: con ropa ligera',
+  weightExample: 'Ej. 11.6',
+  heightExample: 'Ej. 83',
   bothOptional: 'Puedes anotar solo el peso o solo la talla.',
   save: 'Guardar medida',
   saving: 'Guardando…',
