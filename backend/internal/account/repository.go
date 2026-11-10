@@ -106,7 +106,8 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Account, error
 	}
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, first_name, last_name, birth_date, height, weight, created_at
+		SELECT id, first_name, last_name, birth_date, height, weight, created_at, corrected_at,
+		       (SELECT first_name FROM accounts WHERE id = corrected_by_account_id)
 		FROM children WHERE account_id = $1 ORDER BY created_at ASC
 	`, id)
 	if err != nil {
@@ -116,7 +117,7 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Account, error
 
 	for rows.Next() {
 		child := Child{AccountID: id}
-		if err := rows.Scan(&child.ID, &child.FirstName, &child.LastName, &child.BirthDate, &child.Height, &child.Weight, &child.CreatedAt); err != nil {
+		if err := rows.Scan(&child.ID, &child.FirstName, &child.LastName, &child.BirthDate, &child.Height, &child.Weight, &child.CreatedAt, &child.CorrectedAt, &child.CorrectedBy); err != nil {
 			return nil, fmt.Errorf("scanning child: %w", err)
 		}
 		acc.Children = append(acc.Children, child)
@@ -170,7 +171,8 @@ func (r *Repository) AddChildIfUnderLimit(ctx context.Context, accountID uuid.UU
 	}
 
 	rows, err := tx.Query(ctx, `
-		SELECT id, first_name, last_name, birth_date, height, weight, created_at
+		SELECT id, first_name, last_name, birth_date, height, weight, created_at, corrected_at,
+		       (SELECT first_name FROM accounts WHERE id = corrected_by_account_id)
 		FROM children WHERE account_id = $1 ORDER BY created_at ASC
 	`, accountID)
 	if err != nil {
@@ -178,7 +180,7 @@ func (r *Repository) AddChildIfUnderLimit(ctx context.Context, accountID uuid.UU
 	}
 	for rows.Next() {
 		child := Child{AccountID: accountID}
-		if err := rows.Scan(&child.ID, &child.FirstName, &child.LastName, &child.BirthDate, &child.Height, &child.Weight, &child.CreatedAt); err != nil {
+		if err := rows.Scan(&child.ID, &child.FirstName, &child.LastName, &child.BirthDate, &child.Height, &child.Weight, &child.CreatedAt, &child.CorrectedAt, &child.CorrectedBy); err != nil {
 			rows.Close()
 			return nil, fmt.Errorf("scanning child: %w", err)
 		}
@@ -245,7 +247,8 @@ func (r *Repository) GetByClerkUserID(ctx context.Context, clerkUserID string) (
 	acc.ID = id
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, first_name, last_name, birth_date, height, weight, created_at
+		SELECT id, first_name, last_name, birth_date, height, weight, created_at, corrected_at,
+		       (SELECT first_name FROM accounts WHERE id = corrected_by_account_id)
 		FROM children WHERE account_id = $1 ORDER BY created_at ASC
 	`, id)
 	if err != nil {
@@ -255,7 +258,7 @@ func (r *Repository) GetByClerkUserID(ctx context.Context, clerkUserID string) (
 
 	for rows.Next() {
 		child := Child{AccountID: id}
-		if err := rows.Scan(&child.ID, &child.FirstName, &child.LastName, &child.BirthDate, &child.Height, &child.Weight, &child.CreatedAt); err != nil {
+		if err := rows.Scan(&child.ID, &child.FirstName, &child.LastName, &child.BirthDate, &child.Height, &child.Weight, &child.CreatedAt, &child.CorrectedAt, &child.CorrectedBy); err != nil {
 			return nil, fmt.Errorf("scanning child: %w", err)
 		}
 		acc.Children = append(acc.Children, child)
@@ -297,7 +300,8 @@ func (r *Repository) addSharedChildren(ctx context.Context, acc *Account) error 
 	acc.Family = &m
 
 	rows, err := r.pool.Query(ctx, `
-		SELECT id, first_name, last_name, birth_date, height, weight, created_at
+		SELECT id, first_name, last_name, birth_date, height, weight, created_at, corrected_at,
+		       (SELECT first_name FROM accounts WHERE id = corrected_by_account_id)
 		FROM children WHERE account_id = $1 AND ($2::uuid IS NULL OR id = $2)
 		ORDER BY created_at ASC
 	`, m.OwnerAccountID, childID)
@@ -307,7 +311,7 @@ func (r *Repository) addSharedChildren(ctx context.Context, acc *Account) error 
 	defer rows.Close()
 	for rows.Next() {
 		child := Child{AccountID: m.OwnerAccountID, Role: m.Role, Plan: m.OwnerPlan, ReadOnly: m.ReadOnly()}
-		if err := rows.Scan(&child.ID, &child.FirstName, &child.LastName, &child.BirthDate, &child.Height, &child.Weight, &child.CreatedAt); err != nil {
+		if err := rows.Scan(&child.ID, &child.FirstName, &child.LastName, &child.BirthDate, &child.Height, &child.Weight, &child.CreatedAt, &child.CorrectedAt, &child.CorrectedBy); err != nil {
 			return fmt.Errorf("scanning a shared child: %w", err)
 		}
 		acc.Children = append(acc.Children, child)

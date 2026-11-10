@@ -44,7 +44,7 @@ type createAccountRequest struct {
 	Children    []createChildRequest `json:"children"`
 }
 
-type childResponse struct {
+type ChildResponse struct {
 	ID        string   `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
 	FirstName string   `json:"firstName" example:"Luis"`
 	LastName  string   `json:"lastName" example:"Gómez"`
@@ -58,6 +58,10 @@ type childResponse struct {
 	Role      string `json:"role" enums:"owner,tutor,caregiver,child" example:"owner"`
 	Plan      string `json:"plan" enums:"free,paid" example:"free"`
 	ReadOnly  bool   `json:"readOnly" example:"false"`
+	// CorrectedAt (RFC 3339) and CorrectedBy (first name only) are the last correction of the child's data, null if it was
+	// never corrected (specs/064-editar-datos-hijo).
+	CorrectedAt *string `json:"correctedAt" example:"2026-11-09T16:20:00Z"`
+	CorrectedBy *string `json:"correctedBy" example:"Ana"`
 }
 
 // familyMembershipResponse is the place of the session in somebody else's family (only when it has one).
@@ -77,7 +81,7 @@ type accountResponse struct {
 	CountryCode *string         `json:"countryCode" example:"MX"`
 	StateCode   *string         `json:"stateCode" example:"MX-JAL"`
 	Plan        string          `json:"plan" example:"free"`
-	Children    []childResponse `json:"children"`
+	Children    []ChildResponse `json:"children"`
 	// DisclaimerVersion is the version of the "Antes de empezar" notice the client must show, and
 	// DisclaimerAccepted whether this account already acknowledged it (specs/010-registro-aceptacion-aviso).
 	DisclaimerVersion  string `json:"disclaimerVersion" example:"2026-09-26"`
@@ -686,26 +690,39 @@ func validationErrorBody(errs []ValidationError, message string) map[string]any 
 	return httpx.ValidationBody(message, fields)
 }
 
+// ToChildResponse is a child as the API sends it, for the reader's role over it, the plan of its family and its owner account.
+// Also used by PUT /children/{childId} (specs/064-editar-datos-hijo).
+func ToChildResponse(c Child, role string, plan Plan, ownerID uuid.UUID) ChildResponse {
+	var corrected *string
+	if c.CorrectedAt != nil {
+		at := c.CorrectedAt.UTC().Format(time.RFC3339)
+		corrected = &at
+	}
+	return ChildResponse{
+		ID:          c.ID.String(),
+		FirstName:   c.FirstName,
+		LastName:    c.LastName,
+		BirthDate:   c.BirthDate.Format("2006-01-02"),
+		Height:      c.Height,
+		Weight:      c.Weight,
+		AccountID:   ownerID.String(),
+		Role:        role,
+		Plan:        string(plan),
+		ReadOnly:    c.ReadOnly,
+		CorrectedAt: corrected,
+		CorrectedBy: c.CorrectedBy,
+	}
+}
+
 func toAccountResponse(acc *Account) accountResponse {
-	children := make([]childResponse, 0, len(acc.Children))
+	children := make([]ChildResponse, 0, len(acc.Children))
 	for _, c := range acc.Children {
 		// Children the account owns carry no role of their own: "owner", with the account's plan.
 		role, plan, ownerID := c.Role, c.Plan, c.AccountID
 		if role == "" {
 			role, plan, ownerID = "owner", acc.Plan, acc.ID
 		}
-		children = append(children, childResponse{
-			ID:        c.ID.String(),
-			FirstName: c.FirstName,
-			LastName:  c.LastName,
-			BirthDate: c.BirthDate.Format("2006-01-02"),
-			Height:    c.Height,
-			Weight:    c.Weight,
-			AccountID: ownerID.String(),
-			Role:      role,
-			Plan:      string(plan),
-			ReadOnly:  c.ReadOnly,
-		})
+		children = append(children, ToChildResponse(c, role, plan, ownerID))
 	}
 	var membership *familyMembershipResponse
 	if acc.Family != nil {

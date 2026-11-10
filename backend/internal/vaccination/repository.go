@@ -68,6 +68,11 @@ func (r *Repository) List(ctx context.Context, childID uuid.UUID) ([]Vaccination
 	return out, rows.Err()
 }
 
+// beforeBirth is the error of a dose dated before the child's birth, the same one Validate gives. Create and Update check it again
+// with the child's row locked FOR SHARE, because the birth date can be corrected (specs/064-editar-datos-hijo) between the
+// validation and the write: the correction locks the row FOR UPDATE, so one of the two waits for the other.
+var beforeBirth = ValidationErrors{{Field: "appliedOn", Message: "La fecha de aplicación no puede ser anterior al nacimiento."}}
+
 // Create records a dose in one transaction: the vaccine must be in the catalog and active (when it has a code), and a dose that
 // matches one already recorded is ErrDuplicate unless the parent confirmed it.
 func (r *Repository) Create(ctx context.Context, childID, actor uuid.UUID, c Cleaned, allowDuplicate bool) (*Vaccination, error) {
@@ -78,10 +83,14 @@ func (r *Repository) Create(ctx context.Context, childID, actor uuid.UUID, c Cle
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	var accountID uuid.UUID
-	if err := tx.QueryRow(ctx, `SELECT account_id FROM children WHERE id = $1`, childID).Scan(&accountID); errors.Is(err, pgx.ErrNoRows) {
+	var birth time.Time
+	if err := tx.QueryRow(ctx, `SELECT account_id, birth_date FROM children WHERE id = $1 FOR SHARE`, childID).Scan(&accountID, &birth); errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrChildNotFound
 	} else if err != nil {
 		return nil, fmt.Errorf("reading the child: %w", err)
+	}
+	if c.AppliedOn.Before(birth) {
+		return nil, beforeBirth
 	}
 	if c.VaccineCode != nil {
 		if err := checkCatalog(ctx, tx, *c.VaccineCode); err != nil {
@@ -120,6 +129,15 @@ func (r *Repository) Update(ctx context.Context, childID, id, actor uuid.UUID, c
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
+	var birth time.Time
+	if err := tx.QueryRow(ctx, `SELECT birth_date FROM children WHERE id = $1 FOR SHARE`, childID).Scan(&birth); errors.Is(err, pgx.ErrNoRows) {
+		return nil, ErrNotFound
+	} else if err != nil {
+		return nil, fmt.Errorf("locking the child: %w", err)
+	}
+	if c.AppliedOn.Before(birth) {
+		return nil, beforeBirth
+	}
 	var current *string
 	if err := tx.QueryRow(ctx, `SELECT vaccine_code FROM vaccine_records WHERE id = $1 AND child_id = $2 FOR UPDATE`, id, childID).Scan(&current); errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound

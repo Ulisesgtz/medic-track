@@ -274,6 +274,10 @@ Reutilizan la cuenta de Resend, la clave `RESEND_API_KEY` y el dominio ya verifi
 4. **Vigilar la cuota** (el plan gratis de Resend: 100 correos al día, compartidos con el digest): `SELECT day, sent, warned FROM mail_daily_counts ORDER BY day DESC LIMIT 14;`. Al llegar a `MAIL_WARN_AT` queda **una** fila `job:mailer` («daily e-mail quota reached the warning threshold») en `error_logs` y aparece en el digest semanal; es la señal para decidir si se pasa Resend a un plan de pago. Con el día en 95 las invitaciones siguen creándose pero su correo queda «no enviado» (la pantalla ofrece copiar la liga) y el digest conserva los últimos 5.
 5. Si algo falla: `GET /ops/error-logs?endpointPrefix=job:mailer` (mensajes fijos, sin correos, ligas ni claves). Un reinicio durante un envío deja esa invitación en «no enviado» en menos de 4 minutos; basta «Enviar de nuevo» o copiar la liga.
 
+## Editar los datos del hijo (spec 064)
+
+1. **Migración `0035`** (`children.corrected_by_account_id` y `children.corrected_at`) en la base de DEV **antes** de desplegar el backend nuevo. No toca datos existentes. Aplicarla una sola vez.
+
 ## Curvas de crecimiento (spec 063)
 
 1. **Migración `0034`** (`growth_measurements` y `children.growth_reference_sex`) en la base de DEV **antes** de desplegar el backend nuevo. No toca datos existentes. Aplicarla una sola vez.

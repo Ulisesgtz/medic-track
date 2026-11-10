@@ -17,11 +17,12 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/appointment"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
 	"github.com/Ulisesgtz/medic-track/backend/internal/cabinet"
-	"github.com/Ulisesgtz/medic-track/backend/internal/growth"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
+	"github.com/Ulisesgtz/medic-track/backend/internal/childprofile"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/family"
+	"github.com/Ulisesgtz/medic-track/backend/internal/growth"
 	"github.com/Ulisesgtz/medic-track/backend/internal/historyexport"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ops"
@@ -52,6 +53,8 @@ type Deps struct {
 	Cabinet *cabinet.Handler
 	// Growth: a child's measurements and the growth chart (specs/063).
 	Growth *growth.Handler
+	// ChildProfile corrects a child's own data (specs/064).
+	ChildProfile *childprofile.Handler
 	// HistoryExport: the data of the history's PDF (specs/050). Nil = the route is not registered.
 	HistoryExport *historyexport.Handler
 	// Payments: the subscription of the full plan (specs/045). Nil = the charge is not available in this environment: none of its routes
@@ -300,6 +303,9 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(fullChild).Delete("/children/{childId}/growth-measurements/{measurementId}", d.Growth.DeleteMeasurement)
 		r.With(fullChild).Put("/children/{childId}/growth-reference", d.Growth.SetReference)
 		r.With(seesChild).Get("/children/{childId}/growth-chart", d.Growth.GetChart)
+		// Specs/064: correcting the child's own data (names, birth date, height, weight) is Full; the service asks the paid plan
+		// for the identity. Never under /child-device.
+		r.With(fullChild).Put("/children/{childId}", d.ChildProfile.UpdateChild)
 		r.With(seesAppointment).Get("/appointments/{appointmentId}", d.Appointment.Get)
 		r.With(fullAppointment).Patch("/appointments/{appointmentId}", d.Appointment.Update)
 		r.With(fullAppointment).Post("/appointments/{appointmentId}/status", d.Appointment.SetStatus)

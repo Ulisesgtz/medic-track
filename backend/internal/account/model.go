@@ -58,8 +58,8 @@ type FamilyMembership struct {
 func (f FamilyMembership) ReadOnly() bool { return f.OwnerPlan != PlanPaid }
 
 // Child represents a child associated with an Account.
-// Per FR-006a, once persisted, a Child's FirstName, LastName and BirthDate
-// are immutable and it can never be deleted in this scope.
+// A Child can never be deleted. Its data can be corrected (specs/064-editar-datos-hijo, which replaces FR-006a of
+// specs/001): height and weight on every plan, FirstName, LastName and BirthDate only on the paid plan.
 type Child struct {
 	ID        uuid.UUID
 	AccountID uuid.UUID
@@ -69,6 +69,10 @@ type Child struct {
 	Height    *float64
 	Weight    *float64
 	CreatedAt time.Time
+	// CorrectedAt and CorrectedBy (the first name of who corrected it) are the trace of the last correction of the child's
+	// data (specs/064-editar-datos-hijo); nil if it was never corrected.
+	CorrectedAt *time.Time
+	CorrectedBy *string
 	// Role is the reader's role over this child: "" (or "owner") for the account's own children, else the
 	// role of the family membership that shares it. Plan is the plan of the family the child belongs to (the
 	// owner account's) and ReadOnly whether the reader can only see and mark (specs/032-compartir-con-familia).
