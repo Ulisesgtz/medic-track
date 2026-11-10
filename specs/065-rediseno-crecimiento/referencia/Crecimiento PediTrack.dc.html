@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--color-ink:#04252b;--color-ink-soft:#0b3b44;--color-action:#0e7490;--color-bright:#22d3ee;--color-confirmed:#047857;--color-confirmed-soft:#d1fae5;--color-canvas:#f8feff;--color-surface:#ffffff;--color-hint:#ecfeff;--color-hint-border:#a5f3fc;--color-hint-edge:#cffafe;--color-body:#1f3d44;--color-muted:#475569;--color-line:#cfe8ec}
+*{box-sizing:border-box}
+body{margin:0;background:#dfe8ea;font-family:'Figtree',system-ui,sans-serif;color:#04252b}
+button,input{font-family:inherit}
+a{color:#0e7490;text-decoration:none}
+a:hover{color:#04252b;text-decoration:underline}
+button:focus-visible,a:focus-visible{outline:2px solid #0e7490;outline-offset:2px}
+</style>
+</helmet>
+
+<div style="padding:56px;display:flex;flex-direction:column;gap:72px">
+  <div style="max-width:900px;display:flex;flex-direction:column;gap:10px">
+    <p style="margin:0;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-action)">PediTrack · Crecimiento · propuesta 9 nov 2026</p>
+    <h1 style="margin:0;font-size:38px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Crecimiento</h1>
+    <p style="margin:0;font-size:16px;line-height:1.55;color:var(--color-body);text-wrap:pretty">Estados A–G en teléfono (390 px) y web (1280 px con barra lateral de 280 px). La gráfica es interactiva: cambia Peso/Talla y el rango, toca la gráfica o usa ‹ › para leer cada medida. En el mock, hoy es 24 oct 2026 y Mateo nació el 12 sep 2024.</p>
+  </div>
+
+  <sc-for list="{{ estados }}" as="s" hint-placeholder-count="1">
+    <div id="{{ s.id }}" style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <span style="padding:4px 11px;border-radius:999px;background:var(--color-ink);color:#ffffff;font-size:13px;font-weight:800">{{ s.id }}</span>
+        <span style="font-size:20px;font-weight:800;color:var(--color-ink)">{{ s.label }}</span>
+        <span style="font-size:14px;color:var(--color-body)">{{ s.quien }}</span>
+      </div>
+      <div style="display:flex;gap:48px;align-items:flex-start">
+
+        <div style="display:flex;flex-direction:column;gap:10px;flex:none">
+          <span style="font-size:13px;font-weight:800;color:var(--color-muted)">{{ s.id }}t · Teléfono</span>
+          <div data-screen-label="{{ s.id }} teléfono" style="width:410px;padding:10px;border-radius:50px;background:var(--color-ink);box-shadow:0 20px 50px rgba(4,37,43,0.22)">
+            <div style="position:relative;width:390px;height:{{ phH }};min-height:844px;border-radius:40px;overflow:hidden;background:var(--color-canvas);display:flex;flex-direction:column">
+              <div style="flex:none;height:47px;padding:4px 30px 0;display:flex;align-items:center;justify-content:space-between;font-size:15px;font-weight:700;color:var(--color-ink)"><span>10:24</span><span style="display:flex;gap:5px"><span style="width:18px;height:10px;border-radius:2px;background:var(--color-ink)"></span><span style="width:24px;height:11px;border-radius:3px;border:1.5px solid var(--color-ink)"></span></span></div>
+              <div style="flex:1;min-height:0;overflow-y:{{ phOv }};padding:0 20px 40px;display:flex;flex-direction:column;gap:16px">
+
+                <header style="display:flex;flex-direction:column;gap:4px">
+                  <a href="#" style="align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;font-size:15px;font-weight:700">{{ s.back }}</a>
+                  <h1 style="margin:0;font-size:28px;line-height:1.15;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">{{ s.titulo }}</h1>
+                  <span style="font-size:15px;color:var(--color-body)">Mateo · 2 años 1 mes</span>
+                  <sc-if value="{{ s.addTop }}"><button type="button" style="margin-top:12px;min-height:52px;padding:0 24px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer">+ Anotar medida</button></sc-if>
+                  <sc-if value="{{ s.cuid }}"><div role="note" style="margin-top:12px;padding:14px 16px;border-radius:16px;border:1.5px solid var(--color-hint-border);background:var(--color-surface);font-size:15px;line-height:1.45;color:var(--color-body)"><strong style="color:var(--color-ink)">Vista de Cuidadora.</strong> Puedes ver las medidas. Anotarlas lo hace la familia.</div></sc-if>
+                </header>
+
+                <sc-if value="{{ s.hero }}">
+                  <section aria-label="Última medida" style="padding:16px 18px;border-radius:16px;border:1px solid var(--color-line);background:var(--color-surface);display:flex;flex-direction:column;gap:4px">
+                    <span style="font-size:13px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-action)">Última medida</span>
+                    <span style="font-size:34px;line-height:1.1;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink);font-variant-numeric:tabular-nums">11.4 kg · 82 cm</span>
+                    <span style="font-size:15px;font-weight:500;color:var(--color-body)">hace 12 días · 12 oct 2026</span>
+                  </section>
+                </sc-if>
+
+                <sc-if value="{{ s.empty }}">
+                  <section style="padding:28px 20px;border-radius:16px;border:1.5px dashed var(--color-hint-border);background:var(--color-surface);display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+                    <span style="font-size:18px;font-weight:800;color:var(--color-ink)">Aún no hay medidas anotadas</span>
+                    <span style="font-size:15px;line-height:1.5;color:var(--color-body);text-wrap:pretty">Anota el peso, la talla o los dos, con la fecha en que se midieron.</span>
+                    <button type="button" style="margin-top:6px;align-self:stretch;min-height:52px;padding:0 24px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer">Anotar la primera medida</button>
+                  </section>
+                </sc-if>
+
+                <sc-if value="{{ s.chart }}">
+                  <section aria-label="Gráfica de crecimiento" style="padding:16px;border-radius:16px;border:1px solid var(--color-line);background:var(--color-surface);display:flex;flex-direction:column;gap:12px">
+                    <div role="tablist" aria-label="Medida en la gráfica" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:14px;background:var(--color-hint);border:1px solid var(--color-hint-border)">
+                      <sc-for list="{{ s.t.tabs }}" as="b" hint-placeholder-count="2"><button type="button" role="tab" aria-selected="{{ b.on }}" onClick="{{ b.go }}" style="min-height:44px;border-radius:11px;border:2px solid {{ b.bd }};background:{{ b.bg }};color:{{ b.c }};font-size:16px;font-weight:{{ b.w }};cursor:pointer">{{ b.l }}</button></sc-for>
+                    </div>
+                    <div role="group" aria-label="Rango de edad" style="display:flex;gap:8px;flex-wrap:wrap">
+                      <sc-for list="{{ s.t.ranges }}" as="b" hint-placeholder-count="2"><button type="button" aria-pressed="{{ b.on }}" onClick="{{ b.go }}" style="min-height:44px;padding:0 16px;border-radius:999px;border:1.5px solid {{ b.bd }};background:{{ b.bg }};color:{{ b.c }};font-size:15px;font-weight:{{ b.w }};cursor:pointer">{{ b.l }}</button></sc-for>
+                    </div>
+                    <sc-if value="{{ s.invite }}">
+                      <div style="padding:14px;border-radius:14px;background:var(--color-hint);border:1px solid var(--color-hint-border);display:flex;flex-direction:column;gap:8px">
+                        <span style="font-size:15px;line-height:1.4;font-weight:800;color:var(--color-ink)">Elige la tabla de la OMS para ver las curvas de referencia.</span>
+                        <span style="font-size:14px;line-height:1.45;color:var(--color-body)">Por ahora ves solo las medidas de Mateo.</span>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button type="button" aria-pressed="false" style="min-height:44px;border:2px solid var(--color-action);border-radius:14px;background:var(--color-surface);color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Niña</button><button type="button" aria-pressed="false" style="min-height:44px;border:2px solid var(--color-action);border-radius:14px;background:var(--color-surface);color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Niño</button></div>
+                      </div>
+                    </sc-if>
+                    <div aria-live="polite" style="display:flex;align-items:center;gap:8px;padding:6px;border-radius:14px;background:var(--color-canvas);border:1px solid var(--color-hint-edge)">
+                      <button type="button" aria-label="Medida anterior" onClick="{{ s.t.prev }}" style="flex:none;width:44px;height:44px;border-radius:12px;border:1.5px solid var(--color-hint-border);background:var(--color-surface);color:var(--color-action);font-size:22px;font-weight:800;cursor:pointer;opacity:{{ s.t.pOp }}">‹</button>
+                      <div style="flex:1;min-width:0;text-align:center;display:flex;flex-direction:column;gap:1px"><span style="font-size:18px;font-weight:900;color:var(--color-ink);font-variant-numeric:tabular-nums">{{ s.t.val }}</span><span style="font-size:14px;font-weight:500;color:var(--color-body)">{{ s.t.meta }}</span></div>
+                      <button type="button" aria-label="Medida siguiente" onClick="{{ s.t.next }}" style="flex:none;width:44px;height:44px;border-radius:12px;border:1.5px solid var(--color-hint-border);background:var(--color-surface);color:var(--color-action);font-size:22px;font-weight:800;cursor:pointer;opacity:{{ s.t.nOp }}">›</button>
+                    </div>
+                    <div style="margin:0 -2px">{{ s.t.svg }}</div>
+                    <sc-if value="{{ s.sexPick }}">
+                      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                        <span style="font-size:14px;font-weight:700;color:var(--color-body)">Curvas de la OMS para</span>
+                        <div role="group" aria-label="Tabla de la OMS" style="flex:none;display:flex;gap:4px;padding:3px;border-radius:13px;background:var(--color-hint);border:1px solid var(--color-hint-border)"><button type="button" aria-pressed="false" style="min-height:44px;padding:0 14px;border-radius:10px;border:2px solid transparent;background:transparent;color:var(--color-action);font-size:15px;font-weight:700;cursor:pointer">Niña</button><button type="button" aria-pressed="true" style="min-height:44px;padding:0 14px;border-radius:10px;border:2px solid var(--color-action);background:var(--color-surface);color:var(--color-ink);font-size:15px;font-weight:800;cursor:pointer">Niño</button></div>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ s.cuid }}"><p style="margin:0;font-size:14px;line-height:1.45;color:var(--color-body)">Curvas de la OMS para niño. La tabla la elige Ana.</p></sc-if>
+                    <div role="note" style="padding:12px 14px;border-radius:14px;background:var(--color-hint);border:1px solid var(--color-hint-border);display:flex;flex-direction:column;gap:4px;font-size:14px;line-height:1.45;color:var(--color-body)"><p style="margin:0">Las curvas son la referencia de la OMS para niñas y niños nacidos a término.</p><p style="margin:0;font-weight:700;color:var(--color-ink)">Tu pediatra es quien interpreta la gráfica.</p></div>
+                  </section>
+                </sc-if>
+
+                <sc-if value="{{ s.locked }}">
+                  <section style="padding:18px;border-radius:16px;border:1px solid var(--color-line);background:var(--color-surface);display:flex;flex-direction:column;gap:10px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><h2 style="margin:0;font-size:18px;font-weight:800;color:var(--color-ink)">Gráfica de crecimiento</h2><span style="flex:none;padding:4px 10px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:12px;font-weight:800">Plan completo</span></div>
+                    <p style="margin:0;font-size:15px;line-height:1.5;color:var(--color-body);text-wrap:pretty">Con el Plan completo ves las medidas de Mateo sobre las curvas de la OMS.</p>
+                    <button type="button" onClick="{{ s.t.openPlan }}" style="align-self:flex-start;min-height:44px;padding:0 18px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Ver la gráfica</button>
+                  </section>
+                </sc-if>
+
+                <sc-if value="{{ s.hintOut }}"><div role="note" style="padding:12px 14px;border-radius:14px;background:var(--color-hint);border:1px solid var(--color-hint-border);display:flex;flex-direction:column;gap:4px;font-size:14px;line-height:1.45;color:var(--color-body)"><p style="margin:0">Las curvas son la referencia de la OMS para niñas y niños nacidos a término.</p><p style="margin:0;font-weight:700;color:var(--color-ink)">Tu pediatra es quien interpreta la gráfica.</p></div></sc-if>
+
+                <sc-if value="{{ s.list }}">
+                  <section aria-label="Medidas anotadas" style="display:flex;flex-direction:column;gap:10px">
+                    <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px"><h2 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Medidas anotadas</h2><span style="font-size:14px;color:var(--color-body)">8 medidas</span></div>
+                    <div role="list" style="border-radius:16px;border:1px solid var(--color-line);background:var(--color-hint-edge);overflow:hidden;display:flex;flex-direction:column;gap:1px">
+                      <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+                        <div role="listitem" style="padding:12px 16px 4px;background:var(--color-surface);display:flex;flex-direction:column;gap:3px">
+                          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><span style="font-size:16px;font-weight:800;color:var(--color-ink)">{{ r.fecha }}</span><span style="font-size:16px;font-weight:800;color:var(--color-ink);font-variant-numeric:tabular-nums;text-align:right">{{ r.vals }}</span></div>
+                          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><span style="font-size:14px;color:var(--color-body)">{{ r.edad }}</span><span style="font-size:13px;font-weight:600;color:var(--color-muted)">{{ r.por }}</span></div>
+                          <sc-if value="{{ r.nota }}"><span style="font-size:14px;line-height:1.4;color:var(--color-body)">Nota: {{ r.nota }}</span></sc-if>
+                          <sc-if value="{{ r.corr }}"><span style="font-size:13px;font-weight:600;color:var(--color-muted)">{{ r.corr }}</span></sc-if>
+                          <sc-if value="{{ s.rowAcc }}"><div style="display:flex;gap:20px"><button type="button" style="min-height:44px;padding:0;border:none;background:transparent;color:var(--color-action);font-size:14px;font-weight:800;cursor:pointer">Corregir</button><button type="button" style="min-height:44px;padding:0;border:none;background:transparent;color:#b91c1c;font-size:14px;font-weight:800;cursor:pointer">Quitar</button></div></sc-if>
+                          <sc-if value="{{ s.noAcc }}"><div style="height:8px"></div></sc-if>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </section>
+                </sc-if>
+
+                <sc-if value="{{ s.reg }}">
+                  <section aria-label="Medida del registro" style="padding:14px 16px;border-radius:16px;border:1.5px dashed var(--color-hint-border);background:var(--color-surface);display:flex;flex-direction:column;gap:4px">
+                    <span style="font-size:13px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-action)">Al registrar a Mateo</span>
+                    <span style="font-size:17px;font-weight:800;color:var(--color-ink);font-variant-numeric:tabular-nums">3.3 kg · 50 cm</span>
+                    <span style="font-size:14px;line-height:1.45;color:var(--color-body)">Sin fecha, por eso no aparece en la gráfica.</span>
+                    <sc-if value="{{ s.regLink }}"><a href="#" style="align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;font-size:15px;font-weight:800">Anotarla con fecha</a></sc-if>
+                  </section>
+                </sc-if>
+
+                <sc-if value="{{ s.form }}">
+                  <div style="display:flex;flex-direction:column;gap:18px">
+                    <div style="display:flex;flex-direction:column;gap:6px">
+                      <span style="font-size:15px;font-weight:800;color:var(--color-ink)">Fecha</span>
+                      <div style="min-height:52px;padding:0 14px;border-radius:14px;border:{{ s.fF.bd }};background:var(--color-surface);display:flex;align-items:center;justify-content:space-between;font-size:17px;color:var(--color-ink)"><span>{{ s.fF.v }}</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg></div>
+                      <sc-if value="{{ s.fF.err }}"><span role="alert" style="display:flex;gap:6px;align-items:flex-start;font-size:14px;line-height:1.4;font-weight:600;color:#b91c1c"><span aria-hidden="true" style="flex:none;margin-top:1px;width:18px;height:18px;border-radius:50%;background:#b91c1c;color:#ffffff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center">!</span>{{ s.fF.err }}</span></sc-if>
+                    </div>
+                    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-items:start">
+                      <div style="display:flex;flex-direction:column;gap:6px">
+                        <span style="font-size:15px;font-weight:800;color:var(--color-ink)">Peso</span>
+                        <div style="min-height:52px;padding:0 14px;border-radius:14px;border:{{ s.fP.bd }};background:var(--color-surface);display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:17px"><span style="color:{{ s.fP.c }}">{{ s.fP.v }}</span><span style="font-size:15px;font-weight:700;color:var(--color-body)">kg</span></div>
+                      </div>
+                      <div style="display:flex;flex-direction:column;gap:6px">
+                        <span style="font-size:15px;font-weight:800;color:var(--color-ink)">Talla</span>
+                        <div style="min-height:52px;padding:0 14px;border-radius:14px;border:{{ s.fT.bd }};background:var(--color-surface);display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:17px"><span style="color:{{ s.fT.c }}">{{ s.fT.v }}</span><span style="font-size:15px;font-weight:700;color:var(--color-body)">cm</span></div>
+                      </div>
+                    </div>
+                    <sc-if value="{{ s.fP.err }}"><span role="alert" style="margin-top:-10px;display:flex;gap:6px;align-items:flex-start;font-size:14px;line-height:1.4;font-weight:600;color:#b91c1c"><span aria-hidden="true" style="flex:none;margin-top:1px;width:18px;height:18px;border-radius:50%;background:#b91c1c;color:#ffffff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center">!</span>{{ s.fP.err }}</span></sc-if>
+                    <span style="margin-top:-8px;font-size:14px;line-height:1.45;color:var(--color-body)">Puedes anotar solo el peso o solo la talla.</span>
+                    <div style="display:flex;flex-direction:column;gap:6px">
+                      <span style="font-size:15px;font-weight:800;color:var(--color-ink)">Nota <span style="font-weight:500;color:var(--color-body)">(opcional)</span></span>
+                      <div style="min-height:96px;padding:14px;border-radius:14px;border:1.5px solid #6b8f97;background:var(--color-surface);font-size:17px;color:{{ s.fN.c }}">{{ s.fN.v }}</div>
+                    </div>
+                    <div style="height:84px"></div>
+                  </div>
+                </sc-if>
+              </div>
+
+              <sc-if value="{{ s.form }}">
+                <div style="position:absolute;left:0;right:0;bottom:0;padding:14px 20px 34px;background:var(--color-surface);border-top:1px solid var(--color-line)">
+                  <button type="button" style="width:100%;min-height:52px;padding:0 24px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer">Guardar medida</button>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ s.t.planOpen }}">
+                <div style="position:absolute;inset:0;background:rgba(4,37,43,0.5);display:flex;align-items:flex-end">
+                  <div role="dialog" aria-label="Plan completo" style="width:100%;padding:12px 20px 34px;border-radius:28px 28px 0 0;background:var(--color-surface);display:flex;flex-direction:column;gap:12px">
+                    <span style="align-self:center;width:40px;height:5px;border-radius:999px;background:#e2eef0"></span>
+                    <span style="align-self:flex-start;padding:4px 10px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:12px;font-weight:800">Plan completo</span>
+                    <h2 style="margin:0;font-size:22px;line-height:1.25;font-weight:900;color:var(--color-ink)">La gráfica es parte del Plan completo</h2>
+                    <p style="margin:0;font-size:16px;line-height:1.5;color:var(--color-body)">Tus medidas siguen guardadas y las ves en la lista. Con el Plan completo también las ves sobre las curvas de la OMS.</p>
+                    <button type="button" style="margin-top:6px;min-height:52px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer">Conocer el Plan completo</button>
+                    <button type="button" onClick="{{ s.t.closePlan }}" style="min-height:44px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Ahora no</button>
+                  </div>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;flex:none">
+          <span style="font-size:13px;font-weight:800;color:var(--color-muted)">{{ s.id }}w · Web</span>
+          <div data-screen-label="{{ s.id }} web" style="position:relative;width:1280px;min-height:844px;display:flex;background:var(--color-canvas);box-shadow:0 20px 50px rgba(4,37,43,0.18);border-radius:16px;overflow:hidden">
+            <aside style="width:280px;flex-shrink:0;background:var(--color-ink);padding:28px 24px;display:flex;flex-direction:column;gap:24px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <svg width="34" height="34" viewBox="0 0 64 64" role="img" aria-label="PediTrack"><defs><clipPath id="crC{{ s.id }}"><rect x="21" y="5" width="22" height="54" rx="11"></rect></clipPath></defs><rect width="64" height="64" rx="15" fill="#22d3ee"></rect><g transform="rotate(-45 32 32)" clip-path="url(#crC{{ s.id }})"><rect x="21" y="5" width="22" height="54" fill="#ffffff"></rect><rect x="21" y="32" width="22" height="27" fill="#047857"></rect><rect x="21" y="30.6" width="22" height="2.8" fill="#22d3ee"></rect></g></svg>
+                <span style="font-size:18px;font-weight:900;letter-spacing:-0.03em;color:#ffffff">Pedi<span style="color:#67e8f9">Track</span></span>
+              </div>
+              <nav style="display:flex;flex-direction:column;gap:6px">
+                <a href="#" style="min-height:48px;padding:0 16px;border-radius:16px;display:flex;align-items:center;font-size:16px;font-weight:700;color:#a5f3fc;text-decoration:none">Inicio</a>
+                <span style="padding:12px 16px 4px;font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#67e8f9">Tus hijos</span>
+                <a href="#" aria-current="page" style="min-height:48px;padding:0 16px;border-radius:16px;background:var(--color-ink-soft);display:flex;align-items:center;justify-content:space-between;text-decoration:none"><span style="font-size:16px;font-weight:800;color:#ffffff">Mateo</span><span style="font-size:13px;font-weight:600;color:#cffafe">2a 1m</span></a>
+                <a href="#" style="min-height:48px;padding:0 16px;border-radius:16px;display:flex;align-items:center;justify-content:space-between;text-decoration:none"><span style="font-size:16px;font-weight:700;color:#a5f3fc">Sofía</span><span style="font-size:13px;font-weight:600;color:#67e8f9">5a 4m</span></a>
+                <span style="padding:12px 16px 4px;font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#67e8f9">Familia</span>
+                <a href="#" style="min-height:48px;padding:0 16px;border-radius:16px;display:flex;align-items:center;font-size:16px;font-weight:700;color:#a5f3fc;text-decoration:none">Botiquín</a>
+                <span style="padding:12px 16px 4px;font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#67e8f9">Personal</span>
+                <a href="#" style="min-height:48px;padding:0 16px;border-radius:16px;display:flex;align-items:center;font-size:16px;font-weight:700;color:#a5f3fc;text-decoration:none">Mi día</a>
+              </nav>
+              <div style="margin-top:auto;padding-top:16px;border-top:1px solid var(--color-ink-soft);display:flex;align-items:center;gap:12px">
+                <span style="flex:none;width:38px;height:38px;border-radius:50%;background:var(--color-action);color:#ffffff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center">{{ s.uIni }}</span>
+                <span style="display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700;color:#ffffff">{{ s.uNombre }}</span><span style="font-size:12px;color:#67e8f9">{{ s.uRol }}</span></span>
+              </div>
+            </aside>
+
+            <main style="flex:1;min-width:0;padding:28px 48px 56px">
+              <div style="max-width:904px;margin:0 auto;display:flex;flex-direction:column;gap:24px">
+                <header style="display:flex;flex-direction:column;gap:6px">
+                  <a href="#" style="align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;font-size:15px;font-weight:700">{{ s.back }}</a>
+                  <div style="display:flex;align-items:center;gap:24px">
+                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                      <h1 style="margin:0;font-size:34px;line-height:1.15;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">{{ s.titulo }}</h1>
+                      <span style="font-size:16px;color:var(--color-body)">Mateo · 2 años 1 mes</span>
+                    </div>
+                    <sc-if value="{{ s.addTop }}"><button type="button" style="flex:none;min-height:52px;padding:0 24px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer">+ Anotar medida</button></sc-if>
+                  </div>
+                  <sc-if value="{{ s.cuid }}"><div role="note" style="margin-top:10px;padding:14px 18px;border-radius:16px;border:1.5px solid var(--color-hint-border);background:var(--color-surface);font-size:15px;color:var(--color-body)"><strong style="color:var(--color-ink)">Vista de Cuidadora.</strong> Puedes ver las medidas. Anotarlas lo hace la familia.</div></sc-if>
+                </header>
+
+                <sc-if value="{{ s.topRow }}">
+                  <div style="display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:20px;align-items:stretch">
+                    <sc-if value="{{ s.hero }}">
+                      <section aria-label="Última medida" style="padding:20px 24px;border-radius:16px;border:1px solid var(--color-line);background:var(--color-surface);display:flex;flex-direction:column;gap:6px">
+                        <span style="font-size:13px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-action)">Última medida</span>
+                        <span style="font-size:44px;line-height:1.05;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink);font-variant-numeric:tabular-nums">11.4 kg · 82 cm</span>
+                        <span style="font-size:16px;font-weight:500;color:var(--color-body)">hace 12 días · 12 oct 2026</span>
+                      </section>
+                    </sc-if>
+                    <sc-if value="{{ s.empty }}">
+                      <section style="padding:32px 24px;border-radius:16px;border:1.5px dashed var(--color-hint-border);background:var(--color-surface);display:flex;flex-direction:column;align-items:flex-start;gap:10px">
+                        <span style="font-size:20px;font-weight:800;color:var(--color-ink)">Aún no hay medidas anotadas</span>
+                        <span style="font-size:16px;line-height:1.5;color:var(--color-body)">Anota el peso, la talla o los dos, con la fecha en que se midieron.</span>
+                        <button type="button" style="margin-top:8px;min-height:52px;padding:0 28px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer">Anotar la primera medida</button>
+                      </section>
+                    </sc-if>
+                    <section aria-label="Medida del registro" style="padding:20px 22px;border-radius:16px;border:1.5px dashed var(--color-hint-border);background:var(--color-surface);display:flex;flex-direction:column;gap:4px">
+                      <span style="font-size:13px;font-weight:800;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-action)">Al registrar a Mateo</span>
+                      <span style="font-size:20px;font-weight:800;color:var(--color-ink);font-variant-numeric:tabular-nums">3.3 kg · 50 cm</span>
+                      <span style="font-size:15px;line-height:1.45;color:var(--color-body)">Sin fecha, por eso no aparece en la gráfica.</span>
+                      <sc-if value="{{ s.regLink }}"><a href="#" style="align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;font-size:15px;font-weight:800">Anotarla con fecha</a></sc-if>
+                    </section>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ s.chart }}">
+                  <section aria-label="Gráfica de crecimiento" style="padding:24px;border-radius:16px;border:1px solid var(--color-line);background:var(--color-surface);display:flex;flex-direction:column;gap:16px">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+                      <div role="tablist" aria-label="Medida en la gráfica" style="width:300px;display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:14px;background:var(--color-hint);border:1px solid var(--color-hint-border)">
+                        <sc-for list="{{ s.w.tabs }}" as="b" hint-placeholder-count="2"><button type="button" role="tab" aria-selected="{{ b.on }}" onClick="{{ b.go }}" style="min-height:44px;border-radius:11px;border:2px solid {{ b.bd }};background:{{ b.bg }};color:{{ b.c }};font-size:16px;font-weight:{{ b.w }};cursor:pointer">{{ b.l }}</button></sc-for>
+                      </div>
+                      <div role="group" aria-label="Rango de edad" style="display:flex;gap:8px">
+                        <sc-for list="{{ s.w.ranges }}" as="b" hint-placeholder-count="2"><button type="button" aria-pressed="{{ b.on }}" onClick="{{ b.go }}" style="min-height:44px;padding:0 18px;border-radius:999px;border:1.5px solid {{ b.bd }};background:{{ b.bg }};color:{{ b.c }};font-size:15px;font-weight:{{ b.w }};cursor:pointer">{{ b.l }}</button></sc-for>
+                      </div>
+                    </div>
+                    <sc-if value="{{ s.invite }}">
+                      <div style="padding:16px 18px;border-radius:14px;background:var(--color-hint);border:1px solid var(--color-hint-border);display:flex;align-items:center;gap:20px">
+                        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><span style="font-size:16px;font-weight:800;color:var(--color-ink)">Elige la tabla de la OMS para ver las curvas de referencia.</span><span style="font-size:15px;color:var(--color-body)">Por ahora ves solo las medidas de Mateo.</span></div>
+                        <div style="flex:none;display:flex;gap:8px"><button type="button" aria-pressed="false" style="min-height:44px;padding:0 22px;border:2px solid var(--color-action);border-radius:14px;background:var(--color-surface);color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Niña</button><button type="button" aria-pressed="false" style="min-height:44px;padding:0 22px;border:2px solid var(--color-action);border-radius:14px;background:var(--color-surface);color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Niño</button></div>
+                      </div>
+                    </sc-if>
+                    <div aria-live="polite" style="display:flex;align-items:center;gap:12px">
+                      <button type="button" aria-label="Medida anterior" onClick="{{ s.w.prev }}" style="flex:none;width:44px;height:44px;border-radius:12px;border:1.5px solid var(--color-hint-border);background:var(--color-surface);color:var(--color-action);font-size:22px;font-weight:800;cursor:pointer;opacity:{{ s.w.pOp }}">‹</button>
+                      <span style="font-size:18px;font-weight:800;color:var(--color-ink);font-variant-numeric:tabular-nums">{{ s.w.line }}</span>
+                      <button type="button" aria-label="Medida siguiente" onClick="{{ s.w.next }}" style="flex:none;width:44px;height:44px;border-radius:12px;border:1.5px solid var(--color-hint-border);background:var(--color-surface);color:var(--color-action);font-size:22px;font-weight:800;cursor:pointer;opacity:{{ s.w.nOp }}">›</button>
+                    </div>
+                    <div>{{ s.w.svg }}</div>
+                    <div style="display:flex;align-items:center;gap:20px">
+                      <div role="note" style="flex:1;min-width:0;padding:12px 16px;border-radius:14px;background:var(--color-hint);border:1px solid var(--color-hint-border);display:flex;flex-direction:column;gap:2px;font-size:15px;line-height:1.45;color:var(--color-body)"><p style="margin:0">Las curvas son la referencia de la OMS para niñas y niños nacidos a término.</p><p style="margin:0;font-weight:700;color:var(--color-ink)">Tu pediatra es quien interpreta la gráfica.</p></div>
+                      <sc-if value="{{ s.sexPick }}">
+                        <div style="flex:none;display:flex;flex-direction:column;gap:6px">
+                          <span style="font-size:14px;font-weight:700;color:var(--color-body)">Curvas de la OMS para</span>
+                          <div role="group" aria-label="Tabla de la OMS" style="display:flex;gap:4px;padding:3px;border-radius:13px;background:var(--color-hint);border:1px solid var(--color-hint-border)"><button type="button" aria-pressed="false" style="min-height:44px;padding:0 20px;border-radius:10px;border:2px solid transparent;background:transparent;color:var(--color-action);font-size:15px;font-weight:700;cursor:pointer">Niña</button><button type="button" aria-pressed="true" style="min-height:44px;padding:0 20px;border-radius:10px;border:2px solid var(--color-action);background:var(--color-surface);color:var(--color-ink);font-size:15px;font-weight:800;cursor:pointer">Niño</button></div>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ s.cuid }}"><p style="flex:none;max-width:220px;margin:0;font-size:15px;line-height:1.45;color:var(--color-body)">Curvas de la OMS para niño. La tabla la elige Ana.</p></sc-if>
+                    </div>
+                  </section>
+                </sc-if>
+
+                <sc-if value="{{ s.locked }}">
+                  <section style="padding:24px;border-radius:16px;border:1px solid var(--color-line);background:var(--color-surface);display:flex;align-items:center;gap:24px">
+                    <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+                      <div style="display:flex;align-items:center;gap:10px"><h2 style="margin:0;font-size:20px;font-weight:800;color:var(--color-ink)">Gráfica de crecimiento</h2><span style="padding:4px 10px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:12px;font-weight:800">Plan completo</span></div>
+                      <p style="margin:0;font-size:16px;line-height:1.5;color:var(--color-body)">Con el Plan completo ves las medidas de Mateo sobre las curvas de la OMS.</p>
+                    </div>
+                    <button type="button" onClick="{{ s.w.openPlan }}" style="flex:none;min-height:48px;padding:0 22px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Ver la gráfica</button>
+                  </section>
+                </sc-if>
+
+                <sc-if value="{{ s.hintOut }}"><div role="note" style="padding:12px 16px;border-radius:14px;background:var(--color-hint);border:1px solid var(--color-hint-border);display:flex;flex-direction:column;gap:2px;font-size:15px;line-height:1.45;color:var(--color-body)"><p style="margin:0">Las curvas son la referencia de la OMS para niñas y niños nacidos a término.</p><p style="margin:0;font-weight:700;color:var(--color-ink)">Tu pediatra es quien interpreta la gráfica.</p></div></sc-if>
+
+                <sc-if value="{{ s.list }}">
+                  <section aria-label="Medidas anotadas" style="display:flex;flex-direction:column;gap:12px">
+                    <div style="display:flex;align-items:baseline;justify-content:space-between"><h2 style="margin:0;font-size:22px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Medidas anotadas</h2><span style="font-size:15px;color:var(--color-body)">8 medidas</span></div>
+                    <div role="table" aria-label="Medidas anotadas" style="border-radius:16px;border:1px solid var(--color-line);background:var(--color-hint-edge);overflow:hidden;display:flex;flex-direction:column;gap:1px">
+                      <div role="row" style="display:grid;grid-template-columns:132px 128px 96px 96px minmax(0,1fr) 168px;gap:16px;padding:12px 20px;background:var(--color-canvas);font-size:13px;font-weight:800;letter-spacing:0.04em;text-transform:uppercase;color:var(--color-muted)"><span role="columnheader">Fecha</span><span role="columnheader">Edad</span><span role="columnheader">Peso</span><span role="columnheader">Talla</span><span role="columnheader">Anotada por</span><span role="columnheader" style="position:absolute;width:1px;height:1px;overflow:hidden">Acciones</span></div>
+                      <sc-for list="{{ rows }}" as="r" hint-placeholder-count="8">
+                        <div role="row" style="min-height:64px;display:grid;grid-template-columns:132px 128px 96px 96px minmax(0,1fr) 168px;gap:16px;align-items:center;padding:10px 20px;background:var(--color-surface)">
+                          <span role="cell" style="font-size:16px;font-weight:800;color:var(--color-ink)">{{ r.fecha }}</span>
+                          <span role="cell" style="font-size:15px;color:var(--color-body)">{{ r.edad }}</span>
+                          <span role="cell" aria-label="{{ r.pesoA }}" style="font-size:16px;font-weight:700;color:var(--color-ink);font-variant-numeric:tabular-nums">{{ r.peso }}</span>
+                          <span role="cell" aria-label="{{ r.tallaA }}" style="font-size:16px;font-weight:700;color:var(--color-ink);font-variant-numeric:tabular-nums">{{ r.talla }}</span>
+                          <span role="cell" style="display:flex;flex-direction:column;gap:2px;min-width:0"><span style="font-size:15px;color:var(--color-body)">{{ r.quien }}</span><sc-if value="{{ r.nota }}"><span style="font-size:14px;color:var(--color-body)">Nota: {{ r.nota }}</span></sc-if><sc-if value="{{ r.corr }}"><span style="font-size:13px;font-weight:600;color:var(--color-muted)">{{ r.corr }}</span></sc-if></span>
+                          <span role="cell" style="display:flex;justify-content:flex-end;gap:6px"><sc-if value="{{ s.rowAcc }}"><button type="button" style="min-height:44px;padding:0 12px;border:none;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Corregir</button><button type="button" style="min-height:44px;padding:0 12px;border:none;background:transparent;color:#b91c1c;font-size:15px;font-weight:800;cursor:pointer">Quitar</button></sc-if></span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </section>
+                </sc-if>
+
+                <sc-if value="{{ s.form }}">
+                  <section style="max-width:600px;padding:28px;border-radius:16px;border:1px solid var(--color-line);background:var(--color-surface);display:flex;flex-direction:column;gap:20px">
+                    <div style="display:flex;flex-direction:column;gap:6px">
+                      <span style="font-size:15px;font-weight:800;color:var(--color-ink)">Fecha</span>
+                      <div style="max-width:260px;min-height:52px;padding:0 14px;border-radius:14px;border:{{ s.fF.bd }};background:var(--color-surface);display:flex;align-items:center;justify-content:space-between;font-size:17px;color:var(--color-ink)"><span>{{ s.fF.v }}</span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2.5"></rect><path d="M3.5 10h17M8 3v4M16 3v4"></path></svg></div>
+                      <sc-if value="{{ s.fF.err }}"><span role="alert" style="display:flex;gap:6px;align-items:flex-start;font-size:14px;line-height:1.4;font-weight:600;color:#b91c1c"><span aria-hidden="true" style="flex:none;margin-top:1px;width:18px;height:18px;border-radius:50%;background:#b91c1c;color:#ffffff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center">!</span>{{ s.fF.err }}</span></sc-if>
+                    </div>
+                    <div style="display:grid;grid-template-columns:200px 200px;gap:16px;align-items:start">
+                      <div style="display:flex;flex-direction:column;gap:6px">
+                        <span style="font-size:15px;font-weight:800;color:var(--color-ink)">Peso</span>
+                        <div style="min-height:52px;padding:0 14px;border-radius:14px;border:{{ s.fP.bd }};background:var(--color-surface);display:flex;align-items:center;justify-content:space-between;font-size:17px"><span style="color:{{ s.fP.c }}">{{ s.fP.v }}</span><span style="font-size:15px;font-weight:700;color:var(--color-body)">kg</span></div>
+                      </div>
+                      <div style="display:flex;flex-direction:column;gap:6px">
+                        <span style="font-size:15px;font-weight:800;color:var(--color-ink)">Talla</span>
+                        <div style="min-height:52px;padding:0 14px;border-radius:14px;border:{{ s.fT.bd }};background:var(--color-surface);display:flex;align-items:center;justify-content:space-between;font-size:17px"><span style="color:{{ s.fT.c }}">{{ s.fT.v }}</span><span style="font-size:15px;font-weight:700;color:var(--color-body)">cm</span></div>
+                      </div>
+                    </div>
+                    <sc-if value="{{ s.fP.err }}"><span role="alert" style="margin-top:-12px;display:flex;gap:6px;align-items:flex-start;font-size:14px;line-height:1.4;font-weight:600;color:#b91c1c"><span aria-hidden="true" style="flex:none;margin-top:1px;width:18px;height:18px;border-radius:50%;background:#b91c1c;color:#ffffff;font-size:12px;font-weight:900;display:flex;align-items:center;justify-content:center">!</span>{{ s.fP.err }}</span></sc-if>
+                    <span style="margin-top:-10px;font-size:15px;color:var(--color-body)">Puedes anotar solo el peso o solo la talla.</span>
+                    <div style="display:flex;flex-direction:column;gap:6px">
+                      <span style="font-size:15px;font-weight:800;color:var(--color-ink)">Nota <span style="font-weight:500;color:var(--color-body)">(opcional)</span></span>
+                      <div style="min-height:96px;padding:14px;border-radius:14px;border:1.5px solid #6b8f97;background:var(--color-surface);font-size:17px;color:{{ s.fN.c }}">{{ s.fN.v }}</div>
+                    </div>
+                    <div style="padding-top:8px;display:flex;justify-content:flex-end;gap:12px">
+                      <button type="button" style="min-height:52px;padding:0 22px;border:2px solid var(--color-action);border-radius:16px;background:transparent;color:var(--color-action);font-size:16px;font-weight:800;cursor:pointer">Cancelar</button>
+                      <button type="button" style="min-height:52px;padding:0 24px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer">Guardar medida</button>
+                    </div>
+                  </section>
+                </sc-if>
+              </div>
+            </main>
+
+            <sc-if value="{{ s.w.planOpen }}">
+              <div style="position:absolute;inset:0;background:rgba(4,37,43,0.5);display:flex;align-items:center;justify-content:center">
+                <div role="dialog" aria-label="Plan completo" style="width:480px;padding:28px;border-radius:22px;background:var(--color-surface);box-shadow:0 24px 60px rgba(4,37,43,0.3);display:flex;flex-direction:column;gap:12px">
+                  <span style="align-self:flex-start;padding:4px 10px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:12px;font-weight:800">Plan completo</span>
+                  <h2 style="margin:0;font-size:22px;font-weight:900;color:var(--color-ink)">La gráfica es parte del Plan completo</h2>
+                  <p style="margin:0;font-size:16px;line-height:1.5;color:var(--color-body)">Tus medidas siguen guardadas y las ves en la lista. Con el Plan completo también las ves sobre las curvas de la OMS.</p>
+                  <div style="margin-top:8px;display:flex;justify-content:flex-end;gap:12px">
+                    <button type="button" onClick="{{ s.w.closePlan }}" style="min-height:44px;padding:0 20px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Ahora no</button>
+                    <button type="button" style="min-height:48px;padding:0 22px;border:none;border-radius:14px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer">Conocer el Plan completo</button>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-for>
+
+  <section id="medidas" style="max-width:1100px;display:flex;flex-direction:column;gap:28px">
+    <div style="padding-bottom:12px;border-bottom:2px solid var(--color-ink)"><h2 style="margin:0;font-size:28px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Medidas y decisiones</h2></div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <h3 style="margin:0;font-size:18px;font-weight:800;color:var(--color-ink)">Teléfono · 390 px</h3>
+        <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:15px;line-height:1.5;color:var(--color-body)">
+          <li>Zona segura 47 px. Relleno lateral 20; 16 entre bloques.</li>
+          <li>Encabezado: «← Mateo» 15/700, alto 44. Título 28/900. Subtítulo 15/400. «+ Anotar medida» alto 52, radio 16, 12 bajo el subtítulo.</li>
+          <li>Última medida: tarjeta radio 16, borde 1 px #cfe8ec, relleno 16/18. Etiqueta 13/800 mayúsculas; valor 34/900; fecha 15/500.</li>
+          <li>Gráfica: tarjeta relleno 16, separación 12. Pestañas Peso/Talla 44 alto (riel 54). Rango 44 alto, 15 px.</li>
+          <li>Lectura del punto: ‹ › 44×44; valor 18/900; fecha y edad 14/500.</li>
+          <li>Área de la gráfica 316×264: datos 240×186 (márgenes 36 izq., 40 der., 28 arriba, 50 abajo). Ejes 13/600; unidad 13/800; P3…P97 13/700 #475569.</li>
+          <li>Curvas OMS 1.5 px #869ca3. Línea del hijo 2.5 px #0e7490; puntos radio 5 con borde blanco 2; seleccionado radio 8 con aro de 3 px.</li>
+          <li>Lista: fila mín. 96; fecha y valores 16/800; edad 14; quién 13/600; Corregir/Quitar 14/800, alto 44.</li>
+          <li>Formulario: etiqueta 15/800; campo 52 alto, radio 14, borde 1.5 px #6b8f97 (error 2 px #b91c1c); error 14/600 con ícono «!». Barra fija: botón 52 + 14 arriba + 34 abajo.</li>
+        </ul>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <h3 style="margin:0;font-size:18px;font-weight:800;color:var(--color-ink)">Web · 1280 px</h3>
+        <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:15px;line-height:1.5;color:var(--color-body)">
+          <li>Barra lateral 280; contenido 28/48, ancho máximo 904; 24 entre bloques.</li>
+          <li>Encabezado: título 34/900, subtítulo 16; «+ Anotar medida» a la derecha, 52 alto.</li>
+          <li>Fila superior 1.7fr / 1fr: Última medida (valor 44/900) y medida del registro (20/800), separación 20.</li>
+          <li>Gráfica: tarjeta relleno 24. Pestañas 300 ancho; rango a la derecha. Lectura en una línea 18/800.</li>
+          <li>Área de la gráfica 854×380: datos 752×296 (márgenes 48 / 54 / 30 / 54). Ejes 14/600; P3…P97 14/700. Línea 3 px; puntos radio 6, seleccionado 9.</li>
+          <li>Tabla: columnas 132 / 128 / 96 / 96 / 1fr / 168, separación 16; fila mín. 64; encabezado 13/800 mayúsculas #475569.</li>
+          <li>Formulario: tarjeta 600 máx., relleno 28; Peso y Talla 200 cada uno; Cancelar + Guardar medida a la derecha.</li>
+        </ul>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <h3 style="margin:0;font-size:18px;font-weight:800;color:var(--color-ink)">Decisiones de legibilidad</h3>
+      <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:15px;line-height:1.5;color:var(--color-body);max-width:900px">
+        <li>Rango por defecto «0–3 años»: desde el nacimiento hasta el año entero que sigue a la edad del hijo. Con la referencia completa (10 o 19 años) los puntos de Mateo ocuparían el primer 20 % del ancho. «Hasta 10 años» (peso) o «Hasta 19 años» (talla) queda a un toque. Así no hay que pellizcar.</li>
+        <li>La lectura del punto va fija arriba de la gráfica, no en un globo flotante: no tapa puntos ni se sale de los 390 px. Tocar en cualquier parte de la gráfica elige la medida más cercana en fecha, y ‹ › recorre las medidas con áreas de 44 px aunque los puntos estén a 15 px uno de otro.</li>
+        <li>Las curvas de la OMS son líneas grises finas, sin relleno entre ellas, con su nombre (P3…P97) al final de cada una. La línea del hijo es la única en color y la única con puntos, así que se distingue por forma y no solo por color.</li>
+        <li>El eje X dice «meses» bajo 0–24 y «años» después; una marca más larga en los 2 años separa las dos escalas. Rejilla solo horizontal, 3–6 líneas.</li>
+        <li>La lista «Medidas anotadas» es la tabla accesible de la gráfica: tiene los mismos datos (fecha, edad, peso, talla). En web es una tabla con encabezados; en el teléfono, una lista. Una medida con un solo valor muestra solo ese valor; en la tabla web la celda vacía dice «—».</li>
+        <li>La medida del registro va en una caja punteada aparte, con la razón de que no esté en la gráfica.</li>
+        <li>Datos de prueba: hoy es 24 oct 2026 para que «hace 12 días · 12 oct 2026» cuadre. La corrección de ejemplo dice 3 oct 2026 porque el 3 nov sería una fecha futura.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;telefonoCompleto&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;rangoInicial&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;0–3 años&quot;,&quot;Todo&quot;],&quot;default&quot;:&quot;0–3 años&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = { ch: {}, plan: {} };
+
+  M = [
+    { f: '10 oct 2024', m: 0.93, edad: '4 semanas', kg: 4.4, cm: 54, por: 'Ana' },
+    { f: '12 dic 2024', m: 3.0, edad: '3 meses', kg: 6.1, cm: 59.5, por: 'Ana' },
+    { f: '13 feb 2025', m: 5.03, edad: '5 meses', kg: 7.2, cm: 64, por: 'Luis' },
+    { f: '14 abr 2025', m: 7.07, edad: '7 meses', kg: 8.1, cm: 67.5, por: 'Ana' },
+    { f: '18 jul 2025', m: 10.2, edad: '10 meses', kg: 9.0, cm: null, por: 'Luis', nota: 'Báscula de la farmacia' },
+    { f: '15 oct 2025', m: 13.1, edad: '1 año 1 mes', kg: 9.6, cm: 74.5, por: 'Ana', nota: 'Con ropa ligera' },
+    { f: '10 abr 2026', m: 18.95, edad: '1 año 6 meses', kg: 10.6, cm: 78.5, por: 'Ana', corr: 'Corregida el 3 oct 2026 por Luis' },
+    { f: '12 oct 2026', m: 25.0, edad: '2 años 1 mes', kg: 11.4, cm: 82, por: 'Ana' }
+  ];
+
+  REF = {
+    kg: [[0,2.5,2.9,3.3,3.9,4.3],[1,3.4,3.9,4.5,5.1,5.7],[2,4.4,4.9,5.6,6.3,7.0],[3,5.1,5.6,6.4,7.2,7.9],[4,5.6,6.2,7.0,7.8,8.6],[6,6.4,7.1,7.9,8.8,9.7],[9,7.2,7.9,8.9,9.9,10.9],[12,7.8,8.6,9.6,10.8,11.8],[15,8.3,9.1,10.3,11.5,12.7],[18,8.8,9.7,10.9,12.2,13.5],[21,9.2,10.1,11.5,12.9,14.2],[24,9.7,10.6,12.2,13.6,15.0],[30,10.5,11.5,13.3,14.9,16.4],[36,11.3,12.4,14.3,16.2,17.8],[48,12.9,14.2,16.3,18.6,20.6],[60,14.3,15.9,18.3,21.0,23.4],[72,15.9,17.6,20.5,23.6,26.4],[84,17.5,19.4,22.9,26.5,29.9],[96,19.2,21.4,25.4,29.8,34.0],[108,21.0,23.5,28.1,33.6,38.7],[120,22.8,25.7,31.2,37.8,44.0]],
+    cm: [[0,46.3,47.9,49.9,51.8,53.4],[1,51.1,52.7,54.7,56.7,58.4],[2,54.7,56.4,58.4,60.5,62.2],[3,57.6,59.3,61.4,63.5,65.3],[4,60.0,61.7,63.9,66.0,67.8],[6,63.6,65.5,67.6,69.8,71.6],[9,68.0,69.9,72.0,74.2,76.2],[12,71.3,73.4,75.7,78.1,80.2],[15,74.4,76.6,79.1,81.7,83.9],[18,77.2,79.5,82.3,85.0,87.3],[21,79.7,82.2,85.1,88.0,90.4],[24,81.0,83.6,86.4,89.3,91.9],[30,85.1,88.0,91.9,95.3,98.1],[36,89.1,92.2,96.1,99.8,102.7],[48,94.4,98.0,103.3,108.6,112.2],[60,100.7,104.6,110.0,115.4,119.3],[72,106.1,110.3,116.0,121.7,125.8],[84,111.1,115.6,121.7,127.8,132.2],[96,115.9,120.6,127.3,133.9,138.6],[108,120.5,125.5,132.6,139.7,144.7],[120,124.9,130.2,137.8,145.4,150.9],[144,133.6,139.6,149.1,158.6,164.3],[168,145.0,151.5,163.2,174.0,180.0],[192,155.8,162.4,172.9,182.0,187.0],[228,162.0,168.0,176.5,185.0,190.4]]
+  };
+
+  fk(v) { return v.toFixed(1) + ' kg'; }
+  fc(v) { return (Number.isInteger(v) ? String(v) : v.toFixed(1)) + ' cm'; }
+
+  cfg(metric, range) {
+    if (range === '3') return metric === 'kg'
+      ? { xMax: 36, y0: 2, y1: 18, yt: [4, 8, 12, 16], xt: [[0,'0'],[6,'6'],[12,'12'],[18,'18'],[24,'2'],[36,'3']], units: [['meses',12],['años',30]] }
+      : { xMax: 36, y0: 44, y1: 106, yt: [50,60,70,80,90,100], xt: [[0,'0'],[6,'6'],[12,'12'],[18,'18'],[24,'2'],[36,'3']], units: [['meses',12],['años',30]] };
+    return metric === 'kg'
+      ? { xMax: 120, y0: 0, y1: 46, yt: [10,20,30,40], xt: [[0,'0'],[12,'12'],[24,'2'],[48,'4'],[72,'6'],[96,'8'],[120,'10']], units: [['meses',12],['años',72]] }
+      : { xMax: 228, y0: 40, y1: 196, yt: [60,100,140,180], xt: [[0,'0'],[24,'2'],[60,'5'],[120,'10'],[180,'15'],[228,'19']], units: [['meses',12],['años',126]] };
+  }
+
+  smooth(p) {
+    let d = 'M' + p[0][0].toFixed(1) + ' ' + p[0][1].toFixed(1);
+    for (let i = 0; i < p.length - 1; i++) {
+      const a = p[i - 1] || p[i], b = p[i], c = p[i + 1], e = p[i + 2] || c;
+      d += ' C' + (b[0] + (c[0] - a[0]) / 6).toFixed(1) + ' ' + (b[1] + (c[1] - a[1]) / 6).toFixed(1) + ' ' + (c[0] - (e[0] - b[0]) / 6).toFixed(1) + ' ' + (c[1] - (e[1] - b[1]) / 6).toFixed(1) + ' ' + c[0].toFixed(1) + ' ' + c[1].toFixed(1);
+    }
+    return d;
+  }
+
+  svg(o) {
+    const h = React.createElement;
+    const web = o.web, W = web ? 854 : 316, H = web ? 380 : 264;
+    const L = web ? 48 : 36, R = web ? 54 : 40, T = web ? 30 : 28, B = web ? 54 : 50;
+    const pw = W - L - R, ph = H - T - B, fs = web ? 14 : 13;
+    const c = this.cfg(o.metric, o.range);
+    const X = m => L + m / c.xMax * pw, Y = v => T + (1 - (v - c.y0) / (c.y1 - c.y0)) * ph;
+    const tx = { fontSize: fs, fontWeight: 600, fill: '#475569' };
+    const grid = c.yt.map(v => h('line', { x1: L, x2: L + pw, y1: Y(v), y2: Y(v), stroke: '#e2eef0', strokeWidth: 1 }));
+    const ylab = c.yt.map(v => h('text', Object.assign({ x: L - 8, y: Y(v) + fs * 0.35, textAnchor: 'end' }, tx), String(v)));
+    const xtk = c.xt.map(t => h('g', null,
+      h('line', { x1: X(t[0]), x2: X(t[0]), y1: T + ph, y2: T + ph + (t[0] === 24 ? 12 : 5), stroke: '#869ca3', strokeWidth: t[0] === 24 ? 1.5 : 1 }),
+      h('text', Object.assign({ x: X(t[0]), y: T + ph + fs + 8, textAnchor: 'middle' }, tx), t[1])));
+    const units = c.units.map(u => h('text', { x: X(u[1]), y: T + ph + fs * 2 + 14, textAnchor: 'middle', fontSize: fs, fontWeight: 800, fill: '#1f3d44' }, u[0]));
+    let curves = [], clabs = [];
+    if (o.curves) {
+      const ref = this.REF[o.metric].filter(r => r[0] <= c.xMax);
+      const ends = [];
+      for (let p = 1; p <= 5; p++) {
+        const pts = ref.map(r => [X(r[0]), Y(r[p])]);
+        curves.push(h('path', { d: this.smooth(pts), fill: 'none', stroke: '#869ca3', strokeWidth: 1.5 }));
+        ends.push({ l: ['P3','P15','P50','P85','P97'][p - 1], y: pts[pts.length - 1][1] });
+      }
+      ends.sort((a, b) => a.y - b.y);
+      const gap = fs + 1;
+      for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < gap) ends[i].y = ends[i - 1].y + gap;
+      clabs = ends.map(e => h('text', { x: L + pw + 6, y: e.y + fs * 0.35, fontSize: fs, fontWeight: 700, fill: '#475569' }, e.l));
+    }
+    const pts = o.pts.map(v => [X(v.m), Y(v[o.metric])]);
+    const sp = pts[o.sel];
+    const line = h('polyline', { points: pts.map(p => p.join(',')).join(' '), fill: 'none', stroke: '#0e7490', strokeWidth: web ? 3 : 2.5, strokeLinejoin: 'round', strokeLinecap: 'round' });
+    const r = web ? 6 : 5;
+    const dots = pts.map((p, i) => i === o.sel ? null : h('circle', { cx: p[0], cy: p[1], r: r, fill: '#0e7490', stroke: '#ffffff', strokeWidth: 2 }));
+    const sel = h('g', null,
+      h('line', { x1: sp[0], x2: sp[0], y1: T, y2: T + ph, stroke: '#0e7490', strokeWidth: 1, strokeDasharray: '3 4' }),
+      h('circle', { cx: sp[0], cy: sp[1], r: r + 3, fill: '#ffffff', stroke: '#0e7490', strokeWidth: 3 }),
+      h('circle', { cx: sp[0], cy: sp[1], r: r - 1.5, fill: '#0e7490' }));
+    const hit = h('rect', { x: L, y: T, width: pw, height: ph, fill: 'transparent', style: { cursor: 'pointer' }, onClick: e => {
+      const b = e.currentTarget.ownerSVGElement.getBoundingClientRect();
+      const sx = (e.clientX - b.left) * W / b.width;
+      let best = 0; pts.forEach((p, i) => { if (Math.abs(p[0] - sx) < Math.abs(pts[best][0] - sx)) best = i; });
+      o.pick(best);
+    } });
+    return h('svg', { width: W, height: H, viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': 'Gráfica de ' + (o.metric === 'kg' ? 'peso' : 'talla') + ' de Mateo. Los mismos datos están en Medidas anotadas.', style: { display: 'block', maxWidth: '100%', height: 'auto', fontFamily: 'Figtree, system-ui, sans-serif' } },
+      h('g', null, ...grid), h('g', null, ...ylab),
+      h('text', { x: L - 8, y: T - 12, textAnchor: 'end', fontSize: fs, fontWeight: 800, fill: '#1f3d44' }, o.metric),
+      h('line', { x1: L, x2: L + pw, y1: T + ph, y2: T + ph, stroke: '#869ca3', strokeWidth: 1 }),
+      h('g', null, ...xtk), h('g', null, ...units), h('g', null, ...curves), h('g', null, ...clabs),
+      line, h('g', null, ...dots), sel, hit);
+  }
+
+  set(key, patch) { this.setState(s => ({ ch: Object.assign({}, s.ch, { [key]: Object.assign({}, s.ch[key] || {}, patch) }) })); }
+
+  bundle(key, defMetric, web, curves, defR) {
+    const c = Object.assign({ metric: defMetric, range: defR, sel: null }, this.state.ch[key] || {});
+    const pts = this.M.filter(v => v[c.metric] != null);
+    const n = pts.length, sel = c.sel == null ? n - 1 : Math.max(0, Math.min(c.sel, n - 1));
+    const p = pts[sel], val = c.metric === 'kg' ? this.fk(p.kg) : this.fc(p.cm);
+    const on = { bd: '#0e7490', bg: '#ffffff', c: '#04252b', w: 800 }, off = { bd: 'transparent', bg: 'transparent', c: '#0e7490', w: 700 };
+    const ron = { bd: '#04252b', bg: '#04252b', c: '#ffffff', w: 800 }, roff = { bd: '#a5f3fc', bg: '#ffffff', c: '#0e7490', w: 700 };
+    const planOpen = !!this.state.plan[key];
+    return {
+      tabs: [['Peso', 'kg'], ['Talla', 'cm']].map(t => Object.assign({ l: t[0], on: c.metric === t[1], go: () => this.set(key, { metric: t[1], sel: null }) }, c.metric === t[1] ? on : off)),
+      ranges: [['0–3 años', '3'], [c.metric === 'kg' ? 'Hasta 10 años' : 'Hasta 19 años', 'todo']].map(t => Object.assign({ l: t[0], on: c.range === t[1], go: () => this.set(key, { range: t[1] }) }, c.range === t[1] ? ron : roff)),
+      val, meta: p.f + ' · ' + p.edad, line: p.f + ' · ' + val + ' · ' + p.edad,
+      prev: () => this.set(key, { sel: Math.max(0, sel - 1) }), next: () => this.set(key, { sel: Math.min(n - 1, sel + 1) }),
+      pOp: sel === 0 ? 0.4 : 1, nOp: sel === n - 1 ? 0.4 : 1,
+      svg: this.svg({ web, metric: c.metric, range: c.range, curves, pts, sel, pick: i => this.set(key, { sel: i }) }),
+      planOpen, openPlan: () => this.setState(s => ({ plan: Object.assign({}, s.plan, { [key]: true }) })), closePlan: () => this.setState(s => ({ plan: Object.assign({}, s.plan, { [key]: false }) }))
+    };
+  }
+
+  renderVals() {
+    const full = this.props.telefonoCompleto ?? true;
+    const defR = (this.props.rangoInicial ?? '0–3 años') === 'Todo' ? 'todo' : '3';
+    const fam = { uIni: 'A', uNombre: 'Ana', uRol: 'Mamá · Plan completo' };
+    const base = { back: '← Mateo', titulo: 'Crecimiento', metric: 'kg', curves: true, addTop: true, hero: true, chart: true, sexPick: true, list: true, rowAcc: true, reg: true, regLink: true, topRow: true };
+    const ok = '1.5px solid #6b8f97', bad = '2px solid #b91c1c';
+    const defs = [
+      Object.assign({}, base, fam, { id: 'A', label: 'Con 8 medidas · Peso', quien: 'Ana, Plan completo' }),
+      Object.assign({}, base, fam, { id: 'B', label: 'Con 8 medidas · Talla', quien: 'La misma pantalla con la pestaña Talla', metric: 'cm' }),
+      Object.assign({}, base, fam, { id: 'C', label: 'Sin medidas', quien: 'Solo existe la medida del registro, sin fecha', addTop: false, hero: false, chart: false, list: false, empty: true, hintOut: true }),
+      Object.assign({}, base, fam, { id: 'D', label: 'Sin elegir Niña · Niño', quien: 'Solo los puntos del hijo, sin curvas', curves: false, sexPick: false, invite: true }),
+      Object.assign({}, base, { id: 'E', label: 'Plan gratuito', quien: 'Lista completa; la gráfica se abre con el aviso del plan', uIni: 'A', uNombre: 'Ana', uRol: 'Mamá · Plan gratuito', chart: false, locked: true, hintOut: true }),
+      Object.assign({}, base, { id: 'F', label: 'Vista de Cuidadora', quien: 'Solo lectura', uIni: 'R', uNombre: 'Rosa', uRol: 'Cuidadora', addTop: false, sexPick: false, rowAcc: false, noAcc: true, regLink: false, cuid: true }),
+      { id: 'G1', label: 'Anotar medida', quien: 'Formulario', back: '← Crecimiento', titulo: 'Anotar medida', form: true, uIni: 'A', uNombre: 'Ana', uRol: 'Mamá · Plan completo',
+        fF: { v: '24 oct 2026', bd: ok }, fP: { v: '11.6', c: '#04252b', bd: ok }, fT: { v: 'Ej. 83', c: '#64748b', bd: ok }, fN: { v: 'Por ejemplo: con ropa ligera', c: '#64748b' } },
+      { id: 'G2', label: 'Anotar medida · errores de campo', quien: 'Mensajes neutrales, sin culpas', back: '← Crecimiento', titulo: 'Anotar medida', form: true, uIni: 'A', uNombre: 'Ana', uRol: 'Mamá · Plan completo',
+        fF: { v: '2 nov 2026', bd: bad, err: 'Esa fecha aún no llega. Elige hoy o un día anterior.' }, fP: { v: '116', c: '#04252b', bd: bad, err: 'Escribe el peso en kilos, con punto decimal. Por ejemplo: 11.6' }, fT: { v: '83', c: '#04252b', bd: ok }, fN: { v: 'Por ejemplo: con ropa ligera', c: '#64748b' } }
+    ];
+    const estados = defs.map(d => Object.assign({}, d, {
+      t: d.chart || d.locked ? this.bundle(d.id + 't', d.metric, false, d.curves, defR) : {},
+      w: d.chart || d.locked ? this.bundle(d.id + 'w', d.metric, true, d.curves, defR) : {}
+    }));
+    const rows = this.M.slice().reverse().map(v => ({
+      fecha: v.f, edad: v.edad,
+      vals: [v.kg != null ? this.fk(v.kg) : null, v.cm != null ? this.fc(v.cm) : null].filter(Boolean).join(' · '),
+      peso: v.kg != null ? this.fk(v.kg) : '—', talla: v.cm != null ? this.fc(v.cm) : '—',
+      pesoA: v.kg != null ? this.fk(v.kg) : 'Sin peso anotado', tallaA: v.cm != null ? this.fc(v.cm) : 'Sin talla anotada',
+      por: 'Anotada por ' + v.por, quien: v.por, nota: v.nota || '', corr: v.corr || ''
+    }));
+    return { estados, rows, phH: full ? 'auto' : '844px', phOv: full ? 'visible' : 'auto' };
+  }
+}
+</script>
+</body>
+</html>

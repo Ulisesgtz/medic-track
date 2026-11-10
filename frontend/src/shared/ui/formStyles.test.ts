@@ -13,6 +13,9 @@ import {
   labelClass,
   fieldCabinet,
   fieldCabinetProposed,
+  fieldGrowth,
+  fieldGrowthError,
+  fieldGrowthInput,
 } from './formStyles'
 
 // The classes each screen had before they moved here (BACKLOG, "Unificar estilos de formulario"). Moving them was meant to
@@ -83,6 +86,10 @@ describe('formStyles', () => {
     expect(fieldCabinet).toContain('min-h-[52px]')
     expect(fieldCabinet).toContain('border-calendar-muted')
     expect(fieldCabinetProposed).toContain('border-action bg-hint')
+    expect(fieldGrowth).toContain('min-h-[52px]')
+    expect(fieldGrowth).toContain('border-[1.5px] border-field-edge')
+    expect(fieldGrowthError).toContain('border-2 border-error')
+    expect(fieldGrowthInput).toContain('text-[17px]')
   })
 
   it('label and error keep the project sizes: 13 px, error in red-700', () => {

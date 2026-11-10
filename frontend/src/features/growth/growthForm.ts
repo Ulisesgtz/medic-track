@@ -15,11 +15,13 @@ export const EMPTY_VALUES: GrowthValues = { measuredOn: '', weight: '', height: 
 
 const MESSAGES = {
   date: 'Escribe la fecha de la medida.',
-  future: 'La fecha no puede ser futura.',
-  beforeBirth: 'La fecha no puede ser anterior al nacimiento.',
+  future: 'Esa fecha aún no llega. Elige hoy o un día anterior.',
+  beforeBirth: 'Esa fecha es antes del nacimiento. Elige otra.',
   none: 'Escribe el peso, la talla o los dos.',
-  weight: 'Escribe el peso en kilogramos, entre 0.3 y 200, con hasta 2 decimales.',
-  height: 'Escribe la talla en centímetros, entre 30 y 220, con hasta 1 decimal.',
+  weight: 'Escribe el peso en kilos, con punto decimal. Por ejemplo: 11.6',
+  height: 'Escribe la talla en centímetros. Por ejemplo: 83',
+  weightRange: 'El peso se anota entre 0.3 y 200 kg, con hasta 2 decimales.',
+  heightRange: 'La talla se anota entre 30 y 220 cm, con hasta 1 decimal.',
   note: 'La nota puede tener hasta 300 caracteres.',
 }
 
@@ -46,8 +48,10 @@ export function validate(v: GrowthValues, birthDate: string, today: string): Gro
   const w = parseDecimal(v.weight)
   const h = parseDecimal(v.height)
   if (w === null && h === null) errors.weightKg = MESSAGES.none
-  if (w !== null && (Number.isNaN(w) || w < 0.3 || w > 200 || decimals(v.weight) > 2)) errors.weightKg = MESSAGES.weight
-  if (h !== null && (Number.isNaN(h) || h < 30 || h > 220 || decimals(v.height) > 1)) errors.heightCm = MESSAGES.height
+  if (w !== null && Number.isNaN(w)) errors.weightKg = MESSAGES.weight
+  else if (w !== null && (w < 0.3 || w > 200 || decimals(v.weight) > 2)) errors.weightKg = MESSAGES.weightRange
+  if (h !== null && Number.isNaN(h)) errors.heightCm = MESSAGES.height
+  else if (h !== null && (h < 30 || h > 220 || decimals(v.height) > 1)) errors.heightCm = MESSAGES.heightRange
   if (v.note.trim().length > 300) errors.note = MESSAGES.note
   return errors
 }

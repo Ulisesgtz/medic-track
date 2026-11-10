@@ -49,6 +49,7 @@ describe('PageHeader', () => {
 
   it('the buttons have the design’s sizes: solid primary, outlined secondary', () => {
     expect(pageHeaderButton('primary', 'phone')).toContain('min-h-12')
+    expect(pageHeaderButton('primary', 'phone', { tall: true })).toContain('min-h-[52px]')
     expect(pageHeaderButton('primary', 'desktop')).toContain('min-h-[52px]')
     expect(pageHeaderButton('primary', 'phone')).toContain('bg-confirmed')
     expect(pageHeaderButton('secondary', 'phone')).toContain('border-action')

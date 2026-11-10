@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { formatDateLong, formatDateShort, formatDayMonth, formatTime, formatWeekdayLong, localDayRange } from './date'
+import { formatDateLong, formatDateShort, formatDateShortNoPad, formatDayMonth, formatTime, formatWeekdayLong, localDayRange } from './date'
 
 describe('formatDateShort', () => {
   it('formats YYYY-MM-DD as "15 sep 2026", keeping the leading zero on the day', () => {
@@ -11,6 +11,14 @@ describe('formatDateShort', () => {
   it('leaves anything that is not a date untouched', () => {
     expect(formatDateShort('pronto')).toBe('pronto')
     expect(formatDateShort('2026-13-01')).toBe('2026-13-01')
+  })
+})
+
+describe('formatDateShortNoPad', () => {
+  it('drops the leading zero of the day and leaves anything else as it is', () => {
+    expect(formatDateShortNoPad('2026-10-03')).toBe('3 oct 2026')
+    expect(formatDateShortNoPad('2026-10-12')).toBe('12 oct 2026')
+    expect(formatDateShortNoPad('pronto')).toBe('pronto')
   })
 })
 

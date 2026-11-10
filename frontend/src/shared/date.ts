@@ -15,6 +15,12 @@ export function formatDateShort(isoDate: string): string {
   return `${match[3]} ${month} ${match[1]}`
 }
 
+/** «3 oct 2026»: like `formatDateShort` without the day's leading zero (the growth screen's mock, spec 065). */
+export function formatDateShortNoPad(isoDate: string): string {
+  const short = formatDateShort(isoDate)
+  return short === isoDate ? short : short.replace(/^0/, '')
+}
+
 const pad = (n: number) => String(n).padStart(2, '0')
 
 /** Local wall-clock time of an instant as "16:00". */

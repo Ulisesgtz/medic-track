@@ -5,6 +5,8 @@
 **Estado**: Borrador
 **Entrada**: `BACKLOG.md` («Otras ideas del plan de pago»: curvas de crecimiento OMS, informativas) y las decisiones del dueño del 2026-11-08: peso y talla con fecha; la gráfica pone los puntos del hijo sobre las curvas de la OMS en gris, sin decir nunca en qué percentil está; anotar es de cualquier plan y la gráfica, del plan completo; sin mock (sistema visual).
 
+> **Nota (2026-11-09):** la pantalla y el formulario de esta spec se rehicieron con el mock de Claude Design en la spec 065 (`specs/065-rediseno-crecimiento/`): mismos datos y reglas, otra presentación. La tabla dentro de la gráfica se quitó (la lista «Medidas anotadas» es su alternativa accesible).
+
 ## Escenarios de Usuario y Pruebas *(obligatorio)*
 
 ### Historia de Usuario 1 - Anotar el peso y la talla de cada consulta (Prioridad: P1)
