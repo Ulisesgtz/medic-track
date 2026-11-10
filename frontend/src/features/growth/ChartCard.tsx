@@ -39,7 +39,8 @@ interface ChartCardProps {
 export function ChartCard({ chart, childName, today, canEdit, ownerName, desktop, onChooseSex, choosingSex, chooseFailed }: ChartCardProps) {
   const [indicator, setIndicator] = useState<Indicator>('weight')
   const [range, setRange] = useState<RangeKind>('short')
-  const [selectedDate, setSelectedDate] = useState<string | null>(null)
+  // The chosen measurement by its date and its place among that day's (two can share a date).
+  const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const tabs = useRef<(HTMLButtonElement | null)[]>([])
 
   const reference = chart.reference
@@ -61,15 +62,16 @@ export function ChartCard({ chart, childName, today, canEdit, ownerName, desktop
   const curves = curveSet ? visibleCurves(curveSet.curves, xMax) : []
   const y = yAxis(axisValues(points, curves))
 
-  const found = selectedDate == null ? -1 : points.findIndex((p) => p.measuredOn === selectedDate)
+  const keys = points.map((p, i) => `${p.measuredOn}#${points.slice(0, i).filter((q) => q.measuredOn === p.measuredOn).length}`)
+  const found = selectedKey == null ? -1 : keys.indexOf(selectedKey)
   const selected = points.length === 0 ? null : found >= 0 ? found : points.length - 1
   const point = selected == null ? null : points[selected]
   const age = point ? ageAt(chart.birthDate, point.measuredOn) : ''
-  const choose = (i: number) => setSelectedDate(points[i]?.measuredOn ?? null)
+  const choose = (i: number) => setSelectedKey(keys[i] ?? null)
 
   const switchTab = (next: Indicator) => {
     setIndicator(next)
-    setSelectedDate(null)
+    setSelectedKey(null)
   }
   const onTabKey = (e: KeyboardEvent<HTMLButtonElement>) => {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return

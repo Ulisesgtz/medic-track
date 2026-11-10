@@ -333,6 +333,22 @@ describe('GrowthPage (spec 065)', () => {
     expect(screen.queryByRole('button', { name: 'Medida anterior' })).not.toBeInTheDocument()
   })
 
+  it('two measurements of the same day are walked one by one', async () => {
+    const pts = [
+      { measuredOn: '2026-10-12', months: 25, value: 11.2 },
+      { measuredOn: '2026-10-12', months: 25, value: 11.4 },
+    ]
+    api({ chartReply: { body: mockChart({ points: { weight: pts, height: [] } }) } })
+    renderAt(PATH, <GrowthPage />, ROUTE)
+    await screen.findByRole('img', { name: /Gráfica de peso/ })
+    expect(within(reading()).getByText('11.4 kg')).toBeInTheDocument()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Medida anterior' }))
+    expect(within(reading()).getByText('11.2 kg')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Medida siguiente' }))
+    expect(within(reading()).getByText('11.4 kg')).toBeInTheDocument()
+  })
+
   it('a chart that fails can be asked again; one alone has no line', async () => {
     let fail = true
     stubApi({

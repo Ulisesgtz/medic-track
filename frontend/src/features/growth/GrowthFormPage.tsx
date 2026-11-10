@@ -8,6 +8,7 @@ import { formatAgeLong } from '../../shared/age'
 import { fieldGrowth, fieldGrowthError, fieldGrowthInput } from '../../shared/ui/formStyles'
 import { StickyActionBar } from '../../shared/ui/StickyActionBar'
 import { pageHeaderButton } from '../../shared/ui/pageHeaderButton'
+import { dayKeyOf } from '../consultations/treatmentDays'
 import { GrowthApiError } from './api'
 import { EMPTY_VALUES, isDirty, toInput, validate, valuesOf, type GrowthErrors, type GrowthValues } from './growthForm'
 import { GROWTH } from './growthText'
@@ -17,10 +18,7 @@ const label = 'text-[15px] font-extrabold text-ink'
 const optional = <span className="font-medium text-body"> {GROWTH.optional}</span>
 
 /** The device's local day as YYYY-MM-DD (a measurement can't be dated after it). */
-function localToday(now = new Date()): string {
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
-}
+const localToday = (now = new Date()) => dayKeyOf(now.getFullYear(), now.getMonth(), now.getDate())
 
 /**
  * `/children/:childId/crecimiento/nueva` and `/children/:childId/crecimiento/:measurementId/editar` (specs/063): a measurement as a

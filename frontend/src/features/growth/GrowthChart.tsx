@@ -37,6 +37,8 @@ export function GrowthChart({ desktop, indicator, points, curves, xMax, y, selec
 
   const lines = PERCENTILES.map((key) => curves.map((c): [number, number] => [s.x(c.months), s.y(c[key])]))
   const labelYs = curves.length ? spreadLabels(lines.map((pts) => pts[pts.length - 1][1]), l.fs + 1) : []
+  // The names go at the curves' own end (before the range's end when the child is older than the reference).
+  const labelX = curves.length ? s.x(curves[curves.length - 1].months) + 6 : 0
 
   const pick = (e: MouseEvent<SVGRectElement>) => {
     if (points.length === 0) return
@@ -95,7 +97,7 @@ export function GrowthChart({ desktop, indicator, points, curves, xMax, y, selec
       </g>
       <g>
         {labelYs.map((ly, i) => (
-          <text key={PERCENTILES[i]} x={l.L + s.plotWidth + 6} y={ly + l.fs * 0.35} fontSize={l.fs} fontWeight={700} className="fill-muted">
+          <text key={PERCENTILES[i]} x={labelX} y={ly + l.fs * 0.35} fontSize={l.fs} fontWeight={700} className="fill-muted">
             {NAMES[PERCENTILES[i]]}
           </text>
         ))}

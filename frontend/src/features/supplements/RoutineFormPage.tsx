@@ -27,6 +27,7 @@ export function RoutinePageFrame({
   title,
   children,
   maxWidth,
+  phoneContent,
   subtitle,
   chip,
   actions,
@@ -46,6 +47,8 @@ export function RoutinePageFrame({
   children: ReactNode
   /** The web's content column (the form is 640 px). */
   maxWidth?: string
+  /** The phone's content column: its gap and top padding (a design may ask for 16 px between blocks, specs/065). */
+  phoneContent?: string
 } & Pick<PageHeaderProps, 'subtitle' | 'chip' | 'actions' | 'readOnly' | 'state' | 'errorWhat' | 'onRetry'>) {
   const header = (variant: 'phone' | 'desktop') => (
     <PageHeader
@@ -74,7 +77,7 @@ export function RoutinePageFrame({
       ) : (
         <main className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas pb-10">
           {header('phone')}
-          <div className="flex flex-col gap-5 px-5 pt-1">{children}</div>
+          <div className={`flex flex-col px-5 ${phoneContent ?? 'gap-5 pt-1'}`}>{children}</div>
         </main>
       )}
     </AppShell>

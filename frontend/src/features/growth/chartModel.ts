@@ -67,7 +67,8 @@ export interface XAxis {
   units: { label: 'meses' | 'años'; at: number }[]
 }
 
-const tick = (months: number): XTick => ({ months, label: months <= 12 || months < 24 ? String(months) : String(months / 12), long: months === 24 })
+/** Months are written as months before two years and as years from two years on. */
+const tick = (months: number): XTick => ({ months, label: months < 24 ? String(months) : String(months / 12), long: months === 24 })
 
 /**
  * The marks of the age axis, as the mock: months up to two years and years after. Up to a year, every 3 months; up to three years,

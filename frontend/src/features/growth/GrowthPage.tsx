@@ -7,6 +7,7 @@ import { RoutinePageFrame } from '../supplements/RoutineFormPage'
 import { formatAgeLong } from '../../shared/age'
 import { formatDateShortNoPad } from '../../shared/date'
 import { useLocalDay } from '../../shared/useLocalDay'
+import { dayKeyOf } from '../consultations/treatmentDays'
 import { pageHeaderButton } from '../../shared/ui/pageHeaderButton'
 import { GrowthApiError } from './api'
 import { ChartCard } from './ChartCard'
@@ -16,8 +17,6 @@ import { GROWTH } from './growthText'
 import { useDeleteMeasurement, useGrowth, useGrowthChart, useSetReferenceSex } from './hooks'
 import type { Measurement } from './types'
 
-const pad = (n: number) => String(n).padStart(2, '0')
-const isoDay = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
 /**
  * `/children/:childId/crecimiento`, rebuilt from Claude Design's mock (specs/065-rediseno-crecimiento/referencia): the newest
@@ -30,7 +29,8 @@ export function GrowthPage() {
   const navigate = useNavigate()
   const { isDesktop: desktop } = useSidebarSession()
   const variant = desktop ? 'desktop' : 'phone'
-  const today = isoDay(useLocalDay().from)
+  const local = useLocalDay().from
+  const today = dayKeyOf(local.getFullYear(), local.getMonth(), local.getDate())
   const accountQuery = useCurrentAccount()
   const account = accountQuery.data
   const child = account?.children.find((c) => c.id === childId)
@@ -54,7 +54,7 @@ export function GrowthPage() {
 
   const addLink =
     canEdit && hasMeasurements ? (
-      <Link to={`/children/${childId}/crecimiento/nueva`} className={`${pageHeaderButton('primary', variant).replace('min-h-12', 'min-h-[52px]')} ${desktop ? '' : 'w-full'}`}>
+      <Link to={`/children/${childId}/crecimiento/nueva`} className={`${pageHeaderButton('primary', variant, { tall: true })} ${desktop ? '' : 'w-full'}`}>
         {GROWTH.addPlus}
       </Link>
     ) : undefined
@@ -115,6 +115,7 @@ export function GrowthPage() {
       state={growth.isError ? 'error' : growth.isPending ? 'loading' : undefined}
       errorWhat={GROWTH.loadFailed}
       onRetry={() => void growth.refetch()}
+      phoneContent="gap-4"
     >
       {growth.isSuccess &&
         (desktop ? (
@@ -131,8 +132,7 @@ export function GrowthPage() {
             {list}
           </>
         ) : (
-          // The frame's own 4 px top padding is taken back: the mock leaves 16 px under the header (research R3).
-          <div className="-mt-1 flex flex-col gap-4">
+          <>
             {!canEdit && <ReadOnlyNote caregiver={caregiver} desktop={false} />}
             {latest}
             {empty}
@@ -140,7 +140,7 @@ export function GrowthPage() {
             {noteOutside}
             {list}
             {registered}
-          </div>
+          </>
         ))}
       {removing && (
         <ConfirmDialog
