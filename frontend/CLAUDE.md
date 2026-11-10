@@ -200,6 +200,19 @@ Built from the delivered mock (`specs/062-botiquin/referencia/Botiquín PediTrac
 
 E2E: `botiquin.spec.ts` (Chromium, 390 and 1280 px: the owner adds, finds, edits and removes; the shortcut from a consultation; a Caregiver who sees and gets 403; the free plan's notice).
 
+## `src/features/childProfile/` — editar los datos del hijo (spec 064)
+
+No mock: built from the visual system. Corrects what was captured; nothing judges a height or a weight (Principio I).
+
+| File | Role |
+|---|---|
+| `childProfileText.ts` (+ `childProfile.test.ts`) | Every sentence (`CHILD_PROFILE`, `correctedLine` «Corregido el 9 nov 2026 por Ana», `conflictLine` «Hay 2 medidas (…) y 1 vacuna (…) anotadas antes de esa fecha…»); the test forbids «normal», «bajo», «alto», «riesgo», «debería»… |
+| `editChildForm.ts` | Pure: the values from the `Child`, `identityChanged` / `measuresChanged`, the same checks as the server (the signup's `NAME_PATTERN`, a birth date not after the device's today, positive height/weight, with the box the growth record's ranges), the `PUT` body (empty → null, `measurement` only with the box) and the server's errors on the fields |
+| `EditChildPage.tsx` | `/children/:childId/editar`, two designs (`useIsDesktop`), `RoutinePageFrame` + `StickyActionBar` + `useUnsavedWork`. On the free plan the names and the birth date are `disabled` and «Plan completo» opens `FreemiumLimitModal reason="child_identity"` (only the owner reaches the form on a free family: an invited person there is read-only); the box «Anotarlo también como medida de hoy» shows only when the height or the weight changed; the 409 shows the conflict under the date; a Caregiver or a read-only Tutor sees a sentence, no form |
+| `api.ts`, `hooks.ts` | `ChildProfileApiError` (`validation_error`/`birth_date_conflict` with `.conflict`/`plan_required`/`limit`/`forbidden`/`not_found`); `useUpdateChild` invalidates `['accounts','me']`, `['growth', id]` and `['growth-chart', id]` |
+
+The entry is the row «Editar datos» of «Lo demás» (`MoreRows` in `features/childDetail/ChildDetailParts.tsx`, only with `canAdd`), with «Corregido el … por …» when the child carries `correctedAt`/`correctedBy`. E2E: `editar-hijo.spec.ts` (Chromium, 390 and 1280).
+
 ## `src/features/growth/` — curvas de crecimiento (specs 063 y 065)
 
 **Rebuilt in spec 065 from Claude Design's mock** (`specs/065-rediseno-crecimiento/referencia/Crecimiento PediTrack.dc.html`, states A–G; deviations in `referencia/desviaciones.md`), measured against it at 390 and 1280 px. **Records and draws, never evaluates** (Principio I): no percentile of the child, no «normal/bajo/alto», no colors of alert, no trends.

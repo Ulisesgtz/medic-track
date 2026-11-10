@@ -269,6 +269,10 @@ func fieldIndex(prefix string, i int, field string) string {
 	return prefix + "[" + strconv.Itoa(i) + "]." + field
 }
 
+// ValidateName is the name rule of the signup (FR-001a of specs/001) for other packages: "" when the value is valid, else
+// a fixed message. The caller trims it and checks it's not empty.
+func ValidateName(name string) string { return validateNameFormat(name) }
+
 // validateNameFormat checks length and character-set rules shared by every
 // first/last name field. Returns an empty string when the value is valid.
 func validateNameFormat(name string) string {

@@ -352,6 +352,88 @@ definitions:
       photoBase64:
         type: string
     type: object
+  ChildBirthDateConflictResponse:
+    properties:
+      error:
+        example: birth_date_conflict
+        type: string
+      measurementCount:
+        example: 2
+        type: integer
+      measurements:
+        example:
+        - "2022-03-03"
+        - "2022-04-14"
+        items:
+          type: string
+        type: array
+      message:
+        type: string
+      vaccinationCount:
+        example: 1
+        type: integer
+      vaccinations:
+        example:
+        - "2022-03-10"
+        items:
+          type: string
+        type: array
+    type: object
+  ChildCorrectionErrorResponse:
+    properties:
+      error:
+        example: child_not_found
+        type: string
+      message:
+        type: string
+    type: object
+  ChildCorrectionInput:
+    properties:
+      birthDate:
+        example: "2021-03-14"
+        type: string
+      firstName:
+        example: Sofía
+        type: string
+      height:
+        example: 88.5
+        type: number
+      lastName:
+        example: Gómez
+        type: string
+      measurement:
+        allOf:
+        - $ref: '#/definitions/ChildCorrectionMeasurement'
+        description: Measurement, when set, also writes a growth measurement on that
+          date with the non-empty height and weight.
+      weight:
+        example: 12.4
+        type: number
+    type: object
+  ChildCorrectionMeasurement:
+    properties:
+      measuredOn:
+        example: "2026-11-09"
+        type: string
+    type: object
+  ChildCorrectionValidationResponse:
+    properties:
+      details:
+        items:
+          properties:
+            field:
+              example: firstName
+              type: string
+            message:
+              type: string
+          type: object
+        type: array
+      error:
+        example: validation_error
+        type: string
+      message:
+        type: string
+    type: object
   ChildDeviceErrorResponse:
     properties:
       error:
@@ -467,6 +549,17 @@ definitions:
         example: validation_error
         type: string
       message:
+        type: string
+    type: object
+  ChildIdentityPlanLimitResponse:
+    properties:
+      error:
+        example: freemium_consultation_limit_exceeded
+        type: string
+      message:
+        type: string
+      reason:
+        example: child_identity
         type: string
     type: object
   ChildNotFoundResponse:
@@ -2643,6 +2736,114 @@ definitions:
         example: One or more fields are invalid
         type: string
     type: object
+  github_com_Ulisesgtz_medic-track_backend_internal_account.ChildResponse:
+    properties:
+      accountId:
+        description: |-
+          AccountID is the account the child belongs to (the family's owner), Role the session's role over this child
+          ("owner" for its own children), Plan the plan of that family and ReadOnly whether the session can only see and mark
+          (specs/032-compartir-con-familia).
+        example: e5f6a7b8-0000-0000-0000-000000000000
+        type: string
+      birthDate:
+        example: "2020-01-15"
+        type: string
+      correctedAt:
+        description: |-
+          CorrectedAt (RFC 3339) and CorrectedBy (first name only) are the last correction of the child's data, null if it was
+          never corrected (specs/064-editar-datos-hijo).
+        example: "2026-11-09T16:20:00Z"
+        type: string
+      correctedBy:
+        example: Ana
+        type: string
+      firstName:
+        example: Luis
+        type: string
+      height:
+        example: 95.5
+        type: number
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      lastName:
+        example: Gómez
+        type: string
+      plan:
+        enum:
+        - free
+        - paid
+        example: free
+        type: string
+      readOnly:
+        example: false
+        type: boolean
+      role:
+        enum:
+        - owner
+        - tutor
+        - caregiver
+        - child
+        example: owner
+        type: string
+      weight:
+        example: 14.2
+        type: number
+    type: object
+  internal_account.ChildResponse:
+    properties:
+      accountId:
+        description: |-
+          AccountID is the account the child belongs to (the family's owner), Role the session's role over this child
+          ("owner" for its own children), Plan the plan of that family and ReadOnly whether the session can only see and mark
+          (specs/032-compartir-con-familia).
+        example: e5f6a7b8-0000-0000-0000-000000000000
+        type: string
+      birthDate:
+        example: "2020-01-15"
+        type: string
+      correctedAt:
+        description: |-
+          CorrectedAt (RFC 3339) and CorrectedBy (first name only) are the last correction of the child's data, null if it was
+          never corrected (specs/064-editar-datos-hijo).
+        example: "2026-11-09T16:20:00Z"
+        type: string
+      correctedBy:
+        example: Ana
+        type: string
+      firstName:
+        example: Luis
+        type: string
+      height:
+        example: 95.5
+        type: number
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      lastName:
+        example: Gómez
+        type: string
+      plan:
+        enum:
+        - free
+        - paid
+        example: free
+        type: string
+      readOnly:
+        example: false
+        type: boolean
+      role:
+        enum:
+        - owner
+        - tutor
+        - caregiver
+        - child
+        example: owner
+        type: string
+      weight:
+        example: 14.2
+        type: number
+    type: object
   internal_account.acceptDisclaimerRequest:
     properties:
       version:
@@ -2653,7 +2854,7 @@ definitions:
     properties:
       children:
         items:
-          $ref: '#/definitions/internal_account.childResponse'
+          $ref: '#/definitions/internal_account.ChildResponse'
         type: array
       consultationSharing:
         allOf:
@@ -2708,51 +2909,6 @@ definitions:
       stateCode:
         example: MX-JAL
         type: string
-    type: object
-  internal_account.childResponse:
-    properties:
-      accountId:
-        description: |-
-          AccountID is the account the child belongs to (the family's owner), Role the session's role over this child
-          ("owner" for its own children), Plan the plan of that family and ReadOnly whether the session can only see and mark
-          (specs/032-compartir-con-familia).
-        example: e5f6a7b8-0000-0000-0000-000000000000
-        type: string
-      birthDate:
-        example: "2020-01-15"
-        type: string
-      firstName:
-        example: Luis
-        type: string
-      height:
-        example: 95.5
-        type: number
-      id:
-        example: a1b2c3d4-0000-0000-0000-000000000000
-        type: string
-      lastName:
-        example: Gómez
-        type: string
-      plan:
-        enum:
-        - free
-        - paid
-        example: free
-        type: string
-      readOnly:
-        example: false
-        type: boolean
-      role:
-        enum:
-        - owner
-        - tutor
-        - caregiver
-        - child
-        example: owner
-        type: string
-      weight:
-        example: 14.2
-        type: number
     type: object
   internal_account.consultationSharingResponse:
     properties:
@@ -4688,6 +4844,65 @@ paths:
       summary: Renew the phone's credential
       tags:
       - child-device
+  /children/{childId}:
+    put:
+      consumes:
+      - application/json
+      description: |-
+        The whole child is sent: first name, last name, birth date, height and weight (null empties them). Height and
+        weight on every plan; a change of the names or the birth date needs the paid plan of the family (422
+        `child_identity`, nothing saved). A birth date after measurements or vaccinations already written down is 409
+        `birth_date_conflict` with their dates. With `measurement`, a growth measurement is also written on that date,
+        in the same transaction. Saving without changes doesn't count as a correction. A child is never deleted.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: The child
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/ChildCorrectionInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_Ulisesgtz_medic-track_backend_internal_account.ChildResponse'
+        "400":
+          description: An invalid field or a malformed body
+          schema:
+            $ref: '#/definitions/ChildCorrectionValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ChildCorrectionErrorResponse'
+        "403":
+          description: The session can't correct this child's data
+          schema:
+            $ref: '#/definitions/ChildCorrectionErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/ChildCorrectionErrorResponse'
+        "409":
+          description: The birth date is after records already written down
+          schema:
+            $ref: '#/definitions/ChildBirthDateConflictResponse'
+        "422":
+          description: The identity needs the paid plan, or the measurement passes
+            the cap (growth_limit_exceeded)
+          schema:
+            $ref: '#/definitions/ChildIdentityPlanLimitResponse'
+      security:
+      - ClerkSession: []
+      summary: Correct a child's data
+      tags:
+      - children
   /children/{childId}/appointments:
     get:
       description: |-

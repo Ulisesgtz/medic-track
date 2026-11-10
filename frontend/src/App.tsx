@@ -36,6 +36,7 @@ import { CabinetFormPage } from './features/medicineCabinet/CabinetFormPage'
 import { CabinetItemPage } from './features/medicineCabinet/CabinetItemPage'
 import { GrowthPage } from './features/growth/GrowthPage'
 import { GrowthFormPage } from './features/growth/GrowthFormPage'
+import { EditChildPage } from './features/childProfile/EditChildPage'
 
 const queryClient = new QueryClient()
 
@@ -115,6 +116,14 @@ function App() {
             element={
               <RequireSession>
                 <CabinetFormPage key="edit" />
+              </RequireSession>
+            }
+          />
+          <Route
+            path="/children/:childId/editar"
+            element={
+              <RequireSession>
+                <EditChildPage />
               </RequireSession>
             }
           />

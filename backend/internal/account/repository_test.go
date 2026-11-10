@@ -307,3 +307,41 @@ func TestRepository_LinkByEmail_ConnectionError(t *testing.T) {
 	require.Error(t, err)
 	require.NotErrorIs(t, err, account.ErrAccountNotFound)
 }
+
+// specs/064-editar-datos-hijo: the child carries the trace of its last correction (when and the first name of who), nil if it was
+// never corrected, in every read of the account and in the API's shape.
+func TestRepository_TheChildCarriesItsLastCorrection(t *testing.T) {
+	pool := testPool(t)
+	ctx := context.Background()
+	repo := account.NewRepository(pool)
+	clerkID := uniqueClerkUserID("corrected")
+	acc := &account.Account{
+		FirstName: "Ana", LastName: "Prueba", Email: uniqueEmail("repo.corrected"), Plan: account.PlanPaid, ClerkUserID: &clerkID,
+		Children: []account.Child{{FirstName: "Mateo", LastName: "Prueba", BirthDate: time.Now().UTC().AddDate(-2, 0, 0)}},
+	}
+	require.NoError(t, repo.Create(ctx, acc))
+
+	got, err := repo.GetByID(ctx, acc.ID)
+	require.NoError(t, err)
+	require.Nil(t, got.Children[0].CorrectedAt)
+	require.Nil(t, got.Children[0].CorrectedBy)
+	r := account.ToChildResponse(got.Children[0], "owner", account.PlanPaid, acc.ID)
+	require.Nil(t, r.CorrectedAt)
+
+	_, err = pool.Exec(ctx, `UPDATE children SET corrected_by_account_id = $2, corrected_at = now() WHERE id = $1`, acc.Children[0].ID, acc.ID)
+	require.NoError(t, err)
+	for _, read := range []func() (*account.Account, error){
+		func() (*account.Account, error) { return repo.GetByID(ctx, acc.ID) },
+		func() (*account.Account, error) { return repo.GetByClerkUserID(ctx, clerkID) },
+	} {
+		got, err := read()
+		require.NoError(t, err)
+		require.NotNil(t, got.Children[0].CorrectedAt)
+		require.Equal(t, "Ana", *got.Children[0].CorrectedBy)
+		r := account.ToChildResponse(got.Children[0], "owner", account.PlanPaid, acc.ID)
+		require.NotNil(t, r.CorrectedAt)
+		require.Equal(t, "Ana", *r.CorrectedBy)
+	}
+	require.Empty(t, account.ValidateName("Sofía"))
+	require.NotEmpty(t, account.ValidateName("Sofi4"))
+}

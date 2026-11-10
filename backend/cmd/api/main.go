@@ -39,14 +39,15 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/appointment"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
 	"github.com/Ulisesgtz/medic-track/backend/internal/cabinet"
-	"github.com/Ulisesgtz/medic-track/backend/internal/growth"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
+	"github.com/Ulisesgtz/medic-track/backend/internal/childprofile"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	_ "github.com/Ulisesgtz/medic-track/backend/internal/docs"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errordigest"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/family"
+	"github.com/Ulisesgtz/medic-track/backend/internal/growth"
 	"github.com/Ulisesgtz/medic-track/backend/internal/historyexport"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/jobreport"
@@ -113,6 +114,8 @@ func main() {
 	growthService := growth.NewService(growth.NewRepository(pool))
 	growthService.SetReferenceEnabled(os.Getenv("WHO_GROWTH_REFERENCE_ENABLED") == "true")
 	growthHandler := growth.NewHandler(growthService, responder)
+	// Correcting a child's own data (specs/064).
+	childProfileHandler := childprofile.NewHandler(childprofile.NewService(childprofile.NewRepository(pool)), responder)
 	// The history's PDF (specs/050): one read-only answer with everything the document shows; the PDF is made on the phone.
 	historyExportHandler := historyexport.NewHandler(historyexport.NewService(historyexport.NewRepository(pool), consultationRepo, vaccinationRepo), responder)
 
@@ -251,6 +254,7 @@ func main() {
 		Vaccination:     vaccinationHandler,
 		Cabinet:         cabinet.NewHandler(cabinet.NewService(cabinet.NewRepository(pool)), responder),
 		Growth:          growthHandler,
+		ChildProfile:    childProfileHandler,
 		HistoryExport:   historyExportHandler,
 		Payments:        paymentsHandler,
 		Ops:             opsHandler,

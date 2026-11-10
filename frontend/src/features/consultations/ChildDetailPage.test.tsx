@@ -306,6 +306,17 @@ describe('ChildDetailPage — phone (design A)', () => {
     expect(await within(more).findByText('Crear liga')).toBeInTheDocument()
     await userEvent.click(accessRow)
     expect(accessRow).toHaveAttribute('aria-expanded', 'true')
+    // specs/064: «Editar datos», without a trace while the child was never corrected.
+    expect(within(more).getByRole('link', { name: 'Editar datos' })).toHaveAttribute('href', '/children/child-1/editar')
+  })
+
+  it('«Editar datos» says who corrected the child’s data last (specs/064)', async () => {
+    account.children = [{ ...own, correctedAt: '2026-11-09T16:20:00Z', correctedBy: 'Luis' }]
+    stubApi()
+    renderPage()
+    const more = await screen.findByRole('navigation', { name: 'Lo demás' })
+    expect(await within(more).findByText(/Corregido el .* por Luis/)).toBeInTheDocument()
+    expect(within(more).getByRole('link', { name: /Editar datos/ })).toHaveTextContent(/Corregido el .* por Luis/)
   })
 
   it('on the free plan with a treatment running, «Nueva consulta» opens the plan notice; the search carries «Plan completo»', async () => {
@@ -332,6 +343,7 @@ describe('ChildDetailPage — phone (design A)', () => {
     expect(screen.queryByRole('link', { name: 'Nueva consulta' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Nueva consulta' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Acceso del hijo/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /Editar datos/ })).not.toBeInTheDocument()
   })
 
   it('locks somebody else’s mark for a Caregiver', async () => {

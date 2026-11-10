@@ -2484,6 +2484,88 @@
                 }
             }
         },
+        "/children/{childId}": {
+            "put": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The whole child is sent: first name, last name, birth date, height and weight (null empties them). Height and\nweight on every plan; a change of the names or the birth date needs the paid plan of the family (422\n`child_identity`, nothing saved). A birth date after measurements or vaccinations already written down is 409\n`birth_date_conflict` with their dates. With `measurement`, a growth measurement is also written on that date,\nin the same transaction. Saving without changes doesn't count as a correction. A child is never deleted.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "children"
+                ],
+                "summary": "Correct a child's data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The child",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ChildCorrectionInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_Ulisesgtz_medic-track_backend_internal_account.ChildResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "An invalid field or a malformed body",
+                        "schema": {
+                            "$ref": "#/definitions/ChildCorrectionValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ChildCorrectionErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't correct this child's data",
+                        "schema": {
+                            "$ref": "#/definitions/ChildCorrectionErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ChildCorrectionErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "The birth date is after records already written down",
+                        "schema": {
+                            "$ref": "#/definitions/ChildBirthDateConflictResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "The identity needs the paid plan, or the measurement passes the cap (growth_limit_exceeded)",
+                        "schema": {
+                            "$ref": "#/definitions/ChildIdentityPlanLimitResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/children/{childId}/appointments": {
             "get": {
                 "security": [
@@ -6776,6 +6858,126 @@
                 }
             }
         },
+        "ChildBirthDateConflictResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "birth_date_conflict"
+                },
+                "measurementCount": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "measurements": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "2022-03-03",
+                        "2022-04-14"
+                    ]
+                },
+                "message": {
+                    "type": "string"
+                },
+                "vaccinationCount": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "vaccinations": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "2022-03-10"
+                    ]
+                }
+            }
+        },
+        "ChildCorrectionErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "child_not_found"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "ChildCorrectionInput": {
+            "type": "object",
+            "properties": {
+                "birthDate": {
+                    "type": "string",
+                    "example": "2021-03-14"
+                },
+                "firstName": {
+                    "type": "string",
+                    "example": "Sofía"
+                },
+                "height": {
+                    "type": "number",
+                    "example": 88.5
+                },
+                "lastName": {
+                    "type": "string",
+                    "example": "Gómez"
+                },
+                "measurement": {
+                    "description": "Measurement, when set, also writes a growth measurement on that date with the non-empty height and weight.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/ChildCorrectionMeasurement"
+                        }
+                    ]
+                },
+                "weight": {
+                    "type": "number",
+                    "example": 12.4
+                }
+            }
+        },
+        "ChildCorrectionMeasurement": {
+            "type": "object",
+            "properties": {
+                "measuredOn": {
+                    "type": "string",
+                    "example": "2026-11-09"
+                }
+            }
+        },
+        "ChildCorrectionValidationResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "field": {
+                                "type": "string",
+                                "example": "firstName"
+                            },
+                            "message": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "error": {
+                    "type": "string",
+                    "example": "validation_error"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "ChildDeviceErrorResponse": {
             "type": "object",
             "properties": {
@@ -6935,6 +7137,22 @@
                 },
                 "message": {
                     "type": "string"
+                }
+            }
+        },
+        "ChildIdentityPlanLimitResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "freemium_consultation_limit_exceeded"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string",
+                    "example": "child_identity"
                 }
             }
         },
@@ -9930,6 +10148,136 @@
                 }
             }
         },
+        "github_com_Ulisesgtz_medic-track_backend_internal_account.ChildResponse": {
+            "type": "object",
+            "properties": {
+                "accountId": {
+                    "description": "AccountID is the account the child belongs to (the family's owner), Role the session's role over this child\n(\"owner\" for its own children), Plan the plan of that family and ReadOnly whether the session can only see and mark\n(specs/032-compartir-con-familia).",
+                    "type": "string",
+                    "example": "e5f6a7b8-0000-0000-0000-000000000000"
+                },
+                "birthDate": {
+                    "type": "string",
+                    "example": "2020-01-15"
+                },
+                "correctedAt": {
+                    "description": "CorrectedAt (RFC 3339) and CorrectedBy (first name only) are the last correction of the child's data, null if it was\nnever corrected (specs/064-editar-datos-hijo).",
+                    "type": "string",
+                    "example": "2026-11-09T16:20:00Z"
+                },
+                "correctedBy": {
+                    "type": "string",
+                    "example": "Ana"
+                },
+                "firstName": {
+                    "type": "string",
+                    "example": "Luis"
+                },
+                "height": {
+                    "type": "number",
+                    "example": 95.5
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "lastName": {
+                    "type": "string",
+                    "example": "Gómez"
+                },
+                "plan": {
+                    "type": "string",
+                    "enum": [
+                        "free",
+                        "paid"
+                    ],
+                    "example": "free"
+                },
+                "readOnly": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "owner",
+                        "tutor",
+                        "caregiver",
+                        "child"
+                    ],
+                    "example": "owner"
+                },
+                "weight": {
+                    "type": "number",
+                    "example": 14.2
+                }
+            }
+        },
+        "internal_account.ChildResponse": {
+            "type": "object",
+            "properties": {
+                "accountId": {
+                    "description": "AccountID is the account the child belongs to (the family's owner), Role the session's role over this child\n(\"owner\" for its own children), Plan the plan of that family and ReadOnly whether the session can only see and mark\n(specs/032-compartir-con-familia).",
+                    "type": "string",
+                    "example": "e5f6a7b8-0000-0000-0000-000000000000"
+                },
+                "birthDate": {
+                    "type": "string",
+                    "example": "2020-01-15"
+                },
+                "correctedAt": {
+                    "description": "CorrectedAt (RFC 3339) and CorrectedBy (first name only) are the last correction of the child's data, null if it was\nnever corrected (specs/064-editar-datos-hijo).",
+                    "type": "string",
+                    "example": "2026-11-09T16:20:00Z"
+                },
+                "correctedBy": {
+                    "type": "string",
+                    "example": "Ana"
+                },
+                "firstName": {
+                    "type": "string",
+                    "example": "Luis"
+                },
+                "height": {
+                    "type": "number",
+                    "example": 95.5
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "lastName": {
+                    "type": "string",
+                    "example": "Gómez"
+                },
+                "plan": {
+                    "type": "string",
+                    "enum": [
+                        "free",
+                        "paid"
+                    ],
+                    "example": "free"
+                },
+                "readOnly": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "owner",
+                        "tutor",
+                        "caregiver",
+                        "child"
+                    ],
+                    "example": "owner"
+                },
+                "weight": {
+                    "type": "number",
+                    "example": 14.2
+                }
+            }
+        },
         "internal_account.acceptDisclaimerRequest": {
             "type": "object",
             "properties": {
@@ -9945,7 +10293,7 @@
                 "children": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/internal_account.childResponse"
+                        "$ref": "#/definitions/internal_account.ChildResponse"
                     }
                 },
                 "consultationSharing": {
@@ -10012,62 +10360,6 @@
                 "stateCode": {
                     "type": "string",
                     "example": "MX-JAL"
-                }
-            }
-        },
-        "internal_account.childResponse": {
-            "type": "object",
-            "properties": {
-                "accountId": {
-                    "description": "AccountID is the account the child belongs to (the family's owner), Role the session's role over this child\n(\"owner\" for its own children), Plan the plan of that family and ReadOnly whether the session can only see and mark\n(specs/032-compartir-con-familia).",
-                    "type": "string",
-                    "example": "e5f6a7b8-0000-0000-0000-000000000000"
-                },
-                "birthDate": {
-                    "type": "string",
-                    "example": "2020-01-15"
-                },
-                "firstName": {
-                    "type": "string",
-                    "example": "Luis"
-                },
-                "height": {
-                    "type": "number",
-                    "example": 95.5
-                },
-                "id": {
-                    "type": "string",
-                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
-                },
-                "lastName": {
-                    "type": "string",
-                    "example": "Gómez"
-                },
-                "plan": {
-                    "type": "string",
-                    "enum": [
-                        "free",
-                        "paid"
-                    ],
-                    "example": "free"
-                },
-                "readOnly": {
-                    "type": "boolean",
-                    "example": false
-                },
-                "role": {
-                    "type": "string",
-                    "enum": [
-                        "owner",
-                        "tutor",
-                        "caregiver",
-                        "child"
-                    ],
-                    "example": "owner"
-                },
-                "weight": {
-                    "type": "number",
-                    "example": 14.2
                 }
             }
         },

@@ -126,6 +126,15 @@ export const LIMIT_MOTIVES: Record<PlanLimitReason, LimitMotive> = {
       row('Familia', 'Solo tú', 'Hasta 4 personas'),
     ],
   },
+  child_identity: {
+    title: 'Corregir el nombre y la fecha de nacimiento',
+    line: 'Intentaste corregir el nombre o la fecha de nacimiento de tu hijo. La talla y el peso se corrigen en todos los planes; el nombre y la fecha de nacimiento, en el plan completo.',
+    rows: [
+      row('Corregir nombre y fecha de nacimiento', NO, 'Sí'),
+      row('Corregir talla y peso', 'Sí', 'Sí'),
+      row('Hijos', '1', 'Hasta 10'),
+    ],
+  },
   own_consultations: {
     title: 'Tus propias consultas',
     line: 'Intentaste registrar una consulta tuya. Tus consultas, con sus tomas, avisos, historial y PDF, son del plan completo; lo de tus hijos sigue igual.',

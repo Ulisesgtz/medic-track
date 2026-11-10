@@ -494,3 +494,29 @@ func TestRoles_TheRecordByRole(t *testing.T) {
 	require.Equal(t, http.StatusCreated, do(ownerClerk, http.MethodPost, base+"/growth-measurements", body).Code, "the owner writes on any plan")
 	require.Equal(t, http.StatusNoContent, do(ownerClerk, http.MethodDelete, base+"/growth-measurements/"+m.ID, "").Code)
 }
+
+// The birth date can be corrected (specs/064-editar-datos-hijo) between the validation and the write: the repository checks the
+// date again with the child's row locked, so a measurement is never written before the birth.
+func TestRepository_TheBirthIsCheckedAgainUnderTheLock(t *testing.T) {
+	pool := testPool(t)
+	ctx := context.Background()
+	fam := newFamily(t, pool, account.PlanFree)
+	repo := growth.NewRepository(pool)
+	ok, err := repo.Create(ctx, fam.childID, fam.accountID, growth.Cleaned{MeasuredOn: fam.birth.AddDate(0, 3, 0), WeightKg: f(6)})
+	require.NoError(t, err)
+
+	// Somebody moves the birth one year later after this measurement was validated.
+	_, err = pool.Exec(ctx, `UPDATE children SET birth_date = $2 WHERE id = $1`, fam.childID, fam.birth.AddDate(1, 0, 0))
+	require.NoError(t, err)
+	var verrs growth.ValidationErrors
+	_, err = repo.Create(ctx, fam.childID, fam.accountID, growth.Cleaned{MeasuredOn: fam.birth.AddDate(0, 6, 0), WeightKg: f(7)})
+	require.ErrorAs(t, err, &verrs)
+	require.Equal(t, "measuredOn", verrs[0].Field)
+	_, err = repo.Update(ctx, fam.childID, ok.ID, fam.accountID, growth.Cleaned{MeasuredOn: fam.birth.AddDate(0, 6, 0), WeightKg: f(7)})
+	require.ErrorAs(t, err, &verrs)
+	_, err = repo.Update(ctx, uuid.New(), ok.ID, fam.accountID, growth.Cleaned{MeasuredOn: fam.birth, WeightKg: f(7)})
+	require.ErrorIs(t, err, growth.ErrNotFound, "an unknown child")
+	fixed, err := repo.Update(ctx, fam.childID, ok.ID, fam.accountID, growth.Cleaned{MeasuredOn: fam.birth.AddDate(1, 1, 0), WeightKg: f(9)})
+	require.NoError(t, err)
+	require.Equal(t, 9.0, *fixed.WeightKg)
+}

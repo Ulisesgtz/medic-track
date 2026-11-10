@@ -285,3 +285,28 @@ func TestRepository_FailuresOfTheDatabaseAreReturnedNotSwallowed(t *testing.T) {
 }
 
 func strp(s string) *string { return &s }
+
+// The birth date can be corrected (specs/064-editar-datos-hijo) between the validation and the write: Create and Update check the
+// date again with the child's row locked, so a dose is never recorded before the birth.
+func TestRepository_TheBirthIsCheckedAgainUnderTheLock(t *testing.T) {
+	pool := testPool(t)
+	ctx := context.Background()
+	fam := newFamily(t, pool)
+	repo := vaccination.NewRepository(pool)
+	code := "bcg"
+	ok, err := repo.Create(ctx, fam.childID, fam.accountID, vaccination.Cleaned{VaccineCode: &code, AppliedOn: fam.birth.AddDate(0, 1, 0)}, false)
+	require.NoError(t, err)
+
+	_, err = pool.Exec(ctx, `UPDATE children SET birth_date = $2 WHERE id = $1`, fam.childID, fam.birth.AddDate(1, 0, 0))
+	require.NoError(t, err)
+	var verrs vaccination.ValidationErrors
+	_, err = repo.Create(ctx, fam.childID, fam.accountID, vaccination.Cleaned{VaccineCode: &code, AppliedOn: fam.birth.AddDate(0, 2, 0)}, true)
+	require.ErrorAs(t, err, &verrs)
+	require.Equal(t, "appliedOn", verrs[0].Field)
+	_, err = repo.Update(ctx, fam.childID, ok.ID, fam.accountID, vaccination.Cleaned{VaccineCode: &code, AppliedOn: fam.birth.AddDate(0, 2, 0)}, true)
+	require.ErrorAs(t, err, &verrs)
+	_, err = repo.Update(ctx, uuid.New(), ok.ID, fam.accountID, vaccination.Cleaned{VaccineCode: &code, AppliedOn: fam.birth}, true)
+	require.ErrorIs(t, err, vaccination.ErrNotFound, "an unknown child")
+	_, err = repo.Update(ctx, fam.childID, ok.ID, fam.accountID, vaccination.Cleaned{VaccineCode: &code, AppliedOn: fam.birth.AddDate(1, 1, 0)}, true)
+	require.NoError(t, err)
+}
