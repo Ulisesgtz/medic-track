@@ -65,7 +65,7 @@ for (const design of designs) {
       await page.goto(`/children/${owner.childId}/crecimiento`)
       await expect(page.getByText('1 medida', { exact: true })).toBeVisible()
       const locked = page.getByRole('region', { name: 'Gráfica de crecimiento' })
-      await expect(locked.getByText('Plan completo')).toBeVisible()
+      await expect(locked.getByText('Plan completo', { exact: true })).toBeVisible()
       await locked.getByRole('button', { name: 'Ver la gráfica' }).click()
       await expect(page.getByRole('dialog').getByText('Gráfica de crecimiento').first()).toBeVisible()
       const chart = await page.context().request.get(`${API}/children/${owner.childId}/growth-chart`, { headers: { Authorization: `Bearer ${owner.token}` } })
