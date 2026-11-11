@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { formatAgeLong } from '../../shared/age'
+import { useDiscardGuard } from '../../shared/ui/useDiscardGuard'
 import { useUnsavedWork } from '../../shared/appVersion/unsavedWork'
 import { subjectAccessOf, subjectKey, type Subject } from '../../shared/subject'
 import { AppShell } from '../home/AppShell'
@@ -29,6 +30,8 @@ export function NewConsultationPage({ own = false }: { own?: boolean }) {
     dirtyRef.current = value
     setDirty(value)
   }, [])
+  // specs/066: the app's own question instead of the browser's.
+  const guard = useDiscardGuard({ isDirty: () => dirtyRef.current, title: '¿Descartar la consulta?', body: 'Se perderá lo que capturaste.' })
 
   const accountQuery = useCurrentAccount()
   const account = accountQuery.data
@@ -50,14 +53,13 @@ export function NewConsultationPage({ own = false }: { own?: boolean }) {
   return (
     <AppShell activeChildId={own ? undefined : childId}>
       <main className={isDesktop ? 'min-w-0 bg-canvas px-6 py-8 lg:px-12 lg:py-11' : 'mx-auto min-h-screen w-full max-w-[430px] bg-canvas pb-10'}>
+        {guard.dialog}
         <ConsultationForm
           childId={subject}
           variant={isDesktop ? 'desktop' : 'phone'}
           childLabel={childLabel}
           cancelTo={home}
-          confirmLeave={() =>
-            !dirtyRef.current || window.confirm('¿Descartar la consulta? Se perderá lo que capturaste.')
-          }
+          onLeaveClick={(event) => guard.guardLink(event, home)}
           onDirtyChange={handleDirtyChange}
           // specs/030: only the free plan lacks it; until the account loads the server decides.
           recordOnlyAvailable={!access.isFree}

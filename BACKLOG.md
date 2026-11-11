@@ -350,6 +350,63 @@ Nada urge con los usuarios de hoy; revisarlo antes de abrir al público:
 - **Correo**: Resend gratis manda 100 al día (el tope compartido de `internal/mailer` es 95 para invitaciones); con más
   familias hay que pasar al plan de pago de Resend y subir los topes de `internal/mailer`.
 
+## Ideas de la revisión de la app (anotado 2026-11-10)
+
+Salieron de una revisión de lectura del backlog, la constitución, las rutas del API, el service worker y `DEPLOY.md`
+(no se corrió la app). **Nada está decidido ni tiene spec**: son candidatas para priorizar. Todas respetan el
+Principio I (la app guarda lo que el padre escribe; nunca evalúa ni sugiere).
+
+### Antes del primer cobro real (riesgo, no funciones)
+
+- **Respaldos de la base** — `DEPLOY.md` dice que no hay respaldos y los lista como falta para producción. Con datos de
+  salud y fotos dentro de Postgres: un `pg_dump` diario cifrado hacia R2 o S3, con retención y **una restauración
+  probada**.
+- **Eliminar la cuenta y descargar todos mis datos** — no hay ruta para borrar una cuenta (ni un hijo). La LFPDPPP da
+  derecho de cancelación (ARCO) y son datos de salud de menores. Decidir: qué pasa con la familia y los invitados, con
+  una suscripción vigente, con el usuario de Clerk y con los teléfonos del hijo; plazo de gracia antes del borrado real;
+  y un «llévate todo» (ZIP o el PDF completo) antes de borrar, que además sostiene el Principio IV (los datos no se
+  secuestran).
+- **Monitoreo externo y errores del frontend** — `error_logs` solo ve lo que falla en el servidor; una caída del API o
+  una pantalla en blanco en un iPhone se notan hasta el digest del lunes. (a) Ruta `/healthz` propia (hoy el healthcheck
+  es `GET /catalog/countries`) y un ping externo cada minuto con aviso; (b) `POST /client-errors` que registre los
+  errores de JavaScript en `error_logs` (mensaje fijo, versión del build, ruta sin ids; sin terceros, con límite de
+  peticiones y sin datos de salud).
+
+### Producto
+
+- **Ficha de datos permanentes del hijo** — alergias, tipo de sangre, padecimientos y pediatra de cabecera, escritos
+  tal cual por el padre; visibles en el detalle del hijo y en la portada del PDF. Hoy el hijo solo tiene nombre, fecha
+  de nacimiento, talla y peso. (También aparece como «ficha de emergencia» en `docs/analisis-famitrack.md`.)
+- **Medicamento «por razón necesaria» (PRN)** — hoy todo medicamento exige frecuencia, duración y primera toma;
+  «paracetamol solo si hay fiebre» no cabe. Un medicamento sin horario con «Registrar toma ahora» y «Última: hace 5 h».
+  La app solo muestra la hora de la última toma: **nunca** dice «ya puedes dar otra» ni calcula intervalos. Toca el
+  modelo de tomas (hoy materializadas al crear), los recordatorios (no avisa) y «tratamiento activo».
+- **Registro de temperatura y síntomas durante la enfermedad** — hoy los síntomas se marcan una vez, al crear la
+  consulta. Una bitácora con hora dentro del tratamiento («38.5 °C a las 03:00», «vomitó»), en lista y gráfica de lo
+  anotado, **sin umbrales de fiebre ni colores**. Entraría también en el PDF.
+- **Ver la app sin conexión** — el service worker solo maneja avisos push, sin precache: la app instalada no abre sin
+  señal. Etapa 1, solo lectura: el cascarón de la app y los últimos datos guardados en el teléfono (decidir qué se
+  guarda en el dispositivo y que se borre al cerrar sesión, Principio II). Etapa 2: marcar tomas sin conexión y
+  sincronizar (la primera marca gana, como hoy). *La spec 066 ya muestra la marca al instante y la revierte si no hay señal; la etapa 2 sería guardarla y mandarla después.*
+- **Lo que la spec 066 dejó fuera** (anotado 2026-11-11): preguntar antes de descartar también con el botón «atrás» del sistema, con un enlace de la barra lateral web o al cerrar la pestaña (hoy no pregunta; necesitaría el bloqueo de navegación del router y `beforeunload`); hacer inmediatas las demás acciones (pausar, finalizar, «Tus avisos», marcar una cita), y que «Agregar hijo» pregunte al cerrar con datos.
+- **Directorio de doctores** — el doctor es texto libre en cada consulta. Guardar una vez nombre, teléfono,
+  especialidad y dirección; autocompletar en consultas y citas y un botón «Llamar». Semilla del canal B2B2C.
+- **Documentos y estudios por hijo** — análisis, radiografías, póliza: se guardan, no se leen. Depende de mover las
+  fotos a object storage (sección Backend).
+- **Agregar la cita al calendario del teléfono** — un archivo `.ics` generado en el dispositivo, sin terceros;
+  complementa los avisos push.
+- **«Repetir tratamiento» desde una consulta anterior** — precarga «Nueva consulta» con los medicamentos de una
+  consulta previa; el padre confirma todo, la app no sugiere nada.
+- **Primer uso guiado** — tras el registro el inicio queda vacío. Tres pasos (foto de una receta, activar
+  recordatorios, instalar en la pantalla de inicio; en iPhone sin instalar no hay avisos). Necesita diseño.
+
+### Operación y calidad
+
+- **Métricas de producto propias** — conteos agregados (cuentas que crean una consulta, activan recordatorios, marcan
+  tomas, pasan a pago) en un `/ops/metrics` con la clave de operación; sin SDK de analítica ni datos por cuenta.
+- **Accesibilidad automática** — una pasada de `axe` dentro de los E2E existentes (390 y 1280 px) y una prueba manual
+  con VoiceOver en iPhone.
+
 ## Producto / Legal
 
 - Registro de marca ante el IMPI (clases 9+42) — ver memoria `peditrack-registro-marca-impi.md`.

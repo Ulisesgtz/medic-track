@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ConfirmDialog } from '../family/ConfirmDialog'
+import { ConfirmDialog } from '../../shared/ui/ConfirmDialog'
 import { SubscriptionApiError } from './api'
 import { useCancelSubscription, useStartSubscription } from './hooks'
 import { ACTION_LABEL, CANCEL_ERROR, cancelDialog, subscribeErrorText, type PlanAction, type PlanStateCopy } from './subscriptionText'

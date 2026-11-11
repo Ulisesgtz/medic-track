@@ -9,6 +9,7 @@ import { useMarkDone, usePersonalRoutines } from '../supplements/hooks'
 import { MARKED_SHOWN_MS } from './ChildDayCard'
 import { personalDay, type PersonalNext } from './daySummary'
 import { HOME, activitiesDone, doneLine, dosesToday, nextLine } from './homeText'
+import type { Routine } from '../supplements/types'
 import type { Account } from './types'
 
 type Variant = 'phone' | 'desktop'
@@ -19,13 +20,12 @@ const outline =
 const doneChip = 'inline-flex min-h-11 shrink-0 items-center rounded-[14px] bg-confirmed-soft text-[15px] font-extrabold text-confirmed-strong'
 
 /** «✓ Realizado» of the activity whose dose comes next (specs/035: the server marks the earliest unmarked of the day). */
-function DoneButton({ target, onDone, desktop }: { target: PersonalNext; onDone: () => void; desktop: boolean }) {
+function DoneButton({ target, doses, onDone, desktop }: { target: PersonalNext; doses?: Routine['doses']; onDone: () => void; desktop: boolean }) {
   const day = useLocalDay()
-  const mark = useMarkDone(target.routineId, day)
+  const mark = useMarkDone(target.routineId, day, { name: target.name, doses })
   return (
     <button
       type="button"
-      disabled={mark.isPending}
       onClick={() => mark.mutate(undefined, { onSuccess: onDone })}
       aria-label={`Realizado: ${target.name}`}
       className={`${outline} ${desktop ? 'px-4' : 'self-end px-[18px]'}`}
@@ -164,7 +164,7 @@ export function TuDia({ account, variant }: { account: Account; variant: Variant
   const action = held ? (
     <span className={`${doneChip} ${desktop ? 'px-3.5' : 'self-end px-4'}`}>{desktop ? `✓ ${held.time}` : doneLine(held.name, held.time)}</span>
   ) : (
-    markable && <DoneButton key={markable.routineId} target={markable} desktop={desktop} onDone={() => setHeld({ name: markable.name, time: formatTime(new Date()) })} />
+    markable && <DoneButton key={markable.routineId} target={markable} doses={activities.data?.routines.find((r) => r.id === markable.routineId)?.doses} desktop={desktop} onDone={() => setHeld({ name: markable.name, time: formatTime(new Date()) })} />
   )
 
   const activitiesBlock = mine.activities && (

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -109,42 +109,46 @@ describe('NewConsultationPage', () => {
 
   it('leaves without asking when nothing was captured', async () => {
     const user = userEvent.setup()
-    const confirm = vi.spyOn(window, 'confirm')
     renderPage()
 
     await user.click(screen.getByRole('link', { name: '← Cancelar' }))
 
-    expect(confirm).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).toBeNull()
     expect(screen.getByText('DETALLE DEL HIJO')).toBeInTheDocument()
   })
 
   it('asks before discarding what was typed, and stays when the parent says no', async () => {
     const user = userEvent.setup()
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     renderPage()
 
     await user.type(screen.getByLabelText('Doctor'), 'Dra. López')
-    await user.click(screen.getByRole('link', { name: '← Cancelar' }))
+    const cancel = screen.getByRole('link', { name: '← Cancelar' })
+    await user.click(cancel)
 
-    expect(confirm).toHaveBeenCalledWith('¿Descartar la consulta? Se perderá lo que capturaste.')
+    // specs/066: the app's own dialog, focus on the choice that keeps the work; Escape keeps it too.
+    const dialog = await screen.findByRole('dialog', { name: '¿Descartar la consulta?' })
+    expect(within(dialog).getByText('Se perderá lo que capturaste.')).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Seguir editando' })).toHaveFocus()
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(cancel).toHaveFocus()
     expect(screen.queryByText('DETALLE DEL HIJO')).not.toBeInTheDocument()
     expect(screen.getByLabelText('Doctor')).toHaveValue('Dra. López')
   })
 
   it('leaves when the parent accepts to discard what was typed', async () => {
     const user = userEvent.setup()
-    vi.spyOn(window, 'confirm').mockReturnValue(true)
     renderPage()
 
     await user.type(screen.getByLabelText('Doctor'), 'Dra. López')
     await user.click(screen.getByRole('link', { name: '← Cancelar' }))
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Descartar' }))
 
     expect(screen.getByText('DETALLE DEL HIJO')).toBeInTheDocument()
   })
 
   it('saving refreshes the child\'s lists and opens the new consultation without asking to discard', async () => {
     const user = userEvent.setup()
-    const confirm = vi.spyOn(window, 'confirm')
     const { invalidate } = renderPage()
 
     await fillValid(user)
@@ -155,7 +159,7 @@ describe('NewConsultationPage', () => {
       expect(invalidate).toHaveBeenCalledWith({ queryKey: ['consultations', 'k1'] })
       expect(invalidate).toHaveBeenCalledWith({ queryKey: ['overview'] })
     })
-    expect(confirm).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('renders nothing when the route has no child id', () => {

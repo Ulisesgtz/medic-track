@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { GrowthFormPage } from './GrowthFormPage'
 import { GrowthApiError, fetchGrowth } from './api'
@@ -104,9 +104,9 @@ describe('GrowthFormPage', () => {
     const user = userEvent.setup()
     await user.clear(weight)
     await user.type(weight, '10.5')
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     await user.click(screen.getByRole('button', { name: 'Cancelar' }))
-    expect(confirm).toHaveBeenCalled()
+    const dialog = await screen.findByRole('dialog', { name: '¿Salir sin guardarla?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Seguir editando' }))
     expect(screen.queryByText('CRECIMIENTO')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Guardar medida' }))
     expect(await screen.findByText('CRECIMIENTO')).toBeInTheDocument()

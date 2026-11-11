@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -119,15 +119,21 @@ for (const web of [false, true]) {
     it('leaving with changes asks first', async () => {
       stubWeb(web)
       api(account({ children: [mateo] }))
-      const confirm = vi.fn().mockReturnValue(false)
-      vi.stubGlobal('confirm', confirm)
       show()
       const user = userEvent.setup()
       await user.type(await screen.findByLabelText(/Peso \(kg\)/), '12')
       await user.click(screen.getByRole('link', { name: '← Mateo' }))
-      if (web) await user.click(screen.getByRole('button', { name: 'Cancelar' }))
-      expect(confirm).toHaveBeenCalled()
+      // specs/066: the app's own dialog; «Seguir editando» keeps the form.
+      let dialog = await screen.findByRole('dialog', { name: '¿Salir sin guardarlos?' })
+      expect(within(dialog).getByText('Tienes cambios sin guardar.')).toBeInTheDocument()
+      await user.click(within(dialog).getByRole('button', { name: 'Seguir editando' }))
       expect(screen.queryByText('HIJO')).toBeNull()
+      if (web) {
+        await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+        dialog = await screen.findByRole('dialog', { name: '¿Salir sin guardarlos?' })
+        await user.click(within(dialog).getByRole('button', { name: 'Descartar' }))
+        expect(await screen.findByText('HIJO')).toBeInTheDocument()
+      }
     })
 
     it('a Caregiver and a Tutor of a family that stopped paying see no form', async () => {

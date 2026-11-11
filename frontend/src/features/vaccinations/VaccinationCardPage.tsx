@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
-import { ConfirmDialog } from '../family/ConfirmDialog'
+import { ConfirmDialog } from '../../shared/ui/ConfirmDialog'
 import { useChildAccess } from '../family/useChildAccess'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { ExportEntry } from '../pdfExport/ExportEntry'

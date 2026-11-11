@@ -15,7 +15,6 @@ export const CHILD = {
   mark: 'Marcar',
   activities: 'Actividades',
   done: '✓ Realizado',
-  markFailed: 'No se pudo marcar. Inténtalo de nuevo.',
   retry: 'Reintentar',
   supplement: 'Suplemento',
   treatment: 'Tratamiento activo',

@@ -25,7 +25,7 @@ describe('useDoseToggle', () => {
       result.current.mutate(true)
     })
 
-    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ['overview'] }))
     expect(vi.mocked(fetch)).toHaveBeenCalledWith(
       expect.stringContaining('/consultations/c1/doses/d1'),
       expect.objectContaining({ method: 'PATCH', body: JSON.stringify({ taken: true }) }),

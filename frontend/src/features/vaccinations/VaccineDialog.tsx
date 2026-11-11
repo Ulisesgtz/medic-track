@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type FormEvent, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
+import { useConfirmGuard } from '../../shared/ui/useDiscardGuard'
 import { useUnsavedWork } from '../../shared/appVersion/unsavedWork'
 import { useVaccines } from '../../shared/catalog/useCatalog'
 import { FormField } from '../../shared/ui/FormField'
@@ -55,16 +56,22 @@ export function VaccineDialog({ childId, birthDate, vaccination, initial, onClos
   useEffect(() => {
     dirtyRef.current = dirty
   })
+  // specs/066: the app's own question, over this dialog; while it is open this dialog answers nothing (no Escape, Tab or backdrop).
+  const guard = useConfirmGuard({ isDirty: () => dirtyRef.current, title: TEXT.dialog.leaveTitle, body: TEXT.dialog.leave })
+  const guardRef = useRef(guard)
+  useEffect(() => {
+    guardRef.current = guard
+  })
   const close = useCallback(() => {
-    if (busyRef.current) return
-    if (dirtyRef.current && !window.confirm(TEXT.dialog.leave)) return
-    onClose()
+    if (busyRef.current || guardRef.current.open) return
+    guardRef.current.guardAction(onClose)
   }, [onClose])
 
   useEffect(() => {
     const restoreTo = opener.current
     firstRef.current?.focus()
     function onKeyDown(event: KeyboardEvent) {
+      if (guardRef.current.open) return
       if (event.key === 'Escape') {
         close()
         return
@@ -120,7 +127,9 @@ export function VaccineDialog({ childId, birthDate, vaccination, initial, onClos
   const title = vaccination ? TEXT.dialog.editTitle : TEXT.dialog.addTitle
   useBodyScrollLock()
 
-  return createPortal(
+  return (
+    <>
+      {createPortal(
     <div className={`fixed inset-0 z-50 flex bg-ink/70 ${desktop ? 'items-center justify-center p-6' : 'items-end p-4'}`} onClick={close}>
       <div
         ref={dialogRef}
@@ -256,5 +265,8 @@ export function VaccineDialog({ childId, birthDate, vaccination, initial, onClos
       </div>
     </div>,
     document.body,
+      )}
+      {guard.dialog}
+    </>
   )
 }

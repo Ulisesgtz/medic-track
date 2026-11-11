@@ -3,6 +3,7 @@ import { formatTime } from '../../shared/date'
 import { DETAIL, takenLine } from './consultationDetailText'
 import { CANCELED_LABEL, UNREGISTERED_LABEL, canUnmarkDose, statusOf } from './doseStatus'
 import type { Dose } from './types'
+import { SavingHint } from '../../shared/marks/MarkNotice'
 import { useDoseToggle } from './useDoseToggle'
 
 const outline =
@@ -30,6 +31,8 @@ interface DoseRowProps {
   /** The chosen day comes after today: an unmarked dose there says «programada» and can still be marked (specs/056 FR-018). */
   future: boolean
   variant: 'phone' | 'desktop'
+  /** The medication's name, for the notice of a mark that didn't get saved (specs/066). */
+  medicationName?: string
 }
 
 /**
@@ -39,8 +42,8 @@ interface DoseRowProps {
  * «Marcar», or «✓ 07:05 · por Ana» once marked; a mark the session can't take back carries a padlock and stays disabled. The
  * toggle keeps its fixed name («Toma de 08:00») with the state in `aria-pressed` and the rest in its description.
  */
-export function DoseRow({ consultationId, dose, canManage, group, future, variant }: DoseRowProps) {
-  const mutation = useDoseToggle(consultationId, dose.id)
+export function DoseRow({ consultationId, dose, canManage, group, future, variant, medicationName }: DoseRowProps) {
+  const mutation = useDoseToggle(consultationId, dose.id, { name: medicationName, scheduledAt: dose.scheduledAt })
   const time = formatTime(dose.scheduledAt)
   const status = statusOf(dose)
   const canceled = status === 'canceled'
@@ -71,12 +74,13 @@ export function DoseRow({ consultationId, dose, canManage, group, future, varian
         <span className="shrink-0 rounded-full border-[1.5px] border-dashed border-calendar-muted px-2.5 py-1 text-[13px] font-extrabold text-body">{DETAIL.unregistered}</span>
       )}
       {!dose.taken && !unregistered && status !== 'due' && future && <span className={quiet}>{DETAIL.scheduled}</span>}
+      <SavingHint doseId={dose.id} className="shrink-0" />
       <button
         type="button"
         aria-pressed={dose.taken}
         aria-label={`Toma de ${time}`}
         aria-describedby={state ? stateId : undefined}
-        disabled={mutation.isPending || locked}
+        disabled={locked}
         title={locked ? 'Solo quien la marcó o un Tutor puede quitar esta marca' : undefined}
         onClick={() => mutation.mutate(!dose.taken)}
         className={dose.taken ? `${mint} ${locked ? 'cursor-default' : 'cursor-pointer'}` : `${outline} ${desktop ? 'min-w-24 px-[18px]' : 'min-w-[92px] px-4'}`}
@@ -112,11 +116,6 @@ export function DoseRow({ consultationId, dose, canManage, group, future, varian
       {state && (
         <span id={stateId} className="sr-only">
           {state}
-        </span>
-      )}
-      {mutation.isError && (
-        <span role="alert" className="w-full pb-1 text-[14px] text-body">
-          No se pudo marcar. Inténtalo de nuevo.
         </span>
       )}
     </li>

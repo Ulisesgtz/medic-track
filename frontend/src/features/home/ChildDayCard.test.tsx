@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act, render, screen, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useAuth } from '@clerk/react'
 import { ChildDayCard, MARKED_SHOWN_MS } from './ChildDayCard'
+import { markNoticesSnapshot, resetMarkNotices } from '../../shared/marks/markNotices'
+import { resetPendingMarks } from '../../shared/marks/pendingMarks'
 import type { Child } from './types'
 
 vi.mock('@clerk/react', () => ({ useAuth: vi.fn() }))
@@ -29,6 +31,16 @@ const activity = (doses: { status: string; taken: boolean }[]) => ({
 
 let calls: { url: string; method: string; body: unknown }[]
 
+/** The server keeps the mark: what the screens read again after a PATCH is what was saved (specs/066). */
+function patched(doses: unknown[], url: string, init?: RequestInit) {
+  const saved = (doses as { id: string; taken: boolean; status: string; takenBy?: unknown }[]).find((d) => url.endsWith(`/doses/${d.id}`))
+  if (!saved) return { id: 'x', taken: true }
+  saved.taken = JSON.parse(String(init?.body)).taken
+  saved.status = saved.taken ? 'taken' : 'due'
+  saved.takenBy = saved.taken ? { name: 'Ana', at: new Date().toISOString(), mine: true } : null
+  return saved
+}
+
 function stub({ doses = [] as unknown[], activities = [] as unknown[], fail = false } = {}) {
   calls = []
   vi.stubGlobal(
@@ -41,7 +53,7 @@ function stub({ doses = [] as unknown[], activities = [] as unknown[], fail = fa
         ? { childId: 'k1', doses, activeTreatment: null }
         : url.includes('/routines') && init?.method !== 'PATCH'
           ? { routines: activities, activeCount: activities.length, limit: 10, paidPlan: true }
-          : { id: 'x', taken: true }
+          : patched(doses, url, init)
       return { ok: true, json: async () => body } as Response
     }),
   )
@@ -64,6 +76,8 @@ beforeEach(() => {
   vi.mocked(useAuth).mockReturnValue({ isLoaded: true, isSignedIn: true, getToken: async () => 't' } as unknown as ReturnType<typeof useAuth>)
 })
 afterEach(() => {
+  resetPendingMarks()
+  resetMarkNotices()
   vi.unstubAllGlobals()
   vi.useRealTimers()
 })
@@ -138,8 +152,8 @@ describe('ChildDayCard', () => {
     expect(calls.find((c) => c.method === 'PATCH')!.url).toMatch(/\/routines\/r1\/doses\/d\d+$/)
   })
 
-  it('after a minute the footer moves on from «✓ HH:MM»', async () => {
-    stub({ doses: [dose('due', '12:00')] })
+  it('after a minute the footer moves on from «✓ HH:MM» to the next dose', async () => {
+    stub({ doses: [dose('due', '12:00'), dose('pending', '16:00')] })
     renderCard()
     const button = await screen.findByRole('button', { name: /^Marcar/ })
     vi.useFakeTimers({ shouldAdvanceTime: true })
@@ -156,8 +170,9 @@ describe('ChildDayCard', () => {
     const button = await screen.findByRole('button', { name: 'Marcar Amoxicilina 12:00 de Mateo' })
     vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({ error: 'x', message: 'boom' }) } as Response)
     await user.click(button)
-    expect(await screen.findByRole('alert')).toHaveTextContent('No se pudo marcar. Inténtalo de nuevo.')
-    expect(button).toHaveAttribute('aria-pressed', 'false')
+    // specs/066: the footer goes back to «Marcar» and the one notice of the screen says it, in neutral words.
+    await waitFor(() => expect(markNoticesSnapshot()).toEqual([{ doseId: expect.any(String), kind: 'not_saved', name: 'Amoxicilina', time: '12:00' }]))
+    expect(await screen.findByRole('button', { name: 'Marcar Amoxicilina 12:00 de Mateo', pressed: false })).toHaveTextContent('Marcar')
   })
 
   it('a failed day says so in the card and can be asked again', async () => {

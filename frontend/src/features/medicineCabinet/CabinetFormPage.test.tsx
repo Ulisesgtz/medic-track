@@ -174,14 +174,14 @@ describe('CabinetFormPage', () => {
     renderAt(NEW, <CabinetFormPage />, NEW)
     const user = userEvent.setup()
     await user.type(await screen.findByLabelText('Nombre'), 'Zinc')
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     await user.click(screen.getByRole('link', { name: '← Botiquín' }))
-    expect(confirm).toHaveBeenCalled()
+    let dialog = await screen.findByRole('dialog', { name: '¿Salir de todos modos?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Seguir editando' }))
     expect(screen.getByLabelText('Nombre')).toHaveValue('Zinc')
-    confirm.mockReturnValue(true)
     await user.click(screen.getByRole('link', { name: '← Botiquín' }))
+    dialog = await screen.findByRole('dialog', { name: '¿Salir de todos modos?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Descartar' }))
     expect(await screen.findByText('LISTA')).toBeInTheDocument()
-    confirm.mockRestore()
   })
 
   it('edits a saved medicine: its values, its photo kept or removed', async () => {

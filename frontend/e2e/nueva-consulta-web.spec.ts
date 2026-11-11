@@ -194,13 +194,14 @@ test.describe('Nueva consulta — diseño web (mock 14)', () => {
 
     await page.goBack()
     await page.getByLabel('Doctor').fill('Dr. Pérez')
-    const messages: string[] = []
-    page.once('dialog', async (dialog) => {
-      messages.push(dialog.message())
-      await dialog.dismiss()
+    // specs/066: the app's own dialog, never the browser's.
+    page.on('dialog', (dialog) => {
+      throw new Error(`browser dialog: ${dialog.message()}`)
     })
     await page.getByRole('link', { name: '← Cancelar' }).click()
-    expect(messages).toEqual(['¿Descartar la consulta? Se perderá lo que capturaste.'])
+    const question = page.getByRole('dialog', { name: '¿Descartar la consulta?' })
+    await expect(question).toContainText('Se perderá lo que capturaste.')
+    await question.getByRole('button', { name: 'Seguir editando' }).click()
     await expect(page.getByLabel('Doctor')).toHaveValue('Dr. Pérez')
   })
 

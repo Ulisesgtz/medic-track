@@ -3,6 +3,7 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@clerk/react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatAgeLong } from '../../shared/age'
+import { useDiscardGuard } from '../../shared/ui/useDiscardGuard'
 import { useUnsavedWork } from '../../shared/appVersion/unsavedWork'
 import { Notice } from '../../shared/ui/Notice'
 import { AppShell } from '../home/AppShell'
@@ -33,6 +34,8 @@ export function EditConsultationPage() {
     dirtyRef.current = value
     setDirty(value)
   }, [])
+  // specs/066: the app's own question instead of the browser's.
+  const guard = useDiscardGuard({ isDirty: () => dirtyRef.current, title: EDIT_TEXT.leaveTitle, body: EDIT_TEXT.leaveBody })
   // A conflict reloads the saved consultation into a fresh form (its key) and says why.
   const [notice, setNotice] = useState<string | null>(null)
   const [round, setRound] = useState(0)
@@ -84,13 +87,14 @@ export function EditConsultationPage() {
             <Notice tone="info">{notice}</Notice>
           </div>
         )}
+        {guard.dialog}
         <EditRound
           key={`${detail.id}:${round}`}
           detail={detail}
           variant={isDesktop ? 'desktop' : 'phone'}
           childLabel={childLabel}
           cancelTo={detailPath}
-          confirmLeave={() => !dirtyRef.current || window.confirm(EDIT_TEXT.leave)}
+          onLeaveClick={(event) => guard.guardLink(event, detailPath)}
           onDirtyChange={handleDirtyChange}
           onConflict={handleConflict}
           onSuccess={() => {

@@ -125,15 +125,16 @@ for (const design of designs) {
       await page.getByLabel('Doctor').fill('Dra. Laura Cázares')
       await page.evaluate(() => ((window as unknown as { marker: number }).marker = 1))
 
-      const dialogs: string[] = []
-      page.once('dialog', async (dialog) => {
-        dialogs.push(dialog.message())
-        await dialog.dismiss()
+      // specs/066: the app's own dialog, never the browser's.
+      page.on('dialog', (dialog) => {
+        throw new Error(`browser dialog: ${dialog.message()}`)
       })
       await page.getByRole('button', { name: 'Actualizar' }).click()
 
-      await expect.poll(() => dialogs.length).toBe(1)
-      expect(dialogs[0]).toContain('Se perderá lo que capturaste')
+      const question = page.getByRole('dialog', { name: '¿Actualizar ahora?' })
+      await expect(question).toContainText('Se perderá lo que capturaste.')
+      await question.getByRole('button', { name: 'Seguir editando' }).click()
+      await expect(question).toHaveCount(0)
       await expect(page.getByLabel('Doctor')).toHaveValue('Dra. Laura Cázares')
       expect(await page.evaluate(() => (window as unknown as { marker: number }).marker)).toBe(1)
     })

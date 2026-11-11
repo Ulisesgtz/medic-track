@@ -1,12 +1,14 @@
 import { useEffect, useId, useRef, type RefObject } from 'react'
 import { createPortal } from 'react-dom'
-import { useIsDesktop } from '../../shared/ui/useIsDesktop'
-import { useBodyScrollLock } from '../../shared/ui/useBodyScrollLock'
+import { useIsDesktop } from './useIsDesktop'
+import { useBodyScrollLock } from './useBodyScrollLock'
 
 interface ConfirmDialogProps {
   title: string
   /** «Dejas de ver / No te llevas / Se conserva»: what happens, in neutral words. */
-  rows: { k: string; v: string }[]
+  rows?: { k: string; v: string }[]
+  /** One plain sentence instead of rows (specs/066: «Se perderá lo que capturaste.»). */
+  body?: string
   confirmLabel: string
   /** The safe button's words (it keeps the first focus); «Cancelar» unless the confirmation itself says that word (specs/033: «Cancelar cita» → «Volver»). */
   cancelLabel?: string
@@ -23,13 +25,14 @@ interface ConfirmDialogProps {
 }
 
 /**
- * The confirmation of leaving or removing someone from the family (mock «Familia», D1/D2): neutral words — what stops, what is
+ * The app's confirmation dialog — born as the one of leaving or removing someone from the family (mock «Familia», D1/D2), shared by
+ * every screen since specs/066 —: neutral words — what stops, what is
  * not taken, what stays; no advice (Principio I). On the phone a sheet anchored to the bottom with the buttons stacked (the
  * confirmation above, «Cancelar» below); on the web centered at 560 px with the actions at the right. A real dialog like the
  * others: rendered into <body>, Escape and the backdrop cancel (not while it works), focus starts on «Cancelar» (the safe
  * choice) and Tab stays inside.
  */
-export function ConfirmDialog({ title, rows, confirmLabel, cancelLabel = 'Cancelar', busyLabel, tone, busy, error, onConfirm, onCancel, opener }: ConfirmDialogProps) {
+export function ConfirmDialog({ title, rows = [], body, confirmLabel, cancelLabel = 'Cancelar', busyLabel, tone, busy, error, onConfirm, onCancel, opener }: ConfirmDialogProps) {
   const id = useId()
   const desktop = useIsDesktop()
   const dialogRef = useRef<HTMLDivElement>(null)
@@ -101,6 +104,7 @@ export function ConfirmDialog({ title, rows, confirmLabel, cancelLabel = 'Cancel
           </button>
         </div>
         <div id={`${id}-body`} className="flex flex-col gap-4">
+          {body && <p className={`leading-normal text-body ${desktop ? 'text-base' : 'text-[15px]'}`}>{body}</p>}
           {rows.map((r) => (
             <div key={r.k} className="flex flex-col gap-0.5">
               <span className="text-[13px] font-bold text-ink">{r.k}</span>

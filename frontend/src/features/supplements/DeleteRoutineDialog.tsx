@@ -1,5 +1,5 @@
 import type { RefObject } from 'react'
-import { ConfirmDialog } from '../family/ConfirmDialog'
+import { ConfirmDialog } from '../../shared/ui/ConfirmDialog'
 import { deleteCopy } from './deleteCopy'
 import type { RoutineKind } from './types'
 

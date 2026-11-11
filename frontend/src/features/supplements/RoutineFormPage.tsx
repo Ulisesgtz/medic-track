@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState, type ReactNode } from 'react'
 import { Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useDiscardGuard } from '../../shared/ui/useDiscardGuard'
 import { useUnsavedWork } from '../../shared/appVersion/unsavedWork'
 import { useLocalDay } from '../../shared/useLocalDay'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
@@ -129,7 +130,7 @@ export function RoutineFormPage({ kind: creatingKind = 'supplement', personal: c
   const noun = activity ? 'actividad' : 'suplemento'
   const backTo = editing ? `${base}/${routineId}` : personal ? personalHome : `/children/${childId}`
   const personalTitle = activity ? 'Mis actividades' : 'Mis suplementos'
-  const discardQuestion = `¿Descartar ${activity ? 'la' : 'el'} ${noun}? Se perderá lo que capturaste.`
+  const guard = useDiscardGuard({ isDirty: () => dirtyRef.current, title: `¿Descartar ${activity ? 'la' : 'el'} ${noun}?`, body: 'Se perderá lo que capturaste.' })
   // specs/056 (design H4): «← Cancelar» (asking first when something was typed), the title and «Para Mateo».
   const subtitle = personal ? personalTitle : child ? `Para ${child.firstName}` : undefined
   const frame = (content: ReactNode) => (
@@ -138,14 +139,13 @@ export function RoutineFormPage({ kind: creatingKind = 'supplement', personal: c
       childId={personal ? undefined : childId}
       backLabel="← Cancelar"
       backTo={backTo}
-      backOnClick={(event) => {
-        if (dirtyRef.current && !window.confirm(discardQuestion)) event.preventDefault()
-      }}
+      backOnClick={(event) => guard.guardLink(event, backTo)}
       title={`${editing ? 'Editar' : 'Agregar'} ${noun}`}
       subtitle={subtitle}
       maxWidth="max-w-[640px]"
     >
       {content}
+      {guard.dialog}
     </RoutinePageFrame>
   )
 
@@ -167,10 +167,7 @@ export function RoutineFormPage({ kind: creatingKind = 'supplement', personal: c
     )
   }
 
-  const leave = () => {
-    if (dirtyRef.current && !window.confirm(discardQuestion)) return
-    navigate(backTo)
-  }
+  const leave = () => guard.guardAction(() => navigate(backTo))
 
   async function save(input: RoutineInput) {
     const saved = editing

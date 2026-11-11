@@ -6,6 +6,7 @@ import { blobToBase64, shrinkPhoto } from '../consultations/shrinkPhoto'
 import { useOcrSuggestion } from '../consultations/useOcrSuggestion'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { RoutinePageFrame } from '../supplements/RoutineFormPage'
+import { useDiscardGuard } from '../../shared/ui/useDiscardGuard'
 import { useUnsavedWork } from '../../shared/appVersion/unsavedWork'
 import { fieldCabinet, fieldCabinetProposed } from '../../shared/ui/formStyles'
 import { StickyActionBar } from '../../shared/ui/StickyActionBar'
@@ -104,9 +105,9 @@ export function CabinetFormPage() {
 
   const backTo = fromRx ? `/consultations/${fromRx.consultationId}` : editing ? `/botiquin/${itemId}` : '/botiquin'
   const backLabel = fromRx ? CABINET.backConsultation : CABINET.backCabinet
-  const leave = (e: { preventDefault: () => void }) => {
-    if (dirty && !window.confirm(CABINET.leaveConfirm)) e.preventDefault()
-  }
+  // specs/066: the app's own question instead of the browser's; «Descartar» goes on to where the tap was going.
+  const guard = useDiscardGuard({ isDirty: () => dirty && !save.isSuccess, title: CABINET.leaveTitle, body: CABINET.leaveBody })
+  const leave = (e: { preventDefault: () => void; currentTarget?: EventTarget | null }) => guard.guardLink(e, backTo)
 
   const set = (field: keyof CabinetValues, value: string) => {
     setValues((v) => ({ ...v, [field]: value }))
@@ -412,6 +413,7 @@ export function CabinetFormPage() {
         </>
       )}
       {planOpen && <FreemiumLimitModal reason="medicine_cabinet" opener={saveRef} onStayFree={() => setPlanOpen(false)} onViewPlans={() => navigate('/planes')} />}
+      {guard.dialog}
     </RoutinePageFrame>
   )
 }

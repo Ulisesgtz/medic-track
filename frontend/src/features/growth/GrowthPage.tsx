@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
-import { ConfirmDialog } from '../family/ConfirmDialog'
+import { ConfirmDialog } from '../../shared/ui/ConfirmDialog'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { RoutinePageFrame } from '../supplements/RoutineFormPage'
 import { formatAgeLong } from '../../shared/age'

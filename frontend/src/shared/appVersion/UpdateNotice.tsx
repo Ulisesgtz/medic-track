@@ -1,9 +1,12 @@
 import { useIsDesktop } from '../ui/useIsDesktop'
+import { useConfirmGuard } from '../ui/useDiscardGuard'
 import { reloadApp } from './reload'
 import { hasUnsavedWork } from './unsavedWork'
 import { useNewVersion } from './useNewVersion'
 
-export const UPDATE_CONFIRM = '¿Actualizar ahora? Se perderá lo que capturaste.'
+/** The question before reloading with a form holding work (specs/017), asked with the app's own dialog since specs/066. */
+export const UPDATE_CONFIRM_TITLE = '¿Actualizar ahora?'
+export const UPDATE_CONFIRM_BODY = 'Se perderá lo que capturaste.'
 
 /**
  * "Hay una versión nueva · Actualizar" (specs/017). A quiet bar at the bottom: it never reloads by itself, and if a
@@ -13,12 +16,10 @@ export const UPDATE_CONFIRM = '¿Actualizar ahora? Se perderá lo que capturaste
 export function UpdateNotice() {
   const hasNew = useNewVersion()
   const isDesktop = useIsDesktop()
+  const guard = useConfirmGuard({ isDirty: hasUnsavedWork, title: UPDATE_CONFIRM_TITLE, body: UPDATE_CONFIRM_BODY, confirmLabel: 'Actualizar' })
   if (!hasNew) return null
 
-  const update = () => {
-    if (hasUnsavedWork() && !window.confirm(UPDATE_CONFIRM)) return
-    reloadApp()
-  }
+  const update = (event: { preventDefault: () => void; currentTarget: EventTarget | null }) => guard.guardAction(reloadApp, event)
 
   const button = (
     <button
@@ -33,6 +34,7 @@ export function UpdateNotice() {
   return (
     <>
       <div aria-hidden="true" className="h-24" />
+      {guard.dialog}
       {isDesktop ? (
         <div
           role="status"
