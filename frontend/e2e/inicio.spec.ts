@@ -44,8 +44,11 @@ for (const design of designs) {
 
       const mark = card.getByRole('button', { name: /^Marcar .* de Mateo$/ })
       const name = await mark.getAttribute('aria-label')
+      // The mark shows at once (specs/066): the server's answer is waited for before asking the API what it saved.
+      const saved = page.waitForResponse((r) => r.request().method() === 'PATCH' && /\/doses\//.test(r.url()))
       await mark.click()
       await expect(card.getByRole('button', { name: name!, pressed: true })).toHaveText(/^✓ \d\d:\d\d$/)
+      expect((await saved).ok()).toBe(true)
       await expect(page).toHaveURL(/\/home$/)
 
       // The mark is the same as from the detail: it carries who made it.

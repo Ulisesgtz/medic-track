@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '@clerk/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { AccountSignupPage } from './features/account-signup/AccountSignupPage'
 import { CompleteGoogleSignupPage } from './features/account-signup/CompleteGoogleSignupPage'
 import { HomePage } from './features/home/HomePage'
@@ -37,8 +37,16 @@ import { CabinetItemPage } from './features/medicineCabinet/CabinetItemPage'
 import { GrowthPage } from './features/growth/GrowthPage'
 import { GrowthFormPage } from './features/growth/GrowthFormPage'
 import { EditChildPage } from './features/childProfile/EditChildPage'
+import { createQueryClient } from './shared/offline/offlineGuard'
+import { installConnectivity } from './shared/offline/connectivity'
+import { bootOffline, useOfflineSession } from './shared/offline/offlineSession'
+import { OfflinePersistence } from './shared/offline/OfflinePersistence'
+import { RequireConnection } from './shared/offline/RequireConnection'
 
-const queryClient = new QueryClient()
+// specs/067: mutations never wait to be sent later, and the installed phone's copy is read back before the first screen.
+const queryClient = createQueryClient()
+installConnectivity()
+void bootOffline(queryClient)
 
 /**
  * `/home`, the installed app's start_url. A phone that carries a child's access (specs/047) and has no parent session is the child's:
@@ -46,7 +54,9 @@ const queryClient = new QueryClient()
  */
 function HomeRoute() {
   const { isLoaded, isSignedIn } = useAuth()
-  if (isLoaded && !isSignedIn && readCredential()) return <Navigate to="/hijo/hoy" replace />
+  const mode = useOfflineSession()
+  // Without a network a child's phone (no parents' copy) still goes to its own screen, which opens offline too (specs/067).
+  if (readCredential() && ((isLoaded && !isSignedIn) || mode === 'gate')) return <Navigate to="/hijo/hoy" replace />
   return (
     <RequireSession>
       <HomePage />
@@ -63,6 +73,7 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <SessionCacheGuard />
+      <OfflinePersistence />
       <BrowserRouter>
         <Routes>
           <Route path="/signup" element={<AccountSignupPage />} />
@@ -131,7 +142,9 @@ function App() {
             path="/children/:childId/crecimiento"
             element={
               <RequireSession>
-                <GrowthPage />
+                <RequireConnection>
+                  <GrowthPage />
+                </RequireConnection>
               </RequireSession>
             }
           />
@@ -139,7 +152,9 @@ function App() {
             path="/children/:childId/crecimiento/nueva"
             element={
               <RequireSession>
-                <GrowthFormPage key="new" />
+                <RequireConnection>
+                  <GrowthFormPage key="new" />
+                </RequireConnection>
               </RequireSession>
             }
           />
@@ -147,7 +162,9 @@ function App() {
             path="/children/:childId/crecimiento/:measurementId/editar"
             element={
               <RequireSession>
-                <GrowthFormPage key="edit" />
+                <RequireConnection>
+                  <GrowthFormPage key="edit" />
+                </RequireConnection>
               </RequireSession>
             }
           />
@@ -163,7 +180,9 @@ function App() {
             path="/children/:childId/historial"
             element={
               <RequireSession>
-                <HistoryPage />
+                <RequireConnection>
+                  <HistoryPage />
+                </RequireConnection>
               </RequireSession>
             }
           />
@@ -228,7 +247,9 @@ function App() {
             path="/yo/historial"
             element={
               <RequireSession>
-                <HistoryPage own />
+                <RequireConnection>
+                  <HistoryPage own />
+                </RequireConnection>
               </RequireSession>
             }
           />
@@ -245,7 +266,9 @@ function App() {
             path="/personas/:accountId/historial"
             element={
               <RequireSession>
-                <HistoryPage />
+                <RequireConnection>
+                  <HistoryPage />
+                </RequireConnection>
               </RequireSession>
             }
           />
@@ -337,7 +360,9 @@ function App() {
             path="/familia"
             element={
               <RequireSession>
-                <FamilyPage />
+                <RequireConnection>
+                  <FamilyPage />
+                </RequireConnection>
               </RequireSession>
             }
           />
@@ -353,7 +378,9 @@ function App() {
             path="/planes"
             element={
               <RequireSession>
-                <PlansPage />
+                <RequireConnection>
+                  <PlansPage />
+                </RequireConnection>
               </RequireSession>
             }
           />

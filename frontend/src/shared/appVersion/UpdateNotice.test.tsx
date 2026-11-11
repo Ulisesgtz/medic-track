@@ -5,6 +5,8 @@ import { UpdateNotice, UPDATE_CONFIRM_BODY, UPDATE_CONFIRM_TITLE } from './Updat
 import { reloadApp } from './reload'
 import { markUnsaved } from './unsavedWork'
 import { resetNewVersion } from './useNewVersion'
+import { act } from '@testing-library/react'
+import { reportNetworkFailure, reportReachable, resetConnectivity } from '../offline/connectivity'
 
 vi.mock('./reload', () => ({ reloadApp: vi.fn() }))
 
@@ -24,6 +26,7 @@ beforeEach(() => {
   vi.mocked(reloadApp).mockClear()
 })
 afterEach(() => {
+  resetConnectivity()
   resetNewVersion()
   vi.unstubAllGlobals()
   vi.restoreAllMocks()
@@ -35,6 +38,16 @@ describe('UpdateNotice (specs/017)', () => {
     const { container } = render(<UpdateNotice />)
     await vi.waitFor(() => expect(fetch).toHaveBeenCalled())
     expect(container).toBeEmptyDOMElement()
+  })
+
+  it('waits for the connection to offer it (specs/067)', async () => {
+    publish('otra')
+    render(<UpdateNotice />)
+    expect(await screen.findByRole('status')).toHaveTextContent('Hay una versión nueva')
+    act(() => reportNetworkFailure())
+    expect(screen.queryByRole('status')).toBeNull()
+    act(() => reportReachable())
+    expect(screen.getByRole('status')).toHaveTextContent('Hay una versión nueva')
   })
 
   it('offers the update on the phone and reloads only when the button is tapped', async () => {

@@ -24,10 +24,12 @@ import {
   updateRoutineDose,
 } from './api'
 import type { RoutineDose, RoutineInput, RoutineKind } from './types'
+import { useOfflineFallback } from '../../shared/offline/useOfflineFallback'
 
 /** The child's supplements or activities with the doses of the parent's local day; asked again every minute so a dose turns "sin registrar" on its own. */
 export function useRoutines(childId: string | undefined, kind: RoutineKind, day: { from: Date; to: Date }) {
   const { getToken } = useAuth()
+  useOfflineFallback(['routines', childId, kind, day.from.toISOString()], 3)
   return useShownQuery(useQuery({
     queryKey: ['routines', childId, kind, day.from.toISOString()],
     queryFn: async () => fetchRoutines(childId!, kind, day.from, day.to, await getToken()),
@@ -40,6 +42,7 @@ export function useRoutines(childId: string | undefined, kind: RoutineKind, day:
 /** The person's OWN supplements or activities (specs/033, part 3) with the doses of their local day; same refresh as a child's. */
 export function usePersonalRoutines(accountId: string | undefined, kind: RoutineKind, day: { from: Date; to: Date }, { poll = true }: { poll?: boolean } = {}) {
   const { getToken } = useAuth()
+  useOfflineFallback(['routines', 'personal', accountId, kind, day.from.toISOString()], 4)
   return useShownQuery(useQuery({
     queryKey: ['routines', 'personal', accountId, kind, day.from.toISOString()],
     queryFn: async () => fetchPersonalRoutines(accountId!, kind, day.from, day.to, await getToken()),

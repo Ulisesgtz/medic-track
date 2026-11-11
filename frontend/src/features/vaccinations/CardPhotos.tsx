@@ -9,6 +9,8 @@ import { useOcrSuggestion } from '../consultations/useOcrSuggestion'
 import { ConfirmDialog } from '../../shared/ui/ConfirmDialog'
 import { VaccinationApiError } from './api'
 import { useDeletePhoto, usePhoto, usePhotos, useUploadPhoto } from './hooks'
+import { needsConnection } from '../../shared/offline/queryView'
+import { PHOTO_NEEDS_CONNECTION } from '../../shared/offline/offlineText'
 import { ProposedRows } from './ProposedRows'
 import { TEXT, deletePhotoRows, photoLimitText, photoLine } from './vaccineText'
 import type { VaccinePhotoMeta } from './types'
@@ -24,6 +26,17 @@ const ghost =
 /** The image of one saved photo, asked for only when it is opened, in the app's own viewer. */
 function OpenedPhoto({ childId, id, onClose }: { childId: string; id: string; onClose: () => void }) {
   const photo = usePhoto(childId, id)
+  // specs/067: the photos are never kept on the phone; without a connection, the same neutral line instead of the error.
+  if (needsConnection(photo)) {
+    return (
+      <Notice tone="info">
+        <span>{PHOTO_NEEDS_CONNECTION}</span>{' '}
+        <button type="button" className={ghost} onClick={onClose}>
+          {TEXT.dialog.close}
+        </button>
+      </Notice>
+    )
+  }
   if (photo.isError) {
     return (
       <Notice tone="error">

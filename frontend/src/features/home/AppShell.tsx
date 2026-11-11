@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { UpdateNotice } from '../../shared/appVersion/UpdateNotice'
 import { MarkNotice } from '../../shared/marks/MarkNotice'
+import { OfflineBanner } from '../../shared/offline/OfflineBanner'
 import { PullIndicator } from '../../shared/pullToRefresh/PullIndicator'
 import { usePullToRefresh } from '../../shared/pullToRefresh/usePullToRefresh'
 import { useIsDesktop } from '../../shared/ui/useIsDesktop'
@@ -23,7 +24,8 @@ interface AppShellProps {
  * React would remount it and wipe what the tutor had already typed (or the photo already chosen).
  *
  * It also hosts what every signed-in screen shares (specs/017): pull down to refresh the data (phone design only) and
- * the "Hay una versión nueva" bar. Both sit after the screen, so the screen's place in the tree does not change.
+ * the "Hay una versión nueva" bar. Both sit after the screen, so the screen's place in the tree does not change. Without a
+ * connection (specs/067) a strip on top says so and the hour of the data shown.
  */
 export function AppShell({ activeChildId, children }: AppShellProps) {
   const { accountId, hasSidebar } = useSidebarSession()
@@ -35,6 +37,10 @@ export function AppShell({ activeChildId, children }: AppShellProps) {
 
   return (
     <>
+      {/* specs/067: «Sin conexión · datos de las 08:15», always in the tree (hidden when online) so the screen keeps its place. */}
+      <div className="sticky top-0 z-30">
+        <OfflineBanner />
+      </div>
       <div className={sidebar ? 'flex min-h-screen' : undefined}>
         {sidebar && <ChildrenSidebar activeChildId={activeChildId} />}
         <div className={sidebar ? 'min-w-0 flex-1' : undefined}>{children}</div>

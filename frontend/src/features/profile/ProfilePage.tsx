@@ -172,7 +172,8 @@ export function ProfilePage() {
       variant={variant}
       pending={!ready}
       failed={
-        supplements.isError || activities.isError || overview.isError
+        // specs/067: a failed refresh doesn't hide the data the screen has.
+        (supplements.isError && !supplements.data) || (activities.isError && !activities.data) || (overview.isError && !overview.data)
           ? { text: HOME.loadFailedMine, onRetry: () => void Promise.all([supplements.refetch(), activities.refetch(), overview.refetch()]) }
           : null
       }
@@ -188,7 +189,7 @@ export function ProfilePage() {
   const consultations = account && me && (
     <ConsultationsSection
       consultations={consultationsQuery.data ?? []}
-      status={consultationsQuery.isPending ? 'loading' : consultationsQuery.isError ? 'error' : 'ready'}
+      status={consultationsQuery.data !== undefined ? 'ready' : consultationsQuery.isError ? 'error' : 'loading'}
       childId={me}
       historyTo="/yo/historial"
       child={account}

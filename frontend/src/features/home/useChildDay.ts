@@ -6,6 +6,7 @@ import { fetchChildOverview } from '../consultations/api'
 import { DOSE_REFETCH_MS } from '../consultations/doseStatus'
 import { useRoutines } from '../supplements/hooks'
 import { childDay } from './daySummary'
+import { useOfflineFallback } from '../../shared/offline/useOfflineFallback'
 
 /**
  * One child's day on the home (specs/055, research R1): the overview (medication and supplement doses) and the activities, with
@@ -15,6 +16,7 @@ import { childDay } from './daySummary'
 export function useChildDay(childId: string) {
   const day = useLocalDay()
   const { getToken } = useAuth()
+  useOfflineFallback(['overview', childId, day.from.toISOString()], 2)
   const overview = useShownQuery(useQuery({
     queryKey: ['overview', childId, day.from.toISOString()],
     queryFn: async () => fetchChildOverview(childId, day.from, day.to, await getToken()),

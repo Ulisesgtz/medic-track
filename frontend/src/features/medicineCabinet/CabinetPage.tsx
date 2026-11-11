@@ -10,6 +10,8 @@ import { fold } from './cabinetForm'
 import { CABINET, listCount, noResults } from './cabinetText'
 import { BoxIcon, CabinetRow, CaregiverNote, card } from './CabinetParts'
 import { useCabinet } from './hooks'
+import { needsConnection } from '../../shared/offline/queryView'
+import { SCREEN_NEEDS_CONNECTION } from '../../shared/offline/offlineText'
 
 /**
  * `/botiquin` (specs/062, mock pantalla 2): the family's medicine cabinet, alphabetical (the server's order), with a search by name
@@ -62,7 +64,9 @@ export function CabinetPage() {
     </div>
   )
 
-  const content = !access.canView ? null : query.isPending ? (
+  const content = !access.canView ? null : needsConnection(query) ? (
+    <p className="text-base font-bold text-ink">{SCREEN_NEEDS_CONNECTION}</p>
+  ) : query.isPending ? (
     loading
   ) : empty ? (
     <div className="flex flex-col items-center gap-4 rounded-[22px] border-[1.5px] border-dashed border-hint-border px-5 py-8 text-center">
@@ -112,7 +116,7 @@ export function CabinetPage() {
       title={CABINET.title}
       subtitle={CABINET.subtitle}
       actions={!empty && query.isSuccess ? addButton(!desktop) ?? undefined : undefined}
-      state={query.isError ? 'error' : undefined}
+      state={query.isError && query.data === undefined && !needsConnection(query) ? 'error' : undefined}
       errorWhat={CABINET.loadFailed}
       onRetry={() => void query.refetch()}
     >

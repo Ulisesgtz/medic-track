@@ -11,6 +11,8 @@ import { cabinetAccess } from './cabinetAccess'
 import { CABINET, addedBy, editedBy, expiresDate, quantityText } from './cabinetText'
 import { CaregiverNote, card } from './CabinetParts'
 import { useCabinetItem, useCabinetPhoto, useDeleteCabinetItem } from './hooks'
+import { needsConnection } from '../../shared/offline/queryView'
+import { PHOTO_NEEDS_CONNECTION } from '../../shared/offline/offlineText'
 
 /**
  * `/botiquin/:itemId` (specs/062, mock pantalla 4): the box's photo (it opens in the viewer), the data and who added it. No solid
@@ -75,6 +77,8 @@ export function CabinetItemPage() {
         className={`flex-none cursor-pointer overflow-hidden rounded-[22px] border border-hint-border bg-hint ${desktop ? 'h-[440px] w-[360px]' : 'h-60 w-full'}`}
       >
         {src && <img src={src} alt={CABINET.photoViewer} className="h-full w-full object-cover" />}
+        {/* specs/067: the photo is never kept on the phone; without a connection its place says so. */}
+        {!src && needsConnection(photo) && <span className="flex h-full items-center justify-center px-4 text-[15px] text-muted">{PHOTO_NEEDS_CONNECTION}</span>}
       </button>
     )
 
@@ -107,7 +111,7 @@ export function CabinetItemPage() {
       title={item?.name ?? CABINET.title}
       subtitle={item?.strength || undefined}
       actions={actions}
-      state={query.isPending && access.ownerId ? 'loading' : query.isError && !missing ? 'error' : undefined}
+      state={needsConnection(query) ? undefined : query.isPending && access.ownerId ? 'loading' : query.isError && !missing && query.data === undefined ? 'error' : undefined}
       errorWhat={CABINET.loadFailed}
       onRetry={() => void query.refetch()}
     >

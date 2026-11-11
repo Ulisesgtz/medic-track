@@ -20,6 +20,8 @@ import { MY_DAY } from './myDayText'
 import { RoutinePageFrame } from './RoutineFormPage'
 import { activityRule, dayCount, detailRows, endedNote, fixedLast, fixedNext, isFixedActivity, lastMarked, lastMarkedDose, nextUnmarked, noTodayText, pausedNote, routineStatusLabel, supplementPeriodText, todayLabel } from './scheduleText'
 import type { Routine } from './types'
+import { OfflineMissing } from '../../shared/offline/OfflineMissing'
+import { needsConnection } from '../../shared/offline/queryView'
 
 const card = 'rounded-[22px] bg-surface shadow-[0_8px_20px_rgba(4,37,43,0.07)]'
 const outlineButton =
@@ -217,8 +219,9 @@ export function RoutineDetailPage() {
     </RoutinePageFrame>
   )
 
+  if (needsConnection(query)) return <OfflineMissing />
   if (query.isPending) return frameFor(noun, null, { state: 'loading' })
-  if (query.isError || !routine) {
+  if (!routine) {
     const missing = query.error instanceof SupplementApiError && (query.error.kind === 'routine_not_found' || query.error.kind === 'forbidden')
     return frameFor(
       noun,

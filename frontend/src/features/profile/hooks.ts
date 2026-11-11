@@ -4,11 +4,13 @@ import { fetchChildOverview, setConsultationSharing, setOwnReminders } from '../
 import { DOSE_REFETCH_MS } from '../consultations/doseStatus'
 import { useShownQuery } from '../../shared/marks/usePendingMarks'
 import { subjectKey, type Subject } from '../../shared/subject'
+import { useOfflineFallback } from '../../shared/offline/useOfflineFallback'
 
 /** A person's own doses of the day and their running treatment (specs/058): `GET /accounts/{id}/overview`. */
 export function usePersonOverview(accountId: string | undefined, day: { from: Date; to: Date }, enabled = true) {
   const { getToken } = useAuth()
   const subject: Subject | undefined = accountId ? { kind: 'person', accountId } : undefined
+  useOfflineFallback(['overview', subject ? subjectKey(subject) : undefined, day.from.toISOString()], 2)
   return useShownQuery(useQuery({
     queryKey: ['overview', subject ? subjectKey(subject) : undefined, day.from.toISOString()],
     queryFn: async () => fetchChildOverview(subject!, day.from, day.to, await getToken()),

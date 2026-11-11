@@ -57,16 +57,22 @@ export default defineConfig({
     tailwindcss(),
     versionFile,
     childPages,
-    // The service worker that receives the dose reminders (specs/011-recordatorios-push). Written in
-    // TypeScript (src/sw.ts) and compiled by the plugin; no precache (working offline is out of scope)
-    // and our own public/manifest.webmanifest stays as it is.
+    // The service worker that receives the dose reminders (specs/011-recordatorios-push) and keeps the app's own files so the
+    // installed app opens without a signal (specs/067). Written in TypeScript (src/sw.ts) and compiled by the plugin, which writes
+    // the list of this build's files into it; our own public/manifest.webmanifest stays as it is. version.json is never kept
+    // (spec 017 must always see the published one).
     VitePWA({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
       manifest: false,
       injectRegister: 'script-defer',
-      injectManifest: { injectionPoint: undefined },
+      injectManifest: {
+        injectionPoint: 'self.__WB_MANIFEST',
+        globPatterns: ['**/*.{js,css,html,png,svg,ico,webmanifest,woff2}'],
+        // The PDF's library (~1.2 MB, spec 050) is left out: exporting needs a connection anyway.
+        globIgnores: ['version.json', 'sw.js', 'workbox-*.js', 'assets/render-*.js', 'assets/react-pdf*.js'],
+      },
       devOptions: { enabled: true, type: 'module' },
     }),
   ],

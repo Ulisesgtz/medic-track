@@ -7,6 +7,7 @@ import type { ChildOverview, OverviewDose } from '../../consultations/types'
 import type { Routine, RoutineList } from '../../supplements/types'
 import { deviceRequest, fetchMe, PhoneApiError, type Me } from './api'
 import { writeCredential } from './storage'
+import { useOfflineFallback } from '../../../shared/offline/useOfflineFallback'
 
 // The queries of the child's own screen (specs/047). All of them go with the phone's credential and refresh every minute, like the
 // parents' screens, so a dose that turns «sin registrar» changes by itself. None of them knows what a Clerk session is.
@@ -28,6 +29,7 @@ const windowQuery = (from: Date, to: Date) => new URLSearchParams({ from: from.t
 
 /** Today's doses of the child: medications and supplements. */
 export function useOverview(credential: string, childId: string | undefined, from: Date, to: Date) {
+  useOfflineFallback(phoneKey('overview', childId, from.toISOString()), 3)
   return useShownQuery(useQuery({
     queryKey: phoneKey('overview', childId, from.toISOString()),
     queryFn: () => deviceRequest<ChildOverview>(credential, `/child-device/children/${childId}/overview?${windowQuery(from, to)}`),
@@ -39,6 +41,7 @@ export function useOverview(credential: string, childId: string | undefined, fro
 
 /** The child's activities with the doses of today. */
 export function useActivities(credential: string, childId: string | undefined, from: Date, to: Date) {
+  useOfflineFallback(phoneKey('activities', childId, from.toISOString()), 3)
   return useShownQuery(useQuery({
     queryKey: phoneKey('activities', childId, from.toISOString()),
     queryFn: async () => {

@@ -29,6 +29,9 @@ import { DOSE_REFETCH_MS } from './doseStatus'
 import { EDIT_TEXT, editedLine } from './editText'
 import { DETAIL, dataSummary, dayTitle, finished, inProgress, toMarkChip, unregisteredChip } from './consultationDetailText'
 import type { ConsultationDetail } from './types'
+import { OfflineMissing } from '../../shared/offline/OfflineMissing'
+import { needsConnection } from '../../shared/offline/queryView'
+import { PHOTO_NEEDS_CONNECTION } from '../../shared/offline/offlineText'
 
 const card = 'rounded-[22px] bg-surface shadow-[0_8px_20px_rgba(4,37,43,0.07)]'
 const chip = 'rounded-full text-[13px] font-extrabold'
@@ -69,7 +72,7 @@ function ConsultationData({
       >
         <span className="flex flex-1 flex-col gap-0.5">
           <span className={`font-extrabold text-ink ${desktop ? 'text-[16px]' : 'text-[17px]'}`}>{DETAIL.data}</span>
-          {!desktop && <span className="text-[14px] text-body">{dataSummary(hasPhoto, consultation.symptoms.length, hasNotes)}</span>}
+          {!desktop && <span className="text-[14px] text-body">{dataSummary(hasPhoto || consultation.photoOmitted === true, consultation.symptoms.length, hasNotes)}</span>}
         </span>
         <span aria-hidden="true" className={`text-[20px] font-extrabold text-action transition-transform ${open ? 'rotate-90' : ''}`}>
           ›
@@ -95,6 +98,9 @@ function ConsultationData({
                 <span className="text-[13px] leading-normal text-body">{DETAIL.photoNote}</span>
               </span>
             </div>
+          ) : consultation.photoOmitted ? (
+            // specs/067: the copy kept on the phone has no photo; the photo itself needs the connection.
+            <p className="pt-3 text-[15px] text-muted">{PHOTO_NEEDS_CONNECTION}</p>
           ) : (
             <p className="pt-3 text-[15px] text-muted">{DETAIL.noPhoto}</p>
           )}
@@ -180,8 +186,10 @@ export function ConsultationDetailPage() {
     </AppShell>
   )
 
+  if (needsConnection(query)) return <OfflineMissing />
   if (query.isPending) return shell(<PageHeader variant={variant} back={back} state="loading" />)
-  if (query.isError) {
+  // specs/067: with the data on screen a failed refresh doesn't hide them.
+  if (query.isError && query.data === undefined) {
     const notFound = query.error instanceof ConsultationApiError && query.error.kind === 'consultation_not_found'
     if (notFound) return shell(<PageHeader variant={variant} back={back} title={DETAIL.notFound} />)
     return shell(<PageHeader variant={variant} back={back} state="error" errorWhat={DETAIL.loadFailed} onRetry={() => void query.refetch()} />)
