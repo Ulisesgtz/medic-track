@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { formatDayMonth, formatTime } from '../../../shared/date'
 import { fieldRoutine } from '../../../shared/ui/formStyles'
-import { ConfirmDialog } from '../../family/ConfirmDialog'
+import { ConfirmDialog } from '../../../shared/ui/ConfirmDialog'
 import { PARENT } from '../childText'
 import type { DeviceLink } from './parentApi'
 import { useRevokeDeviceLink, useSetReminderDetail } from './parentHooks'

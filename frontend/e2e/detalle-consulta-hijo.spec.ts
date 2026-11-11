@@ -88,13 +88,14 @@ for (const design of designs) {
       // With something typed, the parent is asked first; declining keeps them on the form.
       await page.getByRole('link', { name: 'Nueva consulta' }).click()
       await page.getByLabel('Doctor').fill('Dr. Pérez')
-      const dialogs: string[] = []
-      page.once('dialog', async (dialog) => {
-        dialogs.push(dialog.message())
-        await dialog.dismiss()
+      // specs/066: the app's own dialog, never the browser's.
+      page.on('dialog', (dialog) => {
+        throw new Error(`browser dialog: ${dialog.message()}`)
       })
       await page.getByRole('link', { name: /Cancelar/ }).click()
-      expect(dialogs).toEqual(['¿Descartar la consulta? Se perderá lo que capturaste.'])
+      const question = page.getByRole('dialog', { name: '¿Descartar la consulta?' })
+      await expect(question).toContainText('Se perderá lo que capturaste.')
+      await question.getByRole('button', { name: 'Seguir editando' }).click()
       await expect(page).toHaveURL(/\/consultations\/new/)
       await expect(page.getByLabel('Doctor')).toHaveValue('Dr. Pérez')
     })

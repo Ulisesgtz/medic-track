@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ConfirmDialog } from '../family/ConfirmDialog'
+import { ConfirmDialog } from '../../shared/ui/ConfirmDialog'
 import { bigDateText, countdown, placeLink, shortDayText, timeText, whenText } from './appointmentText'
 import { useMyAppointmentReminders, useSetAppointmentStatus } from './hooks'
 import type { Appointment } from './types'

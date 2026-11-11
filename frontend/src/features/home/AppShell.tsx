@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { UpdateNotice } from '../../shared/appVersion/UpdateNotice'
+import { MarkNotice } from '../../shared/marks/MarkNotice'
 import { PullIndicator } from '../../shared/pullToRefresh/PullIndicator'
 import { usePullToRefresh } from '../../shared/pullToRefresh/usePullToRefresh'
 import { useIsDesktop } from '../../shared/ui/useIsDesktop'
@@ -39,6 +40,7 @@ export function AppShell({ activeChildId, children }: AppShellProps) {
         <div className={sidebar ? 'min-w-0 flex-1' : undefined}>{children}</div>
       </div>
       {!isDesktop && <PullIndicator state={pull} />}
+      <MarkNotice />
       <UpdateNotice />
     </>
   )

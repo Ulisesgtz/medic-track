@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { groupByPeriod } from '../../consultations/dayPeriods'
 import { takenByText } from '../../consultations/doseStatus'
+import { MarkNotice } from '../../../shared/marks/MarkNotice'
 import type { OverviewDose } from '../../consultations/types'
 import type { Routine } from '../../supplements/types'
 import { formatTime, formatWeekdayLong } from '../../../shared/date'
@@ -51,7 +52,7 @@ function DoseRow({ credential, dose }: { credential: string; dose: OverviewDose 
         type="button"
         aria-label={PHONE.markLabel(dose.medicationName, time)}
         aria-pressed={dose.taken}
-        disabled={mark.isPending || others}
+        disabled={others}
         onClick={() => mark.mutate({ dose, taken: !dose.taken })}
         className={dose.taken ? `${mint} ${others ? 'px-3 text-[14px]' : 'cursor-pointer px-3.5 text-[15px]'}` : `${outline} min-w-24 px-[18px]`}
       >
@@ -62,7 +63,7 @@ function DoseRow({ credential, dose }: { credential: string; dose: OverviewDose 
 }
 
 /** One activity: its hour (or its count when it repeats in the day) and «✓ Realizado» while one is still unmarked. */
-function ActivityRow({ activity, onDone, busy }: { activity: Routine; onDone: () => void; busy: boolean }) {
+function ActivityRow({ activity, onDone }: { activity: Routine; onDone: () => void }) {
   const doses = activity.doses
   const done = doses.filter((d) => d.taken)
   const last = [...done].sort((a, b) => (a.takenBy?.at ?? '').localeCompare(b.takenBy?.at ?? '')).at(-1)
@@ -75,7 +76,7 @@ function ActivityRow({ activity, onDone, busy }: { activity: Routine; onDone: ()
         <span className="text-[14px] text-body">{detail}</span>
       </span>
       {done.length < doses.length ? (
-        <button type="button" aria-label={`Realizado: ${activity.name}`} disabled={busy} onClick={onDone} className={`${outline} px-4`}>
+        <button type="button" aria-label={`Realizado: ${activity.name}`} onClick={onDone} className={`${outline} px-4`}>
           {PHONE.done}
         </button>
       ) : (
@@ -216,13 +217,14 @@ function Today({ credential, onRotated }: { credential: string; onRotated: (cred
           </div>
           <ul className="flex flex-col">
             {activeActivities.map((activity) => (
-              <ActivityRow key={activity.id} activity={activity} busy={done.isPending} onDone={() => done.mutate(activity.id)} />
+              <ActivityRow key={activity.id} activity={activity} onDone={() => done.mutate(activity)} />
             ))}
           </ul>
         </section>
       )}
 
       {!failed && !loading && <RemindersCard credential={credential} />}
+      <MarkNotice />
     </main>
   )
 }

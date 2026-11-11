@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { UpdateNotice, UPDATE_CONFIRM } from './UpdateNotice'
+import { UpdateNotice, UPDATE_CONFIRM_BODY, UPDATE_CONFIRM_TITLE } from './UpdateNotice'
 import { reloadApp } from './reload'
 import { markUnsaved } from './unsavedWork'
 import { resetNewVersion } from './useNewVersion'
@@ -62,28 +62,31 @@ describe('UpdateNotice (specs/017)', () => {
   it('asks before reloading when a form holds work, and keeps everything if the tutor says no', async () => {
     publish('otra')
     const release = markUnsaved()
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     render(<UpdateNotice />)
     await screen.findByRole('status')
 
     await userEvent.click(screen.getByRole('button', { name: 'Actualizar' }))
-    expect(confirm).toHaveBeenCalledWith(UPDATE_CONFIRM)
+    // specs/066: the app's own dialog, «Seguir editando» and «Actualizar».
+    let dialog = await screen.findByRole('dialog', { name: UPDATE_CONFIRM_TITLE })
+    expect(within(dialog).getByText(UPDATE_CONFIRM_BODY)).toBeInTheDocument()
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Seguir editando' }))
     expect(reloadApp).not.toHaveBeenCalled()
 
-    confirm.mockReturnValue(true)
     await userEvent.click(screen.getByRole('button', { name: 'Actualizar' }))
+    dialog = await screen.findByRole('dialog', { name: UPDATE_CONFIRM_TITLE })
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Actualizar' }))
     expect(reloadApp).toHaveBeenCalledTimes(1)
     release()
   })
 
   it('does not ask when there is nothing to lose', async () => {
     publish('otra')
-    const confirm = vi.spyOn(window, 'confirm')
     render(<UpdateNotice />)
     await screen.findByRole('status')
 
     await userEvent.click(screen.getByRole('button', { name: 'Actualizar' }))
 
-    expect(confirm).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(reloadApp).toHaveBeenCalledTimes(1)
   })
 })

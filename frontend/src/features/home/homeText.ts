@@ -45,7 +45,6 @@ export const HOME = {
   readOnlyLead: PAGE_HEADER.readOnlyLead,
   readOnlyRest: PAGE_HEADER.readOnlyRest,
   retry: 'Reintentar',
-  markFailed: 'No se pudo marcar. Inténtalo de nuevo.',
   loadFailedMine: 'no pudimos cargar tus suplementos y actividades',
 } as const
 

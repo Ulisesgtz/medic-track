@@ -123,25 +123,27 @@ describe('AppointmentFormPage — edit', () => {
 
   it('leaves without asking when nothing changed, and asks when something did', async () => {
     api()
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
     renderAt('/citas/ap1/editar')
     const user = setup()
     await user.click(await screen.findByRole('button', { name: 'Cancelar' }))
     expect(await screen.findByText('HIJO')).toBeInTheDocument()
-    expect(confirm).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('keeps the form when leaving is refused', async () => {
     api()
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
     renderAt('/citas/ap1/editar')
     const user = setup()
     await user.type(await screen.findByLabelText('Nota', { exact: false }), ' más')
     await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+    // specs/066: the app's own dialog, not the browser's.
+    let dialog = await screen.findByRole('dialog', { name: '¿Descartar la cita?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Seguir editando' }))
     expect(screen.getByRole('heading', { name: 'Editar cita', level: 1 })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+    dialog = await screen.findByRole('dialog', { name: '¿Descartar la cita?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Descartar' }))
     expect(await screen.findByText('HIJO')).toBeInTheDocument()
-    expect(confirm).toHaveBeenCalledTimes(2)
   })
 
   it('does not edit a closed appointment, nor one that does not exist, and a Caregiver cannot', async () => {

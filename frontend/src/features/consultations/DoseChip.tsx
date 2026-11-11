@@ -1,6 +1,8 @@
 import { useId } from 'react'
 import { formatTime } from '../../shared/date'
 import { CANCELED_LABEL, DOSE_CHIP_STYLE, UNREGISTERED_LABEL, canUnmarkDose, ownTakenText, statusOf, takenByText } from './doseStatus'
+import { SAVING } from '../../shared/marks/markText'
+import { usePendingMark } from '../../shared/marks/usePendingMarks'
 import type { Dose } from './types'
 
 interface DoseChipViewProps {
@@ -26,7 +28,9 @@ export function DoseChipView({ dose, canManage, pending, onToggle, own = false }
   // Specs/032: a mark somebody else made is only taken back by who can do everything.
   const locked = !canUnmarkDose(dose, canManage)
   // Who marked it (specs/032): a line under the time, and its sentence as part of the accessible description.
-  const author = dose.taken ? (own ? ownTakenText(dose.takenBy) : takenByText(dose.takenBy)) : ''
+  // specs/066: a mark that has travelled for two seconds says so instead.
+  const { slow } = usePendingMark(dose.id)
+  const author = slow ? SAVING : dose.taken ? (own ? ownTakenText(dose.takenBy) : takenByText(dose.takenBy)) : ''
   const described = unregistered || canceled || author !== ''
 
   return (
@@ -62,7 +66,7 @@ export function DoseChipView({ dose, canManage, pending, onToggle, own = false }
             {author}
           </span>
           <span id={stateId} className="sr-only">
-            {`Marcada ${author}`}
+            {slow ? SAVING : `Marcada ${author}`}
           </span>
         </>
       )}

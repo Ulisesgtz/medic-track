@@ -5,6 +5,7 @@ import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { childAccessOf } from '../family/useChildAccess'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { RoutinePageFrame } from '../supplements/RoutineFormPage'
+import { useDiscardGuard } from '../../shared/ui/useDiscardGuard'
 import { useUnsavedWork } from '../../shared/appVersion/unsavedWork'
 import { fieldCabinet } from '../../shared/ui/formStyles'
 import { StickyActionBar } from '../../shared/ui/StickyActionBar'
@@ -68,9 +69,9 @@ export function EditChildPage() {
   const measuring = measure && offerMeasure
   useUnsavedWork(dirty && !save.isSuccess)
   const backTo = `/children/${childId}`
-  const leave = (e: { preventDefault: () => void }) => {
-    if (dirty && !window.confirm(CHILD_PROFILE.leaveConfirm)) e.preventDefault()
-  }
+  // specs/066: the app's own question instead of the browser's; «Descartar» goes on to where the tap was going.
+  const guard = useDiscardGuard({ isDirty: () => dirty && !save.isSuccess, title: CHILD_PROFILE.leaveTitle, body: CHILD_PROFILE.leaveBody })
+  const leave = (e: { preventDefault: () => void; currentTarget?: EventTarget | null }) => guard.guardLink(e, backTo)
   const set = (field: keyof ChildValues, value: string) => {
     setValues((v) => ({ ...v, [field]: value }))
     if (field === 'birthDate') setConflict(null)
@@ -233,6 +234,7 @@ export function EditChildPage() {
     >
       {body}
       {planOpen && <FreemiumLimitModal reason="child_identity" opener={planRef} onStayFree={() => setPlanOpen(false)} onViewPlans={() => navigate('/planes')} />}
+      {guard.dialog}
     </RoutinePageFrame>
   )
 }

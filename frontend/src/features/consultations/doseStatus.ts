@@ -74,5 +74,7 @@ export function ownTakenText(takenBy: TakenBy | null | undefined): string {
 
 /** "por Ana, 08:05": who marked a dose and at what time (local), or '' if nobody is known (specs/032). It only records. */
 export function takenByText(takenBy: TakenBy | null | undefined): string {
-  return takenBy ? `por ${takenBy.name}, ${formatTime(takenBy.at)}` : ''
+  if (!takenBy) return ''
+  // specs/066: an own mark the server hasn't answered yet has the hour of the tap and no name.
+  return takenBy.name ? `por ${takenBy.name}, ${formatTime(takenBy.at)}` : `a las ${formatTime(takenBy.at)}`
 }

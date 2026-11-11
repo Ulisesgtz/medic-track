@@ -232,26 +232,26 @@ describe('RoutineFormPage — nuevo suplemento', () => {
 
   it('leaves without asking when nothing was typed', async () => {
     api()
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
     renderAt(NEW)
     const user = setup()
     await user.click(await screen.findByRole('button', { name: 'Cancelar' }))
     expect(await screen.findByText('HIJO')).toBeInTheDocument()
-    expect(confirm).not.toHaveBeenCalled()
+    expect(screen.queryByRole('dialog')).toBeNull()
   })
 
   it('keeps the form when leaving is not confirmed and leaves when it is', async () => {
     api()
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
     renderAt(NEW)
     const user = setup()
     await user.type(await screen.findByLabelText('Nombre'), 'Zinc')
     await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+    let dialog = await screen.findByRole('dialog', { name: '¿Descartar el suplemento?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Seguir editando' }))
     expect(screen.getByLabelText('Nombre')).toHaveValue('Zinc')
-    expect(confirm).toHaveBeenLastCalledWith('¿Descartar el suplemento? Se perderá lo que capturaste.')
     await user.click(screen.getByRole('button', { name: 'Cancelar' }))
+    dialog = await screen.findByRole('dialog', { name: '¿Descartar el suplemento?' })
+    await user.click(within(dialog).getByRole('button', { name: 'Descartar' }))
     expect(await screen.findByText('HIJO')).toBeInTheDocument()
-    expect(confirm).toHaveBeenCalledTimes(2)
   })
 
   it('tells who is not a Tutor that only a Tutor adds', async () => {
@@ -500,12 +500,12 @@ describe('RoutineFormPage — nueva actividad', () => {
 
   it('asks before discarding an activity with the right words', async () => {
     api()
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     renderAt(NEW_ACTIVITY)
     const user = setup()
     await user.type(await screen.findByLabelText('Nombre'), 'Agua')
     await user.click(screen.getByRole('button', { name: 'Cancelar' }))
-    expect(confirm).toHaveBeenCalledWith('¿Descartar la actividad? Se perderá lo que capturaste.')
+    const dialog = await screen.findByRole('dialog', { name: '¿Descartar la actividad?' })
+    expect(within(dialog).getByText('Se perderá lo que capturaste.')).toBeInTheDocument()
   })
 
   it('says only a Tutor adds activities', async () => {

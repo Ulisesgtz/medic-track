@@ -43,6 +43,7 @@ export const TEXT = {
     saveAnyway: 'Guardar de todos modos',
     duplicate: 'Ya tienes esta vacuna con esta dosis y fecha.',
     saveError: 'No se pudo guardar. No se perdió nada de lo que escribiste. Inténtalo de nuevo.',
+    leaveTitle: '¿Salir sin guardar?',
     leave: 'Si sales, se pierde lo que escribiste.',
   },
   errors: {

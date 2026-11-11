@@ -125,6 +125,7 @@ export function MedicationCard({ consultationId, medication, number, variant, da
             <ul key={group.key} role="group" aria-label={`${group.label}, ${medication.name}, ${dayName}`} className="flex flex-col">
               {group.doses.map((dose, i) => (
                 <DoseRow
+                  medicationName={medication.name}
                   key={dose.id}
                   consultationId={consultationId}
                   dose={dose}

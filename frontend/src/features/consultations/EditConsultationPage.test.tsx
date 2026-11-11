@@ -196,12 +196,13 @@ describe('EditConsultationPage', () => {
   it('leaving with changes asks first', async () => {
     const user = userEvent.setup()
     stubApi()
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     renderPage()
     await user.type(await screen.findByLabelText('Doctor'), ' x')
     await user.click(screen.getByRole('link', { name: '← Cancelar' }))
 
-    expect(confirm).toHaveBeenCalledWith(EDIT_TEXT.leave)
+    // specs/066: the app's own dialog; «Seguir editando» keeps the form.
+    const dialog = await screen.findByRole('dialog', { name: EDIT_TEXT.leaveTitle })
+    await user.click(within(dialog).getByRole('button', { name: 'Seguir editando' }))
     expect(screen.getByRole('heading', { level: 1, name: EDIT_TEXT.title })).toBeInTheDocument()
   })
 

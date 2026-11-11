@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { ConfirmDialog } from './ConfirmDialog'
+import { ConfirmDialog } from '../../shared/ui/ConfirmDialog'
 import { FamilyCounter } from './FamilyCounter'
 import { formatInstant, namesText } from './roles'
 import { RoleChip } from './RoleChip'

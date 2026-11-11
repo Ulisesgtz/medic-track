@@ -27,7 +27,7 @@ import { pageHeaderButton } from '../../shared/ui/pageHeaderButton'
 import { StickyActionBar } from '../../shared/ui/StickyActionBar'
 import { EDIT_TEXT } from './editText'
 import { hasScheduleChange, toUpdatePayload, type MedicationFlags } from './editValues'
-import { ConfirmDialog } from '../family/ConfirmDialog'
+import { ConfirmDialog } from '../../shared/ui/ConfirmDialog'
 import { missingFieldsText } from './missingFields'
 import { SymptomPicker } from './SymptomPicker'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
@@ -185,7 +185,7 @@ interface ConsultationFormProps {
   /** `appointmentFailed`: the consultation was saved but its next appointment was not (specs/033, part 2). */
   onSuccess: (consultationId: string, appointmentFailed?: boolean) => void
   /** Called when "← Cancelar" is followed: return false to stay (e.g. the parent refused to discard). */
-  confirmLeave?: () => boolean
+  onLeaveClick?: (event: { preventDefault: () => void; currentTarget?: EventTarget | null }) => void
   /** Tells the parent whether the form holds anything the user would lose. */
   onDirtyChange?: (dirty: boolean) => void
   /** False on the free plan (specs/030): "guardar solo como registro" is shown but can't be marked. Default: true. */
@@ -225,7 +225,7 @@ export function ConsultationForm({
   childLabel,
   cancelTo,
   onSuccess,
-  confirmLeave,
+  onLeaveClick,
   onDirtyChange,
   recordOnlyAvailable = true,
   appointmentAvailable = true,
@@ -548,9 +548,7 @@ export function ConsultationForm({
       back={{
         label: '← Cancelar',
         to: cancelTo,
-        onClick: (event) => {
-          if (confirmLeave && !confirmLeave()) event.preventDefault()
-        },
+        onClick: (event) => onLeaveClick?.(event),
       }}
       title={edit ? EDIT_TEXT.title : 'Nueva consulta'}
       subtitle={childLabel ? `Para ${childLabel}` : undefined}

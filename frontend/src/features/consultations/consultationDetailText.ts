@@ -50,4 +50,5 @@ export function scheduleLine(frequencyHours: number, durationDays: number, start
 }
 /** «✓ 07:05 · por Ana»: when the mark was made and by whom (specs/032). */
 export const takenLine = (takenBy: TakenBy | null | undefined, scheduledAt: string) =>
-  takenBy ? `✓ ${formatTime(takenBy.at)} · por ${takenBy.name}` : `✓ ${formatTime(scheduledAt)}`
+  // specs/066: an own mark the server hasn't answered yet has the hour of the tap and no name.
+  takenBy ? (takenBy.name ? `✓ ${formatTime(takenBy.at)} · por ${takenBy.name}` : `✓ ${formatTime(takenBy.at)}`) : `✓ ${formatTime(scheduledAt)}`

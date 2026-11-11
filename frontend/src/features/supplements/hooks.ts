@@ -1,5 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@clerk/react'
+import { formatTime } from '../../shared/date'
+import { requestMark } from '../../shared/marks/requestMark'
+import { useShownQuery } from '../../shared/marks/usePendingMarks'
+import type { MarkToggle } from '../consultations/useDoseToggle'
 import { DOSE_REFETCH_MS } from '../consultations/doseStatus'
 import type { Account } from '../home/types'
 import { useChildAccess } from '../family/useChildAccess'
@@ -19,43 +23,43 @@ import {
   updateRoutine,
   updateRoutineDose,
 } from './api'
-import type { RoutineInput, RoutineKind } from './types'
+import type { RoutineDose, RoutineInput, RoutineKind } from './types'
 
 /** The child's supplements or activities with the doses of the parent's local day; asked again every minute so a dose turns "sin registrar" on its own. */
 export function useRoutines(childId: string | undefined, kind: RoutineKind, day: { from: Date; to: Date }) {
   const { getToken } = useAuth()
-  return useQuery({
+  return useShownQuery(useQuery({
     queryKey: ['routines', childId, kind, day.from.toISOString()],
     queryFn: async () => fetchRoutines(childId!, kind, day.from, day.to, await getToken()),
     enabled: !!childId,
     retry: false,
     refetchInterval: DOSE_REFETCH_MS,
-  })
+  }))
 }
 
 /** The person's OWN supplements or activities (specs/033, part 3) with the doses of their local day; same refresh as a child's. */
 export function usePersonalRoutines(accountId: string | undefined, kind: RoutineKind, day: { from: Date; to: Date }, { poll = true }: { poll?: boolean } = {}) {
   const { getToken } = useAuth()
-  return useQuery({
+  return useShownQuery(useQuery({
     queryKey: ['routines', 'personal', accountId, kind, day.from.toISOString()],
     queryFn: async () => fetchPersonalRoutines(accountId!, kind, day.from, day.to, await getToken()),
     enabled: !!accountId,
     retry: false,
     // The sidebar only wants the count: it doesn't ask again every minute on every screen (the screens that show doses do).
     refetchInterval: poll ? DOSE_REFETCH_MS : false,
-  })
+  }))
 }
 
 /** One routine with the doses of a month (the calendar's). */
 export function useRoutine(routineId: string | undefined, range: { from: Date; to: Date }) {
   const { getToken } = useAuth()
-  return useQuery({
+  return useShownQuery(useQuery({
     queryKey: ['routine', routineId, range.from.toISOString()],
     queryFn: async () => fetchRoutine(routineId!, range.from, range.to, await getToken()),
     enabled: !!routineId,
     retry: false,
     refetchInterval: DOSE_REFETCH_MS,
-  })
+  }))
 }
 
 /** Everything that shows a routine or its doses asks again after a change: the section, the detail and "Tomas de hoy". */
@@ -151,24 +155,53 @@ export function useMyReminders(routineId: string) {
 /**
  * «Realizado» on an activity (specs/035): the server marks the earliest unmarked dose of the person's local day. A 409
  * («nothing_to_mark», another device marked the last one first) is not an error to the person: the screens ask again.
+ * Since specs/066 the count moves at once: with the day's doses the screen already has, the earliest unmarked one shows
+ * marked while the request travels (the same rule as the server's, without reading the clock); what the server marked wins.
  */
-export function useMarkDone(routineId: string, day: { from: Date; to: Date }) {
+export function useMarkDone(routineId: string, day: { from: Date; to: Date }, routine: { name?: string; doses?: Pick<RoutineDose, 'id' | 'scheduledAt' | 'taken'>[] } = {}) {
   const { getToken } = useAuth()
+  const queryClient = useQueryClient()
   const refresh = useRefreshAfterChange()
-  return useMutation({
-    mutationFn: async () => markRoutineDone(routineId, day.from, day.to, await getToken()),
-    onSettled: refresh,
-  })
+  const send = async () => markRoutineDone(routineId, day.from, day.to, await getToken())
+  return {
+    isPending: false as const,
+    mutate: (_?: undefined, options?: { onSuccess?: () => void }) => {
+      const inDay = (at: string) => new Date(at) >= day.from && new Date(at) < day.to
+      const next = [...(routine.doses ?? [])].filter((d) => !d.taken && inDay(d.scheduledAt)).sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt))[0]
+      if (!next) {
+        // Nothing to show ahead of the server: it decides, and «nothing to mark» is silent.
+        void send().then(() => options?.onSuccess?.(), () => undefined).finally(refresh)
+        return
+      }
+      void requestMark({
+        queryClient,
+        dose: { id: next.id, name: routine.name ?? '', time: formatTime(next.scheduledAt) },
+        taken: true,
+        send,
+        invalidate: refresh,
+        onSaved: options?.onSuccess,
+      })
+    },
+  }
 }
 
 /** Marks or unmarks one routine dose (never depends on the plan) and refreshes every screen that shows it. */
-export function useRoutineDoseToggle(routineId: string, doseId: string) {
+export function useRoutineDoseToggle(routineId: string, doseId: string, label: { name?: string; scheduledAt?: string } = {}): MarkToggle {
   const { getToken } = useAuth()
+  const queryClient = useQueryClient()
   const refresh = useRefreshAfterChange()
-  return useMutation({
-    mutationFn: async (taken: boolean) => updateRoutineDose(routineId, doseId, taken, await getToken()),
-    onSuccess: refresh,
-  })
+  return {
+    isPending: false,
+    mutate: (taken, options) =>
+      void requestMark({
+        queryClient,
+        dose: { id: doseId, name: label.name ?? '', time: label.scheduledAt ? formatTime(label.scheduledAt) : '' },
+        taken,
+        send: async (wanted) => updateRoutineDose(routineId, doseId, wanted, await getToken()),
+        invalidate: refresh,
+        onSaved: options?.onSuccess,
+      }),
+  }
 }
 
 /**

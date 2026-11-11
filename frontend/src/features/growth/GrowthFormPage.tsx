@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { useSidebarSession } from '../home/useSidebarSession'
 import { RoutinePageFrame } from '../supplements/RoutineFormPage'
+import { useDiscardGuard } from '../../shared/ui/useDiscardGuard'
 import { useUnsavedWork } from '../../shared/appVersion/unsavedWork'
 import { formatAgeLong } from '../../shared/age'
 import { fieldGrowth, fieldGrowthError, fieldGrowthInput } from '../../shared/ui/formStyles'
@@ -64,9 +65,9 @@ export function GrowthFormPage() {
   const dirty = isDirty(values, initial)
   useUnsavedWork(dirty && !save.isSuccess)
   const backTo = `/children/${childId}/crecimiento`
-  const leave = (e: { preventDefault: () => void }) => {
-    if (dirty && !window.confirm(GROWTH.leaveConfirm)) e.preventDefault()
-  }
+  // specs/066: the app's own question instead of the browser's; «Descartar» goes on to where the tap was going.
+  const guard = useDiscardGuard({ isDirty: () => dirty && !save.isSuccess, title: GROWTH.leaveTitle, body: GROWTH.leaveBody })
+  const leave = (e: { preventDefault: () => void; currentTarget?: EventTarget | null }) => guard.guardLink(e, backTo)
   const set = (field: keyof GrowthValues, value: string) => setValues((v) => ({ ...v, [field]: value }))
   const today = localToday()
   const birthDate = growth.data?.birthDate ?? child?.birthDate ?? ''
@@ -227,6 +228,7 @@ export function GrowthFormPage() {
           )}
         </>
       )}
+      {guard.dialog}
     </RoutinePageFrame>
   )
 }

@@ -30,10 +30,10 @@ const linkButton =
 /** «Quitar la última marca» (mock D3): takes back the last dose marked today, for a tap by mistake. The server decides who may. */
 function UndoLastMark({ routine, canManage }: { routine: Routine; canManage: boolean }) {
   const last = lastMarkedDose(routine.doses)
-  const mutation = useRoutineDoseToggle(routine.id, last?.id ?? '')
+  const mutation = useRoutineDoseToggle(routine.id, last?.id ?? '', { name: routine.name, scheduledAt: last?.scheduledAt })
   if (!last || !(canManage || last.takenBy?.mine)) return null
   return (
-    <button type="button" disabled={mutation.isPending} onClick={() => mutation.mutate(false)} className={`self-center ${linkButton}`}>
+    <button type="button" onClick={() => mutation.mutate(false)} className={`self-center ${linkButton}`}>
       Quitar la última marca
     </button>
   )
@@ -56,7 +56,7 @@ function SupplementToday({ routine, canManage, own, today }: { routine: Routine;
         <DayProgress done={count.done} total={count.total} label={`${count.done} de ${count.total} tomas hoy`} />
         <div className="grid grid-cols-[repeat(auto-fill,minmax(112px,1fr))] gap-2 pt-1">
           {routine.doses.map((dose) => (
-            <RoutineDoseChip key={dose.id} routineId={routine.id} dose={dose} canManage={canManage} own={own} />
+            <RoutineDoseChip key={dose.id} routineId={routine.id} name={routine.name} dose={dose} canManage={canManage} own={own} />
           ))}
         </div>
       </>
@@ -94,7 +94,7 @@ function FixedToday({ routine, canManage, own, today }: { routine: Routine; canM
           {last && <span className="text-[13px] font-bold text-body">{last.sub}</span>}
         </div>
       </div>
-      {pendingToday && <RealizadoButton routineId={routine.id} name={routine.name} variant="solid" />}
+      {pendingToday && <RealizadoButton routineId={routine.id} name={routine.name} doses={routine.doses} variant="solid" />}
       {!pendingToday && routine.doses.length > 0 && <p className="text-[15px] leading-normal text-body">No quedan avisos hoy.</p>}
       <UndoLastMark routine={routine} canManage={canManage} />
     </>
@@ -150,7 +150,7 @@ function ActivityToday({ routine, canManage, own, today }: { routine: Routine; c
       {allDone ? (
         <p className="text-[15px] leading-normal text-body">No quedan avisos hoy.</p>
       ) : (
-        <RealizadoButton routineId={routine.id} name={routine.name} variant="solid" />
+        <RealizadoButton routineId={routine.id} name={routine.name} doses={routine.doses} variant="solid" />
       )}
       <UndoLastMark routine={routine} canManage={canManage} />
     </>

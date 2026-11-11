@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { useAuth } from '@clerk/react'
+import { useShownQuery } from '../../shared/marks/usePendingMarks'
 import { useQuery } from '@tanstack/react-query'
 import { PageHeader } from '../../shared/ui/PageHeader'
 import { SectionIndex } from '../../shared/ui/SectionIndex'
@@ -48,13 +49,13 @@ export function ChildDetailPage() {
 
   const today = useLocalDay()
   const { getToken } = useAuth()
-  const overviewQuery = useQuery({
+  const overviewQuery = useShownQuery(useQuery({
     queryKey: ['overview', childId, today.from.toISOString()],
     queryFn: async () => fetchChildOverview(childId, today.from, today.to, await getToken()),
     enabled: !!childId,
     retry: false,
     refetchInterval: DOSE_REFETCH_MS,
-  })
+  }))
   const query = useQuery({
     queryKey: ['consultations', childId],
     queryFn: async () => fetchConsultations(childId, await getToken()),

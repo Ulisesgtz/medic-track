@@ -1,5 +1,8 @@
 import { useEffect, useRef } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { formatTime } from '../../../shared/date'
+import { requestMark } from '../../../shared/marks/requestMark'
+import { useShownQuery } from '../../../shared/marks/usePendingMarks'
 import type { ChildOverview, OverviewDose } from '../../consultations/types'
 import type { Routine, RoutineList } from '../../supplements/types'
 import { deviceRequest, fetchMe, PhoneApiError, type Me } from './api'
@@ -25,18 +28,18 @@ const windowQuery = (from: Date, to: Date) => new URLSearchParams({ from: from.t
 
 /** Today's doses of the child: medications and supplements. */
 export function useOverview(credential: string, childId: string | undefined, from: Date, to: Date) {
-  return useQuery({
+  return useShownQuery(useQuery({
     queryKey: phoneKey('overview', childId, from.toISOString()),
     queryFn: () => deviceRequest<ChildOverview>(credential, `/child-device/children/${childId}/overview?${windowQuery(from, to)}`),
     enabled: !!childId,
     retry: false,
     refetchInterval: REFRESH_MS,
-  })
+  }))
 }
 
 /** The child's activities with the doses of today. */
 export function useActivities(credential: string, childId: string | undefined, from: Date, to: Date) {
-  return useQuery({
+  return useShownQuery(useQuery({
     queryKey: phoneKey('activities', childId, from.toISOString()),
     queryFn: async () => {
       const query = windowQuery(from, to)
@@ -46,33 +49,49 @@ export function useActivities(credential: string, childId: string | undefined, f
     enabled: !!childId,
     retry: false,
     refetchInterval: REFRESH_MS,
-  })
+  }))
 }
 
 /** Marks or unmarks a dose of a medication or of a supplement. A mark is the phone's own: the server refuses to take back another's. */
 export function useMarkDose(credential: string) {
   const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ dose, taken }: { dose: OverviewDose; taken: boolean }) => {
+  return {
+    isPending: false as const,
+    // specs/066: the mark shows at once and goes back, with the notice, if the server didn't save it.
+    mutate: ({ dose, taken }: { dose: OverviewDose; taken: boolean }) => {
       const path =
         dose.kind === 'supplement' && dose.routineId
           ? `/child-device/routines/${dose.routineId}/doses/${dose.id}`
           : `/child-device/consultations/${dose.consultationId}/doses/${dose.id}`
-      return deviceRequest<unknown>(credential, path, 'PATCH', { taken })
+      void requestMark({
+        queryClient,
+        dose: { id: dose.id, name: dose.medicationName, time: formatTime(dose.scheduledAt) },
+        taken,
+        send: (wanted) => deviceRequest<unknown>(credential, path, 'PATCH', { taken: wanted }),
+        invalidate: () => queryClient.invalidateQueries({ queryKey: phoneKey() }),
+      })
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: phoneKey() }),
-  })
+  }
 }
 
 /** «Realizado»: marks the next dose of the day of an activity. */
 export function useDone(credential: string, from: Date, to: Date) {
   const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: (routineId: string) =>
-      deviceRequest<unknown>(credential, `/child-device/routines/${routineId}/done`, 'POST', { from: from.toISOString(), to: to.toISOString() }),
-    // Another device marking the last dose first answers «nothing to mark»: the list is read again either way.
-    onSettled: () => queryClient.invalidateQueries({ queryKey: phoneKey() }),
-  })
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: phoneKey() })
+  return {
+    isPending: false as const,
+    // specs/066: the earliest unmarked dose of the day the screen has shows marked at once (the server's own rule); what the
+    // server marked wins. Another device marking the last dose first answers «nothing to mark»: the list is read again either way.
+    mutate: (activity: Pick<Routine, 'id' | 'name' | 'doses'>) => {
+      const send = () => deviceRequest<unknown>(credential, `/child-device/routines/${activity.id}/done`, 'POST', { from: from.toISOString(), to: to.toISOString() })
+      const next = activity.doses.filter((d) => !d.taken).sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt))[0]
+      if (!next) {
+        void send().catch(() => undefined).finally(invalidate)
+        return
+      }
+      void requestMark({ queryClient, dose: { id: next.id, name: activity.name, time: formatTime(next.scheduledAt) }, taken: true, send, invalidate })
+    },
+  }
 }
 
 /**

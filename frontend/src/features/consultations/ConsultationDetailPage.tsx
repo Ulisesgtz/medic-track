@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useAuth } from '@clerk/react'
 import { useLocation, useParams, Link } from 'react-router-dom'
+import { useShownQuery } from '../../shared/marks/usePendingMarks'
 import { useQuery } from '@tanstack/react-query'
 import { formatDateShort } from '../../shared/date'
 import { PageHeader } from '../../shared/ui/PageHeader'
@@ -135,14 +136,15 @@ export function ConsultationDetailPage() {
   const variant = isDesktop ? 'desktop' : 'phone'
 
   const { getToken } = useAuth()
-  const query = useQuery({
+  // specs/066: a mark that still travels shows at once (`useShownQuery`).
+  const query = useShownQuery(useQuery({
     queryKey: ['consultation', consultationId],
     queryFn: async () => fetchConsultationDetail(consultationId!, await getToken()),
     enabled: !!consultationId,
     retry: false,
     // specs/013: a dose turns "sin registrar" on its own; asking again every minute shows it without reloading.
     refetchInterval: DOSE_REFETCH_MS,
-  })
+  }))
   // A child's consultation, or a person's own (specs/058: no child; its account is the person's).
   const subject = query.data ? subjectOfConsultation(query.data) : undefined
   const childId = subject?.kind === 'child' ? subject.childId : undefined

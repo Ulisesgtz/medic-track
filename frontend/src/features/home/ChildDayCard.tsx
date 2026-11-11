@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { formatAgeLong } from '../../shared/age'
 import { formatTime } from '../../shared/date'
 import { DayRow } from '../../shared/ui/DayRow'
+import { SavingHint } from '../../shared/marks/MarkNotice'
 import { useOverviewDoseToggle } from '../consultations/useDoseToggle'
 import type { OverviewDose } from '../consultations/types'
 import type { Child } from './types'
@@ -86,8 +87,12 @@ function Footer({
         type="button"
         aria-pressed={held}
         aria-label={label}
-        disabled={toggle.isPending}
-        onClick={() => toggle.mutate(!held, { onSuccess: held ? onUnmarked : onMarked })}
+        onClick={() => {
+          // specs/066: the footer changes with the tap; if the server doesn't save it, the dose's own data takes it back.
+          if (held) onUnmarked()
+          else onMarked()
+          toggle.mutate(!held)
+        }}
         className={
           held
             ? 'min-h-11 shrink-0 cursor-pointer rounded-[14px] bg-confirmed-soft px-3.5 text-[15px] font-extrabold text-confirmed-strong'
@@ -97,12 +102,7 @@ function Footer({
         {held ? markedAt(heldTime ?? '') : HOME.mark}
       </button>
     </div>
-      {/* A mark that didn't go through says so: the parent must not believe it was recorded (Principio I: neutral words). */}
-      {toggle.isError && (
-        <p role="alert" className="text-[14px] text-body">
-          {HOME.markFailed}
-        </p>
-      )}
+      <SavingHint doseId={dose.id} className="self-end" />
     </div>
   )
 }
@@ -114,8 +114,11 @@ function Footer({
  */
 export function ChildDayCard({ child, variant, index }: { child: Child; variant: Variant; index: number }) {
   const desktop = variant === 'desktop'
-  const { day, isPending, isError, refetch } = useChildDay(child.id)
-  const [held, setHeld] = useState<Held | null>(null)
+  const { day, overview, isPending, isError, refetch } = useChildDay(child.id)
+  const [heldState, setHeld] = useState<Held | null>(null)
+  // A mark the server didn't save goes back in the data (specs/066): the footer must not keep saying «✓ HH:MM» for it.
+  const heldNow = heldState && overview?.doses.find((d) => d.id === heldState.dose.id)
+  const held = heldState && heldNow?.taken !== false ? heldState : null
   useEffect(() => {
     if (!held) return
     const timer = setTimeout(() => setHeld(null), MARKED_SHOWN_MS)

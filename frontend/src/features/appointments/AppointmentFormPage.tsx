@@ -2,6 +2,7 @@ import { useCallback, useRef, useState, type FormEvent, type ReactNode } from 'r
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '@clerk/react'
 import { useQuery } from '@tanstack/react-query'
+import { useDiscardGuard } from '../../shared/ui/useDiscardGuard'
 import { useUnsavedWork } from '../../shared/appVersion/unsavedWork'
 import { formatDateLong } from '../../shared/date'
 import { Notice } from '../../shared/ui/Notice'
@@ -91,21 +92,20 @@ export function AppointmentFormPage() {
 
   const backTo = editing || standalone ? home : `/consultations/${consultationId}`
   // specs/056 (design H4): «← Cancelar» (asking first when something was typed), the title and «Para Mateo».
-  const discardQuestion = '¿Descartar la cita? Se perderá lo que capturaste.'
+  const guard = useDiscardGuard({ isDirty: () => dirtyRef.current, title: '¿Descartar la cita?', body: 'Se perderá lo que capturaste.' })
   const frame = (content: ReactNode) => (
     <RoutinePageFrame
       isDesktop={isDesktop}
       childId={childId}
       backLabel="← Cancelar"
       backTo={backTo}
-      backOnClick={(event) => {
-        if (dirtyRef.current && !window.confirm(discardQuestion)) event.preventDefault()
-      }}
+      backOnClick={(event) => guard.guardLink(event, backTo)}
       title={editing ? 'Editar cita' : 'Agregar próxima cita'}
       subtitle={child ? `Para ${child.firstName}` : undefined}
       maxWidth="max-w-[640px]"
     >
       {content}
+      {guard.dialog}
     </RoutinePageFrame>
   )
   const message = (text: string) => <p className={`${card} text-base leading-relaxed text-body`}>{text}</p>
@@ -127,10 +127,7 @@ export function AppointmentFormPage() {
   const consultDate = editing ? appointment?.consultDate : consultation?.consultDate
   const form = current ?? emptyAppointmentValues()
 
-  const leave = () => {
-    if (dirtyRef.current && !window.confirm(discardQuestion)) return
-    navigate(backTo)
-  }
+  const leave = () => guard.guardAction(() => navigate(backTo))
 
   async function submit(event: FormEvent) {
     event.preventDefault()

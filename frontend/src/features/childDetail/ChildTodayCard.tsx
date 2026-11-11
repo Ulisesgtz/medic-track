@@ -9,6 +9,7 @@ import { useOverviewDoseToggle } from '../consultations/useDoseToggle'
 import { MARKED_SHOWN_MS } from '../home/ChildDayCard'
 import { useChildDay } from '../home/useChildDay'
 import { useMarkDone } from '../supplements/hooks'
+import { SavingHint } from '../../shared/marks/MarkNotice'
 import type { Routine } from '../supplements/types'
 import {
   CHILD,
@@ -62,7 +63,7 @@ function DoseRow({ dose, variant, canManage }: { dose: OverviewDose; variant: Va
         type="button"
         aria-label={markLabel(dose.medicationName, time)}
         aria-pressed={dose.taken}
-        disabled={toggle.isPending || locked}
+        disabled={locked}
         onClick={() => toggle.mutate(!dose.taken)}
         className={
           dose.taken
@@ -72,11 +73,7 @@ function DoseRow({ dose, variant, canManage }: { dose: OverviewDose; variant: Va
       >
         {!dose.taken ? CHILD.mark : others ? `✓ ${takenByText(dose.takenBy)}` : `✓ ${formatTime(dose.takenBy?.at ?? dose.scheduledAt)}`}
       </button>
-      {toggle.isError && (
-        <p role="alert" className="w-full pb-1 text-[14px] text-body">
-          {CHILD.markFailed}
-        </p>
-      )}
+      <SavingHint doseId={dose.id} className="w-full pb-1 text-right" />
     </li>
   )
 }
@@ -85,33 +82,28 @@ interface Target {
   routineId: string
   name: string
   at: string
+  doses: Routine['doses']
 }
 
 function earliest(activities: Routine[], keep: (d: Routine['doses'][number]) => boolean): Target | null {
-  const all = activities.flatMap((r) => r.doses.filter(keep).map((d) => ({ routineId: r.id, name: r.name, at: d.scheduledAt })))
+  const all = activities.flatMap((r) => r.doses.filter(keep).map((d) => ({ routineId: r.id, name: r.name, at: d.scheduledAt, doses: r.doses })))
   return all.sort((a, b) => a.at.localeCompare(b.at))[0] ?? null
 }
 
 /** «✓ Realizado» of the activity whose unmarked dose comes first (the server marks the earliest unmarked of the day, specs/035). */
 function DoneButton({ target, onDone, desktop }: { target: Target; onDone: () => void; desktop: boolean }) {
   const day = useLocalDay()
-  const mark = useMarkDone(target.routineId, day)
+  const mark = useMarkDone(target.routineId, day, target)
   return (
     <>
       <button
         type="button"
-        disabled={mark.isPending}
         onClick={() => mark.mutate(undefined, { onSuccess: onDone })}
         aria-label={`Realizado: ${target.name}`}
         className={`${outline} px-[18px] ${desktop ? 'ml-auto' : 'self-end'}`}
       >
         {CHILD.done}
       </button>
-      {mark.isError && (
-        <p role="alert" className="w-full text-[14px] text-body">
-          {CHILD.markFailed}
-        </p>
-      )}
     </>
   )
 }

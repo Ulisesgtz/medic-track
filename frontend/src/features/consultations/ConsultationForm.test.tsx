@@ -596,7 +596,7 @@ describe('ConsultationForm', () => {
 
     it('stays on the form when the parent refuses to discard what they captured', async () => {
       const user = userEvent.setup()
-      renderForm('phone', { confirmLeave: () => false })
+      renderForm('phone', { onLeaveClick: (event) => event.preventDefault() })
 
       await user.click(screen.getByRole('link', { name: '← Cancelar' }))
 

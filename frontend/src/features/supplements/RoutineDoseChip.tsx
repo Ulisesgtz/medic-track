@@ -9,16 +9,19 @@ import type { RoutineDose } from './types'
  */
 export function RoutineDoseChip({
   routineId,
+  name,
   dose,
   canManage = true,
   own = false,
 }: {
   routineId: string
+  /** The routine's name, for the notice of a mark that didn't get saved (specs/066). */
+  name?: string
   dose: RoutineDose
   canManage?: boolean
   /** The person's own routine: «a las 07:20», no name. */
   own?: boolean
 }) {
-  const mutation = useRoutineDoseToggle(routineId, dose.id)
-  return <DoseChipView dose={dose} canManage={canManage} pending={mutation.isPending} onToggle={() => mutation.mutate(!dose.taken)} own={own} />
+  const mutation = useRoutineDoseToggle(routineId, dose.id, { name, scheduledAt: dose.scheduledAt })
+  return <DoseChipView dose={dose} canManage={canManage} pending={false} onToggle={() => mutation.mutate(!dose.taken)} own={own} />
 }
