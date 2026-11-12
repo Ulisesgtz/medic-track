@@ -51,20 +51,36 @@ DEV_URL="$(grep -E '^DATABASE_URL=' "$ROOT/backend/.env.local" | head -1 | cut -
 [ -n "$DEV_URL" ] || fail "falta DATABASE_URL en backend/.env.local"
 command -v psql > /dev/null || fail "falta psql (el cliente de PostgreSQL) para crear la base de las E2E"
 E2E_DB="${E2E_DB:-peditrack_e2e}"
-BASE="${DEV_URL%%\?*}"              # postgres://user:pass@host:port/pediTrack
-QUERY="${DEV_URL#"$BASE"}"           # ?sslmode=disable (or empty)
-SERVER="${BASE%/*}"                  # postgres://user:pass@host:port
-DEV_DB="${BASE##*/}"
-[ "$E2E_DB" != "$DEV_DB" ] || fail "E2E_DB no puede ser la base de desarrollo ($DEV_DB)"
-E2E_URL="$SERVER/$E2E_DB$QUERY"
-export DATABASE_URL="$E2E_URL"   # also the tests' own queries (setAccountPlan, queryDb in e2e/helpers.ts)
-ADMIN_URL="$SERVER/postgres$QUERY"
+# The name goes into a DROP: only `peditrack_e2e…` in lower case, letters, digits and «_» (no quotes, no other database).
+[[ "$E2E_DB" =~ ^peditrack_e2e[a-z0-9_]*$ ]] || fail "E2E_DB debe empezar con peditrack_e2e y llevar solo minúsculas, números y _"
 
-echo "e2e-local: base nueva $E2E_DB (la de desarrollo no se toca)…"
-psql "$ADMIN_URL" -q -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"$E2E_DB\" WITH (FORCE)" -c "CREATE DATABASE \"$E2E_DB\"" > "$LOGS/db.log" 2>&1 \
+# postgres://user:password@host:port/database?options
+URL_RE='^(postgres(ql)?)://([^:@/]+)(:([^@]*))?@([^/:?]+)(:([0-9]+))?/([^?]+)(\?.*)?$'
+[[ "$DEV_URL" =~ $URL_RE ]] || fail "no entiendo el DATABASE_URL de backend/.env.local (postgres://usuario:clave@servidor:puerto/base)"
+DB_USER="${BASH_REMATCH[3]}"
+DB_PASSWORD="${BASH_REMATCH[5]}"
+DB_HOST="${BASH_REMATCH[6]}"
+DB_PORT="${BASH_REMATCH[8]:-5432}"
+DEV_DB="${BASH_REMATCH[9]}"
+QUERY="${BASH_REMATCH[10]}"
+# This script DROPS a database: only ever on this computer's own PostgreSQL, never on a server (DEV in Railway, production…),
+# even if backend/.env.local is pointed at one some day.
+case "$DB_HOST" in
+  localhost | 127.0.0.1 | ::1 | '[::1]') ;;
+  *) fail "DATABASE_URL de backend/.env.local apunta a «$DB_HOST»: este script solo crea y borra la base de las E2E en localhost" ;;
+esac
+[ "$E2E_DB" != "$DEV_DB" ] || fail "E2E_DB no puede ser la base de desarrollo ($DEV_DB)"
+
+E2E_URL="postgres://$DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$E2E_DB$QUERY"
+export DATABASE_URL="$E2E_URL"   # the tests' own queries (setAccountPlan, queryDb in e2e/helpers.ts); an env var, never an argument
+# psql gets the password through the environment, so it never shows in the list of processes (`ps`, Task Manager).
+psql_e2e() { PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -q -v ON_ERROR_STOP=1 "$@"; }
+
+echo "e2e-local: base nueva $E2E_DB en localhost (la de desarrollo no se toca)…"
+psql_e2e -d postgres -c "DROP DATABASE IF EXISTS \"$E2E_DB\" WITH (FORCE)" -c "CREATE DATABASE \"$E2E_DB\"" > "$LOGS/db.log" 2>&1 \
   || fail "no se pudo crear la base $E2E_DB (ver $LOGS/db.log)"
 for f in "$ROOT"/backend/migrations/*.sql; do
-  psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$f" >> "$LOGS/db.log" 2>&1 || fail "la migración $(basename "$f") falló (ver $LOGS/db.log)"
+  psql_e2e -d "$E2E_DB" -f "$f" >> "$LOGS/db.log" 2>&1 || fail "la migración $(basename "$f") falló (ver $LOGS/db.log)"
 done
 
 echo "e2e-local: compilando y levantando el API…"
