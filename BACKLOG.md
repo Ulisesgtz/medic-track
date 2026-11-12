@@ -322,9 +322,18 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
   Ubuntu 26.04 y WebKit dejó de abrir (`libicudata.so.74`). Ya se fijó `runs-on: ubuntu-24.04` en `.github/workflows/ci.yml`.
   Lo siguiente: correr los jobs de E2E dentro de `mcr.microsoft.com/playwright:v<versión de @playwright/test>-noble`
   (los navegadores y sus librerías ya vienen dentro: sin descarga ni `install-deps`), subiendo la etiqueta junto con
-  `@playwright/test`. Además, para que mis E2E nuevos no se prueben por primera vez en el CI: llaves de prueba de Clerk
-  en este equipo (`frontend/.env.local` y `backend/.env.local`, las pone el dueño) y correr `npx playwright test` antes
-  de cada push.
+  `@playwright/test`. ~~Además, para que mis E2E nuevos no se prueben por primera vez en el CI: llaves de prueba de Clerk
+  en este equipo y correr las E2E antes de cada push~~ **hecho** (2026-11-11/12): las llaves están en este equipo y
+  `scripts/e2e-local.sh` corre las E2E como CI (bugfix/068); también la hora de México en las E2E (PR 87), la tolerancia
+  de reloj con Clerk y el `govulncheck` semanal. **Queda abierto**: la imagen oficial de Playwright (los últimos fallos
+  de infraestructura fueron de WebKit en el PR 62, `kill ESRCH`; si vuelven, es lo siguiente).
+- **E2E de recordatorios por persona que fallan solo en local** (anotado 2026-11-12, bugfix/068): las dos pruebas de
+  `familia-recordatorios.spec.ts` de suplementos y citas pasan en CI pero en este equipo el aviso se reclama ~80 s
+  después de su hora (no ~30 s) y la prueba se queda corta. La base local acumula datos de cientos de corridas
+  (8448 dispositivos «activos» de cuentas de prueba cuyo usuario de Clerk ya se borró), y la vuelta del proceso de
+  avisos se alarga. Opciones: una base aparte para las E2E locales (`peditrack_e2e`, creada y migrada por
+  `scripts/e2e-local.sh`, como en CI), o borrar las cuentas de prueba al terminar cada E2E (hoy solo se borra el
+  usuario de Clerk). La primera es la más limpia: las E2E nunca tocarían la base de desarrollo.
 
 ## Escalar a muchos usuarios (anotado 2026-11-08)
 

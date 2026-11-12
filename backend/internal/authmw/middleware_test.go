@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -89,6 +90,23 @@ func TestRequireSession_ValidToken(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.True(t, gotOK)
 	require.Equal(t, "user_123", gotClerkUserID)
+}
+
+// A token issued by a clock a little ahead of this one (Clerk's, seconds apart) is accepted; one from well in the future is not.
+func TestRequireSession_ToleratesASmallClockSkew(t *testing.T) {
+	router, verifier := newRouter(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	call := func(token string) int {
+		req := httptest.NewRequest(http.MethodGet, "/protected", nil)
+		req.Header.Set("Authorization", "Bearer "+token)
+		rec := httptest.NewRecorder()
+		router.ServeHTTP(rec, req)
+		return rec.Code
+	}
+
+	require.Equal(t, http.StatusOK, call(verifier.TokenIssuedAt(t, "user_123", time.Now().Add(2*time.Second))))
+	require.Equal(t, http.StatusUnauthorized, call(verifier.TokenIssuedAt(t, "user_123", time.Now().Add(authmw.ClockSkewLeeway+30*time.Second))))
 }
 
 func TestClerkUserIDFromContext_NoClaims(t *testing.T) {
@@ -246,7 +264,9 @@ func TestRequireAccess_ALowerLevelOrNoneIs403AndNeverReachesTheHandler(t *testin
 func TestRequireAccess_CheckFailureIs500(t *testing.T) {
 	router, verifier := newAccessRouter(t, access.Mark, func(context.Context, string, uuid.UUID) (access.Access, error) {
 		return access.Access{}, errors.New("db down")
-	}, func(http.ResponseWriter, *http.Request) { t.Fatal("handler must not run when access can't be verified") })
+	}, func(http.ResponseWriter, *http.Request) {
+		t.Fatal("handler must not run when access can't be verified")
+	})
 
 	rec := getThing(router, "/things/"+uuid.NewString(), verifier.Token(t, "user_x"))
 

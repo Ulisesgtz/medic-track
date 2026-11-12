@@ -1,0 +1,31 @@
+name: Vulnerabilidades de Go (semanal)
+
+# The CI's govulncheck (ci.yml, specs/037) blocks a PR when Go publishes a vulnerability in code the API calls — PR 86 failed
+# that way for a reason that had nothing to do with it. This runs the same check on `develop` every Monday (and by hand), so a
+# new vulnerability shows up as a failed run of its own, to be fixed with a small PR, before it stops the next feature.
+on:
+  schedule:
+    - cron: '0 14 * * 1' # Mondays 08:00 Mexico City
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  govulncheck:
+    name: govulncheck en develop
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+
+      - name: Known vulnerabilities (govulncheck)
+        working-directory: backend
+        # Same version and arguments as ci.yml. If it fails: raise the Go version in go.mod (e.g. 1.27.3 → 1.27.4) or the
+        # module it names, in a PR to develop.
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...

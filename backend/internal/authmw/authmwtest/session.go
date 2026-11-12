@@ -62,11 +62,21 @@ func (v *Verifier) Token(t *testing.T, clerkUserID string) string {
 // TokenForParty is Token with the "azp" claim (the origin Clerk issued the session to) set to party; empty leaves it out.
 func (v *Verifier) TokenForParty(t *testing.T, clerkUserID, party string) string {
 	t.Helper()
+	return v.token(t, clerkUserID, party, time.Now())
+}
+
+// TokenIssuedAt is Token issued at a given instant: a token from a clock ahead of this one (bugfix/068).
+func (v *Verifier) TokenIssuedAt(t *testing.T, clerkUserID string, issuedAt time.Time) string {
+	t.Helper()
+	return v.token(t, clerkUserID, "", issuedAt)
+}
+
+func (v *Verifier) token(t *testing.T, clerkUserID, party string, now time.Time) string {
+	t.Helper()
 
 	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.RS256, Key: v.privKey}, nil)
 	require.NoError(t, err)
 
-	now := time.Now()
 	claims := map[string]any{
 		"sub": clerkUserID,
 		// isValidIssuer (clerk-sdk-go/v2/jwt) requires this exact shape.
