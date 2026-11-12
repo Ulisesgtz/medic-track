@@ -98,7 +98,8 @@ for (const design of designs) {
       await expect(tuDia.getByText('Próxima: Omega 3 · 23:55')).toBeVisible()
       const before = await tuDia.getByText(/^\d+ de 24 hechas$/).textContent()
       await tuDia.getByRole('button', { name: 'Realizado: Pararse a estirar' }).click()
-      await expect(tuDia.getByText(/^✓ /)).toBeVisible()
+      // The activity's own «✓» (at some hours «Tu día» also says «✓ Todo marcado hasta ahora»).
+      await expect(tuDia.getByText(/^✓ Pararse a estirar · \d\d:\d\d$/)).toBeVisible()
       await expect(tuDia.getByText(/^\d+ de 24 hechas$/)).not.toHaveText(before!)
       // «Tu día» is above the children.
       const tuDiaBox = (await tuDia.boundingBox())!
