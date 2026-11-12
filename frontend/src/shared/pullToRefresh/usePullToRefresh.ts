@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
+import { isOffline } from '../offline/connectivity'
 
 /** Finger travel (px) at which letting go refreshes. */
 export const PULL_THRESHOLD = 140
@@ -55,6 +56,11 @@ export function usePullToRefresh(enabled: boolean): PullState {
     }
 
     const refresh = async () => {
+      // specs/067: without a connection a refetch would wait for the network forever; the banner already says why.
+      if (isOffline()) {
+        setState(IDLE)
+        return
+      }
       busy.current = true
       // An earlier failure notice must not hide this refresh's indicator when its timer fires.
       clearTimeout(failedTimer.current)

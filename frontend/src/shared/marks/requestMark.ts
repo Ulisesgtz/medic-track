@@ -2,6 +2,8 @@ import type { QueryClient } from '@tanstack/react-query'
 import { dismissMarkNotice, pushMarkNotice } from './markNotices'
 import { clearPendingMark, getPendingMark, setDesired, setInFlight } from './pendingMarks'
 import { writeDoseToCaches, type SavedDose } from './writeDoseToCaches'
+import { isOffline } from '../offline/connectivity'
+import { notifyNeedsConnection } from '../offline/offlineGuard'
 
 // One tap on a dose (specs/066, research R5): the screen changes at once and ONE request at a time travels per dose, so the
 // screen and the server end in the state of the last tap whatever order the answers come in, and no mark is saved twice.
@@ -43,6 +45,11 @@ function asSavedDose(answer: unknown): SavedDose | undefined {
 }
 
 export async function requestMark({ queryClient, dose, taken, send, invalidate, onSaved }: MarkRequest): Promise<void> {
+  // Without a connection the mark is never painted nor sent (specs/067, FR-007): it would look saved when it isn't.
+  if (isOffline()) {
+    notifyNeedsConnection('mark')
+    return
+  }
   setDesired(dose.id, taken)
   // A request for this dose already travels: when it answers, it sends this tap's state if it is another.
   if (getPendingMark(dose.id)?.inFlight) return

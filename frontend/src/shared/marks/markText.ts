@@ -1,3 +1,5 @@
+import { ACTION_NEEDS_CONNECTION, MARK_NEEDS_CONNECTION } from '../offline/offlineText'
+
 // The words of a mark that travels or didn't get saved (specs/066, research R7). They say what happened to the MARK — never
 // anything about the medication or what to do with it (Principio I) — and never call it a mistake.
 
@@ -5,7 +7,8 @@ export const SAVING = 'guardando…'
 export const CLOSE = 'Cerrar'
 export const NOTICE_LABEL = 'Avisos de las marcas'
 
-export type MarkNoticeKind = 'not_saved' | 'not_unmarked' | 'marked_by_other' | 'not_yours' | 'gone'
+// specs/067: without a connection nothing is sent; the notice says the action needs one (one line per kind, not per dose).
+export type MarkNoticeKind = 'not_saved' | 'not_unmarked' | 'marked_by_other' | 'not_yours' | 'gone' | 'mark_needs_connection' | 'action_needs_connection'
 
 const what = (name: string, time: string) => (name ? `${name} de las ${time}` : `las ${time}`)
 
@@ -28,5 +31,9 @@ export function noticeText(notice: { kind: MarkNoticeKind; name: string; time: s
       return NOT_YOURS
     case 'gone':
       return GONE
+    case 'mark_needs_connection':
+      return MARK_NEEDS_CONNECTION
+    case 'action_needs_connection':
+      return ACTION_NEEDS_CONNECTION
   }
 }

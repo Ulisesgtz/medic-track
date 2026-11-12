@@ -13,6 +13,8 @@ import { VaccineDialog } from './VaccineDialog'
 import { VaccineList } from './VaccineList'
 import { TEXT, deleteRows, entrySummary } from './vaccineText'
 import type { Vaccination } from './types'
+import { needsConnection } from '../../shared/offline/queryView'
+import { SCREEN_NEEDS_CONNECTION } from '../../shared/offline/offlineText'
 
 const outline =
   'inline-flex min-h-12 cursor-pointer items-center justify-center rounded-2xl border-2 border-action px-5 text-base font-extrabold text-action hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2'
@@ -48,9 +50,11 @@ export function VaccinationCardPage() {
   const doses = query.data
 
   let content
-  if (!account || query.isPending) {
+  if (needsConnection(query)) {
+    content = <p className="text-base font-bold text-ink">{SCREEN_NEEDS_CONNECTION}</p>
+  } else if (!account || query.isPending) {
     content = <p className="text-base font-semibold text-action">{TEXT.loading}</p>
-  } else if (query.isError) {
+  } else if (query.isError && query.data === undefined) {
     content = (
       <div className={card} role="status">
         <h2 className="text-xl font-black text-ink">{TEXT.loadError}</h2>

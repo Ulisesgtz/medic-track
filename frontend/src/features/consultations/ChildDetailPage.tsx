@@ -20,6 +20,9 @@ import { RegistroCompacto } from '../supplements/RegistroCompacto'
 import { fetchChildOverview, fetchConsultations, ConsultationApiError } from './api'
 import { NewConsultationEntry } from './NewConsultationEntry'
 import { DOSE_REFETCH_MS } from './doseStatus'
+import { useOfflineFallback } from '../../shared/offline/useOfflineFallback'
+import { OfflineMissing } from '../../shared/offline/OfflineMissing'
+import { needsConnection } from '../../shared/offline/queryView'
 
 const SECTIONS = [
   { id: 'consultas', label: CHILD.consultations },
@@ -49,6 +52,8 @@ export function ChildDetailPage() {
 
   const today = useLocalDay()
   const { getToken } = useAuth()
+  // specs/067: another day without a signal, the newest «Hoy» the phone has.
+  useOfflineFallback(['overview', childId, today.from.toISOString()], 2)
   const overviewQuery = useShownQuery(useQuery({
     queryKey: ['overview', childId, today.from.toISOString()],
     queryFn: async () => fetchChildOverview(childId, today.from, today.to, await getToken()),
@@ -78,13 +83,16 @@ export function ChildDetailPage() {
     )
   }
 
+  // specs/067: a child this phone never opened, without a connection.
+  if (needsConnection(overviewQuery) && needsConnection(query)) return <OfflineMissing />
+
   const variant = isDesktop ? 'desktop' : 'phone'
   const childName = child?.firstName ?? 'tu hijo'
   const treatment = overviewQuery.data?.activeTreatment ?? null
   // specs/030: on the free plan a treatment still running means the next consultation has to wait, so the pop-up opens right away.
   const blocked = access.isFree && treatment !== null
   const consultations = query.data ?? []
-  const listStatus = query.isPending ? 'loading' : query.isError ? 'error' : 'ready'
+  const listStatus = query.data !== undefined ? 'ready' : query.isError || needsConnection(query) ? 'error' : 'loading'
 
   const avatar = child && (
     <span

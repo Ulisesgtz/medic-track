@@ -143,6 +143,15 @@ describe('ConsultationDetailPage', () => {
       expect(screen.queryByRole('button', { name: 'Abrir la foto de la receta en tamaño completo' })).not.toBeInTheDocument()
     })
 
+    it('the phone’s offline copy, kept without its photo, says the photo needs a connection (specs/067)', async () => {
+      stubApi(consultation({ photoBase64: '', photoOmitted: true }))
+      renderPage()
+
+      await openData()
+      expect(screen.getByText('La foto necesita conexión.')).toBeInTheDocument()
+      expect(screen.queryByText('Esta consulta se guardó sin foto.')).not.toBeInTheDocument()
+    })
+
     it('the same on the web design', async () => {
       stubDesktop()
       stubApi(consultation({ photoBase64: '' }))

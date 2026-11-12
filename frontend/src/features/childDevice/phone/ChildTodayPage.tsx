@@ -13,6 +13,12 @@ import { NoAccess } from './NoAccess'
 import { RemindersCard } from './RemindersCard'
 import { isIOS } from '../../reminders/deviceSupport'
 import { clearCredential, readCredential } from './storage'
+import { needsConnection } from '../../../shared/offline/queryView'
+import { OfflineMissing } from '../../../shared/offline/OfflineMissing'
+import { OfflineBanner } from '../../../shared/offline/OfflineBanner'
+import { startPersistence, wipeOffline } from '../../../shared/offline/persistence'
+import { forgetSnapshot } from '../../../shared/offline/offlineSession'
+import { useQueryClient } from '@tanstack/react-query'
 
 // specs/055 (estado 7 del diseño del inicio): the same rows, icons and chips as the child's card on the parents' home.
 const card = 'flex flex-col rounded-[22px] bg-surface p-4 shadow-[0_8px_20px_rgba(4,37,43,0.07)]'
@@ -110,6 +116,22 @@ function Today({ credential, onRotated }: { credential: string; onRotated: (cred
   const done = useDone(credential, day.from, day.to)
   useRotation(credential, me.data?.rotateAfter, onRotated)
   const gone = accessGone(me.error, overview.error, activities.error)
+  const queryClient = useQueryClient()
+
+  // specs/067: the installed phone keeps what this screen saw, as the child's (`child:<id>`), to open it again without a signal.
+  useEffect(() => {
+    if (!childId) return
+    let stop: (() => void) | undefined
+    let cancelled = false
+    void startPersistence(queryClient, `child:${childId}`).then((s) => {
+      if (cancelled) s()
+      else stop = s
+    })
+    return () => {
+      cancelled = true
+      stop?.()
+    }
+  }, [childId, queryClient])
 
   useEffect(() => {
     if (!gone) return
@@ -117,12 +139,19 @@ function Today({ credential, onRotated }: { credential: string; onRotated: (cred
     // tab holds, if it is still the stored one, is forgotten.
     const stored = readCredential()
     if (stored && stored !== credential) window.location.reload()
-    else clearCredential()
-  }, [gone, credential])
+    else {
+      clearCredential()
+      // The access is gone: so is everything this phone kept of the child (FR-011).
+      forgetSnapshot()
+      void wipeOffline(queryClient)
+    }
+  }, [gone, credential, queryClient])
 
   if (gone) return <NoAccess />
-  const failed = me.isError || overview.isError || activities.isError
+  // specs/067: what the phone has is shown even when a refresh fails without a signal.
+  const failed = (me.isError && !me.data) || (overview.isError && !overview.data) || (activities.isError && !activities.data)
   const loading = me.isPending || overview.isPending || activities.isPending
+  if (loading && (needsConnection(me) || needsConnection(overview) || needsConnection(activities))) return <OfflineMissing />
 
   const doses = (overview.data?.doses ?? []).filter((d) => d.status !== 'canceled')
   const activeActivities = (activities.data ?? []).filter((a) => a.status === 'active' && a.doses.length > 0)
@@ -138,6 +167,7 @@ function Today({ credential, onRotated }: { credential: string; onRotated: (cred
       className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col gap-5 bg-canvas px-5 pb-8 leading-[normal]"
       style={{ paddingTop: 'calc(0.5rem + env(safe-area-inset-top))' }}
     >
+      <OfflineBanner />
       <header className="flex items-center gap-3.5">
         <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-action text-[19px] font-black text-white">
           {(me.data?.childFirstName ?? '').charAt(0)}

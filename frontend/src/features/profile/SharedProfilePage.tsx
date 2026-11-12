@@ -92,8 +92,8 @@ export function SharedProfilePage() {
   const today = (
     <TodayCardView
       variant={variant}
-      pending={!overview.isSuccess && !overview.isError}
-      failed={overview.isError ? { text: PROFILE.loadFailedDay, onRetry: () => void overview.refetch() } : null}
+      pending={overview.data === undefined && !overview.isError}
+      failed={overview.isError && !overview.data ? { text: PROFILE.loadFailedDay, onRetry: () => void overview.refetch() } : null}
       doses={overview.data?.doses ?? []}
       activities={[]}
       toMark={(overview.data?.doses ?? []).filter((d) => !d.taken && d.status === 'due').length}
@@ -103,7 +103,7 @@ export function SharedProfilePage() {
   const list = person && (
     <ConsultationsSection
       consultations={consultations.data ?? []}
-      status={consultations.isPending ? 'loading' : consultations.isError ? 'error' : 'ready'}
+      status={consultations.data !== undefined ? 'ready' : consultations.isError ? 'error' : 'loading'}
       childId={subject}
       historyTo={`/personas/${accountId}/historial`}
       child={null}

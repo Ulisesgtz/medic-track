@@ -2,6 +2,8 @@ import { useAuth } from '@clerk/react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { Account } from '../home/types'
 import { unsubscribeOnLogout } from '../reminders/pushDevice'
+import { wipeOfflineCopy } from '../../shared/offline/persistence'
+import { forgetSnapshot } from '../../shared/offline/offlineSession'
 
 /**
  * Ends the Clerk session and drops every cached account/child/consultation
@@ -12,6 +14,9 @@ import { unsubscribeOnLogout } from '../reminders/pushDevice'
  *
  * Before that, this browser stops receiving the tutor's dose reminders (specs/011, FR-012): best
  * effort and at most 3 s, so a slow network never holds the logout.
+ *
+ * And this phone forgets everything it kept to be seen offline (specs/067, FR-011) — first, so even a logout that fails halfway
+ * leaves nothing behind.
  */
 export function useLogout() {
   const { signOut, getToken } = useAuth()
@@ -19,6 +24,8 @@ export function useLogout() {
 
   return async function logout() {
     const account = queryClient.getQueryData<Account>(['accounts', 'me'])
+    forgetSnapshot()
+    await wipeOfflineCopy()
     if (account) await unsubscribeOnLogout(account.id, await getToken())
     await signOut({ redirectUrl: '/login' })
     queryClient.clear()

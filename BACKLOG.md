@@ -384,10 +384,17 @@ Principio I (la app guarda lo que el padre escribe; nunca evalúa ni sugiere).
 - **Registro de temperatura y síntomas durante la enfermedad** — hoy los síntomas se marcan una vez, al crear la
   consulta. Una bitácora con hora dentro del tratamiento («38.5 °C a las 03:00», «vomitó»), en lista y gráfica de lo
   anotado, **sin umbrales de fiebre ni colores**. Entraría también en el PDF.
-- **Ver la app sin conexión** — el service worker solo maneja avisos push, sin precache: la app instalada no abre sin
-  señal. Etapa 1, solo lectura: el cascarón de la app y los últimos datos guardados en el teléfono (decidir qué se
-  guarda en el dispositivo y que se borre al cerrar sesión, Principio II). Etapa 2: marcar tomas sin conexión y
-  sincronizar (la primera marca gana, como hoy). *La spec 066 ya muestra la marca al instante y la revierte si no hay señal; la etapa 2 sería guardarla y mandarla después.*
+- **Ver la app sin conexión** — ~~Etapa 1, solo lectura~~ **hecha en `specs/067-ver-app-sin-conexion/`** (2026-11-11):
+  la app instalada **en un teléfono** abre sin señal con lo que ya vio, 7 días, sin fotos, y no manda nada sin conexión.
+  **Queda la etapa 2**: marcar tomas sin conexión y mandarlas al volver (la primera marca gana, como hoy). Hoy sin señal
+  la marca no se pinta y dice «Marcar necesita conexión»; la etapa 2 la guardaría en el teléfono y la mandaría después,
+  con su propia spec (qué pasa si otra persona marcó mientras tanto, cuánto tiempo se guarda, cómo se ve que está
+  pendiente).
+- **Pendientes del dueño de la spec 067** (anotado 2026-11-11): (1) mencionar en el **aviso de privacidad** que la app
+  instalada en el teléfono guarda en él, por 7 días, lo que la persona ya vio (sin fotos) y que se borra al cerrar
+  sesión; (2) **probar en un iPhone real** con la app instalada en modo avión (`specs/067-ver-app-sin-conexion/quickstart.md`
+  §7); (3) aprobar los textos de `contracts/ui.md` («Sin conexión · datos de las 08:15», «Necesitas conexión para abrir
+  PediTrack», «Marcar necesita conexión. Tu marca no se guardó.»).
 - **Lo que la spec 066 dejó fuera** (anotado 2026-11-11): preguntar antes de descartar también con el botón «atrás» del sistema, con un enlace de la barra lateral web o al cerrar la pestaña (hoy no pregunta; necesitaría el bloqueo de navegación del router y `beforeunload`); hacer inmediatas las demás acciones (pausar, finalizar, «Tus avisos», marcar una cita), y que «Agregar hijo» pregunte al cerrar con datos.
 - **Directorio de doctores** — el doctor es texto libre en cada consulta. Guardar una vez nombre, teléfono,
   especialidad y dirección; autocompletar en consultas y citas y un botón «Llamar». Semilla del canal B2B2C.

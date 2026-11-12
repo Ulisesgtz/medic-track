@@ -6,6 +6,14 @@ import { loadLocalEnv } from './e2e/clerkApi'
 // The workers and the dev server inherit these: the keys of the Clerk *development* instance.
 loadLocalEnv()
 
+// Every E2E run sees the clock of the people who use the app: Mexico City, in the browser (`timezoneId` below) and in the tests'
+// own process (TZ: the helpers compute «today» and the consultation's offset from it; the workers inherit it). CI runners are UTC,
+// and a push in a Mexican evening made the app see the small hours (00:00–06:00 UTC) in CI and the evening locally — the tests that
+// show «hoy», «próxima» or «todo marcado hasta ahora» then passed locally and failed in CI (PRs 062–067). The API needs nothing:
+// it works with instants and the day the browser sends.
+const E2E_TIMEZONE = 'America/Mexico_City'
+process.env.TZ = E2E_TIMEZONE
+
 // Chromium runs every spec; Firefox and WebKit run only the ones where the browser engine can make a difference — signing in and
 // out, the account, the consultation forms and detail (dates, files, layout at 390 and 1280 px), the family's two-person flows and
 // the reminders' service worker. The other ~20 specs test the app's own logic and layout rules, which behave the same in the
@@ -50,6 +58,7 @@ export default defineConfig({
   reportSlowTests: { max: 15, threshold: 90_000 },
   use: {
     baseURL: 'http://localhost:5173',
+    timezoneId: E2E_TIMEZONE,
     trace: 'on-first-retry',
     // The app's service worker (spec 011) would control every page, and in WebKit Playwright's
     // page.route no longer sees the requests of a controlled page — so @clerk/testing's token never

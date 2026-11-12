@@ -3,6 +3,7 @@ import { useConfirmGuard } from '../ui/useDiscardGuard'
 import { reloadApp } from './reload'
 import { hasUnsavedWork } from './unsavedWork'
 import { useNewVersion } from './useNewVersion'
+import { useConnectivity } from '../offline/connectivity'
 
 /** The question before reloading with a form holding work (specs/017), asked with the app's own dialog since specs/066. */
 export const UPDATE_CONFIRM_TITLE = '¿Actualizar ahora?'
@@ -15,9 +16,11 @@ export const UPDATE_CONFIRM_BODY = 'Se perderá lo que capturaste.'
  */
 export function UpdateNotice() {
   const hasNew = useNewVersion()
+  // specs/067: without a connection the new version can't load; the bar waits for the network.
+  const online = useConnectivity() === 'online'
   const isDesktop = useIsDesktop()
   const guard = useConfirmGuard({ isDirty: hasUnsavedWork, title: UPDATE_CONFIRM_TITLE, body: UPDATE_CONFIRM_BODY, confirmLabel: 'Actualizar' })
-  if (!hasNew) return null
+  if (!hasNew || !online) return null
 
   const update = (event: { preventDefault: () => void; currentTarget: EventTarget | null }) => guard.guardAction(reloadApp, event)
 

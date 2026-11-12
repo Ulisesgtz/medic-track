@@ -6,12 +6,15 @@ import * as text from './markText'
 import { clearPendingMark, getPendingMark, pendingMarksSnapshot, resetPendingMarks, setDesired, setInFlight, subscribePendingMarks } from './pendingMarks'
 import { failureOf, requestMark } from './requestMark'
 import { writeDoseToCaches } from './writeDoseToCaches'
+import { reportNetworkFailure, resetConnectivity } from '../offline/connectivity'
+import { MARK_NEEDS_CONNECTION } from '../offline/offlineText'
 
 const dose = (id: string, taken = false, extra: Record<string, unknown> = {}) => ({ id, scheduledAt: '2026-11-11T14:00:00Z', taken, status: taken ? 'taken' : 'due', takenBy: null, ...extra })
 
 beforeEach(() => {
   resetPendingMarks()
   resetMarkNotices()
+  resetConnectivity()
 })
 
 describe('pendingMarks', () => {
@@ -154,6 +157,18 @@ describe('requestMark', () => {
     })
     return { promise, resolve, reject }
   }
+
+  it('without a connection paints nothing, sends nothing and says marking needs one (specs/067)', async () => {
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(['overview', 'k'], { doses: [dose('d1')] })
+    const send = vi.fn()
+    const invalidate = vi.fn()
+    reportNetworkFailure()
+    await requestMark({ queryClient, dose: target, taken: true, send, invalidate })
+    expect(send).not.toHaveBeenCalled()
+    expect(getPendingMark('d1')).toBeUndefined()
+    expect(markNoticesSnapshot().map(text.noticeText)).toEqual([MARK_NEEDS_CONNECTION])
+  })
 
   it('shows the mark at once, writes what the server saved and asks the data again', async () => {
     const queryClient = new QueryClient()

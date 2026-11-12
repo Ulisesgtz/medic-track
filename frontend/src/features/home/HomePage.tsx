@@ -18,6 +18,8 @@ import { AccountMenu } from './AccountMenu'
 import { MoreLinks } from './MoreLinks'
 import { CabinetEntry } from '../medicineCabinet/CabinetEntry'
 import { SharedProfilesLinks } from '../profile/SharedProfilesLinks'
+import { OfflineMissing } from '../../shared/offline/OfflineMissing'
+import { needsConnection, showsLoadError } from '../../shared/offline/queryView'
 
 /**
  * The parent's home page (spec 055, the design `specs/055-rediseno-inicio/referencia/Inicio PediTrack.dc.html`): the greeting and
@@ -74,7 +76,9 @@ export function HomePage() {
     )
   }
 
-  if (query.isError) {
+  if (needsConnection(query)) return <OfflineMissing />
+
+  if (showsLoadError(query)) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-ink px-5 py-10">
         <div className="w-full max-w-md rounded-3xl bg-surface p-8 text-center shadow-xl">

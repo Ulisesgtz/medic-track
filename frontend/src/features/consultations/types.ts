@@ -84,6 +84,8 @@ export interface ConsultationDetail {
   doctorName: string
   consultDate: string
   photoBase64: string
+  /** Only on the phone's offline copy (specs/067): the prescription was there and wasn't kept (FR-010). Never from the server. */
+  photoOmitted?: boolean
   notes: string
   /** The marked symptoms in catalog order, retired ones included ([] when none). */
   symptoms: Symptom[]

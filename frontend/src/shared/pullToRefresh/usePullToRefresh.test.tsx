@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query'
 import { PULL_FAILED_MS, PULL_THRESHOLD, usePullToRefresh } from './usePullToRefresh'
+import { reportNetworkFailure, resetConnectivity } from '../offline/connectivity'
 
 function setup(options: { enabled?: boolean; fetcher?: () => Promise<string> } = {}) {
   const fetcher = options.fetcher ?? vi.fn().mockResolvedValue('data')
@@ -38,6 +39,7 @@ function pull(to: number, from = 100, target: Element | Document = document) {
 }
 
 afterEach(() => {
+  resetConnectivity()
   Reflect.deleteProperty(document, 'scrollingElement')
   document.body.innerHTML = ''
   vi.useRealTimers()
@@ -182,6 +184,16 @@ describe('usePullToRefresh (specs/017)', () => {
 
     await act(async () => resolve('second'))
     await vi.waitFor(() => expect(phase()).toBe('idle'))
+  })
+
+  it('without a connection keeps the screen as it is and doesn’t wait for the network (specs/067)', async () => {
+    const { fetcher } = setup()
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1))
+    reportNetworkFailure()
+    pull(PULL_THRESHOLD + 10)
+    expect(phase()).toBe('idle')
+    expect(fetcher).toHaveBeenCalledTimes(1)
+    expect(screen.getByTestId('data')).toHaveTextContent('data')
   })
 
   it('does nothing when disabled (the web design)', async () => {
