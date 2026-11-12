@@ -327,13 +327,11 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
   `scripts/e2e-local.sh` corre las E2E como CI (bugfix/068); también la hora de México en las E2E (PR 87), la tolerancia
   de reloj con Clerk y el `govulncheck` semanal. **Queda abierto**: la imagen oficial de Playwright (los últimos fallos
   de infraestructura fueron de WebKit en el PR 62, `kill ESRCH`; si vuelven, es lo siguiente).
-- **E2E de recordatorios por persona que fallan solo en local** (anotado 2026-11-12, bugfix/068): las dos pruebas de
-  `familia-recordatorios.spec.ts` de suplementos y citas pasan en CI pero en este equipo el aviso se reclama ~80 s
-  después de su hora (no ~30 s) y la prueba se queda corta. La base local acumula datos de cientos de corridas
-  (8448 dispositivos «activos» de cuentas de prueba cuyo usuario de Clerk ya se borró), y la vuelta del proceso de
-  avisos se alarga. Opciones: una base aparte para las E2E locales (`peditrack_e2e`, creada y migrada por
-  `scripts/e2e-local.sh`, como en CI), o borrar las cuentas de prueba al terminar cada E2E (hoy solo se borra el
-  usuario de Clerk). La primera es la más limpia: las E2E nunca tocarían la base de desarrollo.
+- ~~**E2E de recordatorios por persona que fallan solo en local**~~ — **hecho** el 2026-11-12 (bugfix/068): las dos
+  pruebas de `familia-recordatorios.spec.ts` de suplementos y citas pasaban en CI pero aquí el aviso llegaba ~80 s tarde:
+  la base de desarrollo acumulaba datos de cientos de corridas (8448 dispositivos «activos» de cuentas de prueba).
+  `scripts/e2e-local.sh` usa ahora una base propia y nueva en cada corrida (`peditrack_e2e`, como en CI) y pasan.
+  Queda la base de desarrollo con esas cuentas de prueba viejas: borrarlas es decisión del dueño (tiene sus datos).
 
 ## Escalar a muchos usuarios (anotado 2026-11-08)
 

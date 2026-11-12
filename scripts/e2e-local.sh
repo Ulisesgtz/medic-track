@@ -8,7 +8,8 @@
 #   E2E_PROJECT=webkit scripts/e2e-local.sh       # another browser
 #
 # Needs the Clerk development keys in frontend/.env.local (VITE_CLERK_PUBLISHABLE_KEY) and backend/.env.local (CLERK_SECRET_KEY,
-# DATABASE_URL), and nothing else listening on :8080 or :5173. Stops what it started, also on Ctrl+C.
+# DATABASE_URL — its server and user; the suite uses a database of its own, `peditrack_e2e`, made new on every run), `psql`, and
+# nothing else listening on :8080 or :5173. Stops what it started, also on Ctrl+C.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -43,6 +44,29 @@ wait_for() {
   fail "$name no respondió en 90 s (ver $LOGS)"
 }
 
+# A database of their own, new on every run, like CI's: the E2E never touch the development database (`pediTrack`), and nothing
+# left by earlier runs (thousands of test accounts and devices) slows the API's background jobs down. Same server and user as
+# backend/.env.local's DATABASE_URL, another name; dropped and created again, then every migration in order.
+DEV_URL="$(grep -E '^DATABASE_URL=' "$ROOT/backend/.env.local" | head -1 | cut -d= -f2- | tr -d '\r')"
+[ -n "$DEV_URL" ] || fail "falta DATABASE_URL en backend/.env.local"
+command -v psql > /dev/null || fail "falta psql (el cliente de PostgreSQL) para crear la base de las E2E"
+E2E_DB="${E2E_DB:-peditrack_e2e}"
+BASE="${DEV_URL%%\?*}"              # postgres://user:pass@host:port/pediTrack
+QUERY="${DEV_URL#"$BASE"}"           # ?sslmode=disable (or empty)
+SERVER="${BASE%/*}"                  # postgres://user:pass@host:port
+DEV_DB="${BASE##*/}"
+[ "$E2E_DB" != "$DEV_DB" ] || fail "E2E_DB no puede ser la base de desarrollo ($DEV_DB)"
+E2E_URL="$SERVER/$E2E_DB$QUERY"
+export DATABASE_URL="$E2E_URL"   # also the tests' own queries (setAccountPlan, queryDb in e2e/helpers.ts)
+ADMIN_URL="$SERVER/postgres$QUERY"
+
+echo "e2e-local: base nueva $E2E_DB (la de desarrollo no se toca)…"
+psql "$ADMIN_URL" -q -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS \"$E2E_DB\" WITH (FORCE)" -c "CREATE DATABASE \"$E2E_DB\"" > "$LOGS/db.log" 2>&1 \
+  || fail "no se pudo crear la base $E2E_DB (ver $LOGS/db.log)"
+for f in "$ROOT"/backend/migrations/*.sql; do
+  psql "$DATABASE_URL" -q -v ON_ERROR_STOP=1 -f "$f" >> "$LOGS/db.log" 2>&1 || fail "la migración $(basename "$f") falló (ver $LOGS/db.log)"
+done
+
 echo "e2e-local: compilando y levantando el API…"
 (
   cd "$ROOT/backend"
@@ -61,6 +85,7 @@ echo "e2e-local: compilando y levantando el API…"
   # The same drivers as CI's «Start backend API»: no real e-mail, the in-memory payment provider, no weekly digest.
   unset RESEND_API_KEY
   export MAIL_DRIVER=discard PAYMENTS_DRIVER=fake FRONTEND_ORIGIN=http://localhost:5173
+  export DATABASE_URL="$E2E_URL"   # .env.local above named the development database
   exec "$LOGS/api"
 ) > "$LOGS/api.log" 2>&1 &
 API_PID=$!
