@@ -322,9 +322,16 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
   Ubuntu 26.04 y WebKit dejó de abrir (`libicudata.so.74`). Ya se fijó `runs-on: ubuntu-24.04` en `.github/workflows/ci.yml`.
   Lo siguiente: correr los jobs de E2E dentro de `mcr.microsoft.com/playwright:v<versión de @playwright/test>-noble`
   (los navegadores y sus librerías ya vienen dentro: sin descarga ni `install-deps`), subiendo la etiqueta junto con
-  `@playwright/test`. Además, para que mis E2E nuevos no se prueben por primera vez en el CI: llaves de prueba de Clerk
-  en este equipo (`frontend/.env.local` y `backend/.env.local`, las pone el dueño) y correr `npx playwright test` antes
-  de cada push.
+  `@playwright/test`. ~~Además, para que mis E2E nuevos no se prueben por primera vez en el CI: llaves de prueba de Clerk
+  en este equipo y correr las E2E antes de cada push~~ **hecho** (2026-11-11/12): las llaves están en este equipo y
+  `scripts/e2e-local.sh` corre las E2E como CI (bugfix/068); también la hora de México en las E2E (PR 87), la tolerancia
+  de reloj con Clerk y el `govulncheck` semanal. **Queda abierto**: la imagen oficial de Playwright (los últimos fallos
+  de infraestructura fueron de WebKit en el PR 62, `kill ESRCH`; si vuelven, es lo siguiente).
+- ~~**E2E de recordatorios por persona que fallan solo en local**~~ — **hecho** el 2026-11-12 (bugfix/068): las dos
+  pruebas de `familia-recordatorios.spec.ts` de suplementos y citas pasaban en CI pero aquí el aviso llegaba ~80 s tarde:
+  la base de desarrollo acumulaba datos de cientos de corridas (8448 dispositivos «activos» de cuentas de prueba).
+  `scripts/e2e-local.sh` usa ahora una base propia y nueva en cada corrida (`peditrack_e2e`, como en CI) y pasan.
+  Queda la base de desarrollo con esas cuentas de prueba viejas: borrarlas es decisión del dueño (tiene sus datos).
 
 ## Escalar a muchos usuarios (anotado 2026-11-08)
 
