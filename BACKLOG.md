@@ -358,9 +358,14 @@ Principio I (la app guarda lo que el padre escribe; nunca evalúa ni sugiere).
 
 ### Antes del primer cobro real (riesgo, no funciones)
 
-- **Respaldos de la base** — `DEPLOY.md` dice que no hay respaldos y los lista como falta para producción. Con datos de
-  salud y fotos dentro de Postgres: un `pg_dump` diario cifrado hacia R2 o S3, con retención y **una restauración
-  probada**.
+- ~~**Respaldos de la base**~~ — **hecho** en `specs/069-respaldos-base/` (2026-11-12): `pg_dump` diario cifrado con
+  age para la llave del dueño y una de comprobación, en Cloudflare R2, retención 7/4/6 y una comprobación semanal que
+  restaura y compara conteos. **Pendientes del dueño** (`DEPLOY.md`, «Respaldos de la base»): crear el bucket y el
+  token de R2, generar las dos llaves, aplicar la `0036` en DEV, crear el servicio `backup` en Railway, hacer una
+  restauración de prueba y mencionar R2 en el aviso de privacidad; después, lo mismo en producción con
+  `BACKUP_ENV=prod`.
+  - **Idea para después: respaldo continuo** (WAL / recuperación a un punto en el tiempo, p. ej. con `wal-g` o el de
+    Railway) si alguna vez hace falta perder menos de un día. Hoy se pierde como máximo lo de un día.
 - **Eliminar la cuenta y descargar todos mis datos** — no hay ruta para borrar una cuenta (ni un hijo). La LFPDPPP da
   derecho de cancelación (ARCO) y son datos de salud de menores. Decidir: qué pasa con la familia y los invitados, con
   una suscripción vigente, con el usuario de Clerk y con los teléfonos del hijo; plazo de gracia antes del borrado real;
