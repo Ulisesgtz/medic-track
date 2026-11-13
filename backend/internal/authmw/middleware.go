@@ -10,6 +10,7 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	clerk "github.com/clerk/clerk-sdk-go/v2"
 	clerkhttp "github.com/clerk/clerk-sdk-go/v2/http"
@@ -19,6 +20,12 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/access"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 )
+
+// ClockSkewLeeway is how far apart this server's clock and Clerk's may be. A session token is checked to be already issued
+// ("iat"/"nbf") and not yet expired ("exp"); with no leeway, a token used the second it was issued was refused whenever this
+// clock ran even a fraction of a second behind Clerk's — the E2E suite on a Windows computer one second behind got 401s on
+// fresh sessions (bugfix/068). Clerk's tokens live 60 s, so five seconds changes nothing about how long a session lasts.
+const ClockSkewLeeway = 5 * time.Second
 
 // RequireSession returns chi-compatible middleware that verifies a Clerk
 // session token from the Authorization header. A missing or invalid token
@@ -41,6 +48,7 @@ func RequireSession(responder *httpx.Responder, opts ...clerkhttp.AuthorizationO
 	})
 	allOpts := append([]clerkhttp.AuthorizationOption{
 		clerkhttp.AuthorizationFailureHandler(unauthorized),
+		clerkhttp.Leeway(ClockSkewLeeway),
 	}, opts...)
 	withAuth := clerkhttp.WithHeaderAuthorization(allOpts...)
 
