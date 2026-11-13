@@ -4,7 +4,7 @@ Decisiones del dueño (2026-11-12): **7 diarias, 4 semanales y 6 mensuales**, **
 
 ## Lo que hay hoy
 
-- El backend es un solo binario Go (`cmd/api`) en Railway, construido con `backend/Dockerfile` (distroless, sin `pg_dump`). La base es el servicio PostgreSQL 18 del mismo proyecto, en la red interna de Railway (`DEPLOY.md`).
+- El backend es un solo binario Go (`cmd/api`) en Railway, construido con `backend/Dockerfile` (distroless, sin `pg_dump`). La base es el servicio PostgreSQL 18 del mismo proyecto, en la red interna de Railway (`RESPALDOS.md`).
 - Los procesos en segundo plano reportan con `internal/jobreport` (spec 018). Escribe la fila de `error_logs` **en una goroutine**, sirve para el API que vive siempre, y **no** para un proceso que termina en segundos (la fila se perdería).
 - El resumen semanal (`internal/errordigest`, spec 039) arma su contenido de `errorlog.Summary`/`Stats` mediante la interfaz `Source`.
 - La puerta de cobertura corre `go test ./internal/...`, así que un `cmd/` nuevo queda fuera igual que `cmd/api`.
@@ -126,7 +126,7 @@ Corre después de cada respaldo exitoso (FR-008, FR-009). Con 7 + 4 + 6 quedan c
 
 ## R11 — Restaurar a mano: `cmd/backup restore`
 
-**Decisión**: el procedimiento de `DEPLOY.md` usa `go run ./cmd/backup restore --key <archivo de la llave del dueño> --object <llave|latest>`, con la URL de una base nueva en `BACKUP_RESTORE_TARGET` (capturada con `read -rs`: nunca en la línea del comando, que queda en el historial). La clave de esa URL llega a `pg_restore` como `PGPASSWORD` en su entorno (`SplitPassword`), igual que la de `DATABASE_URL` a `pg_dump`. Baja, descifra con la llave del dueño, **se niega si la base destino ya tiene tablas** (casos límite: nunca sobre la viva) y restaura. Después compara los conteos con los guardados de esa copia.
+**Decisión**: el procedimiento de `RESPALDOS.md` usa `go run ./cmd/backup restore --key <archivo de la llave del dueño> --object <llave|latest>`, con la URL de una base nueva en `BACKUP_RESTORE_TARGET` (capturada con `read -rs`: nunca en la línea del comando, que queda en el historial). La clave de esa URL llega a `pg_restore` como `PGPASSWORD` en su entorno (`SplitPassword`), igual que la de `DATABASE_URL` a `pg_dump`. Baja, descifra con la llave del dueño, **se niega si la base destino ya tiene tablas** (casos límite: nunca sobre la viva) y restaura. Después compara los conteos con los guardados de esa copia.
 
 Esto requiere el **mismo** `pg_restore` 18 en la computadora del dueño, o correr el mismo contenedor. El procedimiento da ambos caminos.
 
@@ -150,7 +150,7 @@ Esto requiere el **mismo** `pg_restore` 18 en la computadora del dueño, o corre
 - **Digest**: la línea nueva en `content_test.go`.
 - No hay E2E: la app no cambia (FR-017).
 
-## R13 — Pasos del dueño (en `DEPLOY.md`)
+## R13 — Pasos del dueño (en `RESPALDOS.md`)
 
 1. En Cloudflare, crear el bucket R2 `peditrack-backups` (sin acceso público) y un token de API **limitado a ese bucket** con «Object Read & Write».
 2. En su computadora, generar su llave con `go run ./cmd/backup keygen`, guardar la privada en su gestor de contraseñas y en una segunda ubicación, y anotar la pública.

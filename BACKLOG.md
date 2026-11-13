@@ -358,12 +358,15 @@ Principio I (la app guarda lo que el padre escribe; nunca evalúa ni sugiere).
 
 ### Antes del primer cobro real (riesgo, no funciones)
 
-- ~~**Respaldos de la base**~~ — **hecho** en `specs/069-respaldos-base/` (2026-11-12): `pg_dump` diario cifrado con
-  age para la llave del dueño y una de comprobación, en Cloudflare R2, retención 7/4/6 y una comprobación semanal que
-  restaura y compara conteos. **Pendientes del dueño** (`DEPLOY.md`, «Respaldos de la base»): crear el bucket y el
-  token de R2, generar las dos llaves, aplicar la `0036` en DEV, crear el servicio `backup` en Railway, hacer una
-  restauración de prueba y mencionar R2 en el aviso de privacidad; después, lo mismo en producción con
-  `BACKUP_ENV=prod`.
+- **Respaldos de la base — código hecho, falta activarlo (pendiente del dueño).** El código está en
+  `specs/069-respaldos-base/` (2026-11-12): `pg_dump` diario cifrado con age para la llave del dueño y una de
+  comprobación, en Cloudflare R2, retención 7/4/6 y una comprobación semanal que restaura y compara conteos. **Todavía no
+  corre en ningún ambiente: hasta activarlo no hay respaldos.** Está detenido porque Cloudflare R2 pide registrar un método
+  de pago y el dueño no tiene sus datos bancarios a la mano. **Guía paso a paso: `RESPALDOS.md`.** Pasos, en orden:
+  (1) método de pago en Cloudflare, bucket `peditrack-backups` y token limitado a él; (2) las dos llaves con
+  `go run ./cmd/backup keygen`; (3) la migración `0036` en DEV; (4) el **servicio** `backup` en Railway (no una base de
+  datos) con sus variables; (5) «Run now» y una restauración de prueba; (6) mencionar R2 en el aviso de privacidad;
+  después, lo mismo en producción con `BACKUP_ENV=prod`. **Antes del primer cobro real.**
   - **Idea para después: respaldo continuo** (WAL / recuperación a un punto en el tiempo, p. ej. con `wal-g` o el de
     Railway) si alguna vez hace falta perder menos de un día. Hoy se pierde como máximo lo de un día.
 - **Eliminar la cuenta y descargar todos mis datos** — no hay ruta para borrar una cuenta (ni un hijo). La LFPDPPP da

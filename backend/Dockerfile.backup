@@ -1,6 +1,6 @@
 # PediTrack backups (specs/069-respaldos-base). A cron service of its own in Railway, built from this folder (root directory
 # "backend", config `railway.backup.json`). It needs pg_dump/pg_restore of the SAME major version as the database and its own
-# PostgreSQL for the weekly restore check, so the runtime image is postgres, not distroless. See DEPLOY.md, «Respaldos».
+# PostgreSQL for the weekly restore check, so the runtime image is postgres, not distroless. See RESPALDOS.md.
 
 FROM golang:1.27-alpine AS build
 WORKDIR /src

@@ -202,7 +202,7 @@
 
   Pruebas en `service_test.go`: la base con tablas se rechaza, una llave equivocada no abre y la comparación funciona.
 - [X] T020 [US3] En `cmd/backup/main.go`: `run` corre `RunCheck` después de la retención si el día de hoy en `America/Mexico_City` es `BACKUP_CHECK_WEEKDAY`. Agregar los subcomandos `check`, `list` (llave, tamaño y si es `ok` según `ValidObjectKeys`), `restore --key --object --target` y `keygen` (la pública y luego la privada con su advertencia, contracts/cli.md).
-- [X] T021 [US3] Escribir en `DEPLOY.md` una sección nueva **«Respaldos de la base (spec 069)»**:
+- [X] T021 [US3] Escribir en `RESPALDOS.md` una sección nueva **«Respaldos de la base (spec 069)»**:
   - qué se respalda, cuándo y dónde;
   - los pasos del dueño (research R13: bucket y token de R2 limitado, `keygen` de las dos llaves, dónde guardar la privada y su segunda copia, la `0036`, el servicio `backup` con `railway.backup.json` y sus variables);
   - el **procedimiento de restauración paso a paso**: crear una base **nueva**, `restore --key … --object latest` con `BACKUP_RESTORE_TARGET`, revisar el resultado y solo después cambiar `DATABASE_URL` del API;

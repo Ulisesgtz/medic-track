@@ -224,7 +224,7 @@ func restore(ctx context.Context, d deps) int {
 	// history and is visible to every process of the machine.
 	target := strings.TrimSpace(os.Getenv("BACKUP_RESTORE_TARGET"))
 	if target == "" {
-		fmt.Fprintln(os.Stderr, "falta BACKUP_RESTORE_TARGET: la URL de una base NUEVA y vacía (ver DEPLOY.md, «Restaurar»)")
+		fmt.Fprintln(os.Stderr, "falta BACKUP_RESTORE_TARGET: la URL de una base NUEVA y vacía (ver RESPALDOS.md, «Restaurar»)")
 		return 2
 	}
 	content, err := os.ReadFile(*keyFile)

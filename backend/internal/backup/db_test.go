@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -354,9 +355,19 @@ func TestPgTarget(t *testing.T) {
 	counts, err := target.Restore(ctx, strings.NewReader("PGDMP"))
 	require.NoError(t, err)
 	require.Contains(t, counts, "accounts")
-	if _, env, _ := SplitPassword(dsn); len(env) > 0 {
-		require.NotContains(t, strings.Join(restoreArgs, " "), strings.TrimPrefix(env[0], "PGPASSWORD="))
+	// The address pg_restore gets carries no password (in CI the password is "postgres", the user's name too, so look at the
+	// URL itself rather than for the text).
+	var dbArg string
+	for _, a := range restoreArgs {
+		if strings.HasPrefix(a, "--dbname=") {
+			dbArg = strings.TrimPrefix(a, "--dbname=")
+		}
 	}
+	u, err := url.Parse(dbArg)
+	require.NoError(t, err)
+	_, hasPassword := u.User.Password()
+	require.False(t, hasPassword, "no password in pg_restore's arguments")
+	require.Empty(t, u.Query().Get("password"))
 
 	target.Run = func(context.Context, Command) error {
 		return errors.New("pg_restore failed")
