@@ -365,9 +365,19 @@ Principio I (la app guarda lo que el padre escribe; nunca evalúa ni sugiere).
 
 ### Antes del primer cobro real (riesgo, no funciones)
 
-- **Respaldos de la base** — `DEPLOY.md` dice que no hay respaldos y los lista como falta para producción. Con datos de
-  salud y fotos dentro de Postgres: un `pg_dump` diario cifrado hacia R2 o S3, con retención y **una restauración
-  probada**.
+- **Respaldos de la base — código hecho, falta activarlo (pendiente del dueño).** El código está en
+  `specs/069-respaldos-base/` (2026-11-12): `pg_dump` diario cifrado con age para la llave del dueño y una de
+  comprobación, en Cloudflare R2, retención 7/4/6 y una comprobación semanal que restaura y compara conteos. **Todavía no
+  corre en ningún ambiente: hasta activarlo no hay respaldos.** Está detenido porque Cloudflare R2 pide registrar un método
+  de pago y el dueño no tiene sus datos bancarios a la mano. **Guía paso a paso: `RESPALDOS.md`.** Pasos, en orden:
+  (1) método de pago en Cloudflare, bucket `peditrack-backups` y token limitado a él; (2) las dos llaves con
+  `go run ./cmd/backup keygen`; (3) la migración `0036` en DEV; (4) el **servicio** `backup` en Railway (no una base de
+  datos) con sus variables; (5) «Run now» y una restauración de prueba; (6) mencionar R2 en el aviso de privacidad;
+  (7) `BACKUPS_ENABLED=true` en el servicio del API, para que el resumen semanal hable de los respaldos; después, lo mismo
+  en producción con `BACKUP_ENV=prod`. Sin estos pasos **nada falla**: el código queda apagado (no existe el servicio y
+  el API no lee `backup_runs` sin el interruptor). **Antes del primer cobro real.**
+  - **Idea para después: respaldo continuo** (WAL / recuperación a un punto en el tiempo, p. ej. con `wal-g` o el de
+    Railway) si alguna vez hace falta perder menos de un día. Hoy se pierde como máximo lo de un día.
 - **Eliminar la cuenta y descargar todos mis datos** — no hay ruta para borrar una cuenta (ni un hijo). La LFPDPPP da
   derecho de cancelación (ARCO) y son datos de salud de menores. Decidir: qué pasa con la familia y los invitados, con
   una suscripción vigente, con el usuario de Clerk y con los teléfonos del hijo; plazo de gracia antes del borrado real;

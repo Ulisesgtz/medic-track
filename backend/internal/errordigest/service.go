@@ -77,6 +77,7 @@ type Service struct {
 	retentionDays int
 	reporter      FailureReporter // optional
 	quota         Quota           // optional
+	backups       BackupStatus    // optional (specs/069)
 	// sleep waits between the tries of a send; it returns early with the context's error. A field so tests don't wait.
 	sleep func(ctx context.Context, d time.Duration) error
 
@@ -95,6 +96,9 @@ func NewService(src Source, sender mailer.Sender, claims Claimer, cfg Config, re
 // digest is not counted, which is how it behaved before.
 func (s *Service) SetQuota(q Quota) { s.quota = q }
 
+// SetBackupStatus adds the backups' line to the digest (specs/069).
+func (s *Service) SetBackupStatus(b BackupStatus) { s.backups = b }
+
 // SetReporter makes the digest's failures also go to error_logs (as job:error-digest). Without one they only reach the console.
 func (s *Service) SetReporter(r FailureReporter) { s.reporter = r }
 
@@ -104,6 +108,9 @@ func (s *Service) message(ctx context.Context, now time.Time) (mailer.Message, e
 	d, err := Build(ctx, s.src, now, s.retentionDays)
 	if err != nil {
 		return mailer.Message{}, fmt.Errorf("building the digest: %w", err)
+	}
+	if s.backups != nil {
+		d.Backups = readBackups(ctx, s.backups, now)
 	}
 	subject, text := Render(d, s.cfg.EnvLabel)
 	return mailer.Message{

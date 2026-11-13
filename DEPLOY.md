@@ -207,7 +207,7 @@ desarrollo; es normal). En el teléfono sigue `PROBAR.md` (instalar, **Activar r
   creó se quedan). Para que la app lo note, la persona cierra y vuelve a abrir la app. Para varias personas a la vez:
   `WHERE lower(email) IN (lower('a@…'), lower('b@…'))`.
 - **Datos de prueba:** quienes prueban comparten esta base. Se puede vaciar cuando haga falta (con cuidado: no es
-  producción, pero tampoco hay respaldos).
+  producción, y **todavía no hay respaldos**: el código de la spec 069 está listo pero falta activarlo, ver `RESPALDOS.md`).
 - **Costos y límites:** Cloudflare Pages es gratis. Railway cobra por uso (el plan de prueba da un crédito inicial y
   limita los dominios propios a uno). La instancia de desarrollo de Clerk tiene límites bajos y la comparten los E2E del CI.
 - **Claves de Clerk:** `pk_test_` (frontend) y `sk_test_` (backend) deben ser de la **misma** instancia.
@@ -234,7 +234,8 @@ desarrollo; es normal). En el teléfono sigue `PROBAR.md` (instalar, **Activar r
 
 - Instancia de **producción** de Clerk (`pk_live_`/`sk_live_`) con credenciales propias de Google (BACKLOG, Despliegue).
 - Herramienta de migraciones (hoy se aplican a mano).
-- Respaldos de la base y claves VAPID de producción.
+- Respaldos activos: los pasos de `RESPALDOS.md` en DEV y después en producción (con `BACKUP_ENV=prod`).
+- Claves VAPID de producción.
 - Desplegar desde `master` (merge `develop → master`), como pide la constitución.
 - Correo del dominio (`@pedi-track.com`): decidir proveedor antes de tocar los registros `MX` (ver `BACKLOG.md`).
 
@@ -312,3 +313,9 @@ El plan completo (MX$499 al año) se contrata desde `/planes`: el padre paga **e
 3. El aviso «Antes de empezar» cambió de versión (`2026-10-23`: nombra el acceso del hijo), así que cada cuenta lo verá una vez más.
 4. Probar con un iPhone real: abrir la liga desde Mensajes o WhatsApp, instalar la PWA, marcar una toma y activar los avisos. En Safari **sin** instalar la app el almacenamiento se limpia a los 7 días sin uso y el niño necesitaría otra liga. Para revisar que la app del niño abrirá en `/hijo`: `curl -s https://dev.pedi-track.com/hijo | grep manifest` debe nombrar `/manifest-hijo.webmanifest`. Un ícono agregado antes del arreglo del 2026-10-27 (bugfix 052) se queda abriendo `/home`: hay que borrarlo y volver a agregarlo desde la liga.
 5. Pendiente legal del dueño: el aviso de privacidad debe mencionar este acceso (sin datos personales del menor, quitable en cualquier momento).
+
+## Respaldos de la base (spec 069)
+
+El código está listo, pero **todavía no corre en ningún ambiente**: falta que el dueño haga sus pasos (Cloudflare R2 pide
+registrar un método de pago). La guía completa —qué se respalda, los pasos del dueño, cómo restaurar, cambiar o perder una
+llave y el costo— está en **`RESPALDOS.md`**, y el pendiente en `BACKLOG.md`.
