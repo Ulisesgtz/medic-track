@@ -174,8 +174,11 @@ func main() {
 	digestConfig := errordigest.ConfigFromEnv()
 	if digestConfig.Available() {
 		digest := errordigest.NewService(errorLogRepo, mailer.NewResendSender(digestConfig.APIKey, nil, ""), errordigest.NewRepository(pool), digestConfig, retentionConfig.Days)
-		// specs/069: the digest says when the database was last backed up and checked.
-		digest.SetBackupStatus(backup.NewRepository(pool))
+		// specs/069: the digest says when the database was last backed up and checked — only once the backup service exists
+		// (BACKUPS_ENABLED=true); until then the API reads nothing of backup_runs.
+		if digestConfig.Backups {
+			digest.SetBackupStatus(backup.NewRepository(pool))
+		}
 		digest.SetReporter(jobreport.New(errorLogRepo, "error-digest"))
 		digest.SetQuota(mailQuota) // the same daily quota the invitations use: the digest keeps the places they leave
 		go digest.Run(ctx)

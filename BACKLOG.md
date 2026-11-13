@@ -373,7 +373,9 @@ Principio I (la app guarda lo que el padre escribe; nunca evalúa ni sugiere).
   (1) método de pago en Cloudflare, bucket `peditrack-backups` y token limitado a él; (2) las dos llaves con
   `go run ./cmd/backup keygen`; (3) la migración `0036` en DEV; (4) el **servicio** `backup` en Railway (no una base de
   datos) con sus variables; (5) «Run now» y una restauración de prueba; (6) mencionar R2 en el aviso de privacidad;
-  después, lo mismo en producción con `BACKUP_ENV=prod`. **Antes del primer cobro real.**
+  (7) `BACKUPS_ENABLED=true` en el servicio del API, para que el resumen semanal hable de los respaldos; después, lo mismo
+  en producción con `BACKUP_ENV=prod`. Sin estos pasos **nada falla**: el código queda apagado (no existe el servicio y
+  el API no lee `backup_runs` sin el interruptor). **Antes del primer cobro real.**
   - **Idea para después: respaldo continuo** (WAL / recuperación a un punto en el tiempo, p. ej. con `wal-g` o el de
     Railway) si alguna vez hace falta perder menos de un día. Hoy se pierde como máximo lo de un día.
 - **Eliminar la cuenta y descargar todos mis datos** — no hay ruta para borrar una cuenta (ni un hijo). La LFPDPPP da

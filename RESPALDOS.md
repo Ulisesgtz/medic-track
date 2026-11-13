@@ -7,6 +7,10 @@ Guía para activar y usar los respaldos diarios de la base. El código está en 
 > (Cloudflare R2) pide registrar un método de pago en Cloudflare, y el dueño lo hará cuando tenga sus datos a la mano.
 > Mientras tanto **no hay respaldos**. El pendiente está en `BACKLOG.md` («Respaldos de la base»).
 >
+> **Sin la infraestructura nada falla.** El código está en `develop` pero apagado: el servicio `backup` no existe, así que
+> nada corre cada noche, y el API no lee ni menciona los respaldos mientras no tenga **`BACKUPS_ENABLED=true`** (el
+> interruptor del paso 6). Tampoco hace falta aplicar la `0036` hasta activarlos.
+>
 > No hace falta una base de datos nueva en Railway: las copias van a un bucket de R2 (otro proveedor) y en Railway solo se
 > agrega un **servicio** que corre cada noche. Si se creó una base Postgres para esto, no la usa nada y se puede borrar.
 
@@ -54,6 +58,7 @@ Guía para activar y usar los respaldos diarios de la base. El código está en 
 
    Si falta una variable, la corrida termina con código 2, la consola dice **cuáles** faltan (nunca sus valores) y queda una fila `job:backup` «The backup configuration is incomplete».
 5. **Probarlo.** En el servicio, *Deployments* → **Run now** (o espera a las 03:00). La consola dice «respaldo dev listo: dev/…, N MB, N tablas»; en R2 aparece el objeto y en `backup_runs` una fila `backup` `ok`. Para forzar la comprobación, cambia temporalmente `BACKUP_CHECK_WEEKDAY` al día de hoy y vuelve a correrlo.
+6. **Encender el aviso en el resumen semanal.** En el servicio del **API** (`medic-track`, no en `backup`) agrega `BACKUPS_ENABLED=true`. Desde el siguiente lunes el correo de errores trae «Respaldos: último el … · comprobación el …», o «ninguno en los últimos 2 días» si el respaldo dejó de correr. Ponlo solo cuando los pasos 1 a 5 estén hechos: antes, la línea solo diría que no hay respaldos.
 6. **Una restauración de prueba** (abajo), para saber que tu llave abre las copias y cuánto tarda (debe ser menos de una hora).
 7. **Aviso de privacidad**: mencionar que hay copias cifradas de la base en Cloudflare R2.
 
