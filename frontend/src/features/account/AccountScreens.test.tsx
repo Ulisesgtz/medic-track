@@ -232,10 +232,27 @@ describe('PausedAccountGate', () => {
         <div>APP</div>
       </PausedAccountGate>,
     )
+    expect(screen.getByText('APP')).toBeInTheDocument()
+    act(() => {
+      window.dispatchEvent(new Event(ACCOUNT_PAUSED_EVENT))
+    })
     expect(
       await screen.findByRole('button', { name: 'Cancelar la eliminación' }),
     ).toBeInTheDocument()
     expect(screen.queryByText('APP')).not.toBeInTheDocument()
+  })
+
+  it('never reads the account on its own (a read before POST /accounts finishes would cache a 404 over the signup)', async () => {
+    const mock = stubApi({ 'GET /accounts/me': { body: account() } })
+    renderAt(
+      '/x',
+      <PausedAccountGate>
+        <div>APP</div>
+      </PausedAccountGate>,
+    )
+    expect(screen.getByText('APP')).toBeInTheDocument()
+    await new Promise((r) => setTimeout(r, 50))
+    expect(callsOf(mock)).toHaveLength(0)
   })
 
   it('shows the app, the canceled notice and reads the account again on a pause', async () => {
@@ -249,11 +266,10 @@ describe('PausedAccountGate', () => {
     )
     expect(screen.getByText('APP')).toBeInTheDocument()
     expect(screen.getByText(/Listo, tu cuenta sigue igual\./)).toBeInTheDocument()
-    await waitFor(() => expect(callsOf(mock)).toHaveLength(1))
     act(() => {
       window.dispatchEvent(new Event(ACCOUNT_PAUSED_EVENT))
     })
-    await waitFor(() => expect(callsOf(mock)).toHaveLength(2))
+    await waitFor(() => expect(callsOf(mock)).toHaveLength(1))
   })
 })
 

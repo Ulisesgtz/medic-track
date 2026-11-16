@@ -1,7 +1,8 @@
-import { useEffect, type PropsWithChildren } from 'react'
+import { useEffect, useState, type PropsWithChildren } from 'react'
 import { useAuth } from '@clerk/react'
-import { useQueryClient } from '@tanstack/react-query'
-import { useCurrentAccount } from '../auth/useCurrentAccount'
+import { fetchMe } from '../auth/api'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import type { Account } from '../home/types'
 import { ACCOUNT_PAUSED_EVENT } from '../../shared/accountPause'
 import { Notice } from '../../shared/ui/Notice'
 import { PAUSED } from './accountText'
@@ -13,13 +14,26 @@ import { DeletionPendingScreen } from './DeletionPendingScreen'
  * `account_deletion_pending` anywhere (another tab asked for it) reads the account again, so an open screen turns paused too.
  */
 export function PausedAccountGate({ children }: PropsWithChildren) {
-  const { isSignedIn } = useAuth()
+  const { isSignedIn, getToken } = useAuth()
+  const [paused, setPaused] = useState(false)
   const queryClient = useQueryClient()
-  const account = useCurrentAccount().data
+  // Only READS the cached account, never fetches it until the API says the account is paused: the gate wraps every route, so a fetch of its own would run on /registro
+  // right after Clerk signs the new user in, before POST /accounts creates the account, and its 404 would overwrite the account
+  // the signup just stored. The screens that need the account (RequireSession) fetch it; this one shows the pause when it arrives.
+  const cached = queryClient.getQueryData<Account>(['accounts', 'me'])
+  const account = useQuery<Account>({
+    queryKey: ['accounts', 'me'],
+    queryFn: async () => fetchMe(await getToken()),
+    enabled: (paused || !!cached?.deletion) && isSignedIn === true,
+    retry: false,
+  }).data
   const [canceled, dismissCanceled] = useCanceledNotice()
 
   useEffect(() => {
-    const onPaused = () => void queryClient.invalidateQueries({ queryKey: ['accounts', 'me'] })
+    const onPaused = () => {
+      setPaused(true)
+      void queryClient.invalidateQueries({ queryKey: ['accounts', 'me'] })
+    }
     window.addEventListener(ACCOUNT_PAUSED_EVENT, onPaused)
     return () => window.removeEventListener(ACCOUNT_PAUSED_EVENT, onPaused)
   }, [queryClient])
