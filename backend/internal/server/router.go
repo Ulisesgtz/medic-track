@@ -14,6 +14,7 @@ import (
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/access"
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
+	"github.com/Ulisesgtz/medic-track/backend/internal/accountdeletion"
 	"github.com/Ulisesgtz/medic-track/backend/internal/appointment"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
 	"github.com/Ulisesgtz/medic-track/backend/internal/cabinet"
@@ -21,6 +22,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childprofile"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
+	"github.com/Ulisesgtz/medic-track/backend/internal/dataexport"
 	"github.com/Ulisesgtz/medic-track/backend/internal/family"
 	"github.com/Ulisesgtz/medic-track/backend/internal/growth"
 	"github.com/Ulisesgtz/medic-track/backend/internal/historyexport"
@@ -55,6 +57,12 @@ type Deps struct {
 	Growth *growth.Handler
 	// ChildProfile corrects a child's own data (specs/064).
 	ChildProfile *childprofile.Handler
+	// AccountDeletion and DeletionRepo: asking for, reading and canceling an account's deletion, and the guard that pauses an
+	// account scheduled for deletion on every other route (specs/070). Nil = none of it is registered.
+	AccountDeletion *accountdeletion.Handler
+	DeletionRepo    *accountdeletion.Repository
+	// DataExport: «Descargar todos mis datos» (specs/070), any plan.
+	DataExport *dataexport.Handler
 	// HistoryExport: the data of the history's PDF (specs/050). Nil = the route is not registered.
 	HistoryExport *historyexport.Handler
 	// Payments: the subscription of the full plan (specs/045). Nil = the charge is not available in this environment: none of its routes
@@ -89,6 +97,7 @@ func NewRouter(d Deps) *chi.Mux {
 		AllowedOrigins:   []string{d.FrontendOrigin},
 		AllowedMethods:   []string{"GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Content-Type", "Authorization"},
+		ExposedHeaders:   []string{"Content-Disposition"},
 		AllowCredentials: false,
 		MaxAge:           300,
 	}))
@@ -181,8 +190,22 @@ func NewRouter(d Deps) *chi.Mux {
 
 	r.Group(func(r chi.Router) {
 		r.Use(d.RequireSession)
+		// An account scheduled for deletion can only read itself, its deletion and download its data (specs/070, research R3).
+		if d.DeletionRepo != nil {
+			r.Use(accountdeletion.RequireNotPending(d.Responder, d.DeletionRepo))
+		}
 
 		r.Get("/accounts/me", d.Account.GetMe)
+		// Specs/070: deleting the account (30 days to cancel) and downloading all its data — any plan.
+		if d.AccountDeletion != nil {
+			r.With(ownsAccount).Get("/accounts/{accountId}/deletion", d.AccountDeletion.GetDeletion)
+			r.With(ownsAccount).Post("/accounts/{accountId}/deletion", d.AccountDeletion.RequestDeletion)
+			r.With(ownsAccount).Post("/accounts/{accountId}/deletion/cancel", d.AccountDeletion.CancelDeletion)
+		}
+		if d.DataExport != nil {
+			r.With(ownsAccount, strict).Post("/accounts/{accountId}/data-export", d.DataExport.ExportOwn)
+			r.With(strict).Post("/family/children-export", d.DataExport.ExportFamilyChildren)
+		}
 		r.Post("/accounts", d.Account.CreateAccount)
 		r.With(ownsAccount).Get("/accounts/{accountId}", d.Account.GetAccount)
 		r.With(fullAccount).Post("/accounts/{accountId}/children", d.Account.AddChild)

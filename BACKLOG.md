@@ -368,11 +368,14 @@ Principio I (la app guarda lo que el padre escribe; nunca evalúa ni sugiere).
 - **Respaldos de la base** — `DEPLOY.md` dice que no hay respaldos y los lista como falta para producción. Con datos de
   salud y fotos dentro de Postgres: un `pg_dump` diario cifrado hacia R2 o S3, con retención y **una restauración
   probada**.
-- **Eliminar la cuenta y descargar todos mis datos** — no hay ruta para borrar una cuenta (ni un hijo). La LFPDPPP da
+- ~~**Eliminar la cuenta y descargar todos mis datos**~~ — **hecho en la spec 070** (ver abajo). Antes no había ruta para borrar una cuenta (ni un hijo). La LFPDPPP da
   derecho de cancelación (ARCO) y son datos de salud de menores. Decidir: qué pasa con la familia y los invitados, con
   una suscripción vigente, con el usuario de Clerk y con los teléfonos del hijo; plazo de gracia antes del borrado real;
   y un «llévate todo» (ZIP o el PDF completo) antes de borrar, que además sostiene el Principio IV (los datos no se
   secuestran).
+  - **Hecho en `specs/070-eliminar-cuenta-y-datos/` (2026-11)**: «Mi cuenta», descarga de todos los datos (ZIP, cualquier plan), eliminar con 30 días de gracia y cuenta en pausa, la suscripción se cancela primero, la familia con aviso, acceso y descarga, y el usuario de Clerk se borra al vencer. **Pendientes del dueño**: aplicar la `0037` en DEV antes del merge, actualizar el aviso de privacidad y revisar con su contador. **Respaldos**: al restaurar uno, correr `go run ./cmd/accounts reconcile-deleted` (aún no hay `RESPALDOS.md`; cuando se haga el procedimiento de restauración, este paso va dentro).
+  - **Fuera de la 070, para después**: **borrar a un solo hijo** sin borrar la cuenta (mismas reglas de descarga y
+    plazo), y **pasar los hijos a un Tutor** que acepte ser el nuevo dueño cuando la dueña se va.
 - **Monitoreo externo y errores del frontend** — `error_logs` solo ve lo que falla en el servidor; una caída del API o
   una pantalla en blanco en un iPhone se notan hasta el digest del lunes. (a) Ruta `/healthz` propia (hoy el healthcheck
   es `GET /catalog/countries`) y un ping externo cada minuto con aviso; (b) `POST /client-errors` que registre los

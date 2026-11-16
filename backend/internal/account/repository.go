@@ -10,6 +10,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/Ulisesgtz/medic-track/backend/internal/deletionstate"
 )
 
 // Repository persists Account and Child records.
@@ -235,9 +237,11 @@ func (r *Repository) GetByClerkUserID(ctx context.Context, clerkUserID string) (
 	var id uuid.UUID
 	acc := &Account{}
 	err := r.pool.QueryRow(ctx, `
-		SELECT id, first_name, last_name, email, country_code, state_code, plan, created_at, clerk_user_id, reminder_detail
+		SELECT id, first_name, last_name, email, country_code, state_code, plan, created_at, clerk_user_id, reminder_detail,
+		       `+deletionstate.ScheduledForSQL("accounts.id")+`
 		FROM accounts WHERE clerk_user_id = $1
-	`, clerkUserID).Scan(&id, &acc.FirstName, &acc.LastName, &acc.Email, &acc.CountryCode, &acc.StateCode, &acc.Plan, &acc.CreatedAt, &acc.ClerkUserID, &acc.ReminderDetail)
+	`, clerkUserID).Scan(&id, &acc.FirstName, &acc.LastName, &acc.Email, &acc.CountryCode, &acc.StateCode, &acc.Plan, &acc.CreatedAt, &acc.ClerkUserID, &acc.ReminderDetail,
+		&acc.DeletionScheduledFor)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrAccountNotFound
@@ -287,10 +291,10 @@ func (r *Repository) addSharedChildren(ctx context.Context, acc *Account) error 
 	var m FamilyMembership
 	var childID *uuid.UUID
 	err := r.pool.QueryRow(ctx, `
-		SELECT m.role, m.family_account_id, o.first_name, o.plan, m.child_id
+		SELECT m.role, m.family_account_id, o.first_name, o.plan, m.child_id, `+deletionstate.ScheduledForSQL("m.family_account_id")+`
 		FROM family_members m JOIN accounts o ON o.id = m.family_account_id
 		WHERE m.account_id = $1 AND m.status = 'active'
-	`, acc.ID).Scan(&m.Role, &m.OwnerAccountID, &m.OwnerName, &m.OwnerPlan, &childID)
+	`, acc.ID).Scan(&m.Role, &m.OwnerAccountID, &m.OwnerName, &m.OwnerPlan, &childID, &m.DeletionScheduledFor)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}

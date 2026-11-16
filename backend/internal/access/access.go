@@ -17,6 +17,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/Ulisesgtz/medic-track/backend/internal/deletionstate"
 )
 
 // Level is how much a session can do with a child.
@@ -77,13 +79,14 @@ func NewRepository(pool *pgxpool.Pool) *Repository {
 
 // levelCase computes the level of the actor account `a` over the owner account `owner` (and, for a child-role member, over
 // the child `ch`; pass "TRUE" for `childOK` where no single child is involved). `m` is the actor's active membership in
-// the owner's family, if any. 2 = Full, 1 = Mark, 0 = None.
+// the owner's family, if any. 2 = Full, 1 = Mark, 0 = None. While the owner's own deletion is pending (specs/070) her
+// Tutors are capped at Mark: until the date they see and mark the children, and create or edit nothing.
 func levelCase(childOK string) string {
 	return `CASE
 		WHEN owner.id = a.id THEN 2
 		WHEN m.id IS NULL THEN 0
 		WHEN m.role = 'child' AND NOT (` + childOK + `) THEN 0
-		WHEN m.role = 'tutor' AND owner.plan = 'paid' THEN 2
+		WHEN m.role = 'tutor' AND owner.plan = 'paid' AND NOT ` + deletionstate.PendingAccountSQL("owner.id") + ` THEN 2
 		ELSE 1
 	END`
 }

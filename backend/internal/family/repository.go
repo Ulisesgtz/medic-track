@@ -371,14 +371,16 @@ func (r *Repository) PreviewByToken(ctx context.Context, tokenHash []byte) (*Pre
 
 // invitationRow is what Accept and Decline read of an invitation, locked.
 type invitationRow struct {
-	id, familyID, invitedBy uuid.UUID
-	email, status           string
-	role                    string
-	childID                 *uuid.UUID
-	expired                 bool
-	memberID                *uuid.UUID
-	consentBy               *uuid.UUID
-	consentAt               *time.Time
+	id, familyID uuid.UUID
+	// invitedBy is nil when whoever invited has since deleted their account (specs/070).
+	invitedBy     *uuid.UUID
+	email, status string
+	role          string
+	childID       *uuid.UUID
+	expired       bool
+	memberID      *uuid.UUID
+	consentBy     *uuid.UUID
+	consentAt     *time.Time
 }
 
 func lockInvitation(ctx context.Context, tx pgx.Tx, tokenHash []byte) (*invitationRow, error) {

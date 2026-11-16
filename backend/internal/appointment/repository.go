@@ -45,10 +45,10 @@ const appointmentSelect = `
 	       COALESCE(ap.child_id, '00000000-0000-0000-0000-000000000000'::uuid), ap.account_id,
 	       COALESCE(NULLIF(ap.doctor_name, ''), co.doctor_name, ''), COALESCE(co.consult_date::text, ''), ap.starts_at,
 	       ap.utc_offset_minutes, ap.note, ap.location, ap.location_url, ap.status, COALESCE(sb.first_name, ''), ap.status_at,
-	       cb.first_name, ` + planOfAppointmentSQL + `
+	       COALESCE(cb.first_name, ''), ` + planOfAppointmentSQL + `
 	FROM consultation_appointments ap
 	LEFT JOIN consultations co ON co.id = ap.consultation_id
-	JOIN accounts cb ON cb.id = ap.created_by_account_id
+	LEFT JOIN accounts cb ON cb.id = ap.created_by_account_id
 	JOIN accounts owner ON owner.id = ap.account_id
 	LEFT JOIN accounts sb ON sb.id = ap.status_by_account_id`
 

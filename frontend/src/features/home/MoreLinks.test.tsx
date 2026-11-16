@@ -51,6 +51,8 @@ describe('MoreLinks', () => {
     // jsdom has no Push API: the row says they can't be had here, never «Desactivados».
     expect(within(nav).getByRole('button', { name: /Recordatorios/ })).toHaveTextContent('No disponibles aquí')
     expect(within(nav).getByRole('button', { name: 'Cerrar sesión' })).toBeInTheDocument()
+    // Specs/070: «Mi cuenta» (download all the data, delete the account), before «Cerrar sesión».
+    expect(within(nav).getByRole('link', { name: /Mi cuenta/ })).toHaveAttribute('href', '/cuenta')
   })
 
   it('says nothing about the family until it answers (no «Solo tú» while it loads)', () => {
@@ -68,7 +70,7 @@ describe('MoreLinks', () => {
     await user.click(toggle)
     expect(toggle).toHaveAttribute('aria-expanded', 'true')
     expect(screen.getByRole('heading', { name: 'Recordatorios de tomas' })).toBeInTheDocument()
-    expect(screen.getByRole('navigation', { name: 'Más opciones' })).toHaveClass('grid-cols-4')
+    expect(screen.getByRole('navigation', { name: 'Más opciones' })).toHaveClass('grid-cols-5')
   })
 
   it('«Cerrar sesión» signs out', async () => {

@@ -10,6 +10,7 @@ import { AppShell } from './AppShell'
 import { useSidebarSession } from './useSidebarSession'
 import { Logo } from '../../shared/ui/Logo'
 import { WelcomeDisclaimer } from './WelcomeDisclaimer'
+import { FamilyDeletionNotice } from '../account/FamilyDeletionNotice'
 import { readPendingInvitation } from '../family/pendingInvitation'
 import { Greeting } from './Greeting'
 import { TuDia } from './TuDia'
@@ -39,11 +40,14 @@ export function HomePage() {
   // Specs/032: someone who opened an invitation before logging in or signing up is taken back to it, once.
   const signedInWithAccount = query.isSuccess
   useEffect(() => {
-    if (signedInWithAccount && readPendingInvitation()) navigate('/familia/invitacion', { replace: true })
+    if (signedInWithAccount && readPendingInvitation())
+      navigate('/familia/invitacion', { replace: true })
   }, [signedInWithAccount, navigate])
 
   const accountNotFound =
-    query.isError && query.error instanceof MeApiError && query.error.kind === 'not_found_for_session'
+    query.isError &&
+    query.error instanceof MeApiError &&
+    query.error.kind === 'not_found_for_session'
 
   if (accountNotFound) {
     return (
@@ -85,9 +89,12 @@ export function HomePage() {
           <div className="flex justify-center">
             <Logo size={56} variant="light" />
           </div>
-          <h1 className="mt-6 text-3xl font-black tracking-tight text-ink">No pudimos cargar tu cuenta</h1>
+          <h1 className="mt-6 text-3xl font-black tracking-tight text-ink">
+            No pudimos cargar tu cuenta
+          </h1>
           <p className="mt-3 text-base leading-relaxed text-slate-600">
-            Puede ser un problema de conexión o que tu sesión haya caducado. Tus datos siguen guardados.
+            Puede ser un problema de conexión o que tu sesión haya caducado. Tus datos siguen
+            guardados.
           </p>
           <button
             type="button"
@@ -120,7 +127,10 @@ export function HomePage() {
       </AppShell>
     ) : (
       <AppShell>
-        <main className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas px-5 pb-8" style={{ paddingTop: 'calc(0.5rem + env(safe-area-inset-top))' }}>
+        <main
+          className="mx-auto min-h-screen w-full max-w-[430px] bg-canvas px-5 pb-8"
+          style={{ paddingTop: 'calc(0.5rem + env(safe-area-inset-top))' }}
+        >
           <HomeSkeleton variant="phone" />
         </main>
       </AppShell>
@@ -164,6 +174,7 @@ export function HomePage() {
           <div className="mx-auto flex max-w-[904px] flex-col gap-7">
             <WelcomeDisclaimer account={account} />
             {readOnly && <ReadOnlyNote variant="desktop" />}
+            {account && <FamilyDeletionNotice account={account} variant="desktop" />}
             {account && <Greeting account={account} variant="desktop" />}
             {account && <TuDia account={account} variant="desktop" />}
             {childrenSection('desktop')}
@@ -187,6 +198,7 @@ export function HomePage() {
           <WelcomeDisclaimer account={account} />
         </div>
         {readOnly && <ReadOnlyNote variant="phone" />}
+        {account && <FamilyDeletionNotice account={account} variant="phone" />}
         {account && (
           <Greeting
             account={account}

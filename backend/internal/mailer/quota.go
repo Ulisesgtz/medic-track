@@ -18,6 +18,9 @@ type Class int
 const (
 	ClassInvitation Class = iota
 	ClassDigest
+	// ClassAccount: the e-mails about deleting an account (specs/070). Same cap as the invitations, so the digest keeps its
+	// last places.
+	ClassAccount
 )
 
 // ErrQuotaExceeded: the day has no place left for that class.

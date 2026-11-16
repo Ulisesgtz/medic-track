@@ -7,6 +7,7 @@ package httpx
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"runtime"
@@ -72,6 +73,33 @@ func (r *Responder) WriteJSONErrorUnlogged(w http.ResponseWriter, status int, co
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(map[string]string{"error": code, "message": message})
+}
+
+// WriteJSONUnlogged is WriteJSONErrorUnlogged with a body of its own shape. Only for answers that are an expected state and
+// would be repeated on every screen (a paused account's 409, Clerk's "verify it's you" 403, specs/070); never for a failure.
+func (r *Responder) WriteJSONUnlogged(w http.ResponseWriter, status int, body any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(body)
+}
+
+// StreamFailedMessage is the fixed error_logs message of a download that broke half way (specs/070).
+const StreamFailedMessage = "The file download failed while it was being sent"
+
+// Stream sends a file (not JSON) as a 200 download, writing it as `write` produces it, so a large file is never held in
+// memory (specs/070, the data export). Errors found BEFORE calling Stream are still written with WriteJSONError as always;
+// Stream is only for once the file can be sent. If `write` fails half way the status can no longer change: the failure is
+// recorded in error_logs with a fixed message (never the error's text, which could name a file or its content) and the
+// connection is cut, so the client sees a failed download instead of a short file that looks complete.
+func (r *Responder) Stream(ctx context.Context, w http.ResponseWriter, contentType, filename string, accountID *uuid.UUID, write func(io.Writer) error) {
+	w.Header().Set("Content-Type", contentType)
+	w.Header().Set("Content-Disposition", `attachment; filename="`+filename+`"`)
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
+	if err := write(w); err != nil {
+		r.record(ctx, http.StatusInternalServerError, StreamFailedMessage, accountID)
+		panic(http.ErrAbortHandler) // net/http closes the connection without logging a stack
+	}
 }
 
 // record captures the call site of whichever public method invoked it

@@ -37,13 +37,13 @@ type querier interface {
 const routineSelect = `
 	SELECT r.id, r.account_id, r.child_id, r.kind, r.name, r.note, r.period, r.times::text[], r.weekdays, r.window_start::text,
 	       r.window_end::text, r.interval_minutes, r.first_date::text, r.end_date::text, r.utc_offset_minutes, r.status,
-	       r.paused_at, r.ended_at, r.generated_until, r.created_at, c.first_name,
+	       r.paused_at, r.ended_at, r.generated_until, r.created_at, COALESCE(c.first_name, ''),
 	       CASE WHEN r.child_id IS NULL AND (owner.plan = 'paid' OR EXISTS (
 		       SELECT 1 FROM family_members fm JOIN accounts fo ON fo.id = fm.family_account_id
 		       WHERE fm.account_id = owner.id AND fm.status = 'active' AND fo.plan = 'paid')) THEN 'paid' ELSE owner.plan::text END,
 	       EXISTS (SELECT 1 FROM supplement_doses sd WHERE sd.routine_id = r.id AND sd.taken)
 	FROM supplement_routines r
-	JOIN accounts c ON c.id = r.created_by_account_id
+	LEFT JOIN accounts c ON c.id = r.created_by_account_id
 	JOIN accounts owner ON owner.id = r.account_id`
 
 type scanned struct {

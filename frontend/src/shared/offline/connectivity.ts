@@ -1,3 +1,4 @@
+import { noticeAccountPause } from '../accountPause'
 import { useSyncExternalStore } from 'react'
 import { onlineManager } from '@tanstack/react-query'
 import { ApiError } from '../apiError'
@@ -56,7 +57,11 @@ export function subscribeConnectivity(listener: () => void): () => void {
 
 /** `'offline'` while the app can't reach the server. */
 export function useConnectivity(): 'online' | 'offline' {
-  return useSyncExternalStore(subscribeConnectivity, () => (snapshot ? 'offline' : 'online'), () => 'online')
+  return useSyncExternalStore(
+    subscribeConnectivity,
+    () => (snapshot ? 'offline' : 'online'),
+    () => 'online',
+  )
 }
 
 /** A request to the API failed for the network. */
@@ -102,6 +107,7 @@ export function trackedFetch(original: typeof fetch): typeof fetch {
     try {
       const response = await original(input, init)
       reportReachable()
+      if (response.status === 409) void noticeAccountPause(response.clone())
       return response
     } catch (error) {
       if (error instanceof TypeError) reportNetworkFailure()
@@ -125,7 +131,9 @@ export function installConnectivity() {
   window.fetch = trackedFetch(original)
 
   const probe = () => {
-    void window.fetch(`${API_BASE_URL}/catalog/countries`, { cache: 'no-store' }).catch(() => undefined)
+    void window
+      .fetch(`${API_BASE_URL}/catalog/countries`, { cache: 'no-store' })
+      .catch(() => undefined)
   }
   window.addEventListener('online', () => {
     commit()

@@ -312,3 +312,13 @@ El plan completo (MX$499 al año) se contrata desde `/planes`: el padre paga **e
 3. El aviso «Antes de empezar» cambió de versión (`2026-10-23`: nombra el acceso del hijo), así que cada cuenta lo verá una vez más.
 4. Probar con un iPhone real: abrir la liga desde Mensajes o WhatsApp, instalar la PWA, marcar una toma y activar los avisos. En Safari **sin** instalar la app el almacenamiento se limpia a los 7 días sin uso y el niño necesitaría otra liga. Para revisar que la app del niño abrirá en `/hijo`: `curl -s https://dev.pedi-track.com/hijo | grep manifest` debe nombrar `/manifest-hijo.webmanifest`. Un ícono agregado antes del arreglo del 2026-10-27 (bugfix 052) se queda abriendo `/home`: hay que borrarlo y volver a agregarlo desde la liga.
 5. Pendiente legal del dueño: el aviso de privacidad debe mencionar este acceso (sin datos personales del menor, quitable en cualquier momento).
+
+## Eliminar la cuenta (spec 070)
+
+El padre elimina su cuenta desde «Mi cuenta» (`/cuenta/eliminar`): **30 días de gracia** con la cuenta en pausa y, al vencer, el API borra el usuario en Clerk y todos sus datos.
+
+1. **Migración `0037`** (`account_deletions` y las columnas de autor nulables) en la base de DEV **antes** de desplegar el backend nuevo (mismo método que la `0027`).
+2. **El barrido corre dentro del API** (cada 10 min, `accountdeletion.SweepInterval`): el backend debe estar siempre encendido. Necesita **`CLERK_SECRET_KEY`** (ya está para la autenticación): sin ella no puede borrar al usuario en Clerk y la cuenta se queda esperando. Si algo falla queda en `GET /ops/error-logs?endpointPrefix=job:account-deletion` (mensajes fijos con conteos).
+3. **Los correos** (al pedirlo, a la familia y al terminar) usan Resend como las invitaciones (`RESEND_API_KEY`, misma cuota diaria). **Sin `RESEND_API_KEY` no se mandan, pero el borrado sigue** igual.
+4. **Después de restaurar un respaldo**, correr `go run ./cmd/accounts reconcile-deleted` (con `DATABASE_URL` y `CLERK_SECRET_KEY`): **por omisión solo lista** (cuántas cuentas y sus ids, sin borrar nada); revisa que sean las que se eliminaron después del respaldo y repite con `--apply` para borrarlas de nuevo. Si hay más de `--max N` cuentas (por omisión el 20 % de las vinculadas a Clerk) se detiene sin borrar nada: casi seguro la `CLERK_SECRET_KEY` es de otra instancia; revísala antes de subir el límite.
+5. **Pendientes del dueño**: actualizar el aviso de privacidad (borrado, plazo de 30 días, descarga) y revisar con su contador cuánto se conserva (p. ej. la facturación).

@@ -32,10 +32,12 @@ import (
 	"time"
 
 	clerk "github.com/clerk/clerk-sdk-go/v2"
+	"github.com/google/uuid"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/access"
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
+	"github.com/Ulisesgtz/medic-track/backend/internal/accountdeletion"
 	"github.com/Ulisesgtz/medic-track/backend/internal/appointment"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw"
 	"github.com/Ulisesgtz/medic-track/backend/internal/cabinet"
@@ -43,6 +45,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childprofile"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
+	"github.com/Ulisesgtz/medic-track/backend/internal/dataexport"
 	_ "github.com/Ulisesgtz/medic-track/backend/internal/docs"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errordigest"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
@@ -184,6 +187,7 @@ func main() {
 	// its routes exist, /planes keeps the «Pronto» button and a plan is given by hand, as before. The console names what is missing,
 	// never a value. PAYMENTS_DRIVER=fake runs everything against an in-memory provider (tests and development only).
 	var paymentsHandler *payments.Handler
+	var paymentsService *payments.Service
 	paymentsConfig := payments.ConfigFromEnv()
 	if paymentsConfig.Available() {
 		var provider payments.Provider
@@ -201,7 +205,7 @@ func main() {
 				log.Print("MERCADOPAGO_WEBHOOK_SECRET is empty: notices are accepted without a signature (the resource is always re-read from the provider); set it before charging for real")
 			}
 		}
-		paymentsService := payments.NewService(payments.NewRepository(pool, family.NewRepository(pool)), provider, paymentsConfig)
+		paymentsService = payments.NewService(payments.NewRepository(pool, family.NewRepository(pool)), provider, paymentsConfig)
 		paymentsService.SetReporter(jobreport.New(errorLogRepo, "payments"))
 		paymentsHandler = payments.NewHandler(paymentsService, responder, paymentsConfig)
 		// Grace periods, paid periods and pending subscriptions that run out, and the healing of a lost notice (job:payments).
@@ -212,6 +216,25 @@ func main() {
 	} else {
 		log.Printf("payments not available: missing %v", paymentsConfig.Missing())
 	}
+
+	// Deleting an account (specs/070): asking cancels the subscription first (if the charge is configured), the account is
+	// paused for 30 days and then, every 10 minutes, the due ones are deleted — the Clerk user, then every row in one
+	// transaction — and reported as job:account-deletion when something fails. The e-mails go through the same provider and
+	// daily quota as the invitations; without them the deletion works the same, only without e-mails.
+	var cancelSubscription func(context.Context, uuid.UUID) error
+	if paymentsService != nil {
+		cancelSubscription = paymentsService.Cancel
+	}
+	var deletionMail accountdeletion.Notifier
+	if mailConfig.Available() {
+		deletionMail = accountdeletion.NewMailer(mailer.NewSender(mailConfig, nil), mailQuota, mailConfig.From)
+	} else {
+		log.Print("account deletion e-mails unavailable: RESEND_API_KEY (or MAIL_DRIVER=discard) must be set")
+	}
+	deletionRepo := accountdeletion.NewRepository(pool)
+	deletionService := accountdeletion.NewService(deletionRepo, pool, accountdeletion.ClerkAPI{},
+		accountdeletion.PaymentsCanceler(pool, cancelSubscription), deletionMail, jobreport.New(errorLogRepo, "account-deletion"))
+	go deletionService.RunEvery(ctx, accountdeletion.SweepInterval)
 
 	// Operation queries over error_logs (specs/021): they exist only with a key; without one there is no such route.
 	var opsHandler *ops.Handler
@@ -256,6 +279,9 @@ func main() {
 		Growth:          growthHandler,
 		ChildProfile:    childProfileHandler,
 		HistoryExport:   historyExportHandler,
+		AccountDeletion: accountdeletion.NewHandler(deletionService, responder),
+		DeletionRepo:    deletionRepo,
+		DataExport:      dataexport.NewHandler(responder, pool, dataexport.NewFamilyOwnerResolver(pool)),
 		Payments:        paymentsHandler,
 		Ops:             opsHandler,
 		OpsKey:          opsKey,

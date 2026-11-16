@@ -49,4 +49,6 @@ vi.mock('@clerk/react', () => ({
     fetchStatus: 'idle',
   }),
   useClerk: () => ({ setActive: vi.fn() }),
+  // Specs/070: «verify it's you» — in tests the call simply goes through (tests that need Clerk's prompt mock it).
+  useReverification: <T,>(fetcher: T) => fetcher,
 }))

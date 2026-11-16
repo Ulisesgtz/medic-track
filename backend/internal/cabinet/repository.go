@@ -26,9 +26,9 @@ func fold(expr string) string {
 
 const itemSelect = `
 	SELECT i.id, i.name, i.strength, i.quantity, i.unit, i.expires_year, i.expires_month, i.expires_day, i.note,
-	       i.photo IS NOT NULL, c.first_name, i.created_at, u.first_name, i.updated_at
+	       i.photo IS NOT NULL, COALESCE(c.first_name, ''), i.created_at, u.first_name, i.updated_at
 	FROM medicine_cabinet_items i
-	JOIN accounts c ON c.id = i.created_by_account_id
+	LEFT JOIN accounts c ON c.id = i.created_by_account_id
 	LEFT JOIN accounts u ON u.id = i.updated_by_account_id`
 
 func scan(row pgx.Row) (Item, error) {

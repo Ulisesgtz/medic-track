@@ -651,6 +651,241 @@
                 }
             }
         },
+        "/accounts/{accountId}/data-export": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "A ZIP with everything the account recorded — its children, consultations (of the children and its own), medications\nand every dose with its state, appointments, vaccinations and the card's photos, growth measurements, supplements and\nactivities with their doses, the medicine cabinet — as LEEME.txt, datos.json, one CSV per kind (UTF-8 with BOM) and\nthe photos. Any plan, also while the account's deletion is pending. Built on every request, never stored. If it breaks\nhalf way the connection is cut, so a short file never looks complete.",
+                "produces": [
+                    "application/zip"
+                ],
+                "tags": [
+                    "account"
+                ],
+                "summary": "Download all my data",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/DataExportError"
+                        }
+                    },
+                    "403": {
+                        "description": "The account is not the session's",
+                        "schema": {
+                            "$ref": "#/definitions/DataExportError"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/DataExportError"
+                        }
+                    },
+                    "500": {
+                        "description": "The data could not be read",
+                        "schema": {
+                            "$ref": "#/definitions/DataExportError"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}/deletion": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "account"
+                ],
+                "summary": "Whether the account is scheduled for deletion",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/AccountDeletion"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/AccountDeletionError"
+                        }
+                    },
+                    "403": {
+                        "description": "The account is not the session's",
+                        "schema": {
+                            "$ref": "#/definitions/AccountDeletionError"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AccountDeletionError"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Needs the word \"ELIMINAR\" and a sign-in verified in the last 10 minutes (otherwise 403 with Clerk's\n\"reverification-error\", which the app's Clerk component answers by asking for the password or code). Cancels the open\nsubscription first — if the provider fails, nothing is saved (502). Then the account is paused until the date: it can\nonly read its deletion, download its data and cancel. Its pending invitations and child-phone links stop working.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "account"
+                ],
+                "summary": "Ask to delete the account in 30 days",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The confirmation word",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/AccountDeletionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/AccountDeletionRequested"
+                        }
+                    },
+                    "400": {
+                        "description": "The confirmation word is not ELIMINAR",
+                        "schema": {
+                            "$ref": "#/definitions/AccountDeletionError"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/AccountDeletionError"
+                        }
+                    },
+                    "403": {
+                        "description": "Not the session's account, or the sign-in is not recent",
+                        "schema": {
+                            "$ref": "#/definitions/AccountDeletionError"
+                        }
+                    },
+                    "409": {
+                        "description": "The account is already scheduled for deletion",
+                        "schema": {
+                            "$ref": "#/definitions/AccountDeletionError"
+                        }
+                    },
+                    "502": {
+                        "description": "The subscription could not be canceled; nothing was saved",
+                        "schema": {
+                            "$ref": "#/definitions/AccountDeletionError"
+                        }
+                    }
+                }
+            }
+        },
+        "/accounts/{accountId}/deletion/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Idempotent: without an open request it answers the same. A subscription canceled when the deletion was asked for\nstays canceled.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "account"
+                ],
+                "summary": "Cancel the account's deletion",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/AccountDeletion"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/AccountDeletionError"
+                        }
+                    },
+                    "403": {
+                        "description": "The account is not the session's",
+                        "schema": {
+                            "$ref": "#/definitions/AccountDeletionError"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AccountDeletionError"
+                        }
+                    }
+                }
+            }
+        },
         "/accounts/{accountId}/disclaimer-acceptance": {
             "post": {
                 "security": [
@@ -5023,6 +5258,49 @@
                 }
             }
         },
+        "/family/children-export": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The same ZIP as /accounts/{accountId}/data-export, limited to the children of the family's owner — never her own\nconsultations, routines or medicine cabinet. Only for an active member of a family whose owner asked to delete her\naccount; anyone else gets 404.",
+                "produces": [
+                    "application/zip"
+                ],
+                "tags": [
+                    "account"
+                ],
+                "summary": "Download the data of the family's children (while the owner's deletion is pending)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/DataExportError"
+                        }
+                    },
+                    "404": {
+                        "description": "Not a member of a family whose owner asked to delete her account",
+                        "schema": {
+                            "$ref": "#/definitions/DataExportError"
+                        }
+                    },
+                    "500": {
+                        "description": "The data could not be read",
+                        "schema": {
+                            "$ref": "#/definitions/DataExportError"
+                        }
+                    }
+                }
+            }
+        },
         "/family/invitations": {
             "post": {
                 "security": [
@@ -6376,6 +6654,90 @@
         }
     },
     "definitions": {
+        "AccountDeletion": {
+            "type": "object",
+            "properties": {
+                "requestedAt": {
+                    "type": "string",
+                    "example": "2026-11-12T18:00:00Z"
+                },
+                "scheduledFor": {
+                    "type": "string",
+                    "example": "2026-12-12T18:00:00Z"
+                },
+                "status": {
+                    "description": "Status is \"none\" or \"pending\".",
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "pending"
+                    ],
+                    "example": "pending"
+                }
+            }
+        },
+        "AccountDeletionError": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "account_deletion_pending"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "This account is scheduled for deletion"
+                }
+            }
+        },
+        "AccountDeletionInfo": {
+            "type": "object",
+            "properties": {
+                "scheduledFor": {
+                    "type": "string",
+                    "example": "2026-12-12T18:00:00Z"
+                }
+            }
+        },
+        "AccountDeletionRequest": {
+            "type": "object",
+            "properties": {
+                "confirm": {
+                    "description": "Confirm must be exactly \"ELIMINAR\".",
+                    "type": "string",
+                    "example": "ELIMINAR"
+                }
+            }
+        },
+        "AccountDeletionRequested": {
+            "type": "object",
+            "properties": {
+                "familyNotified": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "requestedAt": {
+                    "type": "string",
+                    "example": "2026-11-12T18:00:00Z"
+                },
+                "scheduledFor": {
+                    "type": "string",
+                    "example": "2026-12-12T18:00:00Z"
+                },
+                "status": {
+                    "description": "Status is \"none\" or \"pending\".",
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "pending"
+                    ],
+                    "example": "pending"
+                },
+                "subscriptionCanceled": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "AccountNotFoundForSessionResponse": {
             "type": "object",
             "properties": {
@@ -7474,6 +7836,19 @@
                 }
             }
         },
+        "DataExportError": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "export_failed"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "The data could not be read"
+                }
+            }
+        },
         "DoseNotFoundResponse": {
             "type": "object",
             "properties": {
@@ -8303,6 +8678,11 @@
         "FamilyMembershipInfo": {
             "type": "object",
             "properties": {
+                "deletionScheduledFor": {
+                    "description": "DeletionScheduledFor (RFC 3339) is set when the family's owner asked to delete her account (specs/070): until then\nthe person sees and marks the family's children and can download their data; on that date they stop seeing them.",
+                    "type": "string",
+                    "example": "2026-12-12T18:00:00Z"
+                },
                 "ownerAccountId": {
                     "type": "string",
                     "example": "e5f6a7b8-0000-0000-0000-000000000000"
@@ -10307,6 +10687,14 @@
                 "countryCode": {
                     "type": "string",
                     "example": "MX"
+                },
+                "deletion": {
+                    "description": "Deletion is set when the account asked to delete itself (specs/070): the app then only offers downloading the data\nand canceling. Null otherwise.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/AccountDeletionInfo"
+                        }
+                    ]
                 },
                 "disclaimerAccepted": {
                     "type": "boolean",
