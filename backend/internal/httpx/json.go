@@ -171,3 +171,8 @@ func extractMessage(body any, status int) string {
 	}
 	return http.StatusText(status)
 }
+
+// WriteNoContent answers 204 with no body (a report accepted, specs/072). It is a success, so there is nothing to log.
+func (r *Responder) WriteNoContent(w http.ResponseWriter) {
+	w.WriteHeader(http.StatusNoContent)
+}

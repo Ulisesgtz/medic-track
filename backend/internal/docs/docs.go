@@ -4692,6 +4692,61 @@ const docTemplate = `{
                 }
             }
         },
+        "/client-errors": {
+            "post": {
+                "description": "Public (no session; Authorization is ignored). The app reports what failed on a phone or a browser: a kind, a cleaned message, the screen pattern (never a real address), the browser family and the version. It is written to error_logs as ` + "`" + `client:\u003cscreen\u003e` + "`" + ` with no account. Always 204 when the body is valid, even if the server's cap left the row out. Bodies over 2 KiB: 413. Its own per-address limit answers 429.",
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "client-errors"
+                ],
+                "summary": "Report an error of the app",
+                "parameters": [
+                    {
+                        "description": "The report",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_clienterror.Report"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "invalid_client_error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "413": {
+                        "description": "body_too_large",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "429": {
+                        "description": "too_many_requests",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/consultations/{consultationId}": {
             "get": {
                 "security": [
@@ -5802,6 +5857,32 @@ const docTemplate = `{
                         "description": "Not an active member of this family",
                         "schema": {
                             "$ref": "#/definitions/FamilyErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/healthz": {
+            "get": {
+                "description": "200 when the process is alive and the database answers within 2 s; 503 otherwise. Public, never limited, never logged.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Service health",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_health.StatusResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/internal_health.UnavailableResponse"
                         }
                     }
                 }
@@ -11029,6 +11110,64 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_clienterror.Report": {
+            "type": "object",
+            "properties": {
+                "browser": {
+                    "type": "string",
+                    "enum": [
+                        "safari",
+                        "chrome",
+                        "firefox",
+                        "edge",
+                        "samsung",
+                        "other"
+                    ],
+                    "example": "safari"
+                },
+                "count": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "installed": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "kind": {
+                    "type": "string",
+                    "enum": [
+                        "error",
+                        "rejection",
+                        "render"
+                    ],
+                    "example": "render"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Cannot read properties of undefined (reading 'doses')"
+                },
+                "os": {
+                    "type": "string",
+                    "enum": [
+                        "ios",
+                        "android",
+                        "windows",
+                        "macos",
+                        "linux",
+                        "other"
+                    ],
+                    "example": "ios"
+                },
+                "route": {
+                    "type": "string",
+                    "example": "/consultations/:consultationId"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "3e34a6799b24"
+                }
+            }
+        },
         "internal_consultation.createConsultationRequest": {
             "type": "object",
             "properties": {
@@ -11103,6 +11242,28 @@ const docTemplate = `{
                 "taken": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "internal_health.StatusResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "example": "ok"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "3e34a6799b24"
+                }
+            }
+        },
+        "internal_health.UnavailableResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "example": "unavailable"
                 }
             }
         },

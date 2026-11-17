@@ -63,7 +63,7 @@ base de datos de pruebas y sale de la rama `develop` (la constitución reserva `
 
 1. **Migraciones primero** — se aplican **a mano** (aún no hay herramienta de migraciones), en orden, y solo las que falten
    (`backend/migrations/00NN_….sql`; la última a la fecha es la `0028`). **Las `0017` y `0018` son de compartir con la familia (spec 032)**: la `0018` además **rellena** `dose_reminders` con lo que ya se había avisado (`reminder_sent_at`) para que al desplegar no se reenvíe ningún aviso; aplícalas **antes** del backend (el backend nuevo las necesita) y una sola vez. **La `0019` es de las rutinas de suplementos (spec 033)**: crea cuatro tablas nuevas (`supplement_*`), no toca nada existente y también va **antes** del backend; el aviso «Antes de empezar» cambió de versión (`2026-10-07`), así que cada cuenta lo verá una vez más. **La `0020` es de la próxima cita (spec 033, parte 2)**: crea cuatro tablas nuevas (`consultation_appointments`, `appointment_notices`, `appointment_notice_reminders`, `appointment_muted`), no toca nada existente y también va **antes** del backend; el backend anterior sigue funcionando sin ella, el nuevo no. **La `0021` es de las rutinas personales (spec 033, parte 3)**: una tabla nueva (`personal_routine_notices`), un índice y un CHECK sobre `supplement_routines` (una rutina sin hijo es de su propia creadora; las existentes cumplen); también va **antes** del backend. **La `0022` es de suplementos y actividades por separado (spec 035)**: agrega el tipo (`kind`) y la ventana del día a `supplement_routines`, **convierte en actividades** las rutinas «cada N horas» que ya existían (empiezan a su primera hora y siguen hasta las 23:59; borra sus tomas futuras sin marcar y sin aviso y el proceso del API las vuelve a crear) y **quita** las columnas `interval_hours` y `first_time`; va **antes** del backend (el backend anterior no entiende el periodo `window`, el nuevo no arranca sin las columnas) y una sola vez. El aviso «Antes de empezar» cambió de versión (`2026-10-08`: ahora nombra también las actividades), así que cada cuenta lo verá una vez más. **La `0023` es de la actividad a una hora fija (spec 036)**: solo relaja un CHECK de `supplement_routines` (no cambia ningún dato) y puede ir antes o después del backend nuevo; sin ella, guardar una actividad a una hora fija responde 500.
-2. **Backend después** (el *healthcheck* es `GET /catalog/countries`, que necesita el catálogo ya cargado).
+2. **Backend después** (el *healthcheck* es `GET /healthz`, que solo pide que el proceso viva y que la base responda; spec 072).
 3. **Frontend al final.** El backend es compatible hacia atrás con el frontend anterior; al revés no.
 
 ## Cómo se montó
@@ -245,6 +245,20 @@ desarrollo; es normal). En el teléfono sigue `PROBAR.md` (instalar, **Activar r
 - **Swagger**: el API desplegado ya no sirve `/swagger/*`. Para verlo en DEV, poner `SWAGGER_ENABLED=true` en Railway.
 - **`CLERK_AUTHORIZED_PARTIES`** (Railway, opcional): los orígenes del frontend a los que Clerk emite sesiones, separados por coma (`https://dev.pedi-track.com`). Con ella el API rechaza un token emitido para otro origen. No se pone en local ni en túneles.
 - **Límite de peticiones**: lo hace el propio API (`internal/ratelimit`), por dirección de cliente y por minuto: 240 en general y 20 en las rutas públicas (`Tomada` y las invitaciones). Se ajusta con `RATE_LIMIT_PER_MINUTE`, `RATE_LIMIT_STRICT_PER_MINUTE` (`0` lo apaga) y `TRUSTED_PROXY_HOPS` (1 con Railway; **2 si algún día se pone Cloudflare delante de Railway**, o todos compartirán la dirección de Cloudflare). Al excederlo responde 429 con `Retry-After`. Cloudflare delante (WAF, DDoS) sigue siendo una mejora opcional: requiere agregar `pedi-track.com` a Cloudflare y copiar todos los registros DNS de HostGator, incluidos los del correo.
+
+## Monitoreo externo (Better Stack) (spec 072)
+
+El API tiene `GET /healthz` (también `HEAD`): responde `200 {"status":"ok","version":"…"}` si el proceso vive y la base contesta en menos de 2 s, y `503 {"status":"unavailable"}` si no. Es pública, no entra al límite de peticiones y **nunca escribe en `error_logs`**. Railway la usa como *healthcheck* de despliegue (`backend/railway.json`). Para enterarte en minutos de una caída (sin esperar el correo del lunes), un monitor externo la vigila. **Paso del dueño**, una sola vez:
+
+1. Crea una cuenta gratuita en **Better Stack** (Uptime) con el correo de soporte.
+2. Crea **dos monitores**:
+   - `https://api-dev.pedi-track.com/healthz`: tipo *keyword*, que la respuesta **contenga la palabra `ok`**.
+   - `https://dev.pedi-track.com/`: que responda 200 (la página en Cloudflare Pages).
+3. Intervalo de **3 minutos**, con **confirmación desde otra región** antes de avisar (evita falsas alarmas).
+4. Avisos **por correo** al caer y al volver. La app del teléfono de Better Stack es opcional.
+5. Prueba que avisa: en Railway pausa el servicio del backend unos minutos, espera el correo y vuélvelo a encender (debe llegar el aviso de que volvió).
+
+El monitor solo conoce **dos direcciones públicas y tu correo**: ningún dato de familias pasa por él (Principio II). En **producción** se dan de alta otros dos monitores con las direcciones de producción cuando exista. Alternativas si algún día se cambia: UptimeRobot (gratis, cada 5 min) o HetrixTools (cada 1 min).
 
 ## Correo del dominio (2026-10-11)
 

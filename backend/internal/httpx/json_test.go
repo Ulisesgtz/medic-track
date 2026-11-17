@@ -251,3 +251,15 @@ func TestResponder_WriteJSONErrorUnlogged_WritesBodyAndRecordsNothing(t *testing
 	case <-time.After(100 * time.Millisecond):
 	}
 }
+
+func TestWriteNoContent_204WithoutBodyAndNoLogEntry(t *testing.T) {
+	rec := newFakeRecorder()
+	responder := httpx.NewResponder(rec)
+	w := httptest.NewRecorder()
+
+	responder.WriteNoContent(w)
+
+	require.Equal(t, 204, w.Code)
+	require.Empty(t, w.Body.String())
+	require.Empty(t, rec.entries)
+}

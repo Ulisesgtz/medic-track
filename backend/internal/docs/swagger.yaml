@@ -3129,6 +3129,51 @@ definitions:
         example: Jalisco
         type: string
     type: object
+  internal_clienterror.Report:
+    properties:
+      browser:
+        enum:
+        - safari
+        - chrome
+        - firefox
+        - edge
+        - samsung
+        - other
+        example: safari
+        type: string
+      count:
+        example: 3
+        type: integer
+      installed:
+        example: true
+        type: boolean
+      kind:
+        enum:
+        - error
+        - rejection
+        - render
+        example: render
+        type: string
+      message:
+        example: Cannot read properties of undefined (reading 'doses')
+        type: string
+      os:
+        enum:
+        - ios
+        - android
+        - windows
+        - macos
+        - linux
+        - other
+        example: ios
+        type: string
+      route:
+        example: /consultations/:consultationId
+        type: string
+      version:
+        example: 3e34a6799b24
+        type: string
+    type: object
   internal_consultation.createConsultationRequest:
     properties:
       consultDate:
@@ -3188,6 +3233,21 @@ definitions:
       taken:
         example: true
         type: boolean
+    type: object
+  internal_health.StatusResponse:
+    properties:
+      status:
+        example: ok
+        type: string
+      version:
+        example: 3e34a6799b24
+        type: string
+    type: object
+  internal_health.UnavailableResponse:
+    properties:
+      status:
+        example: unavailable
+        type: string
     type: object
   internal_reminder.actionRequest:
     properties:
@@ -6454,6 +6514,47 @@ paths:
       summary: One photo of the paper card
       tags:
       - vaccinations
+  /client-errors:
+    post:
+      consumes:
+      - application/json
+      description: 'Public (no session; Authorization is ignored). The app reports
+        what failed on a phone or a browser: a kind, a cleaned message, the screen
+        pattern (never a real address), the browser family and the version. It is
+        written to error_logs as `client:<screen>` with no account. Always 204 when
+        the body is valid, even if the server''s cap left the row out. Bodies over
+        2 KiB: 413. Its own per-address limit answers 429.'
+      parameters:
+      - description: The report
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_clienterror.Report'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: invalid_client_error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "413":
+          description: body_too_large
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "429":
+          description: too_many_requests
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Report an error of the app
+      tags:
+      - client-errors
   /consultations/{consultationId}:
     get:
       description: |-
@@ -7219,6 +7320,24 @@ paths:
       summary: Remove a Caregiver or a Child-role member
       tags:
       - family
+  /healthz:
+    get:
+      description: 200 when the process is alive and the database answers within 2
+        s; 503 otherwise. Public, never limited, never logged.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_health.StatusResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/internal_health.UnavailableResponse'
+      summary: Service health
+      tags:
+      - health
   /ops/error-logs:
     get:
       description: |-

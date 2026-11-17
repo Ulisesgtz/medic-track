@@ -29,6 +29,7 @@ const CROSS_BROWSER_SPECS = [
   'detalle-consulta-web',
   'recordatorios',
   'primer-uso',
+  'errores-cliente',
 ]
 for (const name of CROSS_BROWSER_SPECS) {
   // A renamed spec must not silently drop out of the cross-browser run.
@@ -74,7 +75,8 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: process.env.CI ? 180_000 : 60_000,
     // The «payment page» of the fake provider exists only in a build that says so (specs/045); the API is started with PAYMENTS_DRIVER=fake.
-    env: { VITE_PAYMENTS_FAKE: 'true' },
+    // La ruta /__prueba-error (specs/072) solo existe en un build que lo pide: nunca en DEV ni en producción.
+    env: { VITE_PAYMENTS_FAKE: 'true', VITE_TEST_ERROR_ROUTE: 'true' },
   },
   projects: [
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },

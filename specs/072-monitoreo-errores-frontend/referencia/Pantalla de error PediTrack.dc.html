@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pantalla de error PediTrack</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--color-ink:#04252b;--color-ink-soft:#0b3b44;--color-action:#0e7490;--color-bright:#22d3ee;--color-bright-soft:#67e8f9;--color-confirmed:#047857;--color-confirmed-soft:#d1fae5;--color-confirmed-strong:#065f46;--color-canvas:#f8feff;--color-surface:#ffffff;--color-hint:#ecfeff;--color-hint-border:#a5f3fc;--color-hint-edge:#cffafe;--color-body:#1f3d44;--color-ink-edge:#0b5763;--color-muted:#475569}
+*{box-sizing:border-box}
+body{margin:0;background:#dfe8ea;font-family:'Figtree',system-ui,sans-serif;color:#04252b}
+button{font-family:inherit}
+a{color:#0e7490;text-decoration:none}
+button:focus-visible,a:focus-visible{outline:2px solid #0e7490;outline-offset:2px}
+</style>
+</helmet>
+
+<div style="padding:56px;display:flex;flex-direction:column;gap:72px">
+  <div style="max-width:900px;display:flex;flex-direction:column;gap:10px">
+    <p style="margin:0;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-action)">PediTrack · Pantalla de error · propuesta 17 nov 2026</p>
+    <h1 style="margin:0;font-size:38px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Pantalla de error: calmada y sin culpas</h1>
+    <p style="margin:0;font-size:16px;line-height:1.55;color:var(--color-body);text-wrap:pretty">Seis estados (A–F), cada uno en teléfono (390 px) y en web (1280 px, con la barra lateral de la app cuando aplica), en marcos separados. Reemplaza la página en blanco. Las decisiones y lo que el sistema no cubría están al final.</p>
+  </div>
+
+  <sc-for list="{{ estados }}" as="s" hint-placeholder-count="2">
+    <div id="e{{ s.num }}" style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;flex-direction:column;gap:8px;max-width:1000px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="padding:4px 11px;border-radius:999px;background:var(--color-ink);color:#ffffff;font-size:13px;font-weight:800">{{ s.num }}</span>
+          <span style="font-size:20px;font-weight:800;color:var(--color-ink)">{{ s.label }}</span>
+          <span style="font-size:14px;color:var(--color-body)">{{ s.quien }}</span>
+        </div>
+        <p style="margin:0;font-size:15px;line-height:1.5;color:var(--color-body);text-wrap:pretty">{{ s.nota }}</p>
+      </div>
+      <div style="display:flex;gap:48px;align-items:flex-start">
+
+        <div style="display:flex;flex-direction:column;gap:10px;flex:none">
+          <span style="font-size:13px;font-weight:800;color:var(--color-muted)">{{ s.num }} · Teléfono · {{ s.t.plat }}</span>
+          <div data-screen-label="{{ s.num }} teléfono" style="width:410px;padding:10px;border-radius:50px;background:var(--color-ink);box-shadow:0 20px 50px rgba(4,37,43,0.22)">
+            <div style="width:390px;min-height:844px;border-radius:40px;overflow:hidden;background:var(--color-canvas);display:flex;flex-direction:column">
+              <sc-if value="{{ s.t.lApp }}">
+                <div style="order:-1;background:var(--color-ink)"><div style="height:44px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:700;color:#ffffff"><span>9:41</span><span style="display:flex;gap:5px"><span style="width:18px;height:10px;border-radius:2px;background:#ffffff"></span><span style="width:24px;height:11px;border-radius:3px;border:1.5px solid #ffffff"></span></span></div>
+                  <div style="padding:6px 20px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px"><span style="display:flex;align-items:center;gap:10px"><svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><defs><clipPath id="lgAt{{ s.num }}"><rect x="21" y="5" width="22" height="54" rx="11"></rect></clipPath></defs><rect width="64" height="64" rx="15" fill="#22d3ee"></rect><g transform="rotate(-45 32 32)" clip-path="url(#lgAt{{ s.num }})"><rect x="21" y="5" width="22" height="54" fill="#ffffff"></rect><rect x="21" y="32" width="22" height="27" fill="#047857"></rect><rect x="21" y="30.6" width="22" height="2.8" fill="#22d3ee"></rect></g></svg><span style="font-size:18px;font-weight:900;letter-spacing:-0.03em;color:#ffffff">Pedi<span style="color:#67e8f9">Track</span></span></span><button type="button" aria-label="Menú de cuenta" style="flex:none;width:44px;height:44px;border-radius:50%;border:none;background:var(--color-action);color:#ffffff;font-size:15px;font-weight:800;cursor:pointer">AM</button></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ s.t.lSes }}">
+                <div style="order:-1;background:var(--color-ink)"><div style="height:44px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:700;color:#ffffff"><span>9:41</span><span style="display:flex;gap:5px"><span style="width:18px;height:10px;border-radius:2px;background:#ffffff"></span><span style="width:24px;height:11px;border-radius:3px;border:1.5px solid #ffffff"></span></span></div>
+                  <div style="padding:6px 20px 16px;display:flex;align-items:center;gap:10px;min-height:60px"><svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><defs><clipPath id="lgSt{{ s.num }}"><rect x="21" y="5" width="22" height="54" rx="11"></rect></clipPath></defs><rect width="64" height="64" rx="15" fill="#22d3ee"></rect><g transform="rotate(-45 32 32)" clip-path="url(#lgSt{{ s.num }})"><rect x="21" y="5" width="22" height="54" fill="#ffffff"></rect><rect x="21" y="32" width="22" height="27" fill="#047857"></rect><rect x="21" y="30.6" width="22" height="2.8" fill="#22d3ee"></rect></g></svg><span style="font-size:18px;font-weight:900;letter-spacing:-0.03em;color:#ffffff">Pedi<span style="color:#67e8f9">Track</span></span></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ s.t.lFull }}">
+                <div style="order:-1"><div style="height:44px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:700;color:var(--color-ink)"><span>9:41</span><span style="display:flex;gap:5px"><span style="width:18px;height:10px;border-radius:2px;background:var(--color-ink)"></span><span style="width:24px;height:11px;border-radius:3px;border:1.5px solid var(--color-ink)"></span></span></div>
+                  <div style="padding:28px 20px 0;display:flex;flex-direction:column;align-items:center;gap:12px"><svg width="60" height="60" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><defs><clipPath id="lgFt{{ s.num }}"><rect x="21" y="5" width="22" height="54" rx="11"></rect></clipPath></defs><rect width="64" height="64" rx="15" fill="#0e7490"></rect><g transform="rotate(-45 32 32)" clip-path="url(#lgFt{{ s.num }})"><rect x="21" y="5" width="22" height="54" fill="#ffffff"></rect><rect x="21" y="32" width="22" height="27" fill="#047857"></rect><rect x="21" y="30.6" width="22" height="2.8" fill="#0e7490"></rect></g></svg><span style="font-size:28px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Pedi<span style="color:var(--color-action)">Track</span></span></div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ s.t.lHijo }}">
+                <div style="order:-1"><div style="height:44px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:700;color:var(--color-ink)"><span>9:41</span><span style="display:flex;gap:5px"><span style="width:18px;height:10px;border-radius:2px;background:var(--color-ink)"></span><span style="width:24px;height:11px;border-radius:3px;border:1.5px solid var(--color-ink)"></span></span></div>
+                  <div style="padding:10px 20px 0;display:flex;align-items:center;gap:10px"><svg width="36" height="36" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><defs><clipPath id="lgHt{{ s.num }}"><rect x="21" y="5" width="22" height="54" rx="11"></rect></clipPath></defs><rect width="64" height="64" rx="15" fill="#0e7490"></rect><g transform="rotate(-45 32 32)" clip-path="url(#lgHt{{ s.num }})"><rect x="21" y="5" width="22" height="54" fill="#ffffff"></rect><rect x="21" y="32" width="22" height="27" fill="#047857"></rect><rect x="21" y="30.6" width="22" height="2.8" fill="#0e7490"></rect></g></svg><span style="font-size:20px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Pedi<span style="color:var(--color-action)">Track</span></span></div>
+                </div>
+              </sc-if>
+              <main style="flex:1;padding:{{ s.t.pad }};display:flex;flex-direction:column;align-items:center">
+                <div style="width:100%;background:var(--color-surface);border-radius:24px;box-shadow:0 8px 20px rgba(4,37,43,0.07);padding:28px 24px 24px;display:flex;flex-direction:column;gap:16px">
+        <span aria-hidden="true" style="flex:none;width:64px;height:64px;border-radius:50%;background:var(--color-hint);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center">
+          <sc-if value="{{ s.t.icReload }}"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M20 12a8 8 0 1 1-2.7-6"></path><path d="M20 4.5V9h-4.5"></path></svg></sc-if>
+          <sc-if value="{{ s.t.icWifi }}"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M3 9.5a14 14 0 0 1 18 0" stroke-dasharray="1.5 3.5"></path><path d="M6.5 13a9 9 0 0 1 11 0"></path><path d="M10 16.4a4 4 0 0 1 4 0"></path><circle cx="12" cy="20" r="1.2" fill="#0e7490"></circle></svg></sc-if>
+        </span>
+        <h1 tabindex="-1" style="margin:0;font-size:{{ s.t.h1 }}px;font-weight:900;letter-spacing:-0.03em;line-height:1.15;color:var(--color-ink);outline:none">{{ s.t.title }}</h1>
+        <p style="margin:0;font-size:{{ s.t.pz }}px;line-height:1.55;color:var(--color-body)">{{ s.t.text }}</p>
+        <sc-if value="{{ s.t.hasNota }}"><p style="margin:0;font-size:14px;line-height:1.5;color:var(--color-muted)">{{ s.t.nota }}</p></sc-if>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px">
+          <button type="button" style="width:100%;min-height:{{ s.t.btnH }}px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:17px;font-weight:800;cursor:pointer" style-hover="background:#065f46">{{ s.t.main }}</button>
+          <button type="button" style="width:100%;min-height:48px;border:2px solid var(--color-action);border-radius:16px;background:transparent;color:var(--color-action);font-size:16px;font-weight:800;cursor:pointer" style-hover="background:var(--color-hint)">{{ s.t.alt }}</button>
+        </div>
+      </div>
+              </main>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;flex:none">
+          <span style="font-size:13px;font-weight:800;color:var(--color-muted)">{{ s.num }} · Web · {{ s.w.plat }}</span>
+          <sc-if value="{{ s.w.lNone }}">
+            <div style="width:1280px;min-height:200px;border-radius:16px;border:2px dashed var(--color-hint-border);display:flex;align-items:center;justify-content:center;padding:32px"><p style="margin:0;max-width:640px;font-size:16px;line-height:1.55;color:var(--color-body);text-align:center">La vista «Hoy» del hijo solo existe en el teléfono: se abre con la liga, sin cuenta ni barra lateral. No tiene diseño web.</p></div>
+          </sc-if>
+          <sc-if value="{{ s.w.lApp }}">
+            <div data-screen-label="{{ s.num }} web" style="width:1280px;min-height:844px;display:flex;background:var(--color-canvas);box-shadow:0 20px 50px rgba(4,37,43,0.18);border-radius:16px;overflow:hidden">
+              <main style="order:2;flex:1;min-width:0;padding:96px 48px 56px;display:flex;flex-direction:column;align-items:center">
+                <div style="width:100%;max-width:600px;background:var(--color-surface);border-radius:24px;box-shadow:0 8px 20px rgba(4,37,43,0.07);padding:40px 44px 40px;display:flex;flex-direction:column;gap:18px">
+        <span aria-hidden="true" style="flex:none;width:72px;height:72px;border-radius:50%;background:var(--color-hint);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center">
+          <sc-if value="{{ s.w.icReload }}"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M20 12a8 8 0 1 1-2.7-6"></path><path d="M20 4.5V9h-4.5"></path></svg></sc-if>
+          <sc-if value="{{ s.w.icWifi }}"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M3 9.5a14 14 0 0 1 18 0" stroke-dasharray="1.5 3.5"></path><path d="M6.5 13a9 9 0 0 1 11 0"></path><path d="M10 16.4a4 4 0 0 1 4 0"></path><circle cx="12" cy="20" r="1.2" fill="#0e7490"></circle></svg></sc-if>
+        </span>
+        <h1 tabindex="-1" style="margin:0;font-size:34;font-weight:900;letter-spacing:-0.03em;line-height:1.15;color:var(--color-ink);outline:none">{{ s.w.title }}</h1>
+        <p style="margin:0;font-size:17;line-height:1.55;color:var(--color-body)">{{ s.w.text }}</p>
+        <sc-if value="{{ s.w.hasNota }}"><p style="margin:0;font-size:14px;line-height:1.5;color:var(--color-muted)">{{ s.w.nota }}</p></sc-if>
+        <div style="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px;margin-top:10px">
+          <button type="button" style="min-width:200px;padding:0 28px;min-height:52px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer" style-hover="background:#065f46">{{ s.w.main }}</button>
+          <button type="button" style="padding:0 24px;min-height:52px;border:2px solid var(--color-action);border-radius:16px;background:transparent;color:var(--color-action);font-size:16px;font-weight:800;cursor:pointer" style-hover="background:var(--color-hint)">{{ s.w.alt }}</button>
+        </div>
+      </div>
+              </main>
+              <aside style="order:1;width:280px;flex-shrink:0;background:var(--color-ink);padding:28px 24px;display:flex;flex-direction:column;gap:28px">
+              <div style="display:flex;align-items:center;gap:10px"><svg width="34" height="34" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><defs><clipPath id="lgAw{{ s.num }}"><rect x="21" y="5" width="22" height="54" rx="11"></rect></clipPath></defs><rect width="64" height="64" rx="15" fill="#22d3ee"></rect><g transform="rotate(-45 32 32)" clip-path="url(#lgAw{{ s.num }})"><rect x="21" y="5" width="22" height="54" fill="#ffffff"></rect><rect x="21" y="32" width="22" height="27" fill="#047857"></rect><rect x="21" y="30.6" width="22" height="2.8" fill="#22d3ee"></rect></g></svg><span style="font-size:18px;font-weight:900;letter-spacing:-0.03em;color:#ffffff">Pedi<span style="color:#67e8f9">Track</span></span></div>
+              <nav aria-label="Principal" style="display:flex;flex-direction:column;gap:6px">
+                <a href="#" style="min-height:48px;padding:0 16px;border-radius:16px;display:flex;align-items:center;font-size:16px;font-weight:800;color:#ffffff;text-decoration:none" style-hover="background:var(--color-ink-soft)">Inicio</a>
+                <span style="padding:14px 16px 4px;font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#67e8f9">Tus hijos</span>
+                <a href="#" style="min-height:48px;padding:0 16px;border-radius:16px;display:flex;align-items:center;justify-content:space-between;text-decoration:none" style-hover="background:var(--color-ink-soft)"><span style="font-size:16px;font-weight:700;color:#a5f3fc">Mateo</span><span style="font-size:13px;font-weight:600;color:#67e8f9">4a</span></a>
+                <a href="#" style="min-height:48px;padding:0 16px;border-radius:16px;border:1.5px dashed var(--color-ink-edge);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#67e8f9;text-decoration:none">+ Agregar hijo</a>
+                <span style="padding:14px 16px 4px;font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#67e8f9">Personal</span>
+                <a href="#" style="min-height:44px;padding:0 16px;border-radius:16px;display:flex;align-items:center;font-size:15px;font-weight:700;color:#a5f3fc;text-decoration:none" style-hover="background:var(--color-ink-soft)">Mis suplementos</a>
+                <a href="#" style="min-height:44px;padding:0 16px;border-radius:16px;display:flex;align-items:center;font-size:15px;font-weight:700;color:#a5f3fc;text-decoration:none" style-hover="background:var(--color-ink-soft)">Mis actividades</a>
+              </nav>
+              <button type="button" aria-label="Menú de cuenta" style="margin-top:auto;min-height:56px;padding:16px 0 0;border:none;border-top:1px solid var(--color-ink-soft);background:transparent;display:flex;align-items:center;gap:12px;cursor:pointer;text-align:left">
+                <span style="flex:none;width:38px;height:38px;border-radius:50%;background:var(--color-action);color:#ffffff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center">AM</span>
+                <span style="display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700;color:#ffffff">Ana Morales</span><span style="font-size:12px;color:#67e8f9">Plan gratuito</span></span>
+              </button>
+            </aside>
+            </div>
+          </sc-if>
+          <sc-if value="{{ s.w.lFull }}">
+            <div data-screen-label="{{ s.num }} web" style="width:1280px;min-height:844px;display:flex;flex-direction:column;background:var(--color-canvas);box-shadow:0 20px 50px rgba(4,37,43,0.18);border-radius:16px;overflow:hidden">
+              <main style="order:2;flex:1;padding:44px 48px 80px;display:flex;flex-direction:column;align-items:center">
+                <div style="width:100%;max-width:600px;background:var(--color-surface);border-radius:24px;box-shadow:0 8px 20px rgba(4,37,43,0.07);padding:40px 44px 40px;display:flex;flex-direction:column;gap:18px">
+        <span aria-hidden="true" style="flex:none;width:72px;height:72px;border-radius:50%;background:var(--color-hint);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center">
+          <sc-if value="{{ s.w.icReload }}"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M20 12a8 8 0 1 1-2.7-6"></path><path d="M20 4.5V9h-4.5"></path></svg></sc-if>
+          <sc-if value="{{ s.w.icWifi }}"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M3 9.5a14 14 0 0 1 18 0" stroke-dasharray="1.5 3.5"></path><path d="M6.5 13a9 9 0 0 1 11 0"></path><path d="M10 16.4a4 4 0 0 1 4 0"></path><circle cx="12" cy="20" r="1.2" fill="#0e7490"></circle></svg></sc-if>
+        </span>
+        <h1 tabindex="-1" style="margin:0;font-size:34;font-weight:900;letter-spacing:-0.03em;line-height:1.15;color:var(--color-ink);outline:none">{{ s.w.title }}</h1>
+        <p style="margin:0;font-size:17;line-height:1.55;color:var(--color-body)">{{ s.w.text }}</p>
+        <sc-if value="{{ s.w.hasNota }}"><p style="margin:0;font-size:14px;line-height:1.5;color:var(--color-muted)">{{ s.w.nota }}</p></sc-if>
+        <div style="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px;margin-top:10px">
+          <button type="button" style="min-width:200px;padding:0 28px;min-height:52px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer" style-hover="background:#065f46">{{ s.w.main }}</button>
+          <button type="button" style="padding:0 24px;min-height:52px;border:2px solid var(--color-action);border-radius:16px;background:transparent;color:var(--color-action);font-size:16px;font-weight:800;cursor:pointer" style-hover="background:var(--color-hint)">{{ s.w.alt }}</button>
+        </div>
+      </div>
+              </main>
+              <div style="order:1;padding:80px 48px 0;display:flex;flex-direction:column;align-items:center;gap:14px"><svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><defs><clipPath id="lgFw{{ s.num }}"><rect x="21" y="5" width="22" height="54" rx="11"></rect></clipPath></defs><rect width="64" height="64" rx="15" fill="#0e7490"></rect><g transform="rotate(-45 32 32)" clip-path="url(#lgFw{{ s.num }})"><rect x="21" y="5" width="22" height="54" fill="#ffffff"></rect><rect x="21" y="32" width="22" height="27" fill="#047857"></rect><rect x="21" y="30.6" width="22" height="2.8" fill="#0e7490"></rect></g></svg><span style="font-size:30px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Pedi<span style="color:var(--color-action)">Track</span></span></div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ s.w.lSes }}">
+            <div data-screen-label="{{ s.num }} web" style="width:1280px;min-height:844px;display:flex;flex-direction:column;background:var(--color-canvas);box-shadow:0 20px 50px rgba(4,37,43,0.18);border-radius:16px;overflow:hidden">
+              <main style="order:2;flex:1;padding:96px 48px 56px;display:flex;flex-direction:column;align-items:center">
+                <div style="width:100%;max-width:600px;background:var(--color-surface);border-radius:24px;box-shadow:0 8px 20px rgba(4,37,43,0.07);padding:40px 44px 40px;display:flex;flex-direction:column;gap:18px">
+        <span aria-hidden="true" style="flex:none;width:72px;height:72px;border-radius:50%;background:var(--color-hint);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center">
+          <sc-if value="{{ s.w.icReload }}"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M20 12a8 8 0 1 1-2.7-6"></path><path d="M20 4.5V9h-4.5"></path></svg></sc-if>
+          <sc-if value="{{ s.w.icWifi }}"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M3 9.5a14 14 0 0 1 18 0" stroke-dasharray="1.5 3.5"></path><path d="M6.5 13a9 9 0 0 1 11 0"></path><path d="M10 16.4a4 4 0 0 1 4 0"></path><circle cx="12" cy="20" r="1.2" fill="#0e7490"></circle></svg></sc-if>
+        </span>
+        <h1 tabindex="-1" style="margin:0;font-size:34;font-weight:900;letter-spacing:-0.03em;line-height:1.15;color:var(--color-ink);outline:none">{{ s.w.title }}</h1>
+        <p style="margin:0;font-size:17;line-height:1.55;color:var(--color-body)">{{ s.w.text }}</p>
+        <sc-if value="{{ s.w.hasNota }}"><p style="margin:0;font-size:14px;line-height:1.5;color:var(--color-muted)">{{ s.w.nota }}</p></sc-if>
+        <div style="display:flex;flex-direction:row;flex-wrap:wrap;align-items:center;gap:12px;margin-top:10px">
+          <button type="button" style="min-width:200px;padding:0 28px;min-height:52px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer" style-hover="background:#065f46">{{ s.w.main }}</button>
+          <button type="button" style="padding:0 24px;min-height:52px;border:2px solid var(--color-action);border-radius:16px;background:transparent;color:var(--color-action);font-size:16px;font-weight:800;cursor:pointer" style-hover="background:var(--color-hint)">{{ s.w.alt }}</button>
+        </div>
+      </div>
+              </main>
+              <div style="order:1;background:var(--color-ink);padding:0 48px;min-height:72px;display:flex;align-items:center;gap:10px"><svg width="36" height="36" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><defs><clipPath id="lgSw{{ s.num }}"><rect x="21" y="5" width="22" height="54" rx="11"></rect></clipPath></defs><rect width="64" height="64" rx="15" fill="#22d3ee"></rect><g transform="rotate(-45 32 32)" clip-path="url(#lgSw{{ s.num }})"><rect x="21" y="5" width="22" height="54" fill="#ffffff"></rect><rect x="21" y="32" width="22" height="27" fill="#047857"></rect><rect x="21" y="30.6" width="22" height="2.8" fill="#22d3ee"></rect></g></svg><span style="font-size:20px;font-weight:900;letter-spacing:-0.03em;color:#ffffff">Pedi<span style="color:#67e8f9">Track</span></span></div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+  </sc-for>
+
+  <section style="max-width:900px;display:flex;flex-direction:column;gap:14px">
+    <h2 style="margin:0;font-size:24px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Decisiones de diseño</h2>
+    <ol style="margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px;font-size:15px;line-height:1.55;color:var(--color-body)">
+      <li><strong style="color:var(--color-ink)">Dónde cae el error (A).</strong> Hay dos fronteras. La de cada pantalla vive dentro del área de contenido: en web la barra lateral sigue visible y funcional y solo el área del contenido muestra el error; en el teléfono se conserva el encabezado oscuro con el logo y las iniciales. La de toda la app (B) solo se usa cuando ni el armazón se pudo dibujar: página completa, con el logo, sin barra lateral.</li>
+      <li><strong style="color:var(--color-ink)">Neutral de verdad.</strong> Sin rojo, sin ámbar y sin triángulos ni equis. El ícono es una flecha circular (o unas ondas de señal en F) dentro de un círculo menta del sistema, solo decorativo. Nada de códigos, rutas ni texto técnico, y ningún dato del niño en el cuerpo de la pantalla.</li>
+      <li><strong style="color:var(--color-ink)">Lo primero es tranquilizar.</strong> El texto abre con «Lo que ya guardaste sigue en tu cuenta». Debajo, una línea gris pequeña: «El aviso del problema ya se envió solo», para que nadie sienta que tiene que reportar nada. Se omite en C (más simple) y en F (sin conexión no hay forma de asegurar que se envió).</li>
+      <li><strong style="color:var(--color-ink)">Un solo sólido.</strong> «Volver a cargar» es el único botón sólido; la salida va con contorno (ambos de 48–52 px en teléfono, 52 px en web, 56 px en C). En E se invierten: «Ir al inicio» pasa a sólido y «Volver a cargar» queda como contorno, y el texto cambia a «Sigue sin cargar. Intenta más tarde o regresa al inicio.».</li>
+      <li><strong style="color:var(--color-ink)">Orden de lectura.</strong> En el código, el contenido va antes que el encabezado y la barra lateral (el orden visual se logra con CSS), el título es un h1 y recibe el foco al aparecer la pantalla. Así el lector de pantalla empieza por «Algo no cargó bien» y no por el menú. No se usa aviso de voz extra para no leerlo dos veces; el logo es decorativo.</li>
+      <li><strong style="color:var(--color-ink)">Pantallas sin sesión (D).</strong> Encabezado oscuro con solo el logo, sin iniciales ni menú. El texto no dice «tu cuenta» como si siempre existiera: «Si ya tenías una cuenta, tus registros siguen ahí». La misma pantalla sirve para iniciar sesión, registro e invitación a la familia.</li>
+      <li><strong style="color:var(--color-ink)">Teléfono del hijo (C).</strong> Solo teléfono: la vista «Hoy» se abre con la liga y no existe en web. Sin avatar ni nombre, texto más grande (30/18 px), botones de 56 px, y «Lo que ya marcaste sigue guardado». La salida dice «Ir a Hoy».</li>
+      <li><strong style="color:var(--color-ink)">Sin conexión (F).</strong> Cambia título y texto, no la estructura: «Parece que no hay conexión» y «Lo que ya guardaste sigue en tu cuenta. Cuando vuelva la señal, vuelve a cargar la pantalla». El título lo ajusté a propósito: con «Algo no cargó bien» el papá no sabría que el problema es de señal. Se muestra en el teléfono y en la computadora.</li>
+      <li><strong style="color:var(--color-ink)">Texto mínimo.</strong> Cuerpo de 16–17 px y la línea de aviso de 14 px (el mínimo del sistema es 13 px). Todos los colores de texto son los tokens existentes (tinta, body y muted sobre blanco: 7.5:1 o más); el contorno y los enlaces en #0e7490 superan 5:1.</li>
+    </ol>
+  </section>
+  <section style="max-width:900px;display:flex;flex-direction:column;gap:14px">
+    <h2 style="margin:0;font-size:24px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Lo que el design system no cubría</h2>
+    <ol style="margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px;font-size:15px;line-height:1.55;color:var(--color-body)">
+      <li><strong style="color:var(--color-ink)">No había componente de pantalla de error ni de estado vacío a página completa.</strong> La armé con piezas existentes: tarjeta de 24 px con la sombra estándar, botón sólido verde, botón de contorno y encabezado/barra lateral. Conviene guardarla como componente.</li>
+      <li><strong style="color:var(--color-ink)">Ícono de estado.</strong> El sistema no define íconos de estado ni un círculo para ellos. Usé un círculo de 64/72 px en <code>--color-hint</code> con borde <code>--color-hint-border</code> y trazo de 2.2 px en <code>--color-action</code>; es nuevo.</li>
+      <li><strong style="color:var(--color-ink)">Encabezado «solo logo».</strong> Los tokens dan el encabezado con volver/logo/título pero no uno sin título ni sin cuenta. Para D usé el logo con wordmark sobre <code>--color-ink</code> y, en B y C, la variante sobre fondo claro del logo (cuadro <code>#0e7490</code>).</li>
+      <li><strong style="color:var(--color-ink)">Botones de ancho completo y de contorno apilados.</strong> El sistema pide «un solo sólido» y un contorno de 2 px, pero no dice cómo se apilan en el teléfono. Los hice de ancho completo, 12 px entre sí.</li>
+      <li><strong style="color:var(--color-ink)">Sidebar con datos del hijo.</strong> En A web la barra lateral muestra el nombre del hijo porque es el armazón real de la app, no la pantalla fallida. Si quieres cero datos del niño aun ahí, habría que mostrar solo iniciales o ocultar ese grupo cuando falle la pantalla.</li>
+      <li><strong style="color:var(--color-ink)">Texto «aviso ya enviado».</strong> Es una afirmación de producto: solo aplica si el reporte realmente se envía. Si no quieres prometerlo, se quita la línea sin tocar el diseño.</li>
+    </ol>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"estado":{"editor":"enum","options":["todos","A","B","C","D","E","F"],"default":"todos","tsType":"string"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const filtro = this.props.estado ?? 'todos';
+    const OK = 'Lo que ya guardaste sigue en tu cuenta. Vuelve a cargar la pantalla para seguir.';
+    const AVISO = 'El aviso del problema ya se envió solo.';
+    const mk = (o) => Object.assign({ plat: '', lApp: false, lFull: false, lSes: false, lHijo: false, lNone: false, icReload: true, icWifi: false,
+      title: 'Algo no cargó bien', text: OK, hasNota: false, nota: '', main: 'Volver a cargar', alt: 'Ir al inicio',
+      pad: '28px 20px 32px', h1: 28, pz: 16, btnH: 52 }, o);
+    const raw = [
+      { num: 'A', label: 'Falla una pantalla dentro de la app', quien: 'Papá con sesión',
+        nota: 'La barra lateral (web) y el encabezado (teléfono) siguen en su lugar; solo el área del contenido muestra el error.',
+        t: mk({ plat: 'Dentro de la app', lApp: true, hasNota: true, nota: AVISO }),
+        w: mk({ plat: 'Barra lateral visible, error solo en el contenido', lApp: true, hasNota: true, nota: AVISO }) },
+      { num: 'B', label: 'Falla la app completa', quien: 'Ni el armazón se pudo dibujar',
+        nota: 'Página completa con el logo, sin barra lateral ni encabezado de la app.',
+        t: mk({ plat: 'Página completa', lFull: true, hasNota: true, nota: AVISO }),
+        w: mk({ plat: 'Página completa', lFull: true, hasNota: true, nota: AVISO }) },
+      { num: 'C', label: 'Teléfono del hijo', quien: 'Vista sencilla «Hoy»',
+        nota: 'Mismo tono, más simple: texto y botones más grandes, sin nombre ni avatar y sin línea de aviso. La salida dice «Ir a Hoy».',
+        t: mk({ plat: 'Vista «Hoy» del hijo', lHijo: true, text: 'Lo que ya marcaste sigue guardado. Vuelve a cargar la pantalla para seguir.', alt: 'Ir a Hoy', h1: 30, pz: 18, btnH: 56, pad: '36px 20px 32px' }),
+        w: mk({ lNone: true, plat: 'Sin versión web' }) },
+      { num: 'D', label: 'Pantallas sin sesión', quien: 'Iniciar sesión, registro e invitación a la familia',
+        nota: 'Encabezado con solo el logo. Como puede no haber cuenta todavía, el texto no da por hecho que existe.',
+        t: mk({ plat: 'Sin sesión', lSes: true, text: 'Si ya tenías una cuenta, tus registros siguen ahí. Vuelve a cargar la pantalla para seguir.', alt: 'Ir a iniciar sesión', hasNota: true, nota: AVISO, pad: '36px 20px 32px' }),
+        w: mk({ plat: 'Sin sesión', lSes: true, text: 'Si ya tenías una cuenta, tus registros siguen ahí. Vuelve a cargar la pantalla para seguir.', alt: 'Ir a iniciar sesión', hasNota: true, nota: AVISO }) },
+      { num: 'E', label: 'Volvió a fallar', quien: 'Después de tocar «Volver a cargar»',
+        nota: 'Texto distinto para no repetir lo mismo. El botón sólido pasa a «Ir al inicio» y «Volver a cargar» queda como contorno.',
+        t: mk({ plat: 'Segundo intento', lApp: true, text: 'Sigue sin cargar. Intenta más tarde o regresa al inicio.', main: 'Ir al inicio', alt: 'Volver a cargar', hasNota: true, nota: 'Lo que ya guardaste sigue en tu cuenta.' }),
+        w: mk({ plat: 'Segundo intento', lApp: true, text: 'Sigue sin cargar. Intenta más tarde o regresa al inicio.', main: 'Ir al inicio', alt: 'Volver a cargar', hasNota: true, nota: 'Lo que ya guardaste sigue en tu cuenta.' }) },
+      { num: 'F', label: 'Sin conexión', quien: 'Sin señal o sin internet',
+        nota: 'Mismo diseño con otro título y texto, y unas ondas de señal en lugar de la flecha. No dice «error» ni alarma; sin línea de aviso porque sin conexión no se puede enviar.',
+        t: mk({ plat: 'Sin conexión', lApp: true, icReload: false, icWifi: true, title: 'Parece que no hay conexión', text: 'Lo que ya guardaste sigue en tu cuenta. Cuando vuelva la señal, vuelve a cargar la pantalla.' }),
+        w: mk({ plat: 'Sin conexión', lApp: true, icReload: false, icWifi: true, title: 'Parece que no hay conexión', text: 'Lo que ya guardaste sigue en tu cuenta. Cuando vuelva la señal, vuelve a cargar la pantalla.' }) }
+    ];
+    return { estados: raw.filter(s => filtro === 'todos' || filtro === s.num) };
+  }
+}
+</script>
+</body>
+</html>

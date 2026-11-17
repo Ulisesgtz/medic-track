@@ -153,6 +153,26 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
 - ~~**Editar y eliminar suplementos y actividades**~~ — **hecho** en la spec 060 (`specs/060-eliminar-suplementos-actividades/`, decidido 2026-11-04): se elimina de verdad **solo si ninguna toma está marcada** (con marcas se finaliza y su historial queda), lo hacen la dueña y un Tutor (lo personal, solo su dueña) en cualquier plan, con confirmación neutral; se borran también sus tomas y avisos. Editar ya existía (spec 033).
 - ~~**Botiquín de la casa**~~ (pedido del dueño, 2026-11-06) — **hecho** en la spec 062 (`specs/062-botiquin/`): un botiquín de toda la familia, del plan completo, con foto de la caja que propone nombre, concentración y caducidad (leída en el teléfono); la caducidad es solo un dato. **Queda para después**: que la cantidad baje sola al marcar tomas de una consulta, avisos por caducidad y varios botiquines (la casa de los abuelos).
 - **Las consultas solo se editan, nunca se borran** (decisión del dueño, 2026-11-02) — la edición ya existe (spec 051); una consulta completa **no** se elimina. Solo se puede quitar un medicamento sin tomas marcadas al editar (spec 051).
+- **Un hijo registrado dos veces al unirse a una familia** (pedido del dueño, 2026-11-17) — hoy (spec 032) quien acepta
+  una invitación conserva su cuenta y sus hijos y ve los de la familia **junto** a los suyos: si los dos padres
+  registraron al mismo niño, queda **duplicado** (dos registros que no se mezclan; lo anotado en la copia propia solo lo
+  ve quien la anotó) y no hay forma de juntarlos ni de borrar uno (borrar un hijo está pendiente, spec 070).
+  **Idea del dueño**: al aceptar la invitación, si la persona tiene hijos propios, una pantalla «¿Cómo quieres seguir?»
+  con tres caminos: (1) **usar solo lo de la familia** (los hijos, suplementos, actividades de quien invita); (2)
+  **conservar ambas** con el aviso de que el niño puede quedar duplicado; (3) **unir** al hijo propio con el de la
+  familia cuando se parezcan (mismo nombre, o nombre y apellidos), de modo que lo propio quede dentro del de la familia
+  y la copia propia deje de mostrarse.
+  **Ajustes propuestos al revisarla** (a decidir en su spec): (a) **unir, no sobrescribir**: se **mueven** las
+  consultas, tomas marcadas, vacunas, medidas, suplementos y actividades al hijo de la familia, sin borrar nada de
+  ninguno de los dos (conservando «por Ana»); (b) el parecido del nombre **solo sugiere**: la persona elige qué hijo es
+  cuál (gemelos, nombres repetidos) y, si difiere la fecha de nacimiento, el sexo o el peso, elige cuál queda; (c) antes
+  de unir, un **resumen** de lo que se mueve («3 consultas, 12 vacunas, 2 medidas») y la advertencia de que **pasa a la
+  familia de quien invita**: si después sale de la familia, no se lleva copia (regla de la spec 032), con la oferta de
+  descargar sus datos antes (spec 070); (d) en el camino (1) lo propio **no se borra**: se oculta y se puede volver a
+  mostrar, o se descarga (Principio IV, LFPDPPP); (e) la misma acción «Unir con un hijo de la familia» también **después**,
+  desde «Familia», no solo al aceptar; (f) solo quien puede todo en los dos hijos (la dueña de la copia propia y un
+  Tutor de la familia de pago) puede unir; un Cuidador no; (g) recordatorios y tomas no deben duplicarse ni perderse al
+  mover (la primera marca gana); (h) decidir si es irreversible o tiene unos días para deshacerse.
 - ~~**Editar los datos del hijo**~~ (pedido del dueño, 2026-11-09) — **hecho** en la spec 064 (`specs/064-editar-datos-hijo/`): «Editar datos» en «Lo demás» del detalle del hijo corrige nombre, apellido, fecha de nacimiento, talla y peso; la talla y el peso en cualquier plan, el nombre y la fecha **solo con el plan completo** (reemplaza la FR-006a de la spec 001); lo hacen la dueña y un Tutor de familia de pago; una fecha de nacimiento posterior a medidas o vacunas ya anotadas se rechaza y dice cuáles; al cambiar talla o peso se ofrece «Anotarlo también como medida de hoy». **Queda para después**: borrar un hijo (sigue sin poderse), un historial de los valores anteriores y editar los datos de la persona titular.
 
 - La pantalla de detalle de hijo (consultas médicas, recetas, medicamentos, horarios de toma y
@@ -386,11 +406,15 @@ Principio I (la app guarda lo que el padre escribe; nunca evalúa ni sugiere).
   - **Hecho en `specs/070-eliminar-cuenta-y-datos/` (2026-11)**: «Mi cuenta», descarga de todos los datos (ZIP, cualquier plan), eliminar con 30 días de gracia y cuenta en pausa, la suscripción se cancela primero, la familia con aviso, acceso y descarga, y el usuario de Clerk se borra al vencer. **Pendientes del dueño**: aplicar la `0037` en DEV antes del merge, actualizar el aviso de privacidad y revisar con su contador. **Respaldos**: al restaurar uno, correr `go run ./cmd/accounts reconcile-deleted` (aún no hay `RESPALDOS.md`; cuando se haga el procedimiento de restauración, este paso va dentro).
   - **Fuera de la 070, para después**: **borrar a un solo hijo** sin borrar la cuenta (mismas reglas de descarga y
     plazo), y **pasar los hijos a un Tutor** que acepte ser el nuevo dueño cuando la dueña se va.
-- **Monitoreo externo y errores del frontend** — `error_logs` solo ve lo que falla en el servidor; una caída del API o
-  una pantalla en blanco en un iPhone se notan hasta el digest del lunes. (a) Ruta `/healthz` propia (hoy el healthcheck
-  es `GET /catalog/countries`) y un ping externo cada minuto con aviso; (b) `POST /client-errors` que registre los
-  errores de JavaScript en `error_logs` (mensaje fijo, versión del build, ruta sin ids; sin terceros, con límite de
-  peticiones y sin datos de salud).
+- ~~**Monitoreo externo y errores del frontend**~~ — **hecho en la spec 072** (`specs/072-monitoreo-errores-frontend/`):
+  `/healthz` propio (healthcheck de Railway y del monitor externo), `POST /client-errors` (errores de JavaScript en
+  `error_logs` como `client:<ruta>`, sin datos de salud, con topes), sección en el correo semanal y la pantalla de
+  error que reemplaza la página en blanco. **Pendientes del dueño**: dar de alta **Better Stack** después del
+  despliegue (pasos en `DEPLOY.md`, «Monitoreo externo») y **actualizar el aviso de privacidad** (errores del
+  navegador y Better Stack).
+  - **Fuera de la 072, para después**: **mapas de fuente privados** (para ver la pila de llamadas de un error del
+    cliente sin publicar el código); **aviso inmediato al dueño** cuando llegan errores del cliente (hoy solo el
+    correo semanal); **métricas de rendimiento del frontend** (tiempos de carga, sin datos personales).
 
 ### Producto
 
