@@ -40,6 +40,7 @@ import { CabinetItemPage } from './features/medicineCabinet/CabinetItemPage'
 import { GrowthPage } from './features/growth/GrowthPage'
 import { GrowthFormPage } from './features/growth/GrowthFormPage'
 import { EditChildPage } from './features/childProfile/EditChildPage'
+import { EditChildRecordPage } from './features/childRecord/EditChildRecordPage'
 import { createQueryClient } from './shared/offline/offlineGuard'
 import { installConnectivity } from './shared/offline/connectivity'
 import { bootOffline, useOfflineSession } from './shared/offline/offlineSession'
@@ -146,6 +147,14 @@ function App() {
                 element={
                   <RequireSession>
                     <EditChildPage />
+                  </RequireSession>
+                }
+              />
+              <Route
+                path="/children/:childId/ficha/editar"
+                element={
+                  <RequireSession>
+                    <EditChildRecordPage />
                   </RequireSession>
                 }
               />

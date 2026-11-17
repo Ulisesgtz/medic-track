@@ -21,6 +21,7 @@ function seed(client: QueryClient) {
   client.setQueryData(['vaccine-photos', 'c1', 'p1'], { photoBase64: IMAGE })
   client.setQueryData(['history', 'c1', { text: 'fiebre' }], [{ id: 'k1' }])
   client.setQueryData(['growth-chart', 'c1'], { curves: [] })
+  client.setQueryData(['child-record', 'c1'], { exists: true, version: 1, allergies: [{ name: 'Penicilina' }] })
 }
 
 beforeEach(() => {
@@ -46,7 +47,7 @@ describe('what the phone keeps', () => {
     expect(dump).not.toContain(IMAGE)
     expect(all.every((e) => PERSISTED_ROOTS.has(String(e.queryKey[0])))).toBe(true)
     expect(all.some((e) => e.queryKey[0] === 'vaccine-photos' && e.queryKey.length > 2)).toBe(false)
-    expect(all.map((e) => e.queryKey[0]).sort()).toEqual(['accounts', 'cabinet-item', 'consultation', 'vaccine-photos'])
+    expect(all.map((e) => e.queryKey[0]).sort()).toEqual(['accounts', 'cabinet-item', 'child-record', 'consultation', 'vaccine-photos'])
 
     const meta = JSON.stringify(await readMeta())
     expect(meta).not.toContain('ana@example.com')

@@ -99,6 +99,9 @@ INSERT INTO personal_routine_notices (account_id) VALUES (':A');
 INSERT INTO vaccine_records (child_id, account_id, custom_name, applied_on, created_by_account_id) VALUES (':C1', ':A', 'BCG', '2020-01-02', ':A');
 INSERT INTO vaccine_card_photos (child_id, account_id, photo, created_by_account_id) VALUES (':C1', ':A', '\x00', ':A');
 INSERT INTO growth_measurements (child_id, account_id, measured_on, weight_kg, created_by_account_id) VALUES (':C2', ':A', '2026-01-01', 12, ':A');
+INSERT INTO child_records (child_id, account_id, blood_type, version, updated_by_account_id) VALUES (':C1', ':A', 'O+', 1, ':A');
+INSERT INTO child_record_allergies (child_id, account_id, position, name) VALUES (':C1', ':A', 0, 'Penicilina');
+INSERT INTO child_record_conditions (child_id, account_id, position, name) VALUES (':C1', ':A', 0, 'Asma');
 INSERT INTO medicine_cabinet_items (account_id, name, quantity, unit, expires_year, expires_month, created_by_account_id)
   VALUES (':A', 'Paracetamol', 1, 'box', 2027, 3, ':A');
 INSERT INTO disclaimer_acceptances (account_id, version) VALUES (':A', '2026-11-02');
@@ -132,6 +135,8 @@ INSERT INTO vaccine_records (id, child_id, account_id, custom_name, applied_on, 
   VALUES (':XVaccine', ':CX', ':X', 'Polio', '2019-02-01', ':A', ':A', now());
 INSERT INTO growth_measurements (id, child_id, account_id, measured_on, height_cm, created_by_account_id, corrected_by_account_id, corrected_at)
   VALUES (':XGrowth', ':CX', ':X', '2026-01-01', 90, ':A', ':A', now());
+INSERT INTO child_records (child_id, account_id, general_note, version, updated_by_account_id) VALUES (':CX', ':X', 'Nota de X', 1, ':A');
+INSERT INTO child_record_allergies (child_id, account_id, position, name) VALUES (':CX', ':X', 0, 'Polen');
 INSERT INTO medicine_cabinet_items (id, account_id, name, quantity, unit, expires_year, expires_month, created_by_account_id, updated_by_account_id, updated_at)
   VALUES (':XCabinet', ':X', 'Suero', 2, 'bottle', 2027, 1, ':A', ':A', now());
 INSERT INTO consultation_appointments (id, consultation_id, child_id, account_id, starts_at, utc_offset_minutes, created_by_account_id, status, status_by_account_id, status_at)
@@ -261,6 +266,15 @@ func TestPurge_WhatItWroteOnAnotherFamilyStaysWithoutItsName(t *testing.T) {
 		require.NoError(t, pool.QueryRow(ctx, c.query, c.id).Scan(&n))
 		require.Equal(t, 1, n, c.query)
 	}
+
+	// X's record sheet that A saved stays, without A as its author, and its lists stay too.
+	var sheets, listed int
+	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM child_records WHERE child_id = $1 AND version = 1 AND updated_by_account_id IS NULL`, w.CX).Scan(&sheets))
+	require.Equal(t, 1, sheets)
+	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM child_record_allergies WHERE child_id = $1`, w.CX).Scan(&listed))
+	require.Equal(t, 1, listed)
+	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM child_records WHERE child_id = $1`, w.C1).Scan(&sheets))
+	require.Zero(t, sheets, "A's own children's sheets are gone")
 
 	var children, members int
 	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM children WHERE account_id = $1`, w.X).Scan(&children))

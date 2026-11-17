@@ -134,6 +134,18 @@ func collect(ctx context.Context, q Querier, scope Scope, now time.Time) (*Expor
 		{"crecimiento", `SELECT g.id::text, g.child_id::text, g.measured_on::text, g.weight_kg::text, g.height_cm::text, g.note
 			FROM growth_measurements g WHERE g.account_id = $1 ORDER BY g.measured_on, g.id`,
 			[]string{"id", "hijo_id", "fecha", "peso_kg", "talla_cm", "nota"}},
+		{"ficha", `SELECT r.child_id::text, CASE r.blood_type WHEN 'unknown' THEN 'No lo sé' ELSE r.blood_type END, r.general_note,
+				r.pediatrician_name, r.pediatrician_phone, r.pediatrician_office, r.updated_at::text, a.first_name
+			FROM child_records r LEFT JOIN accounts a ON a.id = r.updated_by_account_id
+			WHERE r.account_id = $1 ORDER BY r.child_id`,
+			[]string{"hijo_id", "tipo_de_sangre", "nota_general", "pediatra", "telefono_del_pediatra", "consultorio_del_pediatra", "actualizada_el", "actualizada_por"}},
+		{"ficha_alergias", `SELECT al.id::text, al.child_id::text, al.position::text, al.name,
+				CASE al.kind WHEN 'medication' THEN 'medicamento' WHEN 'food' THEN 'alimento' WHEN 'other' THEN 'otra' END, al.note
+			FROM child_record_allergies al WHERE al.account_id = $1 ORDER BY al.child_id, al.position`,
+			[]string{"id", "hijo_id", "orden", "nombre", "tipo", "nota"}},
+		{"ficha_padecimientos", `SELECT co.id::text, co.child_id::text, co.position::text, co.name, co.note
+			FROM child_record_conditions co WHERE co.account_id = $1 ORDER BY co.child_id, co.position`,
+			[]string{"id", "hijo_id", "orden", "nombre", "nota"}},
 		{"suplementos_y_actividades", `SELECT r.id::text, r.child_id::text,
 				CASE r.kind WHEN 'supplement' THEN 'suplemento' ELSE 'actividad' END, r.name, nullif(r.note, ''),
 				CASE r.period WHEN 'daily' THEN 'todos los días' WHEN 'weekdays' THEN 'ciertos días' ELSE 'varias veces al día' END,

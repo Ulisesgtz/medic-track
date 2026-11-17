@@ -20,6 +20,7 @@ export const PERSISTED_ROOTS: ReadonlySet<string> = new Set([
   'cabinet-item',
   'vaccinations',
   'vaccine-photos',
+  'child-record',
   'family',
   'child-device',
   'catalog',

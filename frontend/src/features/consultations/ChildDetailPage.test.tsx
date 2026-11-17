@@ -120,6 +120,7 @@ function stubApi({ list = consultations, listStatus = 200, overview = day, overv
     if (url.includes('/appointments')) return json({ next: null, history: [], paidPlan })
     if (url.includes('/device-links')) return json({ links: [] })
     if (url.includes('/family')) return json({ members: [{ id: 'm1' }, { id: 'm2' }], invitations: [] })
+    if (url.includes('/record')) return json({ exists: false, version: 0, canEdit: true, bloodType: null, generalNote: null, pediatrician: null, allergies: [], conditions: [], updated: null })
     if (url.includes('/vaccinations')) return json({ vaccinations: [] })
     if (url.includes('/growth-measurements')) return json({ measurements: [], registered: null, referenceSex: null, birthDate: '2024-01-01', canEdit: true, chartAvailable: true })
     if (url.includes('/vaccine-card-photos')) return json({ photos: [] })
@@ -180,7 +181,7 @@ describe('ChildDetailPage — phone (design A)', () => {
     const order = [title, today, treatment, index, consult, sups, acts, card, more]
     for (let i = 1; i < order.length; i++) expect(order[i - 1].compareDocumentPosition(order[i]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
 
-    expect(within(index).getAllByRole('link').map((a) => a.textContent)).toEqual(['Consultas', 'Suplementos', 'Actividades', 'Cartilla', 'Crecimiento'])
+    expect(within(index).getAllByRole('link').map((a) => a.textContent)).toEqual(['Consultas', 'Suplementos', 'Actividades', 'Cartilla', 'Crecimiento', 'Ficha'])
     expect(treatment).toHaveTextContent('Amoxicilina +1 · termina el 04 nov')
   })
 

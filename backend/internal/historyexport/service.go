@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/Ulisesgtz/medic-track/backend/internal/childrecord"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/vaccination"
 )
@@ -17,12 +18,19 @@ type Service struct {
 	repo          *Repository
 	consultations *consultation.Repository
 	vaccinations  *vaccination.Repository
+	records       *childrecord.Repository
 	now           func() time.Time
 }
 
 // NewService creates the Service.
 func NewService(repo *Repository, consultations *consultation.Repository, vaccinations *vaccination.Repository) *Service {
 	return &Service{repo: repo, consultations: consultations, vaccinations: vaccinations, now: time.Now}
+}
+
+// WithRecords lets the document carry the child's record sheet (specs/073). Without it the cover never has one.
+func (s *Service) WithRecords(r *childrecord.Repository) *Service {
+	s.records = r
+	return s
 }
 
 // Build checks the plan FIRST — a free family gets a *consultation.PlanLimitError (reason pdf_export) and nothing is read, also
@@ -49,6 +57,15 @@ func (s *Service) Build(ctx context.Context, childID uuid.UUID, req Request) (*D
 	if req.Vaccinations {
 		if err := s.addVaccinations(ctx, childID, req.Photos, doc); err != nil {
 			return nil, err
+		}
+	}
+	if req.Record && s.records != nil {
+		rec, err := s.records.Get(ctx, childID)
+		if err != nil {
+			return nil, err
+		}
+		if rec.Exists {
+			doc.Record = rec
 		}
 	}
 	return doc, nil

@@ -21,6 +21,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childprofile"
+	"github.com/Ulisesgtz/medic-track/backend/internal/childrecord"
 	"github.com/Ulisesgtz/medic-track/backend/internal/clienterror"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/dataexport"
@@ -59,6 +60,8 @@ type Deps struct {
 	Growth *growth.Handler
 	// ChildProfile corrects a child's own data (specs/064).
 	ChildProfile *childprofile.Handler
+	// ChildRecord is a child's record sheet: allergies, blood type, conditions, pediatrician (specs/073).
+	ChildRecord *childrecord.Handler
 	// AccountDeletion and DeletionRepo: asking for, reading and canceling an account's deletion, and the guard that pauses an
 	// account scheduled for deletion on every other route (specs/070). Nil = none of it is registered.
 	AccountDeletion *accountdeletion.Handler
@@ -362,6 +365,9 @@ func NewRouter(d Deps) *chi.Mux {
 		// Specs/064: correcting the child's own data (names, birth date, height, weight) is Full; the service asks the paid plan
 		// for the identity. Never under /child-device.
 		r.With(fullChild).Put("/children/{childId}", d.ChildProfile.UpdateChild)
+		// Specs/073: the record sheet. Any plan; reading is Mark, writing Full; never under /child-device.
+		r.With(seesChild).Get("/children/{childId}/record", d.ChildRecord.GetRecord)
+		r.With(fullChild).Put("/children/{childId}/record", d.ChildRecord.PutRecord)
 		r.With(seesAppointment).Get("/appointments/{appointmentId}", d.Appointment.Get)
 		r.With(fullAppointment).Patch("/appointments/{appointmentId}", d.Appointment.Update)
 		r.With(fullAppointment).Post("/appointments/{appointmentId}/status", d.Appointment.SetStatus)

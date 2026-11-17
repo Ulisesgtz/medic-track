@@ -4039,6 +4039,132 @@
                 }
             }
         },
+        "/children/{childId}/record": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The allergies, blood type, permanent conditions, pediatrician and general note the family wrote, as they wrote\nthem and in their order. A child without a sheet answers `exists: false` and empty lists. `canEdit` is true for\nthe full level (the owner, a Tutor of a paid family). Any plan. Never reachable from a child's own phone.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "child-record"
+                ],
+                "summary": "A child's record sheet",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ChildRecordResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ChildRecordErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session has no access to this child",
+                        "schema": {
+                            "$ref": "#/definitions/ChildRecordErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Malformed child id",
+                        "schema": {
+                            "$ref": "#/definitions/ChildRecordErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Replaces the whole sheet. `expectedVersion` is the version the form was opened with (0 when there was none); if\nsomeone saved meanwhile the answer is 409 `record_conflict` with the stored sheet as `current` and nothing is\nwritten. Saving without changes writes nothing (version, author and date stay). Any plan; the full level only.\nAn invalid field is 400 with its name and never its value.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "child-record"
+                ],
+                "summary": "Save a child's record sheet",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Child UUID",
+                        "name": "childId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The whole sheet",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ChildRecordInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ChildRecordResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "An invalid field, a malformed body or no expectedVersion",
+                        "schema": {
+                            "$ref": "#/definitions/ChildRecordValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ChildRecordErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't change this child's sheet",
+                        "schema": {
+                            "$ref": "#/definitions/ChildRecordErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No child exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/ChildRecordErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Someone saved the sheet after it was opened",
+                        "schema": {
+                            "$ref": "#/definitions/ChildRecordConflictResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/children/{childId}/routines": {
             "get": {
                 "security": [
@@ -7700,6 +7826,207 @@
                 }
             }
         },
+        "ChildRecordAllergy": {
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": [
+                        "medication",
+                        "food",
+                        "other"
+                    ],
+                    "example": "medication"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Penicilina"
+                },
+                "note": {
+                    "type": "string",
+                    "example": "le salen ronchas"
+                }
+            }
+        },
+        "ChildRecordCondition": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "Asma"
+                },
+                "note": {
+                    "type": "string",
+                    "example": "usa inhalador en crisis"
+                }
+            }
+        },
+        "ChildRecordConflictResponse": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "$ref": "#/definitions/ChildRecordResponse"
+                },
+                "error": {
+                    "type": "string",
+                    "example": "record_conflict"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "ChildRecordErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "child_not_found"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "ChildRecordInput": {
+            "type": "object",
+            "properties": {
+                "allergies": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ChildRecordAllergy"
+                    }
+                },
+                "bloodType": {
+                    "type": "string",
+                    "example": "O+"
+                },
+                "conditions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ChildRecordCondition"
+                    }
+                },
+                "expectedVersion": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "generalNote": {
+                    "type": "string"
+                },
+                "pediatrician": {
+                    "$ref": "#/definitions/ChildRecordPediatrician"
+                }
+            }
+        },
+        "ChildRecordPediatrician": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "example": "Dra. Ruiz"
+                },
+                "office": {
+                    "type": "string",
+                    "example": "Torre Médica, piso 4"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "+52 33 1234 5678"
+                }
+            }
+        },
+        "ChildRecordResponse": {
+            "type": "object",
+            "properties": {
+                "allergies": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ChildRecordAllergy"
+                    }
+                },
+                "bloodType": {
+                    "type": "string",
+                    "enum": [
+                        "O+",
+                        "O-",
+                        "A+",
+                        "A-",
+                        "B+",
+                        "B-",
+                        "AB+",
+                        "AB-",
+                        "unknown"
+                    ],
+                    "example": "O+"
+                },
+                "canEdit": {
+                    "type": "boolean"
+                },
+                "conditions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ChildRecordCondition"
+                    }
+                },
+                "exists": {
+                    "type": "boolean"
+                },
+                "generalNote": {
+                    "type": "string"
+                },
+                "pediatrician": {
+                    "$ref": "#/definitions/ChildRecordPediatrician"
+                },
+                "updated": {
+                    "$ref": "#/definitions/ChildRecordUpdated"
+                },
+                "version": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
+        "ChildRecordUpdated": {
+            "type": "object",
+            "properties": {
+                "at": {
+                    "type": "string",
+                    "example": "2026-11-17T18:05:00Z"
+                },
+                "by": {
+                    "type": "string",
+                    "example": "Ana"
+                }
+            }
+        },
+        "ChildRecordValidationResponse": {
+            "type": "object",
+            "properties": {
+                "details": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "field": {
+                                "type": "string",
+                                "example": "allergies[2].name"
+                            },
+                            "message": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                },
+                "error": {
+                    "type": "string",
+                    "example": "validation_error"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
         "ConsultationDetailResponse": {
             "type": "object",
             "properties": {
@@ -8378,6 +8705,14 @@
                 "photos": {
                     "$ref": "#/definitions/ExportPhotos"
                 },
+                "record": {
+                    "description": "Record is the child's record sheet (without canEdit), or null when it has none or wasn't asked for (specs/073).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/ChildRecordResponse"
+                        }
+                    ]
+                },
                 "subject": {
                     "description": "Subject is \"child\" or, for a person's own history (specs/058), \"person\": then child is the person, with an empty\nbirthDate, and there are no vaccinations.",
                     "type": "string",
@@ -8621,6 +8956,11 @@
                 "photos": {
                     "type": "boolean",
                     "example": false
+                },
+                "record": {
+                    "description": "Record asks for the child's record sheet (specs/073); omitted means true. Alone it isn't enough: consultations or vaccinations are still needed.",
+                    "type": "boolean",
+                    "example": true
                 },
                 "vaccinations": {
                     "type": "boolean",

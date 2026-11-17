@@ -1,4 +1,5 @@
 import type { HistorySearchRequest } from '../consultations/historyCriteria'
+import type { ChildRecord } from '../childRecord/types'
 
 // specs/050: the request and the answer of `POST /children/{childId}/export` (contracts/api.md). The answer is only what is
 // already registered: the document never computes anything that judges it (Principio I).
@@ -10,6 +11,8 @@ export type ExportPeriod =
   | { kind: 'filters'; filters: HistorySearchRequest }
 
 export interface ExportSections {
+  /** specs/073: «Incluir la ficha» (on by default; an absent value counts as on). */
+  record?: boolean
   consultations: boolean
   vaccinations: boolean
   photos: boolean
@@ -104,7 +107,12 @@ export interface ExportPhotos {
   card: { id: string; createdAt: string }[]
 }
 
+/** The child's record as the export carries it (specs/073): the record without `canEdit` and `version`. */
+export type ExportRecord = Omit<ChildRecord, 'canEdit' | 'version' | 'exists'> & Partial<Pick<ChildRecord, 'exists' | 'canEdit' | 'version'>>
+
 export interface ExportData {
+  /** The record of the child, or null when there is none or it wasn't asked for. */
+  record?: ExportRecord | null
   /** "person" for a person's own history (specs/058): `child` is then the person, with an empty birthDate, and there is no card. */
   subject?: 'child' | 'person'
   child: ExportChild

@@ -20,6 +20,7 @@ export const ROUTE_PATTERNS: readonly string[] = [
   '/children/:childId/crecimiento/nueva',
   '/children/:childId/crecimiento/:measurementId/editar',
   '/children/:childId/cartilla',
+  '/children/:childId/ficha/editar',
   '/children/:childId/historial',
   '/children/:childId/consultations/new',
   '/consultations/:consultationId',

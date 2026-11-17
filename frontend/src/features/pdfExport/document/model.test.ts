@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { ExportMedication } from '../types'
+import type { ExportMedication, ExportRecord } from '../types'
 import { CASE_A, CASE_B, CASE_C, NOW, at, sequence } from './fixtures'
 import {
   activeTreatmentLines,
@@ -18,6 +18,7 @@ import {
   localDay,
   periodText,
   sectionsText,
+  showsRecord,
   statusLabels,
   vaccineGroups,
   vaccineRow,
@@ -206,5 +207,18 @@ describe('the vaccination card', () => {
     expect(vaccineRow(groups[2].doses[1])).toMatchObject({ dose: '2.ª dosis', note: 'Lote copiado de la cartilla', corrected: 'Corregida el 3 oct por Ana' })
     const anonymous = { ...groups[2].doses[1], lot: ' ', place: null, corrected: { at: at(2026, 10, 3, 18), by: null } }
     expect(vaccineRow(anonymous)).toMatchObject({ lot: '—', place: '—', corrected: 'Corregida el 3 oct' })
+  })
+
+  it('showsRecord: asked for, present and with something written', () => {
+    const rec: ExportRecord = { bloodType: null, generalNote: null, pediatrician: null, allergies: [], conditions: [], updated: null }
+    const withIt = (record: typeof rec | null, sections = CASE_A.request.sections) => showsRecord({ ...CASE_A.request, sections }, { ...CASE_A.data, record })
+    expect(withIt(null)).toBe(false)
+    expect(withIt(rec)).toBe(false)
+    expect(withIt({ ...rec, bloodType: 'A+' } as never)).toBe(true)
+    expect(withIt({ ...rec, generalNote: ' x ' })).toBe(true)
+    expect(withIt({ ...rec, pediatrician: { name: null, phone: '1', office: null } })).toBe(true)
+    expect(withIt({ ...rec, pediatrician: { name: ' ', phone: null, office: null } })).toBe(false)
+    expect(withIt({ ...rec, bloodType: 'A+' } as never, { ...CASE_A.request.sections, record: false })).toBe(false)
+    expect(sectionsText(CASE_A.request.sections, true)).toBe('Ficha · Consultas · Cartilla de vacunación · Fotos (anexo)')
   })
 })

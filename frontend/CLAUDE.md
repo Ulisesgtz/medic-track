@@ -237,6 +237,19 @@ The entry is the row «Editar datos» of «Lo demás» (`MoreRows` in `features/
 
 E2E: `crecimiento.spec.ts` (Chromium, 390 and 1280 px: the owner's whole flow with ‹ › and the tabs, the free plan's notice and the 422 of the API, a Caregiver who sees and gets 403; it never depends on the WHO curves being on).
 
+## `src/features/childRecord/` — ficha del hijo (spec 073)
+
+Built from Claude Design's mock (`specs/073-ficha-del-hijo/referencia/`, states A–G; deviations in `referencia/desviaciones.md`). **Shows what the family wrote and never evaluates** (Principio I): no «riesgo», «peligro», «grave», «urgente», never «Sin alergias» or «Sin padecimientos» (a group with nothing is simply not drawn), no red or amber in the view (the `error` token only in the form's field errors).
+
+| File | Role |
+|---|---|
+| `recordText.ts` (+ `recordText.test.ts`) | **Every sentence** (`RECORD`, `FORM`, `updatedLine` «Actualizada el 17 nov 2026 por Ana», `bloodLabel`, `countOf`, `limitNote`, `moreLine`, `conflictTitle`/`conflictBody`…); the test forbids the words above and reads the sources for alarm colors. `callLink.ts`: `telHref` keeps only the digits and a leading `+` (no digits → no «Llamar») |
+| `ChildRecordSection.tsx`, `RecordView.tsx`, `recordModel.ts` | «Ficha» at the end of `ChildDetailPage` (the **last pill** of `SectionIndex`, anchor `#ficha`), **two designs by `variant`**: states A (full), B (empty, «Empezar la ficha»; the groups the family left empty are not drawn) and C (`canEdit: false`: no «Editar ficha», the line that only the family edits, «Llamar» stays). `RecordBody` (phone one column, web two) and `RecordFooter` (the date, who and the fixed sentence) are shared with `NewVersionDialog` |
+| `EditChildRecordPage.tsx`, `RecordFormParts.tsx`, `recordForm.ts`, `NewVersionDialog.tsx` | `/children/:childId/ficha/editar` (states D, D2 and E): React Hook Form + `useFieldArray`, a `fieldset` per allergy or condition, option pills of 44 px (the chosen one taps again to clear), «Subir»/«Bajar» with an accessible name, «Quitar» as text, «30 de 30» with «y 28 alergias más · Ver las 30» and no «Agregar», `StickyActionBar` on the phone, `useDiscardGuard` and `useUnsavedWork`. A **409** keeps what was typed, shows who saved and when, «Ver la versión nueva» opens theirs read-only apart and the next save is made on top of the new version. Without edit rights, only a sentence |
+| `api.ts`, `hooks.ts`, `types.ts` | `ChildRecordApiError` (`validation_error`/`conflict` with `.current`/`forbidden`/`not_found`); the query `['child-record', childId]` (`useSaveChildRecord` writes the answer into the cache; the root is in `PERSISTED_ROOTS`, so the last copy opens without a signal and saving needs a connection) |
+
+The PDF's cover has its «Ficha» block (`pdfExport/document/Cover.tsx`, mock F) and the panel the switch «Incluir la ficha» (on from the start). E2E: `ficha-del-hijo.spec.ts` (390 and 1280 px, Chromium and WebKit: the owner fills, sees, edits and removes; a Caregiver sees it and calls, with no edit; a conflict between the owner and a Tutor; the 30 limit seeded by the API; the PDF request carries `sections.record`; none of the record's text reaches `error_logs`).
+
 ## `src/features/plans/` — planes y plan completo (spec 034)
 
 | File | Role |

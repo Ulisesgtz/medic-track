@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
+	"github.com/Ulisesgtz/medic-track/backend/internal/childrecord"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/historyexport"
@@ -67,7 +68,7 @@ func consult(t *testing.T, pool *pgxpool.Pool, f family, date time.Time, doctor 
 }
 
 func newService(pool *pgxpool.Pool) *historyexport.Service {
-	return historyexport.NewService(historyexport.NewRepository(pool), consultation.NewRepository(pool), vaccination.NewRepository(pool))
+	return historyexport.NewService(historyexport.NewRepository(pool), consultation.NewRepository(pool), vaccination.NewRepository(pool)).WithRecords(childrecord.NewRepository(pool))
 }
 
 var everything = historyexport.Request{PeriodKind: historyexport.PeriodAll, Consultations: true, Vaccinations: true}
@@ -261,4 +262,39 @@ func (c *capture) all() []errorlog.Entry {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return append([]errorlog.Entry(nil), c.entries...)
+}
+
+func TestBuild_TheRecordSheetOnlyWhenItExistsAndWasAsked(t *testing.T) {
+	ctx := context.Background()
+	pool := testPool(t)
+	f := newFamily(t, pool, account.PlanPaid)
+	svc := newService(pool)
+	asked := everything
+	asked.Record = true
+
+	doc, err := svc.Build(ctx, f.childID, asked)
+	require.NoError(t, err)
+	require.Nil(t, doc.Record, "a child without a sheet has none on the cover")
+
+	content, errs := childrecord.Validate(childrecord.Content{
+		BloodType: strPtr("A+"), Allergies: []childrecord.Allergy{{Name: "Penicilina"}},
+	})
+	require.Empty(t, errs)
+	_, err = childrecord.NewRepository(pool).Save(ctx, f.childID, f.accountID, content, 0)
+	require.NoError(t, err)
+
+	doc, err = svc.Build(ctx, f.childID, asked)
+	require.NoError(t, err)
+	require.NotNil(t, doc.Record)
+	require.Equal(t, "Penicilina", doc.Record.Allergies[0].Name)
+
+	doc, err = svc.Build(ctx, f.childID, everything)
+	require.NoError(t, err)
+	require.Nil(t, doc.Record, "not asked for")
+
+	// Without the repository wired the cover never has one.
+	bare := historyexport.NewService(historyexport.NewRepository(pool), consultation.NewRepository(pool), vaccination.NewRepository(pool))
+	doc, err = bare.Build(ctx, f.childID, asked)
+	require.NoError(t, err)
+	require.Nil(t, doc.Record)
 }
