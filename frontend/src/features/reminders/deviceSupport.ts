@@ -1,3 +1,5 @@
+import { isIOS, isRunningInstalled } from '../../shared/install/platform'
+
 /**
  * Whether this browser can receive reminders, before showing any button (specs/011, FR-015):
  * - `unsupported`: no service worker, push or notifications at all;
@@ -9,21 +11,10 @@
 export type DeviceSupport = 'unsupported' | 'ios-needs-install' | 'denied' | 'ready'
 
 export function detectDeviceSupport(): DeviceSupport {
-  if (isIOS() && !isInstalled()) return 'ios-needs-install'
+  if (isIOS() && !isRunningInstalled()) return 'ios-needs-install'
   if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) return 'unsupported'
   if (Notification.permission === 'denied') return 'denied'
   return 'ready'
-}
-
-export function isIOS(): boolean {
-  const ua = navigator.userAgent
-  // iPadOS 13+ reports itself as a Mac: tell it apart by its touch screen.
-  return /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
-}
-
-export function isInstalled(): boolean {
-  const standalone = (navigator as Navigator & { standalone?: boolean }).standalone === true
-  return standalone || (typeof window.matchMedia === 'function' && window.matchMedia('(display-mode: standalone)').matches)
 }
 
 /** The VAPID public key (base64url) as the bytes `pushManager.subscribe` takes. */

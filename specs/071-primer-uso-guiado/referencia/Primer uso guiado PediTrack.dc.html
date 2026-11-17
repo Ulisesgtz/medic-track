@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Primer uso guiado PediTrack</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--color-ink:#04252b;--color-ink-soft:#0b3b44;--color-action:#0e7490;--color-bright:#22d3ee;--color-bright-soft:#67e8f9;--color-confirmed:#047857;--color-confirmed-soft:#d1fae5;--color-confirmed-strong:#065f46;--color-pending:#f59e0b;--color-pending-soft:#fef3c7;--color-canvas:#f8feff;--color-surface:#ffffff;--color-hint:#ecfeff;--color-hint-border:#a5f3fc;--color-hint-edge:#cffafe;--color-body:#1f3d44;--color-ink-edge:#0b5763;--color-muted:#475569;--color-skel:#e2eef0}
+*{box-sizing:border-box}
+body{margin:0;background:#dfe8ea;font-family:'Figtree',system-ui,sans-serif;color:#04252b}
+button{font-family:inherit}
+a{color:#0e7490;text-decoration:none}
+a:hover{color:#04252b;text-decoration:underline}
+button:focus-visible,a:focus-visible{outline:2px solid #0e7490;outline-offset:2px}
+</style>
+</helmet>
+
+<div style="padding:56px;display:flex;flex-direction:column;gap:72px">
+  <div style="max-width:900px;display:flex;flex-direction:column;gap:10px">
+    <p style="margin:0;font-size:12px;font-weight:800;letter-spacing:0.1em;text-transform:uppercase;color:var(--color-action)">PediTrack · Primer uso guiado · propuesta 16 nov 2026 · ajustada al inicio actual</p>
+    <h1 style="margin:0;font-size:38px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Primer uso guiado: tres pasos en el Inicio</h1>
+    <p style="margin:0;font-size:16px;line-height:1.55;color:var(--color-body);text-wrap:pretty">Ocho estados (A0 y A–G). Cada uno en teléfono (390 px) y en web (1280 px, con la barra lateral de hijos), en marcos separados y sin diseño responsivo que los mezcle. La guía es una tarjeta del Inicio que se puede ignorar, saltar o cerrar; la app funciona igual. Las decisiones están al final. Todo lo que rodea a la guía es el inicio tal como está hoy en la app, salvo «Antes de empezar», que pasa a ser una ventana («Tu día», la tarjeta del hijo, «+ Agregar hijo», «Checa tus medicamentos», la lista de abajo y la barra lateral); lo único nuevo es la tarjeta «Primeros pasos», su aviso al cerrarla y la fila para reabrirla.</p>
+  </div>
+
+  <sc-for list="{{ estados }}" as="s" hint-placeholder-count="2">
+    <div id="{{ s.anchor }}" style="display:flex;flex-direction:column;gap:18px">
+      <div style="display:flex;flex-direction:column;gap:8px;max-width:1000px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="padding:4px 11px;border-radius:999px;background:var(--color-ink);color:#ffffff;font-size:13px;font-weight:800">{{ s.num }}</span>
+          <span style="font-size:20px;font-weight:800;color:var(--color-ink)">{{ s.label }}</span>
+          <span style="font-size:14px;color:var(--color-body)">{{ s.quien }}</span>
+        </div>
+        <p style="margin:0;font-size:15px;line-height:1.5;color:var(--color-body);text-wrap:pretty">{{ s.nota }}</p>
+      </div>
+      <div style="display:flex;gap:48px;align-items:flex-start">
+
+        <div style="display:flex;flex-direction:column;gap:10px;flex:none">
+          <span style="font-size:13px;font-weight:800;color:var(--color-muted)">{{ s.num }} · Teléfono · {{ s.t.plat }}</span>
+          <div data-screen-label="{{ s.num }} teléfono" style="width:410px;padding:10px;border-radius:50px;background:var(--color-ink);box-shadow:0 20px 50px rgba(4,37,43,0.22)">
+            <div style="width:390px;min-height:844px;border-radius:40px;overflow:hidden;background:var(--color-canvas);position:relative;display:flex;flex-direction:column">
+              <sc-if value="{{ s.t.modal }}">
+                <div style="position:absolute;top:0;left:0;right:0;height:844px;z-index:10;background:rgba(4,37,43,0.55);display:flex;flex-direction:column;justify-content:flex-end">
+                  <div role="dialog" aria-modal="true" aria-labelledby="ae-t-{{ s.num }}" style="max-height:88%;background:var(--color-surface);border-radius:28px 28px 0 0;display:flex;flex-direction:column;box-shadow:0 -12px 40px rgba(4,37,43,0.25)">
+                    <div style="padding:10px 0 0;display:flex;justify-content:center"><span aria-hidden="true" style="width:40px;height:5px;border-radius:999px;background:var(--color-hint-border)"></span></div>
+                    <div style="padding:14px 22px 0"><h2 id="ae-t-{{ s.num }}" style="margin:0;font-size:22px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Antes de empezar</h2></div>
+                    <div style="flex:1;min-height:0;overflow:auto;padding:12px 22px 4px;display:flex;flex-direction:column;gap:10px"><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">PediTrack es una bitácora <strong style="color:var(--color-ink)">informativa y de seguimiento</strong>: guarda lo que tu pediatra indica y te ayuda a llevar el registro, pero <strong style="color:var(--color-ink)">no sustituye una consulta médica</strong> ni interpreta ningún dato. Ante cualquier duda o síntoma, acude siempre a tu médico.</p><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">Leemos el texto de tu receta solo cuando está <strong style="color:var(--color-ink)">impresa</strong> (no escrita a mano), y lo que leemos te lo proponemos para que lo corrijas. Si una receta no está dentro de lo que podemos leer, <strong style="color:var(--color-ink)">no la interpretamos y no autollenamos ningún campo</strong>: los capturas tú. Así no interpretamos nada por ti.</p><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">La lectura se hace en tu teléfono; la foto se guarda en tu cuenta y solo la ven las personas a las que tú invites a tu familia.</p><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)"><strong style="color:var(--color-ink)">Compartir significa que otra persona ve los datos médicos del menor</strong>: sus consultas, recetas, síntomas y tomas. Compártelos solo con quien cuida de tu hijo y quita el acceso cuando ya no haga falta.</p><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">Los suplementos y las actividades que registres <strong style="color:var(--color-ink)">solo repiten lo que tú escribiste</strong>: PediTrack no sugiere suplementos, actividades, cantidades ni horarios, y avisa a las personas de tu familia que tengan acceso a ese hijo.</p><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">Si le das acceso a tu hijo, <strong style="color:var(--color-ink)">verá en su teléfono sus tomas y actividades y podrá marcarlas</strong>; no se guarda ningún dato personal suyo y puedes quitar el acceso cuando quieras.</p><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">Las vacunas y las fotos de la cartilla de tu hijo son datos de salud: se guardan solo en tu cuenta y las personas que invites podrán verlas según su rol.</p><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">También puedes registrar <strong style="color:var(--color-ink)">tus propias consultas</strong>. Son tuyas: solo tú las ves, salvo que tú decidas compartirlas con los Tutores de tu familia; nunca las ve un Cuidador ni el teléfono de un hijo.</p></div>
+                    <div style="padding:14px 22px 30px;border-top:1px solid var(--color-hint-edge);display:flex;flex-direction:column"><button type="button" style="min-height:52px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:17px;font-weight:800;cursor:pointer">Entendido</button></div>
+                  </div>
+                </div>
+              </sc-if>
+              <div style="height:44px;padding:0 28px;display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:700;color:var(--color-ink)"><span>9:41</span><span style="display:flex;gap:5px"><span style="width:18px;height:10px;border-radius:2px;background:var(--color-ink)"></span><span style="width:24px;height:11px;border-radius:3px;border:1.5px solid var(--color-ink)"></span></span></div>
+              <div style="flex:1;padding:8px 20px 28px;display:flex;flex-direction:column;gap:20px">
+                  <header style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+                    <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                      <h2 style="margin:0;font-size:28px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Hola, Ana</h2>
+                      <span style="font-size:15px;color:var(--color-body)">lunes 16 de noviembre</span>
+                    </div>
+                    <button type="button" aria-label="Menú de cuenta" style="flex:none;width:48px;height:48px;border-radius:50%;border:none;background:var(--color-ink);color:#ffffff;font-size:15px;font-weight:800;cursor:pointer">AM</button>
+                  </header>
+                  <sc-if value="{{ s.t.gAbierta }}">
+                    <section aria-label="Primeros pasos" style="background:var(--color-surface);border-radius:22px;box-shadow:0 8px 20px rgba(4,37,43,0.07);padding:18px 18px 4px">
+                      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:10px">
+                        <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                          <h3 style="margin:0;font-size:18px;font-weight:800;letter-spacing:-0.02em;color:var(--color-ink)">Primeros pasos</h3>
+                          <span style="font-size:14px;color:var(--color-body)">{{ s.t.sub }}</span>
+                        </div>
+                        <button type="button" style="flex:none;min-height:44px;min-width:44px;padding:0 12px;margin:-6px -8px 0 0;border:none;border-radius:12px;background:transparent;color:var(--color-action);font-size:14px;font-weight:800;cursor:pointer" style-hover="background:var(--color-hint)">Ahora no</button>
+                      </div>
+                      <sc-for list="{{ s.t.steps }}" as="p" hint-placeholder-count="3">
+                <div style="display:flex;gap:14px;padding:16px 0;border-top:1px solid var(--color-hint-edge);align-items:flex-start">
+                  <sc-if value="{{ p.hecho }}"><span role="img" aria-label="Hecho" style="flex:none;width:36px;height:36px;border-radius:50%;background:var(--color-confirmed);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></sc-if>
+                  <sc-if value="{{ p.pend }}"><span aria-hidden="true" style="flex:none;width:36px;height:36px;border-radius:50%;border:2px solid var(--color-action);background:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:var(--color-action)">{{ p.num }}</span></sc-if>
+                  <sc-if value="{{ p.bloq }}"><span role="img" aria-label="Bloqueado hasta el paso 2" style="flex:none;width:36px;height:36px;border-radius:50%;border:2px dashed #64748b;background:var(--color-surface);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3"></path><rect x="5" y="11" width="14" height="9" rx="2"></rect></svg></span></sc-if>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+                      <span style="font-size:16px;font-weight:800;line-height:1.3;color:var(--color-ink)">{{ p.title }}</span>
+                      <sc-if value="{{ p.opcional }}"><span style="padding:3px 10px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:13px;font-weight:800">Opcional</span></sc-if>
+                    </div>
+                    <span style="font-size:14px;line-height:1.5;color:var(--color-body);">{{ p.desc }}</span>
+                    <sc-if value="{{ p.hasLink }}"><a href="#" style="align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;font-size:14px;font-weight:700">{{ p.link }}</a></sc-if>
+                    <sc-if value="{{ p.panelIos }}">
+                      <div style="margin-top:4px;padding:14px;border-radius:16px;background:var(--color-hint);border:1.5px solid var(--color-hint-border);display:flex;flex-direction:column;gap:10px">
+                        <svg viewBox="0 0 300 56" width="100%" role="img" aria-label="Barra inferior de Safari con el botón Compartir resaltado" style="display:block;max-width:360px"><rect x="1" y="4" width="298" height="48" rx="18" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"></rect><g fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M44 20l-8 8 8 8"></path><path d="M96 20l8 8-8 8"></path><path d="M198 19h-14a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V21a2 2 0 0 0-2-2z"></path><path d="M246 21h16v14h-16z"></path><path d="M250 17h16v14"></path></g><circle cx="150" cy="28" r="21" fill="#ecfeff" stroke="#0e7490" stroke-width="2.5"></circle><g fill="none" stroke="#0e7490" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M150 32V19"></path><path d="M145 23.5l5-5 5 5"></path><path d="M144 26h-2v11h16V26h-2"></path></g></svg>
+                        <sc-for list="{{ p.items }}" as="it" hint-placeholder-count="3">
+                          <div style="display:flex;gap:12px;align-items:center;min-height:44px">
+                            <sc-if value="{{ it.share }}"><span style="flex:none;width:40px;height:40px;border-radius:12px;background:var(--color-surface);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"></path><path d="M8 8l4-4 4 4"></path><path d="M7 10H5.5v10h13V10H17"></path></svg></span></sc-if>
+                            <sc-if value="{{ it.plus }}"><span style="flex:none;width:40px;height:40px;border-radius:12px;background:var(--color-surface);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"></rect><path d="M12 8v8"></path><path d="M8 12h8"></path></svg></span></sc-if>
+                            <sc-if value="{{ it.agregar }}"><span style="flex:none;min-width:40px;height:40px;padding:0 12px;border-radius:12px;background:var(--color-surface);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--color-action)">Agregar</span></sc-if>
+                            <sc-if value="{{ it.num }}"><span aria-hidden="true" style="flex:none;width:40px;height:40px;border-radius:12px;background:var(--color-surface);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:var(--color-action)">{{ it.n }}</span></sc-if>
+                            <span style="flex:1;min-width:0;font-size:15px;line-height:1.45;color:var(--color-ink);font-weight:600">{{ it.txt }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ p.panelDen }}">
+                      <div style="margin-top:4px;padding:14px;border-radius:16px;background:var(--color-hint);border:1.5px solid var(--color-hint-border);display:flex;flex-direction:column;gap:4px">
+                        <sc-for list="{{ p.items }}" as="it" hint-placeholder-count="3">
+                          <div style="display:flex;gap:12px;align-items:center;min-height:44px">
+                            <sc-if value="{{ it.share }}"><span style="flex:none;width:40px;height:40px;border-radius:12px;background:var(--color-surface);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"></path><path d="M8 8l4-4 4 4"></path><path d="M7 10H5.5v10h13V10H17"></path></svg></span></sc-if>
+                            <sc-if value="{{ it.plus }}"><span style="flex:none;width:40px;height:40px;border-radius:12px;background:var(--color-surface);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"></rect><path d="M12 8v8"></path><path d="M8 12h8"></path></svg></span></sc-if>
+                            <sc-if value="{{ it.agregar }}"><span style="flex:none;min-width:40px;height:40px;padding:0 12px;border-radius:12px;background:var(--color-surface);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--color-action)">Agregar</span></sc-if>
+                            <sc-if value="{{ it.num }}"><span aria-hidden="true" style="flex:none;width:40px;height:40px;border-radius:12px;background:var(--color-surface);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:var(--color-action)">{{ it.n }}</span></sc-if>
+                            <span style="flex:1;min-width:0;font-size:15px;line-height:1.45;color:var(--color-ink);font-weight:600">{{ it.txt }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ p.hasNota }}"><span style="font-size:14px;line-height:1.5;color:var(--color-body)">{{ p.nota }}</span></sc-if>
+                    <sc-if value="{{ p.hasBtn }}">
+                    <div style="margin-top:6px;display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+                      <sc-if value="{{ p.solid }}"><button type="button" style="min-height:48px;padding:0 22px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer">{{ p.btn }}</button></sc-if>
+                      <sc-if value="{{ p.outline }}"><button type="button" style="min-height:48px;padding:0 22px;border:2px solid var(--color-action);border-radius:16px;background:transparent;color:var(--color-action);font-size:16px;font-weight:800;cursor:pointer">{{ p.btn }}</button></sc-if>
+                      <sc-if value="{{ p.hasSub }}"><span style="font-size:13px;line-height:1.4;color:var(--color-muted)">{{ p.sub }}</span></sc-if>
+                    </div>
+                  </sc-if>
+                  </div>
+                  
+                </div>
+              </sc-for>
+                    </section>
+                  </sc-if>
+                  <sc-if value="{{ s.t.gDesp }}">
+                    <div role="status" style="padding:14px 16px;border-radius:22px;background:var(--color-confirmed-soft);display:flex;align-items:center;gap:12px">
+                      <span aria-hidden="true" style="flex:none;width:32px;height:32px;border-radius:50%;background:var(--color-confirmed);display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+                      <span style="font-size:15px;font-weight:700;line-height:1.4;color:var(--color-confirmed-strong)">Los tres pasos están hechos. Esta guía ya no se mostrará.</span>
+                    </div>
+                  </sc-if>
+                  <button type="button" style="min-height:56px;padding:0 16px;border-radius:16px;border:1.5px solid var(--color-hint-border);background:var(--color-surface);display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;text-align:left"><span style="font-size:15px;color:var(--color-body)"><strong style="color:var(--color-ink)">Tu día</strong> · tus suplementos y actividades</span><span style="flex:none;padding:4px 10px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:12px;font-weight:800">Plan completo</span></button>
+                  <section style="display:flex;flex-direction:column;gap:12px">
+                    <h3 style="margin:0;font-size:18px;font-weight:800;color:var(--color-ink)">Tus hijos</h3>
+                    <div style="display:flex;flex-direction:column;gap:12px">
+                      <article style="background:var(--color-surface);border-radius:22px;box-shadow:0 8px 20px rgba(4,37,43,0.07);border:1.5px solid transparent;display:flex;flex-direction:column;overflow:hidden">
+                        <a href="#" aria-label="Ver detalle de Mateo" style="padding:16px 16px 6px;display:flex;flex-direction:column;gap:10px;color:inherit;text-decoration:none">
+                          <div style="display:flex;align-items:center;gap:12px">
+                            <span style="flex:none;width:44px;height:44px;border-radius:50%;background:var(--color-action);color:#ffffff;font-size:18px;font-weight:900;display:flex;align-items:center;justify-content:center">M</span>
+                            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+                              <span style="font-size:17px;font-weight:800;color:var(--color-ink)">Mateo <span style="font-weight:500;color:var(--color-body)">· 4 años</span></span>
+                              <sc-if value="{{ s.trat }}"><span style="align-self:flex-start;padding:3px 10px;border-radius:999px;background:var(--color-pending-soft);color:#78350f;font-size:13px;font-weight:800;display:inline-flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;border:2px solid #b45309"></span>1 por marcar</span></sc-if>
+                            </div>
+                            <span aria-hidden="true" style="font-size:22px;color:var(--color-action)">›</span>
+                          </div>
+                          <sc-if value="{{ s.sinTrat }}"><span style="padding:4px 0 10px 56px;font-size:15px;color:var(--color-muted)">Hoy no hay tomas ni actividades</span></sc-if>
+                          <sc-if value="{{ s.trat }}">
+                            <div style="display:flex;align-items:center;gap:12px;min-height:44px">
+                              <span style="flex:none;width:36px;height:36px;border-radius:10px;background:var(--color-hint);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="8.5" width="18" height="7" rx="3.5" transform="rotate(-45 12 12)"></rect><path d="M9.5 9.5l5 5"></path></svg></span>
+                              <span style="flex:1;font-size:13px;font-weight:700;color:var(--color-muted)">Medicamentos</span>
+                              <span style="font-size:15px;font-weight:700;color:var(--color-ink);text-align:right">3 tomas hoy · 1 por marcar</span>
+                            </div>
+                          </sc-if>
+                        </a>
+                        <sc-if value="{{ s.trat }}">
+                          <div style="margin-top:8px;padding:10px 16px 14px;border-top:1px solid var(--color-hint-edge);display:flex;align-items:center;justify-content:space-between;gap:12px">
+                            <div style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:13px;font-weight:700;color:var(--color-muted)">Próxima</span><span style="font-size:15px;font-weight:800;color:var(--color-ink)">Amoxicilina · 16:00</span></div>
+                            <button type="button" aria-label="Marcar Amoxicilina 16:00 de Mateo" style="flex:none;min-height:44px;min-width:96px;padding:0 18px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Marcar</button>
+                          </div>
+                        </sc-if>
+                      </article>
+                      <button type="button" style="min-height:56px;border-radius:22px;border:2px dashed var(--color-hint-border);background:transparent;color:var(--color-action);font-size:16px;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px">+ Agregar hijo<span style="font-size:13px;font-weight:600;color:var(--color-body)">Tu plan incluye un hijo</span></button>
+                    </div>
+                  </section>
+                  <button type="button" style="min-height:72px;padding:14px 16px;border-radius:22px;border:1.5px solid var(--color-hint-border);background:var(--color-surface);display:flex;align-items:center;gap:14px;cursor:pointer;text-align:left"><span aria-hidden="true" style="flex:none;width:44px;height:44px;border-radius:12px;background:var(--color-hint);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="7" width="17" height="13" rx="2.5"></rect><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"></path><path d="M12 10.5v6"></path><path d="M9 13.5h6"></path></svg></span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:800;color:var(--color-ink)">Checa tus medicamentos</span><span style="font-size:14px;color:var(--color-body)">Las medicinas que tienen en casa</span></span><span style="flex:none;padding:4px 10px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:12px;font-weight:800">Plan completo</span></button>
+                  <nav aria-label="Más opciones" style="margin-top:8px;display:flex;flex-direction:column;border-top:1px solid var(--color-hint-edge)">
+                    <sc-for list="{{ s.t.otros }}" as="o" hint-placeholder-count="4">
+                      <a href="#" style="min-height:52px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--color-hint-edge);text-decoration:none">
+                        <span style="font-size:15px;font-weight:700;color:{{ o.color }}">{{ o.t }}</span>
+                        <span style="font-size:14px;color:var(--color-body)">{{ o.v }}</span>
+                      </a>
+                    </sc-for>
+                  </nav>
+              </div>
+              <sc-if value="{{ s.t.toast }}">
+                  <div role="status" style="margin:0 16px 20px;padding:14px 18px;border-radius:16px;background:var(--color-ink);color:#ffffff;font-size:14px;font-weight:600;line-height:1.45;box-shadow:0 12px 30px rgba(4,37,43,0.25)">Cerraste la guía. Puedes volver a abrirla en <strong style="color:var(--color-bright-soft)">Primeros pasos</strong>, al final del inicio.</div>
+                </sc-if>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;flex:none">
+          <span style="font-size:13px;font-weight:800;color:var(--color-muted)">{{ s.num }} · Web · {{ s.w.plat }}</span>
+          <div data-screen-label="{{ s.num }} web" style="width:1280px;min-height:844px;position:relative;display:flex;background:var(--color-canvas);box-shadow:0 20px 50px rgba(4,37,43,0.18);border-radius:16px;overflow:hidden">
+            <sc-if value="{{ s.w.modal }}">
+              <div style="position:absolute;top:0;left:0;right:0;height:844px;z-index:10;background:rgba(4,37,43,0.55);display:flex;align-items:center;justify-content:center;padding:40px">
+                <div role="dialog" aria-modal="true" aria-labelledby="ae-w-{{ s.num }}" style="width:600px;max-height:720px;background:var(--color-surface);border-radius:24px;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(4,37,43,0.3)">
+                  <div style="padding:28px 32px 0"><h2 id="ae-w-{{ s.num }}" style="margin:0;font-size:26px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Antes de empezar</h2></div>
+                  <div style="flex:1;min-height:0;overflow:auto;padding:14px 32px 8px;display:flex;flex-direction:column;gap:10px"><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">PediTrack es una bitácora <strong style="color:var(--color-ink)">informativa y de seguimiento</strong>: guarda lo que tu pediatra indica y te ayuda a llevar el registro, pero <strong style="color:var(--color-ink)">no sustituye una consulta médica</strong> ni interpreta ningún dato. Ante cualquier duda o síntoma, acude siempre a tu médico.</p><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">Leemos el texto de tu receta solo cuando está <strong style="color:var(--color-ink)">impresa</strong> (no escrita a mano), y lo que leemos te lo proponemos para que lo corrijas. Si una receta no está dentro de lo que podemos leer, <strong style="color:var(--color-ink)">no la interpretamos y no autollenamos ningún campo</strong>: los capturas tú. Así no interpretamos nada por ti.</p><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">La lectura se hace en tu teléfono; la foto se guarda en tu cuenta y solo la ven las personas a las que tú invites a tu familia.</p><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)"><strong style="color:var(--color-ink)">Compartir significa que otra persona ve los datos médicos del menor</strong>: sus consultas, recetas, síntomas y tomas. Compártelos solo con quien cuida de tu hijo y quita el acceso cuando ya no haga falta.</p><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">Los suplementos y las actividades que registres <strong style="color:var(--color-ink)">solo repiten lo que tú escribiste</strong>: PediTrack no sugiere suplementos, actividades, cantidades ni horarios, y avisa a las personas de tu familia que tengan acceso a ese hijo.</p><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">Si le das acceso a tu hijo, <strong style="color:var(--color-ink)">verá en su teléfono sus tomas y actividades y podrá marcarlas</strong>; no se guarda ningún dato personal suyo y puedes quitar el acceso cuando quieras.</p><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">Las vacunas y las fotos de la cartilla de tu hijo son datos de salud: se guardan solo en tu cuenta y las personas que invites podrán verlas según su rol.</p><p style="margin:0;font-size:15px;line-height:1.55;color:var(--color-body)">También puedes registrar <strong style="color:var(--color-ink)">tus propias consultas</strong>. Son tuyas: solo tú las ves, salvo que tú decidas compartirlas con los Tutores de tu familia; nunca las ve un Cuidador ni el teléfono de un hijo.</p></div>
+                  <div style="padding:18px 32px 24px;border-top:1px solid var(--color-hint-edge);display:flex;justify-content:flex-end"><button type="button" style="min-height:52px;padding:0 32px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:17px;font-weight:800;cursor:pointer">Entendido</button></div>
+                </div>
+              </div>
+            </sc-if>
+            <aside style="width:280px;flex-shrink:0;background:var(--color-ink);padding:28px 24px;display:flex;flex-direction:column;gap:28px">
+              <div style="display:flex;align-items:center;gap:10px">
+                <svg width="34" height="34" viewBox="0 0 64 64" role="img" aria-label="PediTrack"><defs><clipPath id="lgPu{{ s.num }}"><rect x="21" y="5" width="22" height="54" rx="11"></rect></clipPath></defs><rect width="64" height="64" rx="15" fill="#22d3ee"></rect><g transform="rotate(-45 32 32)" clip-path="url(#lgPu{{ s.num }})"><rect x="21" y="5" width="22" height="54" fill="#ffffff"></rect><rect x="21" y="32" width="22" height="27" fill="#047857"></rect><rect x="21" y="30.6" width="22" height="2.8" fill="#22d3ee"></rect></g></svg>
+                <span style="font-size:18px;font-weight:900;letter-spacing:-0.03em;color:#ffffff">Pedi<span style="color:#67e8f9">Track</span></span>
+              </div>
+              <nav style="display:flex;flex-direction:column;gap:6px">
+                <a href="#" aria-current="page" style="min-height:48px;padding:0 16px;border-radius:16px;background:var(--color-action);display:flex;align-items:center;font-size:16px;font-weight:800;color:#ffffff;text-decoration:none">Inicio</a>
+                <span style="padding:14px 16px 4px;font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#67e8f9">Tus hijos</span>
+                <a href="#" style="min-height:48px;padding:0 16px;border-radius:16px;display:flex;align-items:center;justify-content:space-between;text-decoration:none" style-hover="background:var(--color-ink-soft)"><span style="font-size:16px;font-weight:700;color:#a5f3fc">Mateo</span><span style="font-size:13px;font-weight:600;color:#67e8f9">4a</span></a>
+                <a href="#" style="min-height:48px;padding:0 16px;border-radius:16px;border:1.5px dashed var(--color-ink-edge);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#67e8f9;text-decoration:none">+ Agregar hijo</a>
+                <a href="#" style="min-height:48px;padding:0 16px;border-radius:16px;display:flex;align-items:center;font-size:16px;font-weight:700;color:#a5f3fc;text-decoration:none;margin-top:8px" style-hover="background:var(--color-ink-soft)">Familia</a>
+                <a href="#" style="min-height:48px;padding:0 16px;border-radius:16px;display:flex;align-items:center;font-size:16px;font-weight:700;color:#a5f3fc;text-decoration:none" style-hover="background:var(--color-ink-soft)">Botiquín</a>
+                <span style="padding:14px 16px 4px;font-size:12px;font-weight:800;letter-spacing:0.08em;text-transform:uppercase;color:#67e8f9">Personal</span>
+                <a href="#" style="min-height:44px;padding:0 16px;border-radius:16px;display:flex;align-items:center;font-size:15px;font-weight:700;color:#a5f3fc;text-decoration:none" style-hover="background:var(--color-ink-soft)">Mi perfil</a>
+              </nav>
+              <div style="margin-top:auto;display:flex;flex-direction:column;gap:4px">
+                <a href="#" style="min-height:44px;padding:0 16px;border-radius:16px;display:flex;align-items:center;font-size:15px;font-weight:800;color:#a5f3fc;text-decoration:none" style-hover="background:var(--color-ink-soft)">Planes</a>
+                <a href="#" style="min-height:44px;padding:0 16px;border-radius:16px;display:flex;align-items:center;font-size:15px;font-weight:800;color:#a5f3fc;text-decoration:none" style-hover="background:var(--color-ink-soft)">Mi cuenta</a>
+                <button type="button" aria-label="Menú de cuenta" style="margin-top:8px;min-height:56px;padding:16px 0 0;border:none;border-top:1px solid var(--color-ink-soft);background:transparent;display:flex;align-items:center;gap:12px;cursor:pointer;text-align:left">
+                  <span style="flex:none;width:38px;height:38px;border-radius:50%;background:var(--color-action);color:#ffffff;font-size:14px;font-weight:800;display:flex;align-items:center;justify-content:center">AM</span>
+                  <span style="display:flex;flex-direction:column"><span style="font-size:14px;font-weight:700;color:#ffffff">Ana Morales</span><span style="font-size:12px;color:#67e8f9">Plan gratuito</span></span>
+                </button>
+              </div>
+            </aside>
+            <main style="flex:1;min-width:0;padding:44px 48px 56px;display:flex;flex-direction:column">
+              <div style="width:100%;max-width:904px;margin:0 auto;display:flex;flex-direction:column;gap:28px;flex:1">
+                  <header style="display:flex;flex-direction:column;gap:4px">
+                    <h2 style="margin:0;font-size:34px;font-weight:900;letter-spacing:-0.03em;color:var(--color-ink)">Hola, Ana</h2>
+                    <span style="font-size:16px;color:var(--color-body)">lunes 16 de noviembre</span>
+                  </header>
+                  <sc-if value="{{ s.w.gAbierta }}">
+                    <section aria-label="Primeros pasos" style="background:var(--color-surface);border-radius:22px;box-shadow:0 8px 20px rgba(4,37,43,0.07);padding:22px 24px 4px">
+                      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:14px">
+                        <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+                          <h3 style="margin:0;font-size:20px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Primeros pasos</h3>
+                          <span style="font-size:15px;color:var(--color-body)">{{ s.w.sub }}</span>
+                        </div>
+                        <button type="button" style="flex:none;min-height:44px;min-width:44px;padding:0 12px;margin:-6px -8px 0 0;border:none;border-radius:12px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer" style-hover="background:var(--color-hint)">Ahora no</button>
+                      </div>
+                      <sc-for list="{{ s.w.steps }}" as="p" hint-placeholder-count="3">
+                <div style="display:flex;gap:18px;padding:20px 0;border-top:1px solid var(--color-hint-edge);align-items:flex-start">
+                  <sc-if value="{{ p.hecho }}"><span role="img" aria-label="Hecho" style="flex:none;width:40px;height:40px;border-radius:50%;background:var(--color-confirmed);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span></sc-if>
+                  <sc-if value="{{ p.pend }}"><span aria-hidden="true" style="flex:none;width:40px;height:40px;border-radius:50%;border:2px solid var(--color-action);background:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;color:var(--color-action)">{{ p.num }}</span></sc-if>
+                  <sc-if value="{{ p.bloq }}"><span role="img" aria-label="Bloqueado hasta el paso 2" style="flex:none;width:40px;height:40px;border-radius:50%;border:2px dashed #64748b;background:var(--color-surface);display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 11V8a5 5 0 0 1 10 0v3"></path><rect x="5" y="11" width="14" height="9" rx="2"></rect></svg></span></sc-if>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+                    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+                      <span style="font-size:17px;font-weight:800;line-height:1.3;color:var(--color-ink)">{{ p.title }}</span>
+                      <sc-if value="{{ p.opcional }}"><span style="padding:3px 10px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:13px;font-weight:800">Opcional</span></sc-if>
+                    </div>
+                    <span style="font-size:15px;line-height:1.5;color:var(--color-body);max-width:600px;">{{ p.desc }}</span>
+                    <sc-if value="{{ p.hasLink }}"><a href="#" style="align-self:flex-start;min-height:44px;display:inline-flex;align-items:center;font-size:15px;font-weight:700">{{ p.link }}</a></sc-if>
+                    <sc-if value="{{ p.panelIos }}">
+                      <div style="margin-top:4px;padding:14px;border-radius:16px;background:var(--color-hint);border:1.5px solid var(--color-hint-border);display:flex;flex-direction:column;gap:10px">
+                        <svg viewBox="0 0 300 56" width="100%" role="img" aria-label="Barra inferior de Safari con el botón Compartir resaltado" style="display:block;max-width:360px"><rect x="1" y="4" width="298" height="48" rx="18" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"></rect><g fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M44 20l-8 8 8 8"></path><path d="M96 20l8 8-8 8"></path><path d="M198 19h-14a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V21a2 2 0 0 0-2-2z"></path><path d="M246 21h16v14h-16z"></path><path d="M250 17h16v14"></path></g><circle cx="150" cy="28" r="21" fill="#ecfeff" stroke="#0e7490" stroke-width="2.5"></circle><g fill="none" stroke="#0e7490" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M150 32V19"></path><path d="M145 23.5l5-5 5 5"></path><path d="M144 26h-2v11h16V26h-2"></path></g></svg>
+                        <sc-for list="{{ p.items }}" as="it" hint-placeholder-count="3">
+                          <div style="display:flex;gap:12px;align-items:center;min-height:44px">
+                            <sc-if value="{{ it.share }}"><span style="flex:none;width:40px;height:40px;border-radius:12px;background:var(--color-surface);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"></path><path d="M8 8l4-4 4 4"></path><path d="M7 10H5.5v10h13V10H17"></path></svg></span></sc-if>
+                            <sc-if value="{{ it.plus }}"><span style="flex:none;width:40px;height:40px;border-radius:12px;background:var(--color-surface);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"></rect><path d="M12 8v8"></path><path d="M8 12h8"></path></svg></span></sc-if>
+                            <sc-if value="{{ it.agregar }}"><span style="flex:none;min-width:40px;height:40px;padding:0 12px;border-radius:12px;background:var(--color-surface);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--color-action)">Agregar</span></sc-if>
+                            <sc-if value="{{ it.num }}"><span aria-hidden="true" style="flex:none;width:40px;height:40px;border-radius:12px;background:var(--color-surface);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:var(--color-action)">{{ it.n }}</span></sc-if>
+                            <span style="flex:1;min-width:0;font-size:15px;line-height:1.45;color:var(--color-ink);font-weight:600">{{ it.txt }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ p.panelDen }}">
+                      <div style="margin-top:4px;padding:14px;border-radius:16px;background:var(--color-hint);border:1.5px solid var(--color-hint-border);display:flex;flex-direction:column;gap:4px;max-width:600px">
+                        <sc-for list="{{ p.items }}" as="it" hint-placeholder-count="3">
+                          <div style="display:flex;gap:12px;align-items:center;min-height:44px">
+                            <sc-if value="{{ it.share }}"><span style="flex:none;width:40px;height:40px;border-radius:12px;background:var(--color-surface);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"></path><path d="M8 8l4-4 4 4"></path><path d="M7 10H5.5v10h13V10H17"></path></svg></span></sc-if>
+                            <sc-if value="{{ it.plus }}"><span style="flex:none;width:40px;height:40px;border-radius:12px;background:var(--color-surface);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="4"></rect><path d="M12 8v8"></path><path d="M8 12h8"></path></svg></span></sc-if>
+                            <sc-if value="{{ it.agregar }}"><span style="flex:none;min-width:40px;height:40px;padding:0 12px;border-radius:12px;background:var(--color-surface);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:var(--color-action)">Agregar</span></sc-if>
+                            <sc-if value="{{ it.num }}"><span aria-hidden="true" style="flex:none;width:40px;height:40px;border-radius:12px;background:var(--color-surface);border:1.5px solid var(--color-hint-border);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:var(--color-action)">{{ it.n }}</span></sc-if>
+                            <span style="flex:1;min-width:0;font-size:15px;line-height:1.45;color:var(--color-ink);font-weight:600">{{ it.txt }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </sc-if>
+                    <sc-if value="{{ p.hasNota }}"><span style="font-size:14px;line-height:1.5;color:var(--color-body)">{{ p.nota }}</span></sc-if>
+                    
+                  </div>
+                  <sc-if value="{{ p.hasBtn }}">
+                  <div style="flex:none;width:224px;display:flex;flex-direction:column;gap:6px;align-items:stretch">
+                    <sc-if value="{{ p.solid }}"><button type="button" style="min-height:48px;padding:0 20px;border:none;border-radius:16px;background:var(--color-confirmed);color:#ffffff;font-size:16px;font-weight:800;cursor:pointer">{{ p.btn }}</button></sc-if>
+                    <sc-if value="{{ p.outline }}"><button type="button" style="min-height:48px;padding:0 20px;border:2px solid var(--color-action);border-radius:16px;background:transparent;color:var(--color-action);font-size:16px;font-weight:800;cursor:pointer">{{ p.btn }}</button></sc-if>
+                    <sc-if value="{{ p.hasSub }}"><span style="font-size:13px;line-height:1.4;color:var(--color-muted);text-align:center">{{ p.sub }}</span></sc-if>
+                  </div>
+                </sc-if>
+                </div>
+              </sc-for>
+                    </section>
+                  </sc-if>
+                  <sc-if value="{{ s.w.gDesp }}">
+                    <div role="status" style="padding:16px 22px;border-radius:22px;background:var(--color-confirmed-soft);display:flex;align-items:center;gap:12px">
+                      <span aria-hidden="true" style="flex:none;width:32px;height:32px;border-radius:50%;background:var(--color-confirmed);display:flex;align-items:center;justify-content:center"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"></path></svg></span>
+                      <span style="font-size:16px;font-weight:700;line-height:1.4;color:var(--color-confirmed-strong)">Los tres pasos están hechos. Esta guía ya no se mostrará.</span>
+                    </div>
+                  </sc-if>
+                  <button type="button" style="min-height:56px;padding:0 20px;border-radius:16px;border:1.5px solid var(--color-hint-border);background:var(--color-surface);display:flex;align-items:center;gap:12px;cursor:pointer;text-align:left"><span style="font-size:15px;color:var(--color-body)"><strong style="color:var(--color-ink)">Tu día</strong> · tus suplementos y actividades</span><span style="flex:none;padding:4px 10px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:12px;font-weight:800">Plan completo</span></button>
+                  <section style="display:flex;flex-direction:column;gap:12px">
+                    <h3 style="margin:0;font-size:19px;font-weight:800;color:var(--color-ink)">Tus hijos</h3>
+                    <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px">
+                      <article style="background:var(--color-surface);border-radius:22px;box-shadow:0 8px 20px rgba(4,37,43,0.07);border:1.5px solid transparent;display:flex;flex-direction:column;overflow:hidden">
+                        <a href="#" aria-label="Ver detalle de Mateo" style="padding:20px 20px 8px;display:flex;flex-direction:column;gap:10px;color:inherit;text-decoration:none">
+                          <div style="display:flex;align-items:center;gap:12px">
+                            <span style="flex:none;width:48px;height:48px;border-radius:50%;background:var(--color-action);color:#ffffff;font-size:18px;font-weight:900;display:flex;align-items:center;justify-content:center">M</span>
+                            <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+                              <span style="font-size:18px;font-weight:800;color:var(--color-ink)">Mateo <span style="font-weight:500;color:var(--color-body)">· 4 años</span></span>
+                              <sc-if value="{{ s.trat }}"><span style="align-self:flex-start;padding:3px 10px;border-radius:999px;background:var(--color-pending-soft);color:#78350f;font-size:13px;font-weight:800;display:inline-flex;align-items:center;gap:6px"><span style="width:9px;height:9px;border-radius:50%;border:2px solid #b45309"></span>1 por marcar</span></sc-if>
+                            </div>
+                            <span aria-hidden="true" style="font-size:22px;color:var(--color-action)">›</span>
+                          </div>
+                          <sc-if value="{{ s.sinTrat }}"><span style="padding:4px 0 10px 62px;font-size:15px;color:var(--color-muted)">Hoy no hay tomas ni actividades</span></sc-if>
+                          <sc-if value="{{ s.trat }}">
+                            <div style="display:flex;align-items:center;gap:12px;min-height:44px">
+                              <span style="flex:none;width:36px;height:36px;border-radius:10px;background:var(--color-hint);display:flex;align-items:center;justify-content:center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="8.5" width="18" height="7" rx="3.5" transform="rotate(-45 12 12)"></rect><path d="M9.5 9.5l5 5"></path></svg></span>
+                              <span style="flex:1;font-size:14px;font-weight:700;color:var(--color-muted)">Medicamentos</span>
+                              <span style="font-size:15px;font-weight:700;color:var(--color-ink);text-align:right">3 tomas hoy · 1 por marcar</span>
+                            </div>
+                          </sc-if>
+                        </a>
+                        <sc-if value="{{ s.trat }}">
+                          <div style="margin-top:8px;padding:12px 20px 16px;border-top:1px solid var(--color-hint-edge);display:flex;align-items:center;justify-content:space-between;gap:12px">
+                            <div style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:13px;font-weight:700;color:var(--color-muted)">Próxima</span><span style="font-size:15px;font-weight:800;color:var(--color-ink)">Amoxicilina · 16:00</span></div>
+                            <button type="button" aria-label="Marcar Amoxicilina 16:00 de Mateo" style="flex:none;min-height:44px;min-width:96px;padding:0 18px;border:2px solid var(--color-action);border-radius:14px;background:transparent;color:var(--color-action);font-size:15px;font-weight:800;cursor:pointer">Marcar</button>
+                          </div>
+                        </sc-if>
+                      </article>
+                      <button type="button" style="min-height:120px;border-radius:22px;border:2px dashed var(--color-hint-border);background:transparent;color:var(--color-action);font-size:16px;font-weight:800;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:8px">+ Agregar hijo<span style="font-size:13px;font-weight:600;color:var(--color-body)">Tu plan incluye un hijo</span></button>
+                    </div>
+                  </section>
+                  <button type="button" style="min-height:72px;padding:16px 20px;border-radius:22px;border:1.5px solid var(--color-hint-border);background:var(--color-surface);display:flex;align-items:center;gap:14px;cursor:pointer;text-align:left"><span aria-hidden="true" style="flex:none;width:44px;height:44px;border-radius:12px;background:var(--color-hint);display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0e7490" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="7" width="17" height="13" rx="2.5"></rect><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"></path><path d="M12 10.5v6"></path><path d="M9 13.5h6"></path></svg></span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font-size:17px;font-weight:800;color:var(--color-ink)">Checa tus medicamentos</span><span style="font-size:14px;color:var(--color-body)">Las medicinas que tienen en casa</span></span><span style="flex:none;padding:4px 10px;border-radius:999px;background:var(--color-hint);border:1px solid var(--color-hint-border);color:var(--color-action);font-size:12px;font-weight:800">Plan completo</span></button>
+                  <nav aria-label="Más opciones" style="display:grid;grid-template-columns:{{ s.w.cols }};border-top:1px solid var(--color-hint-edge);border-bottom:1px solid var(--color-hint-edge)">
+                    <sc-for list="{{ s.w.otros }}" as="o" hint-placeholder-count="4">
+                      <a href="#" style="min-height:64px;padding:10px 16px;display:flex;flex-direction:column;justify-content:center;gap:2px;text-decoration:none" style-hover="background:var(--color-hint)">
+                        <span style="font-size:15px;font-weight:700;color:{{ o.color }}">{{ o.t }}</span>
+                        <span style="font-size:13px;color:var(--color-body)">{{ o.v }}</span>
+                      </a>
+                    </sc-for>
+                  </nav>
+                  <div style="margin-top:auto"><sc-if value="{{ s.w.toast }}">
+                  <div role="status" style="align-self:flex-start;max-width:560px;padding:14px 18px;border-radius:16px;background:var(--color-ink);color:#ffffff;font-size:14px;font-weight:600;line-height:1.45;box-shadow:0 12px 30px rgba(4,37,43,0.25)">Cerraste la guía. Puedes volver a abrirla en <strong style="color:var(--color-bright-soft)">Primeros pasos</strong>, al final del inicio.</div>
+                </sc-if></div>
+              </div>
+            </main>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-for>
+
+  <section style="max-width:900px;display:flex;flex-direction:column;gap:14px">
+    <h2 style="margin:0;font-size:24px;font-weight:900;letter-spacing:-0.02em;color:var(--color-ink)">Decisiones</h2>
+    <ol style="margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px;font-size:15px;line-height:1.55;color:var(--color-body)">
+      <li><strong style="color:var(--color-ink)">Dónde vive.</strong> En el Inicio, entre el saludo y «Tu día». Aparece después de «Antes de empezar»: mientras esa ventana está abierta, la guía queda detrás. No es un modal ni una pantalla aparte: es una tarjeta más, con la superficie de «Tu día», y la página hace scroll normal. El resto del inicio no cambia.</li>
+      <li><strong style="color:var(--color-ink)">Orden libre y checks de hechos.</strong> Los tres pasos se pueden hacer en cualquier orden. Un paso se marca solo cuando hay una consulta guardada, cuando la app corre instalada y cuando el permiso de avisos está concedido. Sin barras de progreso, sin «1 de 3» y sin felicitaciones: el check es un dato, no un premio.</li>
+      <li><strong style="color:var(--color-ink)">Un solo botón sólido.</strong> Lo lleva el primer paso pendiente que no es opcional; los demás van con contorno. Si no queda ninguno, no hay sólido en la guía.</li>
+      <li><strong style="color:var(--color-ink)">«Ahora no» y cómo se reabre.</strong> Cierra la guía y se recuerda en la cuenta. Un aviso breve dice dónde volver: «Primeros pasos», al final del inicio (la lista de abajo no tiene título). En el teléfono es la primera fila de la lista de abajo; en la web, el primer acceso de la franja (pasa de 5 a 6: Primeros pasos, Familia, Planes, Recordatorios, Mi cuenta, Cerrar sesión). Esa fila desaparece cuando los tres pasos están hechos. Saltar un paso es simplemente no tocarlo.</li>
+      <li><strong style="color:var(--color-ink)">iPhone sin instalar.</strong> El paso 2 abre sus instrucciones de Safari (Compartir → Agregar a pantalla de inicio) y se marca solo cuando la persona abre PediTrack desde el ícono nuevo. El paso 3 se bloquea con una explicación tranquila y un atajo al paso 2. Si abre desde otro navegador de iPhone, el paso 2 pide «Abrir PediTrack en Safari».</li>
+      <li><strong style="color:var(--color-ink)">Permiso rechazado.</strong> Texto neutral con tres pasos para cambiarlo en los ajustes del sitio; sin rojo, sin ámbar y sin volver a insistir (el navegador no deja repetir la solicitud). «Ya los activé» vuelve a comprobar. La app funciona igual y «Recordatorios» en la lista de abajo dice «No disponibles aquí», como hoy.</li>
+      <li><strong style="color:var(--color-ink)">El paso 2 en la computadora.</strong> Es opcional: lleva la etiqueta «Opcional», su botón es siempre de contorno y solo aparece si el navegador ofrece instalar. Si no (Firefox, Safari), no se muestra: la guía dice «Dos pasos» y los números se recorren (estado C web). En la computadora el paso 3 nunca se bloquea.</li>
+      <li><strong style="color:var(--color-ink)">Plan gratuito.</strong> La guía no lee el plan: no habla de límites, planes ni precios en ningún estado. En G el paso 1 está hecho por una consulta con tratamiento activo. «Tu día» y «Checa tus medicamentos» conservan su marca «Plan completo», como hoy: son del inicio, no de la guía.</li>
+      <li><strong style="color:var(--color-ink)">Medidas.</strong> Todo control mide al menos 44 px de alto (botones de 48). Texto mínimo de 13 px y contraste de 4.5:1 o más con los tokens del sistema; ni el bloqueo ni lo desactivado dependen del color: llevan candado, línea punteada y texto.</li>
+      <li><strong style="color:var(--color-ink)">Ajustes al inicio actual.</strong> La primera versión dibujaba un inicio simplificado. Ahora: el aviso «Antes de empezar» lleva su texto real y ahora es una ventana (A0); «Tu día» es el botón del plan gratuito; la tarjeta del hijo ya no dice «Aún no hay consultas registradas» ni «Última consulta» (hoy muestra su día: «Hoy no hay tomas ni actividades», o la toma por marcar con «Próxima» y «Marcar»); se quitó el enlace «+ Registrar una consulta» de la tarjeta en F (el paso 1 ya lleva ahí); vuelven «+ Agregar hijo» con «Tu plan incluye un hijo» y «Checa tus medicamentos»; la lista de abajo suma «Mi cuenta · Tus datos»; la barra lateral es la de hoy (Inicio, Mateo, + Agregar hijo, Familia, Botiquín, Personal · Mi perfil, Planes, Mi cuenta y la cuenta).</li>
+  <li><strong style="color:var(--color-ink)">«Antes de empezar» como ventana.</strong> Hoy es una tarjeta arriba del inicio que empuja todo hacia abajo (ocho párrafos). Pasa a una ventana que aparece una vez: hoja desde abajo en el teléfono y diálogo centrado de 600 px en la web, con el fondo oscurecido, el texto desplazable y «Entendido» fijo abajo como único botón, sólido. Solo se cierra con «Entendido» (es la confirmación que se guarda); el foco empieza en el título y no sale de la ventana. Si guardar falla, el aviso de error sale dentro de la ventana y no se cierra.</li>
+    </ol>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"estado":{"editor":"enum","options":["todos","A0","A","B","C","D","E","F","G"],"default":"todos","tsType":"string"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const filtro = this.props.estado ?? 'todos';
+    const IOS = [
+      { share: true, txt: 'Toca Compartir, en la barra de abajo de Safari.' },
+      { plus: true, txt: 'Desliza y toca «Agregar a pantalla de inicio».' },
+      { agregar: true, txt: 'Toca «Agregar», arriba a la derecha.' }
+    ];
+    const DEN_TEL = [
+      { n: '1', num: true, txt: 'Toca el ícono junto a la dirección del sitio.' },
+      { n: '2', num: true, txt: 'Abre «Permisos» y luego «Notificaciones».' },
+      { n: '3', num: true, txt: 'Elige «Permitir» y regresa a PediTrack.' }
+    ];
+    const DEN_WEB = [
+      { n: '1', num: true, txt: 'Haz clic en el candado junto a la dirección.' },
+      { n: '2', num: true, txt: 'Abre «Configuración del sitio».' },
+      { n: '3', num: true, txt: 'En «Notificaciones» elige «Permitir» y recarga la página.' }
+    ];
+    const blank = () => ({ num: '', title: '', desc: '', hecho: false, pend: false, bloq: false, opcional: false, hasBtn: false, solid: false, outline: false, btn: '', hasSub: false, sub: '', hasLink: false, link: '', panelIos: false, panelDen: false, items: [], hasNota: false, nota: '' });
+
+    // dev: 'android' | 'iphone' | 'chrome' | 'safari'  ·  st: estado de cada paso
+    const mk = (dev, st, extra) => {
+      const web = dev === 'chrome' || dev === 'safari';
+      const steps = [];
+      // paso 1
+      const p1 = blank();
+      p1.title = 'Registra tu primera consulta';
+      if (st.p1 === 'hecho') { p1.hecho = true; p1.desc = 'Registraste la consulta con la Dra. López.'; p1.hasLink = true; p1.link = 'Ver consulta'; }
+      else { p1.pend = true; p1.hasBtn = true; p1.btn = web ? 'Nueva consulta' : 'Tomar foto de la receta';
+        p1.desc = (web ? 'Sube una foto de la receta' : 'Toma una foto de la receta') + ' y PediTrack te ayuda a llenar los medicamentos. La lectura se hace en tu dispositivo; tú revisas y confirmas todo.'; }
+      steps.push(p1);
+      // paso 2
+      if (dev !== 'safari') {
+        const p2 = blank();
+        p2.title = web ? 'Instala PediTrack en tu computadora' : 'Instala PediTrack en tu pantalla de inicio';
+        if (st.p2 === 'hecho') { p2.hecho = true; p2.desc = web ? 'PediTrack está instalada en esta computadora.' : 'PediTrack está en tu pantalla de inicio.'; }
+        else if (dev === 'iphone') { p2.pend = true; p2.desc = 'En iPhone se hace desde Safari, en tres pasos:'; p2.panelIos = true; p2.items = IOS; p2.hasNota = true; p2.nota = 'Cuando abras PediTrack desde el ícono nuevo, este paso se marcará solo.'; }
+        else if (web) { p2.pend = true; p2.opcional = true; p2.desc = 'Se abre en su propia ventana, sin pestañas. Puedes dejarlo para después o no hacerlo.'; p2.hasBtn = true; p2.btn = 'Instalar'; }
+        else { p2.pend = true; p2.desc = 'Ábrela con un toque, como cualquier app.'; p2.hasBtn = true; p2.btn = 'Instalar'; }
+        steps.push(p2);
+      }
+      // paso 3
+      const p3 = blank();
+      p3.title = 'Activa los recordatorios';
+      if (st.p3 === 'hecho') { p3.hecho = true; p3.desc = web ? 'Los avisos están activos en este navegador.' : 'Los avisos están activos en este dispositivo.'; }
+      else if (st.p3 === 'bloq') { p3.bloq = true; p3.desc = 'En iPhone, los avisos solo funcionan con PediTrack en la pantalla de inicio. Primero haz el paso 2 y luego vuelve aquí.'; p3.hasBtn = true; p3.btn = 'Ir al paso 2'; }
+      else if (st.p3 === 'den') { p3.pend = true; p3.desc = 'Los avisos están desactivados en este navegador. Para activarlos de nuevo, cambia el permiso en los ajustes del sitio:'; p3.panelDen = true; p3.items = web ? DEN_WEB : DEN_TEL; p3.hasBtn = true; p3.btn = 'Ya los activé'; p3.hasNota = true; p3.nota = 'Si prefieres no recibirlos, la app funciona igual.'; }
+      else { p3.pend = true; p3.desc = 'Un aviso a la hora de cada toma, aunque la app esté cerrada.'; p3.hasBtn = true; p3.btn = 'Activar recordatorios'; p3.hasSub = true; p3.sub = 'Tu navegador te pedirá permiso.'; }
+      steps.push(p3);
+
+      steps.forEach((p, i) => { p.num = String(i + 1); });
+      // el único sólido: el primer paso pendiente, con botón, que no sea opcional ni esté bloqueado
+      let sol = false;
+      steps.forEach(p => { if (p.hasBtn) { if (!sol && !p.opcional && !p.bloq) { p.solid = true; sol = true; } else { p.outline = true; } } });
+
+      const todo = steps.every(p => p.hecho);
+      const g = (extra && extra.cerrada) ? 'ninguna' : (todo ? 'desp' : 'abierta');
+      const rec = st.p3 === 'hecho' ? 'Activados' : ((st.p3 === 'bloq' || st.p3 === 'den') ? 'No disponibles aquí' : 'Desactivados');
+      const otros = [];
+      if (g === 'ninguna') otros.push({ t: 'Primeros pasos', v: 'Ver guía', color: '#0e7490' });
+      otros.push({ t: 'Familia', v: 'Solo tú', color: '#04252b' }, { t: 'Planes', v: 'Plan gratuito', color: '#04252b' }, { t: 'Recordatorios', v: rec, color: '#04252b' }, { t: 'Mi cuenta', v: 'Tus datos', color: '#04252b' }, { t: 'Cerrar sesión', v: '', color: '#0e7490' });
+      return Object.assign({
+        plat: extra.plat, modal: !!extra.modal, steps,
+        gAbierta: g === 'abierta', gDesp: g === 'desp',
+        sub: (steps.length === 3 ? 'Tres' : 'Dos') + ' pasos, en el orden que quieras.',
+        otros, cols: 'repeat(' + otros.length + ',minmax(0,1fr))', toast: !!extra.toast
+      });
+    };
+
+    const P = (a, b) => ({ p1: a[0], p2: a[1], p3: a[2] });
+    const nuevo = ['pend', 'pend', 'pend'];
+    const raw = [
+      { num: 'A0', label: 'Antes de empezar', quien: 'Ventana al entrar por primera vez',
+        nota: 'El aviso deja de ser una tarjeta del inicio: es una ventana encima. En el teléfono, una hoja desde abajo; en la web, centrada. El texto se desplaza dentro y «Entendido» queda fijo abajo. No se cierra tocando fuera ni con Escape: solo con «Entendido», que guarda la confirmación como hoy. Vuelve a salir cuando cambia la versión del texto.',
+        conCita: false, trat: false,
+        t: mk('android', P(nuevo), { plat: 'Android · Chrome', modal: true }),
+        w: mk('chrome', P(nuevo), { plat: 'Computadora · Chrome', modal: true }) },
+      { num: 'A', label: 'Recién registrado', quien: 'Después de «Entendido»: los tres pasos pendientes',
+        nota: 'Al tocar «Entendido» la ventana se cierra y el inicio muestra la guía. Los pasos se pueden hacer en cualquier orden; el primero pendiente lleva el único botón sólido.',
+        conCita: false, trat: false,
+        t: mk('android', P(nuevo), { plat: 'Android · Chrome' }),
+        w: mk('chrome', P(nuevo), { plat: 'Computadora · Chrome' }) },
+      { num: 'B', label: 'Un paso hecho', quien: 'La consulta ya está registrada',
+        nota: 'El check aparece solo cuando hay una consulta guardada. El paso hecho pierde su botón y deja un enlace «Ver consulta»; el sólido pasa al siguiente. La tarjeta de Mateo es la de hoy: su día con la toma por marcar.',
+        conCita: true, trat: true,
+        t: mk('android', P(['hecho', 'pend', 'pend']), { plat: 'Android · Chrome' }),
+        w: mk('chrome', P(['hecho', 'pend', 'pend']), { plat: 'Computadora · Chrome' }) },
+      { num: 'C', label: 'iPhone en Safari, sin instalar', quien: 'Paso 3 bloqueado, paso 2 con instrucciones',
+        nota: 'En iPhone sin instalar, el 3 se bloquea con una explicación y un atajo al 2. En la computadora no hay bloqueo: la web de la derecha es un navegador que no ofrece instalar, así que la guía queda en dos pasos.',
+        conCita: false, trat: false,
+        t: mk('iphone', P(['pend', 'pend', 'bloq']), { plat: 'iPhone · Safari, sin instalar' }),
+        w: mk('safari', P(['pend', 'pend', 'pend']), { plat: 'Computadora · navegador sin instalación (Firefox, Safari)' }) },
+      { num: 'D', label: 'Permiso de avisos rechazado', quien: 'Cómo volver a activarlo desde los ajustes',
+        nota: 'Texto neutral, sin rojo ni ámbar. La app no se bloquea ni insiste: el paso sigue pendiente hasta que el permiso cambie.',
+        conCita: true, trat: true,
+        t: mk('android', P(['hecho', 'pend', 'den']), { plat: 'Android · Chrome · permiso rechazado' }),
+        w: mk('chrome', P(['hecho', 'pend', 'den']), { plat: 'Computadora · Chrome · permiso rechazado' }) },
+      { num: 'E', label: 'Todo hecho', quien: 'La guía se despide en una línea y desaparece',
+        nota: 'Una línea con check verde, sin confeti ni felicitaciones. Se oculta sola a los 8 segundos o al salir del inicio, y no vuelve a aparecer.',
+        conCita: true, trat: true,
+        t: mk('android', P(['hecho', 'hecho', 'hecho']), { plat: 'Android · app instalada' }),
+        w: mk('chrome', P(['hecho', 'hecho', 'hecho']), { plat: 'Computadora · app instalada' }) },
+      { num: 'F', label: 'La persona tocó «Ahora no»', quien: 'El inicio sin la guía y dónde reabrirla',
+        nota: 'Sin la guía, el inicio queda como siempre y la app funciona igual. Un aviso breve dice dónde reabrirla: la fila «Primeros pasos», la primera de la lista de abajo del inicio.',
+        conCita: false, trat: false,
+        t: mk('android', P(nuevo), { plat: 'Android · Chrome', cerrada: true, toast: true }),
+        w: mk('chrome', P(nuevo), { plat: 'Computadora · Chrome', cerrada: true, toast: true }) },
+      { num: 'G', label: 'Plan gratuito con consulta guardada', quien: 'Paso 1 hecho, sin empujar a pagar',
+        nota: 'Una consulta con tratamiento activo ya hizo el paso 1. La guía no habla de planes, límites ni precios; no lee el plan en ningún estado.',
+        conCita: true, trat: true,
+        t: mk('android', P(['hecho', 'pend', 'pend']), { plat: 'Android · Chrome · plan gratuito' }),
+        w: mk('chrome', P(['hecho', 'pend', 'pend']), { plat: 'Computadora · Chrome · plan gratuito' }) }
+    ];
+    const estados = raw.filter(s => filtro === 'todos' || filtro === s.num).map(s => Object.assign({ anchor: 'e' + s.num, sinTrat: !s.trat }, s));
+    return { estados };
+  }
+}
+</script>
+</body>
+</html>

@@ -47,6 +47,25 @@ type Account struct {
 	// DeletionScheduledFor is when the account will be deleted, if its owner asked for it (specs/070); nil otherwise.
 	// Filled by GetByClerkUserID.
 	DeletionScheduledFor *time.Time
+	// FirstUseGuide is the state of the first-use guide on the home (specs/071). Filled by the reads that fill
+	// DisclaimerAccepted; the zero value is "not closed, no consultation".
+	FirstUseGuide FirstUseGuide
+}
+
+// FirstUseGuide is what the server knows for the first-use guide of the home (specs/071-primer-uso-guiado).
+type FirstUseGuide struct {
+	// Dismissed is whether the account closed the guide with «Ahora no».
+	Dismissed bool
+	// FirstConsultation is the account's oldest consultation, a child's or its own; nil if it has none.
+	FirstConsultation *FirstConsultation
+}
+
+// FirstConsultation names the oldest consultation of an account: step 1 of the guide is done once one exists.
+type FirstConsultation struct {
+	ID         uuid.UUID
+	DoctorName string
+	// ChildID is nil for a consultation of the person themselves (specs/058).
+	ChildID *uuid.UUID
 }
 
 // FamilyMembership is an account's place in the family of another account.

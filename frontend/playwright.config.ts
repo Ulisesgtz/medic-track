@@ -28,6 +28,7 @@ const CROSS_BROWSER_SPECS = [
   'detalle-consulta-movil',
   'detalle-consulta-web',
   'recordatorios',
+  'primer-uso',
 ]
 for (const name of CROSS_BROWSER_SPECS) {
   // A renamed spec must not silently drop out of the cross-browser run.

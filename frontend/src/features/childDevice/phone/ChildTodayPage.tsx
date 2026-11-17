@@ -11,7 +11,7 @@ import { PHONE } from '../childText'
 import { accessGone, useActivities, useDone, useMarkDose, useMe, useOverview, useRotation } from './hooks'
 import { NoAccess } from './NoAccess'
 import { RemindersCard } from './RemindersCard'
-import { isIOS } from '../../reminders/deviceSupport'
+import { isIOS, isRunningInstalled } from '../../../shared/install'
 import { clearCredential, readCredential } from './storage'
 import { needsConnection } from '../../../shared/offline/queryView'
 import { OfflineMissing } from '../../../shared/offline/OfflineMissing'
@@ -26,15 +26,6 @@ const outline =
   'min-h-11 shrink-0 cursor-pointer rounded-[14px] border-2 border-action text-[15px] font-extrabold text-action hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60'
 const mint = 'inline-flex min-h-11 shrink-0 items-center rounded-[14px] bg-confirmed-soft font-extrabold text-confirmed-strong'
 const row = 'flex min-h-14 items-center gap-3 border-b border-hint-edge'
-
-/** True when the page runs as the app installed on the home screen (the advice to install is then not needed). */
-function isInstalled(): boolean {
-  try {
-    return window.matchMedia('(display-mode: standalone)').matches || (navigator as { standalone?: boolean }).standalone === true
-  } catch {
-    return false
-  }
-}
 
 /**
  * One dose: «Marcar», the child's own mark «✓ 16:02» (tapping it takes it back) or somebody else's «✓ por Ana, 08:05» (locked).
@@ -180,7 +171,7 @@ function Today({ credential, onRotated }: { credential: string; onRotated: (cred
         </div>
       </header>
 
-      {!isInstalled() && <p className="text-[13px] leading-relaxed text-body">{isIOS() ? PHONE.installIos : PHONE.install}</p>}
+      {!isRunningInstalled() && <p className="text-[13px] leading-relaxed text-body">{isIOS() ? PHONE.installIos : PHONE.install}</p>}
       {loading && !failed && (
         <p role="status" className="text-[16px] font-semibold text-action">
           {PHONE.loading}

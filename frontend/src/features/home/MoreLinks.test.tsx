@@ -4,7 +4,8 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useAuth } from '@clerk/react'
-import { MoreLinks } from './MoreLinks'
+import { MoreLinks as MoreLinksList } from './MoreLinks'
+import { useReminders } from '../reminders/useReminders'
 import { AccountMenu } from './AccountMenu'
 import type { Account } from './types'
 
@@ -15,6 +16,11 @@ const ana = {
   disclaimerVersion: 'v', disclaimerAccepted: true, email: 'a@example.com', countryCode: null, stateCode: null,
 } as unknown as Account
 const rosa = { ...ana, firstName: 'Rosa', lastName: 'Luna', plan: 'free', family: { role: 'caregiver', ownerAccountId: 'o', ownerName: 'Ana', plan: 'paid', readOnly: false } } as Account
+
+// The home holds one `useReminders` for «Lo demás» and the first-use guide; here the list gets its own.
+function MoreLinks(props: Omit<React.ComponentProps<typeof MoreLinksList>, 'reminders'>) {
+  return <MoreLinksList {...props} reminders={useReminders(props.account)} />
+}
 
 let signOut: ReturnType<typeof vi.fn>
 let queryClient: QueryClient
@@ -119,5 +125,36 @@ describe('AccountMenu', () => {
     await user.click(button)
     await user.click(screen.getByRole('button', { name: 'Cerrar sesión' }))
     expect(signOut).toHaveBeenCalledOnce()
+  })
+})
+
+describe('MoreLinksList with the first-use guide row (specs/071, state F)', () => {
+  const reminders = { state: 'off', busy: false, error: null, activate: vi.fn(), deactivate: vi.fn(), changeDetail: vi.fn(), recheck: vi.fn() } as unknown as Parameters<typeof MoreLinksList>[0]['reminders']
+
+  it.each(['phone', 'desktop'] as const)('%s: «Primeros pasos · Ver guía» is the first row and opens the guide again', async (variant) => {
+    const onOpen = vi.fn()
+    renderIn(<MoreLinksList account={ana} variant={variant} reminders={reminders} guideRow={{ show: true, onOpen, busy: false }} />)
+
+    const nav = screen.getByRole('navigation', { name: 'Más opciones' })
+    const row = within(nav).getByRole('button', { name: /Primeros pasos/ })
+    expect(row).toHaveTextContent('Ver guía')
+    expect(nav.firstElementChild).toBe(row)
+    expect(row.querySelector('span')?.className).toContain('text-action')
+    await userEvent.click(row)
+    expect(onOpen).toHaveBeenCalledOnce()
+  })
+
+  it('the web strip has six columns only with that row', () => {
+    const { unmount } = renderIn(<MoreLinksList account={ana} variant="desktop" reminders={reminders} guideRow={{ show: true, onOpen: vi.fn(), busy: false }} />)
+    expect(screen.getByRole('navigation', { name: 'Más opciones' })).toHaveClass('grid-cols-6')
+    unmount()
+    renderIn(<MoreLinksList account={ana} variant="desktop" reminders={reminders} guideRow={{ show: false, onOpen: vi.fn(), busy: false }} />)
+    expect(screen.getByRole('navigation', { name: 'Más opciones' })).toHaveClass('grid-cols-5')
+    expect(screen.queryByRole('button', { name: /Primeros pasos/ })).not.toBeInTheDocument()
+  })
+
+  it('the row waits while the guide is being reopened', () => {
+    renderIn(<MoreLinksList account={ana} variant="phone" reminders={reminders} guideRow={{ show: true, onOpen: vi.fn(), busy: true }} />)
+    expect(screen.getByRole('button', { name: /Primeros pasos/ })).toBeDisabled()
   })
 })

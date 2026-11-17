@@ -136,13 +136,13 @@ describe('HomePage', () => {
     }
     stubApi(account)
     const { unmount } = renderHome()
-    expect(await screen.findByRole('region', { name: 'Antes de empezar' })).toBeInTheDocument()
+    expect(await screen.findByRole('dialog', { name: 'Antes de empezar' })).toBeInTheDocument()
     unmount()
 
     stubApi({ ...account, disclaimerAccepted: true })
     renderHome()
     expect(await screen.findByText('Aún no registras a tus hijos')).toBeInTheDocument()
-    expect(screen.queryByRole('region', { name: 'Antes de empezar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('dialog', { name: 'Antes de empezar' })).not.toBeInTheDocument()
   })
 
   it('lists a card per child with name and age (FR-001)', async () => {
@@ -473,5 +473,66 @@ describe('HomePage, family (specs/032)', () => {
       </QueryClientProvider>,
     )
     expect(await screen.findByText('pantalla de la invitación')).toBeInTheDocument()
+  })
+
+  describe('the first-use guide (specs/071)', () => {
+    const guideAccount = (patch: Record<string, unknown> = {}) => ({
+      id: 'a1', firstName: 'Ana', lastName: 'Gómez', email: 'ana@example.com',
+      countryCode: null, stateCode: null, plan: 'free',
+      children: [{ id: 'k1', firstName: 'Luis', lastName: 'Gómez', birthDate: '2021-05-10', height: null, weight: null }],
+      disclaimerVersion: 'v', disclaimerAccepted: true, reminderDetail: null,
+      firstUseGuide: { dismissed: false, firstConsultation: null },
+      ...patch,
+    })
+
+    it('phone: sits between the greeting and the children, and «Ahora no» leaves the reopen row at the end', async () => {
+      const user = userEvent.setup()
+      stubApi(guideAccount())
+      renderHome()
+
+      const guide = await screen.findByRole('region', { name: 'Primeros pasos' })
+      const greeting = screen.getByText('Hola, Ana')
+      const day = await screen.findByRole('link', { name: 'Ver detalle de Luis' })
+      expect(greeting.compareDocumentPosition(guide) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(guide.compareDocumentPosition(day) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(screen.queryByRole('button', { name: /Primeros pasos/ })).not.toBeInTheDocument()
+
+      vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
+        const url = String(input)
+        return { ok: true, json: async () => (url.includes('first-use-guide') ? { dismissed: true, firstConsultation: null } : guideAccount()) } as Response
+      })
+      await user.click(within(guide).getByRole('button', { name: 'Ahora no' }))
+
+      expect(await screen.findByText(/Cerraste la guía/)).toBeInTheDocument()
+      expect(screen.queryByRole('region', { name: 'Primeros pasos' })).not.toBeInTheDocument()
+      const row = screen.getByRole('button', { name: /Primeros pasos/ })
+      expect(row).toHaveTextContent('Ver guía')
+      expect(row.closest('nav')).toHaveAccessibleName('Más opciones')
+    })
+
+    it('web: the same place, with its row making the strip of «Lo demás» six columns', async () => {
+      vi.stubGlobal('matchMedia', vi.fn().mockImplementation(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })))
+      stubApi(guideAccount({ firstUseGuide: { dismissed: true, firstConsultation: null } }))
+      renderHome()
+
+      expect(await screen.findByRole('button', { name: /Primeros pasos/ })).toBeInTheDocument()
+      expect(screen.getByRole('navigation', { name: 'Más opciones' })).toHaveClass('grid-cols-6')
+      expect(screen.queryByRole('region', { name: 'Primeros pasos' })).not.toBeInTheDocument()
+    })
+
+    it('web: an open guide shows its steps in the 224 px column layout', async () => {
+      vi.stubGlobal('matchMedia', vi.fn().mockImplementation(() => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() })))
+      stubApi(guideAccount())
+      renderHome()
+      const guide = await screen.findByRole('region', { name: 'Primeros pasos' })
+      expect(guide.querySelector('.w-56')).not.toBeNull()
+    })
+
+    it('shows nothing of it while «Antes de empezar» is waiting for its «Entendido»', async () => {
+      stubApi(guideAccount({ disclaimerAccepted: false }))
+      renderHome()
+      await screen.findByRole('dialog', { name: 'Antes de empezar' })
+      expect(screen.queryByRole('region', { name: 'Primeros pasos' })).not.toBeInTheDocument()
+    })
   })
 })

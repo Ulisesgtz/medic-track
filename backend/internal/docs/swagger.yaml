@@ -1594,6 +1594,26 @@ definitions:
         example: invalid email format
         type: string
     type: object
+  FirstConsultation:
+    properties:
+      childId:
+        example: 9a1b0000-0000-0000-0000-000000000000
+        type: string
+      doctorName:
+        example: Dra. López
+        type: string
+      id:
+        example: 3f0c0000-0000-0000-0000-000000000000
+        type: string
+    type: object
+  FirstUseGuide:
+    properties:
+      dismissed:
+        example: false
+        type: boolean
+      firstConsultation:
+        $ref: '#/definitions/FirstConsultation'
+    type: object
   FreemiumLimitResponse:
     properties:
       error:
@@ -2966,6 +2986,11 @@ definitions:
       firstName:
         example: Ana
         type: string
+      firstUseGuide:
+        allOf:
+        - $ref: '#/definitions/FirstUseGuide'
+        description: FirstUseGuide is the state of the first-use guide of the home
+          (specs/071-primer-uso-guiado).
       id:
         example: e5f6a7b8-0000-0000-0000-000000000000
         type: string
@@ -3045,6 +3070,12 @@ definitions:
       version:
         example: "2026-09-26"
         type: string
+    type: object
+  internal_account.firstUseGuideRequest:
+    properties:
+      dismissed:
+        example: true
+        type: boolean
     type: object
   internal_account.reminderSettingsRequest:
     properties:
@@ -3931,6 +3962,52 @@ paths:
       summary: Everything the PDF of a person's own history shows
       tags:
       - export
+  /accounts/{accountId}/first-use-guide:
+    put:
+      consumes:
+      - application/json
+      description: '`dismissed: true` closes the guide («Ahora no»); `false` reopens
+        it. Idempotent. Carries no health data.'
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: Whether the guide is closed
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_account.firstUseGuideRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/FirstUseGuide'
+        "400":
+          description: Malformed JSON or missing boolean dismissed
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/AccountNotFoundResponse'
+      security:
+      - ClerkSession: []
+      summary: Close or reopen the first-use guide of the home
+      tags:
+      - accounts
   /accounts/{accountId}/history-options:
     get:
       description: GET /children/{childId}/history-options over the person's own consultations;

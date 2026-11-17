@@ -1,8 +1,7 @@
-import { useCallback, useRef, useState } from 'react'
 import type { Account } from '../home/types'
 import { Notice } from '../../shared/ui/Notice'
-import type { ReminderDetail } from './api'
 import { ReminderDetailDialog } from './ReminderDetailDialog'
+import { useReminderActivation } from './useReminderActivation'
 import { useReminders, type ReminderState } from './useReminders'
 
 const outlineButton =
@@ -28,30 +27,13 @@ export function RemindersCard({ account }: { account: Account | undefined }) {
 
 /** The card with the state of a `useReminders` the caller already holds (the home's «Lo demás» reads it for its row too). */
 export function RemindersCardView({ account, reminders }: { account: Account | undefined; reminders: ReturnType<typeof useReminders> }) {
-  const { state, busy, error, activate, deactivate, changeDetail } = reminders
-  const [dialog, setDialog] = useState<'activate' | 'change' | null>(null)
-  const activateButton = useRef<HTMLButtonElement>(null)
-  const changeButton = useRef<HTMLButtonElement>(null)
-  // Stable: the dialog re-runs its focus setup when this changes identity.
-  const closeDialog = useCallback(() => setDialog(null), [])
+  const { state, busy, error, deactivate } = reminders
+  const activation = useReminderActivation(account, reminders)
+  const { dialog, activateButton, changeButton } = activation
 
   if (!account) return null
 
   const detail = account.reminderDetail
-  const childName = account.children[0]?.firstName ?? 'tu hijo'
-
-  function onActivate() {
-    // The first time for the account the tutor chooses what reminders show before anything else.
-    if (detail === null) setDialog('activate')
-    else void activate()
-  }
-
-  function onChoose(choice: ReminderDetail) {
-    const mode = dialog
-    setDialog(null)
-    if (mode === 'activate') void activate(choice)
-    else void changeDetail(choice)
-  }
 
   return (
     <section
@@ -65,7 +47,7 @@ export function RemindersCardView({ account, reminders }: { account: Account | u
       {state === 'off' && (
         <>
           <p>Te avisamos en este dispositivo a la hora de cada toma que registraste, aunque la app esté cerrada.</p>
-          <button ref={activateButton} type="button" onClick={onActivate} disabled={busy} className={outlineButton}>
+          <button ref={activateButton} type="button" onClick={activation.start} disabled={busy} className={outlineButton}>
             {busy ? 'Activando…' : 'Activar recordatorios'}
           </button>
         </>
@@ -79,7 +61,7 @@ export function RemindersCardView({ account, reminders }: { account: Account | u
             <button
               ref={changeButton}
               type="button"
-              onClick={() => setDialog('change')}
+              onClick={activation.startChange}
               disabled={busy}
               className="-my-3 inline-flex min-h-11 cursor-pointer items-center font-extrabold text-action underline underline-offset-2"
             >
@@ -103,10 +85,10 @@ export function RemindersCardView({ account, reminders }: { account: Account | u
 
       {dialog && (
         <ReminderDetailDialog
-          childName={childName}
+          childName={activation.childName}
           current={detail}
-          onChoose={onChoose}
-          onCancel={closeDialog}
+          onChoose={activation.choose}
+          onCancel={activation.cancel}
           opener={dialog === 'activate' ? activateButton : changeButton}
         />
       )}

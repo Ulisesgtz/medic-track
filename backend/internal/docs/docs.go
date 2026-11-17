@@ -1040,6 +1040,76 @@ const docTemplate = `{
                 }
             }
         },
+        "/accounts/{accountId}/first-use-guide": {
+            "put": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "` + "`" + `dismissed: true` + "`" + ` closes the guide («Ahora no»); ` + "`" + `false` + "`" + ` reopens it. Idempotent. Carries no health data.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Close or reopen the first-use guide of the home",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Whether the guide is closed",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.firstUseGuideRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/FirstUseGuide"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed JSON or missing boolean dismissed",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AccountNotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/accounts/{accountId}/history-options": {
             "get": {
                 "security": [
@@ -8869,6 +8939,35 @@ const docTemplate = `{
                 }
             }
         },
+        "FirstConsultation": {
+            "type": "object",
+            "properties": {
+                "childId": {
+                    "type": "string",
+                    "example": "9a1b0000-0000-0000-0000-000000000000"
+                },
+                "doctorName": {
+                    "type": "string",
+                    "example": "Dra. López"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "3f0c0000-0000-0000-0000-000000000000"
+                }
+            }
+        },
+        "FirstUseGuide": {
+            "type": "object",
+            "properties": {
+                "dismissed": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "firstConsultation": {
+                    "$ref": "#/definitions/FirstConsultation"
+                }
+            }
+        },
         "FreemiumLimitResponse": {
             "type": "object",
             "properties": {
@@ -10729,6 +10828,14 @@ const docTemplate = `{
                     "type": "string",
                     "example": "Ana"
                 },
+                "firstUseGuide": {
+                    "description": "FirstUseGuide is the state of the first-use guide of the home (specs/071-primer-uso-guiado).",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/FirstUseGuide"
+                        }
+                    ]
+                },
                 "id": {
                     "type": "string",
                     "example": "e5f6a7b8-0000-0000-0000-000000000000"
@@ -10834,6 +10941,15 @@ const docTemplate = `{
                 "version": {
                     "type": "string",
                     "example": "2026-09-26"
+                }
+            }
+        },
+        "internal_account.firstUseGuideRequest": {
+            "type": "object",
+            "properties": {
+                "dismissed": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
