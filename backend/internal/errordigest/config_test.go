@@ -9,7 +9,7 @@ import (
 
 func setEnv(t *testing.T, values map[string]string) {
 	t.Helper()
-	for _, name := range []string{"RESEND_API_KEY", "ERROR_DIGEST_TO", "ERROR_DIGEST_FROM", "ERROR_DIGEST_WEEKDAY", "ERROR_DIGEST_HOUR", "APP_ENV_LABEL"} {
+	for _, name := range []string{"RESEND_API_KEY", "ERROR_DIGEST_TO", "ERROR_DIGEST_FROM", "ERROR_DIGEST_WEEKDAY", "ERROR_DIGEST_HOUR", "APP_ENV_LABEL", "BACKUPS_ENABLED"} {
 		t.Setenv(name, values[name])
 	}
 }
@@ -31,11 +31,12 @@ func TestConfigFromEnv_ReadsEveryVariableAndTrimsThem(t *testing.T) {
 		"ERROR_DIGEST_WEEKDAY": " 5 ",
 		"ERROR_DIGEST_HOUR":    "0",
 		"APP_ENV_LABEL":        " DEV ",
+		"BACKUPS_ENABLED":      " TRUE ",
 	})
 
 	got := ConfigFromEnv()
 
-	require.Equal(t, Config{APIKey: "re_secret", To: "ops@example.com", From: "Alerts <a@example.com>", Weekday: 5, Hour: 0, EnvLabel: "DEV"}, got)
+	require.Equal(t, Config{APIKey: "re_secret", To: "ops@example.com", From: "Alerts <a@example.com>", Weekday: 5, Hour: 0, EnvLabel: "DEV", Backups: true}, got)
 	require.True(t, got.Available())
 }
 
@@ -50,6 +51,13 @@ func TestConfigFromEnv_InvalidWeekdayAndHourGoBackToTheirDefaults(t *testing.T) 
 	got := ConfigFromEnv()
 	require.Equal(t, 7, got.Weekday)
 	require.Equal(t, 23, got.Hour)
+}
+
+func TestConfigFromEnv_BackupsOnlyWithTrue(t *testing.T) {
+	for _, v := range []string{"", "false", "1", "yes", "no"} {
+		setEnv(t, map[string]string{"BACKUPS_ENABLED": v})
+		require.False(t, ConfigFromEnv().Backups, v)
+	}
 }
 
 func TestConfig_AvailableNeedsKeyRecipientAndSender(t *testing.T) {

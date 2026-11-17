@@ -36,10 +36,13 @@ type Config struct {
 	Hour    int
 	// EnvLabel names the environment in the subject ("DEV"); empty leaves it out.
 	EnvLabel string
+	// Backups turns on the digest's backups line (specs/069). Off until the backup service exists: without it the line would
+	// only ever say there are no backups, and the API reads nothing of backup_runs (migration 0036 is not needed).
+	Backups bool
 }
 
-// ConfigFromEnv reads RESEND_API_KEY, ERROR_DIGEST_TO, ERROR_DIGEST_FROM, ERROR_DIGEST_WEEKDAY, ERROR_DIGEST_HOUR and
-// APP_ENV_LABEL. Everything but the key has a default; an invalid day or hour goes back to its default instead of stopping
+// ConfigFromEnv reads RESEND_API_KEY, ERROR_DIGEST_TO, ERROR_DIGEST_FROM, ERROR_DIGEST_WEEKDAY, ERROR_DIGEST_HOUR,
+// APP_ENV_LABEL and BACKUPS_ENABLED (only "true" turns it on). Everything but the key has a default; an invalid day or hour goes back to its default instead of stopping
 // the service.
 func ConfigFromEnv() Config {
 	return Config{
@@ -49,6 +52,7 @@ func ConfigFromEnv() Config {
 		Weekday:  intInRange(os.Getenv("ERROR_DIGEST_WEEKDAY"), 1, 7, DefaultWeekday),
 		Hour:     intInRange(os.Getenv("ERROR_DIGEST_HOUR"), 0, 23, DefaultHour),
 		EnvLabel: strings.TrimSpace(os.Getenv("APP_ENV_LABEL")),
+		Backups:  strings.EqualFold(strings.TrimSpace(os.Getenv("BACKUPS_ENABLED")), "true"),
 	}
 }
 

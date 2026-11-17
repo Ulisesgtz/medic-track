@@ -60,6 +60,8 @@ type Digest struct {
 	// PreviousTotal is the number of errors of the week before; meaningful only if HasComparison.
 	PreviousTotal int
 	HasComparison bool
+	// Backups is the backups' line (specs/069); nil without a BackupStatus.
+	Backups *Backups
 }
 
 // Total is every error of the week, requests and processes.
@@ -251,6 +253,9 @@ func Render(d Digest, envLabel string) (subject, text string) {
 	}
 	fmt.Fprintf(&b, "- Peticiones: %d\n", d.Requests.Total)
 	fmt.Fprintf(&b, "- Procesos en segundo plano: %d\n", d.Jobs.Total)
+	if d.Backups != nil {
+		fmt.Fprintf(&b, "- %s\n", d.Backups.Line())
+	}
 
 	if d.Total() == 0 {
 		b.WriteString("\nNo hubo errores esta semana.\n")
