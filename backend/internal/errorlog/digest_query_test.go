@@ -13,7 +13,7 @@ import (
 // specs/039-digest-semanal-errores: what the weekly digest needs from the log. Same rule as query_test.go: every test writes
 // under an endpoint of its own.
 
-func TestFilter_ExcludeEndpointPrefixLeavesOutOnlyThatPrefix(t *testing.T) {
+func TestFilter_ExcludeEndpointPrefixesLeavesOutOnlyThatPrefix(t *testing.T) {
 	pool := testPool(t)
 	repo := errorlog.NewRepository(pool)
 	ep := marker(t)
@@ -22,9 +22,9 @@ func TestFilter_ExcludeEndpointPrefixLeavesOutOnlyThatPrefix(t *testing.T) {
 	insertAt(t, pool, ep+"/jobx", "not a process: the underscore is literal", nil, nil, base)
 
 	got, _, err := repo.List(context.Background(), errorlog.Filter{
-		EndpointPrefix:        ep,
-		ExcludeEndpointPrefix: ep + "/job_",
-		Limit:                 10,
+		EndpointPrefix:          ep,
+		ExcludeEndpointPrefixes: []string{ep + "/job_"},
+		Limit:                   10,
 	})
 
 	require.NoError(t, err)
@@ -43,14 +43,33 @@ func TestFilter_ExcludeEndpointPrefixSeparatesJobsFromRequests(t *testing.T) {
 	insertAt(t, pool, "job:"+ep, "process", nil, nil, base)
 
 	// Both are read through a period no other test writes to would be fragile; the markers do the narrowing instead.
-	requests, err := repo.Summary(context.Background(), errorlog.Filter{Endpoint: ep, ExcludeEndpointPrefix: "job:"})
+	requests, err := repo.Summary(context.Background(), errorlog.Filter{Endpoint: ep, ExcludeEndpointPrefixes: []string{"job:"}})
 	require.NoError(t, err)
 	require.Len(t, requests, 1)
 	require.Equal(t, "request", requests[0].Message)
 
-	processes, err := repo.Summary(context.Background(), errorlog.Filter{Endpoint: "job:" + ep, ExcludeEndpointPrefix: "job:"})
+	processes, err := repo.Summary(context.Background(), errorlog.Filter{Endpoint: "job:" + ep, ExcludeEndpointPrefixes: []string{"job:"}})
 	require.NoError(t, err)
 	require.Empty(t, processes, "excluding the prefix leaves out a job even when asked for it by name")
+}
+
+func TestFilter_ExcludeEndpointPrefixesTwoAtOnce(t *testing.T) {
+	pool := testPool(t)
+	repo := errorlog.NewRepository(pool)
+	ep := marker(t)
+	insertAt(t, pool, ep+"/request", "request", intPtr(500), nil, base)
+	insertAt(t, pool, ep+"/job_x", "process", nil, nil, base)
+	insertAt(t, pool, ep+"/client_x", "browser", nil, nil, base)
+
+	got, _, err := repo.List(context.Background(), errorlog.Filter{
+		EndpointPrefix:          ep,
+		ExcludeEndpointPrefixes: []string{ep + "/job_", "", ep + "/client_"},
+		Limit:                   10,
+	})
+
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	require.Equal(t, "request", got[0].Message)
 }
 
 func TestStats_CountsEntriesGroupsAndDistinctAccounts(t *testing.T) {

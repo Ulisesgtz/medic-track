@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { UpdateNotice } from '../../shared/appVersion/UpdateNotice'
 import { MarkNotice } from '../../shared/marks/MarkNotice'
 import { OfflineBanner } from '../../shared/offline/OfflineBanner'
+import { RenderErrorBoundary } from '../../shared/errorScreen/RenderErrorBoundary'
 import { PullIndicator } from '../../shared/pullToRefresh/PullIndicator'
 import { usePullToRefresh } from '../../shared/pullToRefresh/usePullToRefresh'
 import { useIsDesktop } from '../../shared/ui/useIsDesktop'
@@ -43,7 +44,10 @@ export function AppShell({ activeChildId, children }: AppShellProps) {
       </div>
       <div className={sidebar ? 'flex min-h-screen' : undefined}>
         {sidebar && <ChildrenSidebar activeChildId={activeChildId} />}
-        <div className={sidebar ? 'min-w-0 flex-1' : undefined}>{children}</div>
+        {/* specs/072: a screen that breaks shows the error screen here (A) while the sidebar stays. */}
+        <div className={sidebar ? 'min-w-0 flex-1' : undefined}>
+          <RenderErrorBoundary frame="shell">{children}</RenderErrorBoundary>
+        </div>
       </div>
       {!isDesktop && <PullIndicator state={pull} />}
       <MarkNotice />

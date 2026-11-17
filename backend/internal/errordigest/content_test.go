@@ -14,13 +14,13 @@ import (
 )
 
 // fakeSource answers Build's questions from fixed data, telling the four filters it uses apart: the whole week, its requests
-// (ExcludeEndpointPrefix), its processes (EndpointPrefix) and the week before (a period that ends before the week starts).
+// (ExcludeEndpointPrefixes), its processes (EndpointPrefix) and the week before (a period that ends before the week starts).
 type fakeSource struct {
 	weekStart time.Time
 
-	all, requests, jobs, previous errorlog.Stats
-	requestRows, jobRows          []errorlog.SummaryRow
-	oldest                        *time.Time
+	all, requests, jobs, clients, previous errorlog.Stats
+	requestRows, jobRows, clientRows       []errorlog.SummaryRow
+	oldest                                 *time.Time
 
 	err         error
 	summaryCall int
@@ -33,8 +33,10 @@ func (f *fakeSource) Stats(_ context.Context, flt errorlog.Filter) (errorlog.Sta
 	switch {
 	case flt.Until.Before(f.weekStart):
 		return f.previous, nil
-	case flt.ExcludeEndpointPrefix != "":
+	case len(flt.ExcludeEndpointPrefixes) > 0:
 		return f.requests, nil
+	case flt.EndpointPrefix == "client:":
+		return f.clients, nil
 	case flt.EndpointPrefix != "":
 		return f.jobs, nil
 	default:
@@ -47,8 +49,11 @@ func (f *fakeSource) Summary(_ context.Context, flt errorlog.Filter) ([]errorlog
 	if f.err != nil {
 		return nil, f.err
 	}
-	if flt.ExcludeEndpointPrefix != "" {
+	if len(flt.ExcludeEndpointPrefixes) > 0 {
 		return f.requestRows, nil
+	}
+	if flt.EndpointPrefix == "client:" {
+		return f.clientRows, nil
 	}
 	return f.jobRows, nil
 }
@@ -353,4 +358,51 @@ func TestBuild_ThePaymentsProcessAppearsAmongTheBackgroundProcesses(t *testing.T
 	require.Contains(t, body, "job:payments")
 	require.Contains(t, body, "payment webhook could not be verified")
 	require.NotContains(t, body, "@")
+}
+
+// specs/072: the reports of phones and browsers (`client:`) are their own section and never fall in «Peticiones».
+func TestBuild_ClientErrorsAreTheirOwnSectionAndRequestsExcludeThem(t *testing.T) {
+	src := newFake()
+	src.all = errorlog.Stats{Entries: 7, Groups: 3}
+	src.requests = errorlog.Stats{Entries: 4, Groups: 1}
+	src.clients = errorlog.Stats{Entries: 3, Groups: 2}
+	src.requestRows = []errorlog.SummaryRow{row("/accounts/me", statusPtr(404), "Account not found", 4, now, now)}
+	src.clientRows = []errorlog.SummaryRow{
+		row("client:/hijo/hoy", nil, "render · boom · safari/ios · v1", 2, now.Add(-time.Hour), now),
+		row("client:other", nil, "error · x · chrome/android · v1", 1, now, now),
+	}
+
+	d, err := Build(context.Background(), src, now, 90)
+
+	require.NoError(t, err)
+	require.Equal(t, 7, d.Total())
+	require.Equal(t, 3, d.Clients.Total)
+	require.Len(t, d.Clients.Groups, 2)
+	require.Equal(t, "client:/hijo/hoy", d.Clients.Groups[0].Endpoint)
+	require.Len(t, d.Requests.Groups, 1)
+	require.Equal(t, 3, d.Groups)
+
+	_, text := Render(d, "DEV")
+	require.Contains(t, text, "\nERRORES EN LOS TELÉFONOS Y NAVEGADORES\n")
+	require.Contains(t, text, " 1. 2 × client:/hijo/hoy — render · boom · safari/ios · v1")
+	require.Less(t, strings.Index(text, "PETICIONES"), strings.Index(text, "ERRORES EN LOS TELÉFONOS"))
+	require.NotContains(t, text, "No hubo errores")
+}
+
+func TestRender_OnlyClientErrorsIsNotAQuietWeekAndCleansTheMessage(t *testing.T) {
+	d := Digest{Since: now.Add(-7 * 24 * time.Hour), Until: now, Groups: 1,
+		Clients: Section{Total: 1, Groups: []Group{{Endpoint: "client:other", Message: "fail ana@example.com", Count: 1}}}}
+
+	_, text := Render(d, "")
+
+	require.NotContains(t, text, "No hubo errores")
+	require.Contains(t, text, "ERRORES EN LOS TELÉFONOS")
+	require.NotContains(t, text, "PETICIONES")
+}
+
+func TestBuild_ClientsSectionFailureIsReturned(t *testing.T) {
+	src := newFake()
+	src.err = errors.New("db down")
+	_, err := Build(context.Background(), src, now, 90)
+	require.Error(t, err)
 }

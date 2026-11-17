@@ -4,6 +4,8 @@ import viteConfig from './vite.config.ts'
 export default mergeConfig(
   viteConfig,
   defineConfig({
+    // specs/072: a test reads the table of cleaning cases that the backend shares (specs/…/contracts/clean-cases.json).
+    server: { fs: { allow: ['..'] } },
     test: {
       environment: 'jsdom',
       globals: true,

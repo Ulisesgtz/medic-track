@@ -21,10 +21,12 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childprofile"
+	"github.com/Ulisesgtz/medic-track/backend/internal/clienterror"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/dataexport"
 	"github.com/Ulisesgtz/medic-track/backend/internal/family"
 	"github.com/Ulisesgtz/medic-track/backend/internal/growth"
+	"github.com/Ulisesgtz/medic-track/backend/internal/health"
 	"github.com/Ulisesgtz/medic-track/backend/internal/historyexport"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ops"
@@ -68,6 +70,13 @@ type Deps struct {
 	// Payments: the subscription of the full plan (specs/045). Nil = the charge is not available in this environment: none of its routes
 	// (including the provider's public notice) is registered.
 	Payments *payments.Handler
+	// Health: GET/HEAD /healthz for Railway and the external monitor (specs/072). It is registered in the root router
+	// (NewHandler), outside the request limit, the console log and CORS. Nil = not registered.
+	Health *health.Handler
+	// ClientErrors: POST /client-errors, the app's own error reports (specs/072). Public, with a per-address limit of its
+	// own (ClientErrorsLimit, nil = none). Nil handler = the route is not registered (CLIENT_ERRORS_PER_MINUTE=0).
+	ClientErrors      *clienterror.Handler
+	ClientErrorsLimit func(http.Handler) http.Handler
 	// Ops and OpsKey: the read-only queries over error_logs for the team that runs the service (specs/021). Without
 	// both the routes are not registered at all: there is no open door by default.
 	Ops    *ops.Handler
@@ -84,6 +93,19 @@ type Deps struct {
 	// RequireSession verifies the Clerk session (authmw.RequireSession in
 	// production; tests inject one that verifies against a local key).
 	RequireSession func(http.Handler) http.Handler
+}
+
+// NewHandler is the root router of the server: what is registered here (today /healthz) goes BEFORE everything else and
+// skips the API's console log, CORS and request limit — a monitor asking every minute must not fill the log, be limited
+// or need an origin. It returns the *chi.Mux so cmd/api can add Swagger to it. Everything else is NewRouter's, mounted at "/" (specs/072, research R1).
+func NewHandler(d Deps) *chi.Mux {
+	root := chi.NewRouter()
+	if d.Health != nil {
+		root.Get("/healthz", d.Health.Health)
+		root.Head("/healthz", d.Health.Health)
+	}
+	root.Mount("/", NewRouter(d))
+	return root
 }
 
 // NewRouter registers every route. Only the catalog is public; everything
@@ -114,6 +136,16 @@ func NewRouter(d Deps) *chi.Mux {
 	r.Get("/catalog/countries/{countryCode}/states", d.Catalog.ListStates)
 	r.Get("/catalog/symptoms", d.Catalog.ListSymptoms)
 	r.Get("/catalog/vaccines", d.Catalog.ListVaccines)
+
+	// The app reports its own errors here (specs/072): public, under the general limit and a limit of its own that nothing
+	// else shares (a flood of reports must never use up "Tomada" or the invitations). Every rejection is unlogged.
+	if d.ClientErrors != nil {
+		limit := func(next http.Handler) http.Handler { return next }
+		if d.ClientErrorsLimit != nil {
+			limit = d.ClientErrorsLimit
+		}
+		r.With(limit).Post("/client-errors", d.ClientErrors.Submit)
+	}
 
 	// Operation queries: not for parents, so no Clerk session — a single key held by the server (ops.RequireKey), and
 	// only if the server has one. A wrong key gets the same 404 as any unknown route.

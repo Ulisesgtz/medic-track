@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Ulisesgtz/medic-track/backend/internal/clienterror"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/jobreport"
 	"github.com/Ulisesgtz/medic-track/backend/internal/mailer"
@@ -53,6 +54,8 @@ type Digest struct {
 	Since, Until time.Time
 	Requests     Section
 	Jobs         Section
+	// Clients: what the app reported from phones and browsers (`client:` rows, specs/072).
+	Clients Section
 	// Accounts is how many distinct accounts the week's errors came from: only the number, never which ones.
 	Accounts int
 	// Groups is the number of different errors of the week, both sections together.
@@ -65,7 +68,7 @@ type Digest struct {
 }
 
 // Total is every error of the week, requests and processes.
-func (d Digest) Total() int { return d.Requests.Total + d.Jobs.Total }
+func (d Digest) Total() int { return d.Requests.Total + d.Jobs.Total + d.Clients.Total }
 
 // Build reads the week that ends at `now` and the one before it. The comparison with the previous week is offered only if the
 // retention covers it and there is data to compare with: the previous week had errors, or the log is older than its start (so
@@ -74,9 +77,11 @@ func Build(ctx context.Context, src Source, now time.Time, retentionDays int) (D
 	since, until, previousSince := Window(now)
 	week := errorlog.Filter{Since: since, Until: until}
 	requests := week
-	requests.ExcludeEndpointPrefix = jobreport.EndpointPrefix
+	requests.ExcludeEndpointPrefixes = []string{jobreport.EndpointPrefix, clienterror.EndpointPrefix}
 	jobs := week
 	jobs.EndpointPrefix = jobreport.EndpointPrefix
+	clients := week
+	clients.EndpointPrefix = clienterror.EndpointPrefix
 	// The previous week ends where this one begins; the upper bound of a filter is inclusive, so step back one microsecond
 	// (the resolution of the database) to not count an entry that sits exactly on the boundary twice.
 	previous := errorlog.Filter{Since: previousSince, Until: since.Add(-time.Microsecond)}
@@ -96,7 +101,10 @@ func Build(ctx context.Context, src Source, now time.Time, retentionDays int) (D
 	if d.Jobs, err = section(ctx, src, jobs); err != nil {
 		return Digest{}, err
 	}
-	d.Groups = d.Requests.MoreGroups + len(d.Requests.Groups) + d.Jobs.MoreGroups + len(d.Jobs.Groups)
+	if d.Clients, err = section(ctx, src, clients); err != nil {
+		return Digest{}, err
+	}
+	d.Groups = d.Requests.MoreGroups + len(d.Requests.Groups) + d.Jobs.MoreGroups + len(d.Jobs.Groups) + d.Clients.MoreGroups + len(d.Clients.Groups)
 
 	if retentionDays >= comparisonRetentionDays {
 		prev, err := src.Stats(ctx, previous)
@@ -262,6 +270,7 @@ func Render(d Digest, envLabel string) (subject, text string) {
 	} else {
 		writeSection(&b, "PETICIONES", d.Requests)
 		writeSection(&b, "PROCESOS EN SEGUNDO PLANO", d.Jobs)
+		writeSection(&b, "ERRORES EN LOS TELÉFONOS Y NAVEGADORES", d.Clients)
 	}
 	b.WriteString("\n" + footer + "\n")
 	return subject, b.String()

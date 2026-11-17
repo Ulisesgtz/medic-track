@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
 	"time"
 
 	clerk "github.com/clerk/clerk-sdk-go/v2"
@@ -334,6 +336,29 @@ func clerkTransient(status int) bool {
 		status == http.StatusServiceUnavailable || status == http.StatusGatewayTimeout
 }
 
+// clerkRetryable says whether a failed call to Clerk is worth asking again: Clerk overloaded (clerkTransient) or the
+// client's own time limit / a network error. Never when the REQUEST's context ended (the caller left or its deadline
+// passed): then there is nobody to answer.
+func clerkRetryable(ctx context.Context, err error) bool {
+	if err == nil || ctx.Err() != nil {
+		return false
+	}
+	var apiErr *clerk.APIErrorResponse
+	if errors.As(err, &apiErr) {
+		return clerkTransient(apiErr.HTTPStatusCode)
+	}
+	var netErr net.Error
+	var urlErr *url.Error
+	return errors.As(err, &netErr) || errors.As(err, &urlErr) || errors.Is(err, context.DeadlineExceeded)
+}
+
+// ConfigureClerk sets the secret key and a Backend API client with a longer time limit than the SDK's 5 s, which Clerk's
+// dev instance exceeds under load (the signup then failed with a 500). The key is set first: NewBackend copies it.
+func ConfigureClerk(secretKey string, timeout time.Duration) {
+	clerk.SetKey(secretKey)
+	clerk.SetBackend(clerk.NewBackend(&clerk.BackendConfig{HTTPClient: &http.Client{Timeout: timeout}}))
+}
+
 // clerkRateLimitWaits are the waits before asking Clerk again after a 429 or a 502/503/504 (a variable so tests can shorten them).
 var clerkRateLimitWaits = []time.Duration{500 * time.Millisecond, 1500 * time.Millisecond, 3 * time.Second}
 
@@ -346,11 +371,10 @@ var clerkRateLimitWaits = []time.Duration{500 * time.Millisecond, 1500 * time.Mi
 // one the tutor has proven to control.
 func clerkPrimaryEmail(ctx context.Context, clerkUserID string) (string, error) {
 	clerkUser, err := clerkuser.Get(ctx, clerkUserID)
-	// Clerk limits the requests of an instance (429): a burst of signups must not end in a 500, so it is asked again a few
-	// times with growing waits (clerkRateLimitWaits), and only for that answer.
+	// Clerk limits the requests of an instance (429) and sometimes answers slowly: a burst of signups must not end in a 500,
+	// so it is asked again a few times with growing waits (clerkRateLimitWaits), and only for those answers (see clerkRetryable).
 	for _, wait := range clerkRateLimitWaits {
-		var apiErr *clerk.APIErrorResponse
-		if err == nil || !errors.As(err, &apiErr) || !clerkTransient(apiErr.HTTPStatusCode) {
+		if !clerkRetryable(ctx, err) {
 			break
 		}
 		select {

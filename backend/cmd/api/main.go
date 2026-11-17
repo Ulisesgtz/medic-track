@@ -31,7 +31,6 @@ import (
 	"syscall"
 	"time"
 
-	clerk "github.com/clerk/clerk-sdk-go/v2"
 	"github.com/google/uuid"
 	httpSwagger "github.com/swaggo/http-swagger/v2"
 
@@ -45,6 +44,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childprofile"
+	"github.com/Ulisesgtz/medic-track/backend/internal/clienterror"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/dataexport"
 	_ "github.com/Ulisesgtz/medic-track/backend/internal/docs"
@@ -52,6 +52,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/family"
 	"github.com/Ulisesgtz/medic-track/backend/internal/growth"
+	"github.com/Ulisesgtz/medic-track/backend/internal/health"
 	"github.com/Ulisesgtz/medic-track/backend/internal/historyexport"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/jobreport"
@@ -77,7 +78,8 @@ func main() {
 	if clerkSecretKey == "" {
 		log.Fatal("CLERK_SECRET_KEY is not set")
 	}
-	clerk.SetKey(clerkSecretKey)
+	// 10 s instead of the SDK's 5 s: Clerk's dev instance answers slower than that under load (signups failed with 500).
+	account.ConfigureClerk(clerkSecretKey, 10*time.Second)
 
 	pool, err := platform.NewPostgresPool(ctx)
 	if err != nil {
@@ -268,33 +270,49 @@ func main() {
 		strictMW = ratelimit.Middleware(ratelimit.New(strictLimit, time.Minute), responder, proxyHops)
 	}
 
-	r := server.NewRouter(server.Deps{
-		RateLimit:       generalMW,
-		StrictRateLimit: strictMW,
-		Responder:       responder,
-		Catalog:         catalogHandler,
-		Account:         accountHandler,
-		Consultation:    consultationHandler,
-		Reminder:        reminderHandler,
-		Family:          familyHandler,
-		Supplement:      supplementHandler,
-		ChildDevice:     childDeviceHandler,
-		Appointment:     appointmentHandler,
-		Vaccination:     vaccinationHandler,
-		Cabinet:         cabinet.NewHandler(cabinet.NewService(cabinet.NewRepository(pool)), responder),
-		Growth:          growthHandler,
-		ChildProfile:    childProfileHandler,
-		HistoryExport:   historyExportHandler,
-		AccountDeletion: accountdeletion.NewHandler(deletionService, responder),
-		DeletionRepo:    deletionRepo,
-		DataExport:      dataexport.NewHandler(responder, pool, dataexport.NewFamilyOwnerResolver(pool)),
-		Payments:        paymentsHandler,
-		Ops:             opsHandler,
-		OpsKey:          opsKey,
-		Ownership:       ownership.NewRepository(pool),
-		Access:          access.NewRepository(pool),
-		FrontendOrigin:  frontendOrigin,
-		RequireSession:  authmw.RequireSession(responder, authmw.PartyOptions(os.Getenv("CLERK_AUTHORIZED_PARTIES"))...),
+	// The app's own error reports (specs/072): a limit of its own, apart from the strict one, so a flood of them never blocks
+	// "Tomada" or the invitations. CLIENT_ERRORS_PER_MINUTE=0 does not register the route at all.
+	var clientErrorsHandler *clienterror.Handler
+	var clientErrorsMW func(http.Handler) http.Handler
+	if perMinute := envInt("CLIENT_ERRORS_PER_MINUTE", 10); perMinute > 0 {
+		clientErrorsHandler = clienterror.NewHandler(responder, errorLogRepo)
+		clientErrorsMW = ratelimit.Middleware(ratelimit.New(perMinute, time.Minute), responder, proxyHops)
+	}
+
+	// /healthz: Railway's check and the external monitor's (specs/072).
+	healthHandler := health.NewHandler(responder, health.NewChecker(pool, os.Getenv("RAILWAY_GIT_COMMIT_SHA")))
+
+	// The root router puts /healthz before the API's own (no console log, CORS or limit) and mounts the API at "/".
+	r := server.NewHandler(server.Deps{
+		Health:            healthHandler,
+		ClientErrors:      clientErrorsHandler,
+		ClientErrorsLimit: clientErrorsMW,
+		RateLimit:         generalMW,
+		StrictRateLimit:   strictMW,
+		Responder:         responder,
+		Catalog:           catalogHandler,
+		Account:           accountHandler,
+		Consultation:      consultationHandler,
+		Reminder:          reminderHandler,
+		Family:            familyHandler,
+		Supplement:        supplementHandler,
+		ChildDevice:       childDeviceHandler,
+		Appointment:       appointmentHandler,
+		Vaccination:       vaccinationHandler,
+		Cabinet:           cabinet.NewHandler(cabinet.NewService(cabinet.NewRepository(pool)), responder),
+		Growth:            growthHandler,
+		ChildProfile:      childProfileHandler,
+		HistoryExport:     historyExportHandler,
+		AccountDeletion:   accountdeletion.NewHandler(deletionService, responder),
+		DeletionRepo:      deletionRepo,
+		DataExport:        dataexport.NewHandler(responder, pool, dataexport.NewFamilyOwnerResolver(pool)),
+		Payments:          paymentsHandler,
+		Ops:               opsHandler,
+		OpsKey:            opsKey,
+		Ownership:         ownership.NewRepository(pool),
+		Access:            access.NewRepository(pool),
+		FrontendOrigin:    frontendOrigin,
+		RequireSession:    authmw.RequireSession(responder, authmw.PartyOptions(os.Getenv("CLERK_AUTHORIZED_PARTIES"))...),
 	})
 
 	// Swagger UI, generated from the @swag annotations on the handlers below

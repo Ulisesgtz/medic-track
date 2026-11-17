@@ -1,0 +1,150 @@
+{
+  "_nota": "Tabla compartida de la limpieza del mensaje (research R5). Orden: controles a espacio y espacios colapsados, [correo], [id], [token], [url], comillas (ASCII, ‘…’, “…”, «…», ‹…›), [n], recorte a 200 caracteres con «…». Misma tabla en frontend/src/shared/clientErrors/clean.test.ts y backend/internal/clienterror/clean_test.go.",
+  "cases": [
+    {
+      "name": "correo",
+      "input": "No se pudo enviar a ana@example.com ahora",
+      "want": "No se pudo enviar a [correo] ahora"
+    },
+    {
+      "name": "correo antes que dígitos",
+      "input": "user 1234@x.com",
+      "want": "user [correo]"
+    },
+    {
+      "name": "uuid",
+      "input": "child 3e34a679-9b24-4c1d-8a5e-0123456789ab not found",
+      "want": "child [id] not found"
+    },
+    {
+      "name": "token con dígitos",
+      "input": "Bearer abcDEF0123456789abcDEF0123456789xyz",
+      "want": "Bearer [token]"
+    },
+    {
+      "name": "racha larga solo de letras se conserva",
+      "input": "Antidisestablishmentarianismandotherlongwordsxx",
+      "want": "Antidisestablishmentarianismandotherlongwordsxx"
+    },
+    {
+      "name": "url",
+      "input": "Failed to fetch https://api.pedi-track.com/children/abc?x=1",
+      "want": "Failed to fetch [url]"
+    },
+    {
+      "name": "url con pila",
+      "input": "TypeError: Cannot read properties of undefined (reading 'doses') at https://dev.pedi-track.com/assets/index-3e34a6799b24.js:1:2345",
+      "want": "TypeError: Cannot read properties of undefined (reading 'doses') at [url]"
+    },
+    {
+      "name": "4 o más dígitos",
+      "input": "folio 12345 y tel 5512345678, año 2026, cantidad 123",
+      "want": "folio [n] y tel [n], año [n], cantidad 123"
+    },
+    {
+      "name": "identificador entre comillas simples",
+      "input": "Cannot read properties of undefined (reading 'doses')",
+      "want": "Cannot read properties of undefined (reading 'doses')"
+    },
+    {
+      "name": "identificador con punto, guion bajo y signo de pesos",
+      "input": "reading 'a.b_c$1'",
+      "want": "reading 'a.b_c$1'"
+    },
+    {
+      "name": "otro texto entre comillas simples",
+      "input": "Unexpected token 'Ana López'",
+      "want": "Unexpected token [texto]"
+    },
+    {
+      "name": "otro texto entre comillas dobles",
+      "input": "Unexpected \"Ana López\" here",
+      "want": "Unexpected [texto] here"
+    },
+    {
+      "name": "otro texto entre comillas francesas invertidas",
+      "input": "got `Ana López` here",
+      "want": "got [texto] here"
+    },
+    {
+      "name": "comillas tipográficas dobles con otro texto",
+      "input": "No se encontró “Ana López”",
+      "want": "No se encontró [texto]"
+    },
+    {
+      "name": "comillas tipográficas simples con un identificador se conservan",
+      "input": "Cannot read properties of undefined (reading ‘doses’)",
+      "want": "Cannot read properties of undefined (reading ‘doses’)"
+    },
+    {
+      "name": "comillas tipográficas simples con otro texto",
+      "input": "Unexpected token ‘Ana López’",
+      "want": "Unexpected token [texto]"
+    },
+    {
+      "name": "comillas francesas con otro texto",
+      "input": "No se encontró «Ana López» aquí",
+      "want": "No se encontró [texto] aquí"
+    },
+    {
+      "name": "comillas francesas con un identificador se conservan",
+      "input": "No existe «doses»",
+      "want": "No existe «doses»"
+    },
+    {
+      "name": "comillas angulares simples con otro texto",
+      "input": "Falta ‹Ana López› hoy",
+      "want": "Falta [texto] hoy"
+    },
+    {
+      "name": "comillas tipográficas dobles vacías",
+      "input": "got “”",
+      "want": "got [texto]"
+    },
+    {
+      "name": "identificador demasiado largo (42)",
+      "input": "reading 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'",
+      "want": "reading [texto]"
+    },
+    {
+      "name": "identificador de 41 caracteres se conserva",
+      "input": "reading 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'",
+      "want": "reading 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'"
+    },
+    {
+      "name": "no empieza con letra",
+      "input": "reading '1abc'",
+      "want": "reading [texto]"
+    },
+    {
+      "name": "comillas vacías",
+      "input": "got ''",
+      "want": "got [texto]"
+    },
+    {
+      "name": "controles y espacios",
+      "input": "line1\nline2\u0000\tend",
+      "want": "line1 line2 end"
+    },
+    {
+      "name": "espacios repetidos",
+      "input": "  a   b  ",
+      "want": "a b"
+    },
+    {
+      "name": "200 caracteres exactos se conservan",
+      "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "want": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "name": "recorte a 200 con puntos suspensivos",
+      "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "want": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa…"
+    },
+    {
+      "name": "recorte cuenta caracteres, no bytes",
+      "input": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb😀😀😀",
+      "want": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb😀…"
+    }
+  ]
+}

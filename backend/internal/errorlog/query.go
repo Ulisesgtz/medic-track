@@ -24,13 +24,13 @@ type Filter struct {
 	Since, Until   time.Time
 	Endpoint       string // exact
 	EndpointPrefix string // e.g. "job:"
-	// ExcludeEndpointPrefix leaves out the entries whose endpoint starts with it (specs/039: the digest separates the
-	// requests from the background processes, "job:").
-	ExcludeEndpointPrefix string
-	Status                *int
-	AccountID             *uuid.UUID
-	Limit                 int     // List only
-	After                 *Cursor // List only
+	// ExcludeEndpointPrefixes leaves out the entries whose endpoint starts with any of them (specs/039: the digest
+	// separates the requests from the background processes, "job:"; specs/072 also from the browsers, "client:").
+	ExcludeEndpointPrefixes []string
+	Status                  *int
+	AccountID               *uuid.UUID
+	Limit                   int     // List only
+	After                   *Cursor // List only
 }
 
 // SummaryRow is one group of the summary: the same error (endpoint, status and message) and how often it happened.
@@ -71,8 +71,10 @@ func (f Filter) where() (string, []any) {
 	if f.EndpointPrefix != "" {
 		add(`endpoint LIKE $%d ESCAPE '\'`, escapeLike(f.EndpointPrefix)+"%")
 	}
-	if f.ExcludeEndpointPrefix != "" {
-		add(`endpoint NOT LIKE $%d ESCAPE '\'`, escapeLike(f.ExcludeEndpointPrefix)+"%")
+	for _, prefix := range f.ExcludeEndpointPrefixes {
+		if prefix != "" {
+			add(`endpoint NOT LIKE $%d ESCAPE '\'`, escapeLike(prefix)+"%")
+		}
 	}
 	if f.Status != nil {
 		add("http_status = $%d", *f.Status)

@@ -108,7 +108,7 @@ API_PID=$!
 wait_for http://localhost:8080/catalog/countries "El API"
 
 echo "e2e-local: compilando el frontend (como CI)…"
-(cd "$ROOT/frontend" && VITE_PAYMENTS_FAKE=true npm run build > "$LOGS/build.log" 2>&1) || fail "el build falló (ver $LOGS/build.log)"
+(cd "$ROOT/frontend" && VITE_PAYMENTS_FAKE=true VITE_TEST_ERROR_ROUTE=true npm run build > "$LOGS/build.log" 2>&1) || fail "el build falló (ver $LOGS/build.log)"
 (cd "$ROOT/frontend" && exec node node_modules/vite/bin/vite.js preview --port 5173 --strictPort) > "$LOGS/preview.log" 2>&1 &
 WEB_PID=$!
 wait_for http://localhost:5173/home "El frontend"

@@ -11,7 +11,7 @@ import { ApiError } from '../apiError'
 // Nothing that changes data leaves without a connection (FR-007, R7): every request to the API that isn't a read is refused here,
 // before the network, with an `OfflineError` — whatever screen or hook sends it, `useMutation` or not.
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8080'
 export const PROBE_EVERY_MS = 10_000
 
 export class OfflineError extends ApiError<'offline'> {
