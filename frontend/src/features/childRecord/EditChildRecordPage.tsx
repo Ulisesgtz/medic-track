@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useFieldArray, useForm } from 'react-hook-form'
+import { useFieldArray, useForm, useWatch } from 'react-hook-form'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useUnsavedWork } from '../../shared/appVersion/unsavedWork'
 import { pageHeaderButton } from '../../shared/ui/pageHeaderButton'
@@ -40,9 +40,11 @@ export function EditChildRecordPage() {
   const { register, control, setValue, getValues } = form
   const allergies = useFieldArray({ control, name: 'allergies' })
   const conditions = useFieldArray({ control, name: 'conditions' })
-  const values = form.watch()
+  // `useWatch` types every field as optional; `defaultValues` always has them all.
+  const values = useWatch({ control }) as RecordFormValues
 
   const [initial, setInitial] = useState<RecordFormValues>(EMPTY_VALUES)
+  const [ready, setReady] = useState(false)
   const [baseVersion, setBaseVersion] = useState(0)
   const [errors, setErrors] = useState<RecordErrors>({})
   const [message, setMessage] = useState<string | null>(null)
@@ -51,16 +53,25 @@ export function EditChildRecordPage() {
   const [expanded, setExpanded] = useState({ allergy: false, condition: false })
   const viewRef = useRef<HTMLButtonElement>(null)
 
-  const loaded = useRef(false)
+  // The form starts from the server's answer, not from the copy that was in the cache (or saved without a signal, spec 067): with a copy
+  // and a request in flight it waits for the request. Without a connection the request is paused, so the copy is what there is (saving
+  // needs a connection anyway). A newer version that arrives while the parent has typed nothing replaces the form; with typing, what was
+  // typed stays and a conflict is settled as always (the 409 notice).
+  const loadedVersion = useRef<number | null>(null)
+  const savedOnce = save.isSuccess
+  const settled = recordQuery.isFetchedAfterMount || recordQuery.fetchStatus !== 'fetching'
   useEffect(() => {
-    if (record && !loaded.current) {
-      loaded.current = true
-      const v = valuesOf(record)
-      setInitial(v)
-      setBaseVersion(record.version)
-      form.reset(v)
+    if (!record || !settled || savedOnce) return
+    if (loadedVersion.current !== null) {
+      if (record.version === loadedVersion.current || isDirty(initial, getValues())) return
     }
-  }, [record, form])
+    loadedVersion.current = record.version
+    const v = valuesOf(record)
+    setInitial(v)
+    setBaseVersion(record.version)
+    setReady(true)
+    form.reset(v)
+  }, [record, settled, savedOnce, initial, form, getValues])
 
   const dirty = isDirty(initial, values)
   useUnsavedWork(dirty && !save.isSuccess)
@@ -213,7 +224,7 @@ export function EditChildRecordPage() {
     <p className="text-[15px] text-body">{FORM.notFound}</p>
   ) : record && !record.canEdit ? (
     <p className="text-[15px] leading-normal text-body">{FORM.readOnly}</p>
-  ) : !record ? (
+  ) : !record || !ready ? (
     <p className="text-[15px] text-body">{recordQuery.isError ? FORM.loadError : FORM.loading}</p>
   ) : (
     <>
@@ -263,7 +274,7 @@ export function EditChildRecordPage() {
       eyebrow={child ? `${child.firstName} ${child.lastName}` : undefined}
       title="Editar ficha"
       subtitle={FORM.subtitle}
-      actions={desktop && record?.canEdit ? <>{cancel}{saveButton}</> : undefined}
+      actions={desktop && ready && record?.canEdit ?<>{cancel}{saveButton}</> : undefined}
       maxWidth="max-w-[904px]"
       phoneContent="gap-4 pt-0"
       state={accountQuery.isError ? 'error' : accountQuery.isPending ? 'loading' : undefined}

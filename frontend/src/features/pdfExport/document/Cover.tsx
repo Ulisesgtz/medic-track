@@ -1,6 +1,5 @@
 import { Text, View } from '@react-pdf/renderer'
-import type { Style } from '@react-pdf/types'
-import type { ReactElement } from 'react'
+import type { ComponentProps, ReactElement } from 'react'
 import { RECORD, bloodLabel, updatedLine } from '../../childRecord/recordText'
 import { DOC } from '../exportText'
 import { photoCount } from '../photos'
@@ -103,7 +102,7 @@ export function Cover({ request, data, now, index, symptomNames }: CoverProps) {
 }
 
 /** The running treatment and the next appointment, side by side, when there are. */
-function CurrentBoxes({ data, style, compact = false }: { data: ExportData; style: Style | Style[]; compact?: boolean }) {
+function CurrentBoxes({ data, style, compact = false }: { data: ExportData; style: ComponentProps<typeof View>['style']; compact?: boolean }) {
   const { activeTreatment: treatment, nextAppointment: appointment } = data
   if (!treatment && !appointment) return null
   const lines = treatment ? activeTreatmentLines(treatment) : null

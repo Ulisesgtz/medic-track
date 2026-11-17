@@ -63,7 +63,7 @@ referencia/ con el mock de Claude Design)
 - [X] T017 E2E `frontend/e2e/ficha-del-hijo.spec.ts` (390 y 1280 px): la dueña llena y guarda (lo ve tal cual, «Actualizada … por»), edita y quita; un Cuidador ve sin editar y con «Llamar»; conflicto entre dos sesiones (aviso E); tope de 30; el PDF incluye la ficha; ningún texto de la ficha en `error_logs`. Correr con `scripts/e2e-local.sh e2e/ficha-del-hijo.spec.ts` (Chromium y WebKit)
 - [X] T018 Medir contra el mock a 390 y 1280 px (A, B, C, D, D2, E y la portada F) y escribir `referencia/desviaciones.md`
 - [X] T019 [P] Mapas: `CLAUDE.md` (fila de la spec 073), `backend/CLAUDE.md` (`internal/childrecord`, migración `0039`, purga y descarga), `frontend/CLAUDE.md` (`features/childRecord`); `BACKLOG.md`: ficha del titular (`/yo`), compartir por QR, arrastrar para reordenar en web, y los pendientes del dueño (aplicar la `0039` en DEV, aviso de privacidad)
-- [ ] T020 Correr todo como CI (`go test ./...` > 90 % en `internal`, `vitest --coverage`, `scripts/e2e-local.sh` de los specs tocados, `govulncheck`) y revisión de código final
+- [X] T020 Correr todo como CI (`go test ./...` > 90 % en `internal`, `vitest --coverage`, `scripts/e2e-local.sh` de los specs tocados, `govulncheck`) y revisión de código final
 
 ---
 

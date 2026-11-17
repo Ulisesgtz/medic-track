@@ -2,17 +2,20 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query'
 import { account, bodyOf, stubApi, stubWeb } from '../medicineCabinet/cabinet.test-utils'
 import { EditChildRecordPage } from './EditChildRecordPage'
+import { childRecordKey } from './hooks'
 import { emptyRecord, fullRecord } from './recordFixtures'
 import type { ChildRecord } from './types'
 
 const mateo = { id: 'child-1', firstName: 'Mateo', lastName: 'Morales', birthDate: '2021-03-14', height: null, weight: null }
 
-function show() {
+function show(seed?: ChildRecord, withAccount = false) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
+  if (seed) queryClient.setQueryData(childRecordKey('child-1'), seed)
+  if (withAccount) queryClient.setQueryData(['accounts', 'me'], account({ children: [mateo] }))
+  render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={['/children/child-1/ficha/editar']}>
         <Routes>
@@ -22,6 +25,7 @@ function show() {
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  return queryClient
 }
 
 type Put = { status?: number; body?: unknown } | (() => { status?: number; body?: unknown })
@@ -207,6 +211,71 @@ for (const web of [false, true]) {
       show()
       expect(await screen.findByText('Solo la familia puede editar la ficha.')).toBeInTheDocument()
       expect(screen.queryByRole('button', { name: 'Guardar' })).toBeNull()
+    })
+
+    it('starts from the server answer, not from the old copy in the cache: the form and the version are the new ones', async () => {
+      stubWeb(web)
+      const fresh: ChildRecord = { ...fullRecord, version: 7, generalNote: 'Nota nueva del servidor' }
+      const mock = api(fresh)
+      show(fullRecord)
+      const user = userEvent.setup()
+      // The old copy (version 3) is never put in the form: the page waits for the answer.
+      expect(screen.queryByDisplayValue('Usa lentes desde los 4 años.')).toBeNull()
+      expect(await screen.findByDisplayValue('Nota nueva del servidor')).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'Guardar' }))
+      await screen.findByText('HIJO')
+      expect(bodyOf(mock, 'PUT /children/child-1/record').expectedVersion).toBe(7)
+    })
+
+    it('without a connection it uses the copy that there is', async () => {
+      stubWeb(web)
+      api(fullRecord)
+      onlineManager.setOnline(false)
+      try {
+        show({ ...fullRecord, generalNote: 'Copia sin conexión' }, true)
+        expect(await screen.findByDisplayValue('Copia sin conexión')).toBeInTheDocument()
+      } finally {
+        onlineManager.setOnline(true)
+      }
+    })
+
+    it('a newer version that arrives while nothing was typed replaces the form and the base version', async () => {
+      stubWeb(web)
+      let reads = 0
+      const mock = stubApi({
+        'GET /accounts/me': { body: account({ children: [mateo] }) },
+        'GET /children/child-1/record': () => ({ body: reads++ === 0 ? fullRecord : { ...fullRecord, version: 5, generalNote: 'Cambio de Rafael' } }),
+        'PUT /children/child-1/record': { body: fullRecord },
+      })
+      const queryClient = show()
+      const user = userEvent.setup()
+      await screen.findByDisplayValue('Usa lentes desde los 4 años.')
+      await queryClient.invalidateQueries({ queryKey: childRecordKey('child-1') })
+      expect(await screen.findByDisplayValue('Cambio de Rafael')).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'Guardar' }))
+      await screen.findByText('HIJO')
+      expect(bodyOf(mock, 'PUT /children/child-1/record').expectedVersion).toBe(5)
+    })
+
+    it('a newer version that arrives after the parent typed does not overwrite what was typed', async () => {
+      stubWeb(web)
+      let reads = 0
+      const mock = stubApi({
+        'GET /accounts/me': { body: account({ children: [mateo] }) },
+        'GET /children/child-1/record': () => ({ body: reads++ === 0 ? fullRecord : { ...fullRecord, version: 5, generalNote: 'Cambio de Rafael' } }),
+        'PUT /children/child-1/record': { body: fullRecord },
+      })
+      const queryClient = show()
+      const user = userEvent.setup()
+      const note = await screen.findByLabelText('Nota (opcional)', { selector: 'textarea' })
+      await user.type(note, ' extra')
+      await queryClient.invalidateQueries({ queryKey: childRecordKey('child-1') })
+      await waitFor(() => expect(reads).toBe(2))
+      expect(note).toHaveValue('Usa lentes desde los 4 años. extra')
+      expect(screen.queryByDisplayValue('Cambio de Rafael')).toBeNull()
+      await user.click(screen.getByRole('button', { name: 'Guardar' }))
+      await screen.findByText('HIJO')
+      expect(bodyOf(mock, 'PUT /children/child-1/record').expectedVersion).toBe(3)
     })
 
     it('says it could not load the record', async () => {
