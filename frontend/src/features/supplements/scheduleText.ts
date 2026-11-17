@@ -54,7 +54,10 @@ const everyDay = (weekdays: number[]) => weekdays.length === 0 || weekdays.lengt
 /** "Todos los días" or "Lun, Mié, Vie". */
 export function daysText(weekdays: number[]): string {
   if (everyDay(weekdays)) return 'Todos los días'
-  return [...weekdays].sort((a, b) => a - b).map((d) => WEEKDAYS_SHORT[d]).join(', ')
+  return [...weekdays]
+    .sort((a, b) => a - b)
+    .map((d) => WEEKDAYS_SHORT[d])
+    .join(', ')
 }
 
 /** "martes y jueves", "lunes, miércoles y viernes" (the form's preview). */
@@ -89,7 +92,12 @@ export function everyText(minutes: number): string {
 }
 
 /** An activity's rule: "Cada hora, de 08:00 a 20:00" or, at fixed hours, "Mar, Jue · a las 17:00". */
-export function activityRule(r: Pick<Routine, 'period' | 'times' | 'weekdays' | 'windowStart' | 'windowEnd' | 'intervalMinutes'>): string {
+export function activityRule(
+  r: Pick<
+    Routine,
+    'period' | 'times' | 'weekdays' | 'windowStart' | 'windowEnd' | 'intervalMinutes'
+  >,
+): string {
   if (r.period !== 'window') return `${daysText(r.weekdays)} · a las ${joinTimes(r.times)}`
   return `${everyText(r.intervalMinutes ?? 0)}, de ${r.windowStart ?? ''} a ${r.windowEnd ?? ''}`
 }
@@ -104,7 +112,9 @@ export function rangeText(r: Pick<Routine, 'firstDate' | 'endDate'>): string {
 }
 
 /** An activity's second line: "Todos los días · desde el 1 oct" / "Lun, Mié · del 2 al 20 oct" (at fixed hours the days are in the rule). */
-export function activityRange(r: Pick<Routine, 'period' | 'weekdays' | 'firstDate' | 'endDate'>): string {
+export function activityRange(
+  r: Pick<Routine, 'period' | 'weekdays' | 'firstDate' | 'endDate'>,
+): string {
   if (r.period !== 'window') return rangeText(r)
   const range = r.endDate ? rangeText(r).replace(/^D/, 'd') : `desde el ${dayMonth(r.firstDate)}`
   return `${daysText(r.weekdays)} · ${range}`
@@ -114,7 +124,8 @@ export function activityRange(r: Pick<Routine, 'period' | 'weekdays' | 'firstDat
 export function perDay(windowStart: string, windowEnd: string, everyMinutes: number): number {
   const [sh, sm] = windowStart.split(':').map(Number)
   const [eh, em] = windowEnd.split(':').map(Number)
-  if ([sh, sm, eh, em].some(Number.isNaN) || !Number.isInteger(everyMinutes) || everyMinutes < 1) return 0
+  if ([sh, sm, eh, em].some(Number.isNaN) || !Number.isInteger(everyMinutes) || everyMinutes < 1)
+    return 0
   const span = eh * 60 + em - (sh * 60 + sm)
   return span < 0 ? 0 : Math.floor(span / everyMinutes) + 1
 }
@@ -132,7 +143,12 @@ export function lastOfDay(windowStart: string, windowEnd: string, everyMinutes: 
  * The activity form's preview (mock F5): the arithmetic of what the parent typed, without listing the hours. Null while it can't
  * be computed. «Con esto, cada martes y jueves hay 4 avisos: el primero a las 09:00 y el último a las 18:00.»
  */
-export function activityPreview(windowStart: string, windowEnd: string, everyMinutes: number, weekdays: number[]): string | null {
+export function activityPreview(
+  windowStart: string,
+  windowEnd: string,
+  everyMinutes: number,
+  weekdays: number[],
+): string | null {
   if (!/^\d{2}:\d{2}$/.test(windowStart) || !/^\d{2}:\d{2}$/.test(windowEnd)) return null
   const n = perDay(windowStart, windowEnd, everyMinutes)
   if (n === 0) return null
@@ -168,7 +184,9 @@ export function nextUnmarked(doses: RoutineDose[], now: Date = new Date()): stri
 export function lastMarked(doses: RoutineDose[]): { at: string; by: string } | null {
   const marked = doses.filter((d) => d.taken && d.takenBy)
   if (marked.length === 0) return null
-  const last = marked.reduce((a, b) => (new Date(a.takenBy!.at).getTime() >= new Date(b.takenBy!.at).getTime() ? a : b))
+  const last = marked.reduce((a, b) =>
+    new Date(a.takenBy!.at).getTime() >= new Date(b.takenBy!.at).getTime() ? a : b,
+  )
   return { at: formatTime(last.takenBy!.at), by: last.takenBy!.name }
 }
 
@@ -176,11 +194,14 @@ export function lastMarked(doses: RoutineDose[]): { at: string; by: string } | n
 export function lastMarkedDose(doses: RoutineDose[]): RoutineDose | null {
   const marked = doses.filter((d) => d.taken && d.takenBy)
   if (marked.length === 0) return null
-  return marked.reduce((a, b) => (new Date(a.takenBy!.at).getTime() >= new Date(b.takenBy!.at).getTime() ? a : b))
+  return marked.reduce((a, b) =>
+    new Date(a.takenBy!.at).getTime() >= new Date(b.takenBy!.at).getTime() ? a : b,
+  )
 }
 
 /** True for an activity at fixed hours (no window, no «cada»): its card and detail have no count and no bar (spec 042). */
-export const isFixedActivity = (r: Pick<Routine, 'kind' | 'period'>) => r.kind === 'activity' && r.period !== 'window'
+export const isFixedActivity = (r: Pick<Routine, 'kind' | 'period'>) =>
+  r.kind === 'activity' && r.period !== 'window'
 
 /**
  * When a dose is, as an activity at fixed hours says it: «hoy, 17:00», «mañana, 07:00», «mar 13 oct, 17:00». `sub` is the day alone
@@ -191,7 +212,8 @@ export function doseWhen(at: string, today: string): { time: string; sub: string
   const key = dayKey(date)
   const time = formatTime(at)
   const gap = dayNumber(key) - dayNumber(today)
-  const sub = gap === 0 ? 'hoy' : gap === 1 ? 'mañana' : `${WEEKDAYS_LOWER[date.getDay()]} ${dayMonth(key)}`
+  const sub =
+    gap === 0 ? 'hoy' : gap === 1 ? 'mañana' : `${WEEKDAYS_LOWER[date.getDay()]} ${dayMonth(key)}`
   return { time, sub, text: `${sub}, ${time}` }
 }
 
@@ -199,7 +221,10 @@ export function doseWhen(at: string, today: string): { time: string; sub: string
  * The last mark of an activity at fixed hours, of any day: the server's `lastDone` (the dose marked most recently, so «Última: mar 6 oct,
  * 17:10» survives a day without doses), else the last one marked among today's. `sub` is the day («hoy», «mar 6 oct») and `by` who marked it.
  */
-export function fixedLast(routine: Pick<Routine, 'doses' | 'lastDone'>, today: string): { time: string; sub: string; text: string; by: string } | null {
+export function fixedLast(
+  routine: Pick<Routine, 'doses' | 'lastDone'>,
+  today: string,
+): { time: string; sub: string; text: string; by: string } | null {
   const dose = routine.lastDone ?? lastMarkedDose(routine.doses)
   if (!dose?.takenBy) return null
   const when = doseWhen(dose.takenBy.at, today)
@@ -207,7 +232,11 @@ export function fixedLast(routine: Pick<Routine, 'doses' | 'lastDone'>, today: s
 }
 
 /** The next dose of an activity at fixed hours: the first unmarked one of today still to come, else the next day's (null if none). */
-export function fixedNext(routine: Pick<Routine, 'doses' | 'nextDose'>, today: string, now: Date = new Date()): { time: string; sub: string; text: string } | null {
+export function fixedNext(
+  routine: Pick<Routine, 'doses' | 'nextDose'>,
+  today: string,
+  now: Date = new Date(),
+): { time: string; sub: string; text: string } | null {
   const upcoming = [...routine.doses]
     .filter((d) => !d.taken && new Date(d.scheduledAt).getTime() > now.getTime())
     .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())[0]
@@ -223,7 +252,9 @@ export function noTodayText(nextAt: string, today: string, own = false): string 
   const mm = String(next.getMinutes()).padStart(2, '0')
   const label = `${WEEKDAYS_LOWER[next.getDay()]} ${dayMonth(key)}, a las ${hh}:${mm}`
   const lead = own ? 'Hoy no toca.' : 'Hoy no le toca.'
-  return dayNumber(key) - dayNumber(today) === 1 ? `${lead} La siguiente es mañana, ${label}.` : `${lead} La siguiente es el ${label}.`
+  return dayNumber(key) - dayNumber(today) === 1
+    ? `${lead} La siguiente es mañana, ${label}.`
+    : `${lead} La siguiente es el ${label}.`
 }
 
 const dayNumber = (iso: string) => {
@@ -247,7 +278,9 @@ export const pausedNote = (r: Gendered, pausedAt: string) =>
     : `Pausado desde el ${instantDayMonth(pausedAt)}. Mientras esté pausado no se crean tomas ni avisos. Lo marcado se conserva.`
 
 export const endedCardText = (r: Gendered, endedAt: string, taken: number, total: number) =>
-  r.kind === 'activity' ? `Terminada el ${instantDayMonth(endedAt)}` : `Terminado el ${instantDayMonth(endedAt)} · ${taken} de ${total} tomas`
+  r.kind === 'activity'
+    ? `Terminada el ${instantDayMonth(endedAt)}`
+    : `Terminado el ${instantDayMonth(endedAt)} · ${taken} de ${total} tomas`
 
 export const endedNote = (r: Gendered, endedAt: string, taken: number, total: number) =>
   r.kind === 'activity'
@@ -265,7 +298,10 @@ function datesText(r: Routine): string {
       ? `Del ${a.d} al ${dayMonthYear(r.endDate as string)}`
       : `Del ${dayMonth(r.firstDate)} al ${dayMonthYear(r.endDate ?? dayKey(r.endedAt ?? r.createdAt))}`
   }
-  const from = r.kind === 'activity' ? `Desde el ${dayMonthYear(r.firstDate)}` : `Primera toma el ${dayMonthYear(r.firstDate)}`
+  const from =
+    r.kind === 'activity'
+      ? `Desde el ${dayMonthYear(r.firstDate)}`
+      : `Primera toma el ${dayMonthYear(r.firstDate)}`
   const to = r.kind === 'activity' ? 'hasta el' : 'última el'
   return r.endDate ? `${from} · ${to} ${dayMonthYear(r.endDate)}` : `${from} · sin fecha de fin`
 }
@@ -276,7 +312,10 @@ export function detailRows(r: Routine, personal = false): { k: string; v: string
   if (r.kind === 'activity' && r.period === 'window') {
     rows.push({ k: 'Cada cuánto', v: activityRule(r) })
     rows.push({ k: 'Días', v: daysText(r.weekdays) })
-    rows.push({ k: 'Avisos al día', v: String(perDay(r.windowStart ?? '', r.windowEnd ?? '', r.intervalMinutes ?? 0)) })
+    rows.push({
+      k: 'Avisos al día',
+      v: String(perDay(r.windowStart ?? '', r.windowEnd ?? '', r.intervalMinutes ?? 0)),
+    })
   } else if (r.kind === 'activity') {
     rows.push({ k: 'Días', v: daysText(r.weekdays) })
     rows.push({ k: 'Horas', v: joinTimes(r.times) })
@@ -286,11 +325,27 @@ export function detailRows(r: Routine, personal = false): { k: string; v: string
   }
   rows.push({ k: 'Fechas', v: datesText(r) })
   if (r.note.trim() !== '') rows.push({ k: 'Nota', v: r.note })
-  if (!personal) rows.push({ k: r.kind === 'activity' ? 'Agregada por' : 'Agregado por', v: `${r.createdBy}, el ${instantDayMonth(r.createdAt)}` })
+  // Without a name when who added it deleted their account (specs/070).
+  if (!personal)
+    rows.push(
+      r.createdBy
+        ? {
+            k: r.kind === 'activity' ? 'Agregada por' : 'Agregado por',
+            v: `${r.createdBy}, el ${instantDayMonth(r.createdAt)}`,
+          }
+        : {
+            k: r.kind === 'activity' ? 'Agregada' : 'Agregado',
+            v: `el ${instantDayMonth(r.createdAt)}`,
+          },
+    )
   return rows
 }
 
-export const PERIOD_OPTIONS: { value: Exclude<RoutinePeriod, 'window'>; label: string; desc: string }[] = [
+export const PERIOD_OPTIONS: {
+  value: Exclude<RoutinePeriod, 'window'>
+  label: string
+  desc: string
+}[] = [
   { value: 'daily', label: 'Todos los días', desc: 'A una o varias horas fijas.' },
   { value: 'weekdays', label: 'Ciertos días de la semana', desc: 'Eliges los días y las horas.' },
 ]

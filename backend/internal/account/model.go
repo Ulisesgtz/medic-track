@@ -44,6 +44,9 @@ type Account struct {
 	// the Tutors of their family, and who shares with them. Filled by the reads that fill Family.
 	ConsultationSharing ConsultationSharing
 	SharedProfiles      []SharedProfile
+	// DeletionScheduledFor is when the account will be deleted, if its owner asked for it (specs/070); nil otherwise.
+	// Filled by GetByClerkUserID.
+	DeletionScheduledFor *time.Time
 }
 
 // FamilyMembership is an account's place in the family of another account.
@@ -52,10 +55,16 @@ type FamilyMembership struct {
 	OwnerAccountID uuid.UUID
 	OwnerName      string
 	OwnerPlan      Plan
+	// DeletionScheduledFor is set when the family's owner asked to delete her account (specs/070): the family's children
+	// are deleted on that date.
+	DeletionScheduledFor *time.Time
 }
 
-// ReadOnly: the invited person is read-only when the family's owner is no longer on the paid plan.
-func (f FamilyMembership) ReadOnly() bool { return f.OwnerPlan != PlanPaid }
+// ReadOnly: the invited person is read-only when the family's owner is no longer on the paid plan, or asked to delete her
+// account (they still see and mark until the date, specs/070).
+func (f FamilyMembership) ReadOnly() bool {
+	return f.OwnerPlan != PlanPaid || f.DeletionScheduledFor != nil
+}
 
 // Child represents a child associated with an Account.
 // A Child can never be deleted. Its data can be corrected (specs/064-editar-datos-hijo, which replaces FR-006a of

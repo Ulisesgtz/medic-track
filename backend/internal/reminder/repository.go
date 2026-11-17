@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/access"
+	"github.com/Ulisesgtz/medic-track/backend/internal/deletionstate"
 )
 
 // Repository persists reminder devices and claims the doses to remind.
@@ -111,6 +112,8 @@ func (r *Repository) ClaimDueDoses(ctx context.Context, now time.Time, window ti
 				SELECT 1 FROM reminder_devices rd
 				WHERE rd.account_id = a.id AND rd.active AND rd.activated_at <= cand.scheduled_at
 			)
+			  -- Specs/070: an account scheduled for deletion gets no reminder (others of the same child still do).
+			  AND NOT `+deletionstate.PendingAccountSQL("a.id")+`
 			  AND NOT EXISTS (SELECT 1 FROM dose_reminders dr WHERE dr.dose_id = cand.id AND dr.account_id = a.id)
 			ORDER BY cand.scheduled_at, a.id
 			LIMIT 500

@@ -20,15 +20,17 @@ import (
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/access"
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
+	"github.com/Ulisesgtz/medic-track/backend/internal/accountdeletion"
 	"github.com/Ulisesgtz/medic-track/backend/internal/appointment"
 	"github.com/Ulisesgtz/medic-track/backend/internal/authmw/authmwtest"
 	"github.com/Ulisesgtz/medic-track/backend/internal/cabinet"
-	"github.com/Ulisesgtz/medic-track/backend/internal/childprofile"
-	"github.com/Ulisesgtz/medic-track/backend/internal/growth"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
+	"github.com/Ulisesgtz/medic-track/backend/internal/childprofile"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
+	"github.com/Ulisesgtz/medic-track/backend/internal/dataexport"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/family"
+	"github.com/Ulisesgtz/medic-track/backend/internal/growth"
 	"github.com/Ulisesgtz/medic-track/backend/internal/historyexport"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 	"github.com/Ulisesgtz/medic-track/backend/internal/ownership"
@@ -164,16 +166,20 @@ func newWorld(t *testing.T) *world {
 				}
 				return "", family.ErrEmailNotVerified
 			})), responder),
-		Payments:    paymentsHandler(t, pool, responder),
-		Supplement:  supplement.NewHandler(supplement.NewService(supplement.NewRepository(pool)), responder),
-		Appointment: appointment.NewHandler(appointment.NewService(appointment.NewRepository(pool)), responder),
-		ChildDevice: childdevice.NewHandler(childdevice.NewService(childdevice.NewRepository(pool)), responder),
-		Vaccination: vaccination.NewHandler(vaccination.NewService(vaccination.NewRepository(pool)), responder),
-		Cabinet:     cabinet.NewHandler(cabinet.NewService(cabinet.NewRepository(pool)), responder),
-		Growth:      growth.NewHandler(growth.NewService(growth.NewRepository(pool)), responder),
+		Payments:     paymentsHandler(t, pool, responder),
+		Supplement:   supplement.NewHandler(supplement.NewService(supplement.NewRepository(pool)), responder),
+		Appointment:  appointment.NewHandler(appointment.NewService(appointment.NewRepository(pool)), responder),
+		ChildDevice:  childdevice.NewHandler(childdevice.NewService(childdevice.NewRepository(pool)), responder),
+		Vaccination:  vaccination.NewHandler(vaccination.NewService(vaccination.NewRepository(pool)), responder),
+		Cabinet:      cabinet.NewHandler(cabinet.NewService(cabinet.NewRepository(pool)), responder),
+		Growth:       growth.NewHandler(growth.NewService(growth.NewRepository(pool)), responder),
 		ChildProfile: childprofile.NewHandler(childprofile.NewService(childprofile.NewRepository(pool)), responder),
 		HistoryExport: historyexport.NewHandler(historyexport.NewService(historyexport.NewRepository(pool), consultation.NewRepository(pool),
 			vaccination.NewRepository(pool)), responder),
+		AccountDeletion: accountdeletion.NewHandler(accountdeletion.NewService(accountdeletion.NewRepository(pool), pool,
+			nil, nil, nil, nil), responder),
+		DeletionRepo:   accountdeletion.NewRepository(pool),
+		DataExport:     dataexport.NewHandler(responder, pool, nil),
 		Ownership:      ownership.NewRepository(pool),
 		Access:         access.NewRepository(pool),
 		FrontendOrigin: "http://localhost:5173",
@@ -228,6 +234,11 @@ func (w *world) routes() []struct {
 		ownerStatus              int
 	}{
 		{"get account", http.MethodGet, "/accounts/" + w.accountA.String(), "", http.StatusOK},
+		// Specs/070: the account's deletion (an empty body is a 400: the word is missing) and the download of all its data.
+		{"get deletion", http.MethodGet, "/accounts/" + w.accountA.String() + "/deletion", "", http.StatusOK},
+		{"request deletion", http.MethodPost, "/accounts/" + w.accountA.String() + "/deletion", `{}`, http.StatusBadRequest},
+		{"cancel deletion", http.MethodPost, "/accounts/" + w.accountA.String() + "/deletion/cancel", "", http.StatusOK},
+		{"export my data", http.MethodPost, "/accounts/" + w.accountA.String() + "/data-export", "", http.StatusOK},
 		// Specs/058: tutor A's own consultations and appointments. A is on the free plan here: reading reaches the handler, an
 		// empty form is a 400 before the plan is asked.
 		{"own consultations", http.MethodGet, "/accounts/" + w.accountA.String() + "/consultations", "", http.StatusOK},
@@ -417,7 +428,7 @@ func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 // ownRoutes are the person's own account (their notice, reminder settings and devices): never a family's.
 // fullRoutes need the full level (the owner or a Tutor); every other protected route needs only Mark (see and mark).
 var (
-	ownRoutes = map[string]bool{"search own consultations": true, "own history options": true, "export own history": true, "consultation sharing": true, "own consultations": true, "create own consultation": true, "own overview": true, "own appointments": true, "create own appointment": true, "get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true, "get subscription": true, "subscribe": true, "cancel subscription": true}
+	ownRoutes = map[string]bool{"get deletion": true, "request deletion": true, "cancel deletion": true, "export my data": true, "search own consultations": true, "own history options": true, "export own history": true, "consultation sharing": true, "own consultations": true, "create own consultation": true, "own overview": true, "own appointments": true, "create own appointment": true, "get account": true, "accept disclaimer": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true, "get subscription": true, "subscribe": true, "cancel subscription": true}
 	// cabinetRoutes: the family's medicine cabinet (specs/062), not for a Child-role member.
 	cabinetRoutes = map[string]bool{"list cabinet": true, "cabinet item": true, "cabinet photo": true}
 	fullRoutes    = map[string]bool{"correct child": true, "add growth": true, "correct growth": true, "remove growth": true, "choose growth table": true, "add to cabinet": true, "edit cabinet item": true, "remove cabinet item": true, "delete routine": true, "add child": true, "create consultation": true, "edit consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "record vaccination": true, "correct vaccination": true, "delete vaccination": true, "save card photo": true, "delete card photo": true, "edit appointment": true, "create device link": true, "remove device link": true, "choose device reminders": true, "mark appointment": true}
@@ -587,6 +598,16 @@ func TestRouter_CORSAllowsEveryMethodTheAppUses(t *testing.T) {
 		require.Contains(t, rec.Header().Get("Access-Control-Allow-Methods"), method, method)
 		require.Equal(t, "http://localhost:5173", rec.Header().Get("Access-Control-Allow-Origin"), method)
 	}
+}
+
+// The data export's file name travels in Content-Disposition; from another origin the browser only shows the headers CORS exposes.
+func TestRouter_CORSExposesTheDownloadsFileName(t *testing.T) {
+	w := newWorld(t)
+	req := httptest.NewRequest(http.MethodGet, "/catalog/countries", nil)
+	req.Header.Set("Origin", "http://localhost:5173")
+	rec := httptest.NewRecorder()
+	w.router.ServeHTTP(rec, req)
+	require.Contains(t, rec.Header().Get("Access-Control-Expose-Headers"), "Content-Disposition")
 }
 
 // Specs/058: once tutor A shares their own consultations, a Tutor of the family sees them (Mark) and nothing more; a Caregiver

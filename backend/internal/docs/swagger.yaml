@@ -1,4 +1,64 @@
 definitions:
+  AccountDeletion:
+    properties:
+      requestedAt:
+        example: "2026-11-12T18:00:00Z"
+        type: string
+      scheduledFor:
+        example: "2026-12-12T18:00:00Z"
+        type: string
+      status:
+        description: Status is "none" or "pending".
+        enum:
+        - none
+        - pending
+        example: pending
+        type: string
+    type: object
+  AccountDeletionError:
+    properties:
+      error:
+        example: account_deletion_pending
+        type: string
+      message:
+        example: This account is scheduled for deletion
+        type: string
+    type: object
+  AccountDeletionInfo:
+    properties:
+      scheduledFor:
+        example: "2026-12-12T18:00:00Z"
+        type: string
+    type: object
+  AccountDeletionRequest:
+    properties:
+      confirm:
+        description: Confirm must be exactly "ELIMINAR".
+        example: ELIMINAR
+        type: string
+    type: object
+  AccountDeletionRequested:
+    properties:
+      familyNotified:
+        example: 2
+        type: integer
+      requestedAt:
+        example: "2026-11-12T18:00:00Z"
+        type: string
+      scheduledFor:
+        example: "2026-12-12T18:00:00Z"
+        type: string
+      status:
+        description: Status is "none" or "pending".
+        enum:
+        - none
+        - pending
+        example: pending
+        type: string
+      subscriptionCanceled:
+        example: true
+        type: boolean
+    type: object
   AccountNotFoundForSessionResponse:
     properties:
       error:
@@ -799,6 +859,15 @@ definitions:
         example: 3hF9…
         type: string
     type: object
+  DataExportError:
+    properties:
+      error:
+        example: export_failed
+        type: string
+      message:
+        example: The data could not be read
+        type: string
+    type: object
   DoseNotFoundResponse:
     properties:
       error:
@@ -1393,6 +1462,12 @@ definitions:
     type: object
   FamilyMembershipInfo:
     properties:
+      deletionScheduledFor:
+        description: |-
+          DeletionScheduledFor (RFC 3339) is set when the family's owner asked to delete her account (specs/070): until then
+          the person sees and marks the family's children and can download their data; on that date they stop seeing them.
+        example: "2026-12-12T18:00:00Z"
+        type: string
       ownerAccountId:
         example: e5f6a7b8-0000-0000-0000-000000000000
         type: string
@@ -2864,6 +2939,12 @@ definitions:
       countryCode:
         example: MX
         type: string
+      deletion:
+        allOf:
+        - $ref: '#/definitions/AccountDeletionInfo'
+        description: |-
+          Deletion is set when the account asked to delete itself (specs/070): the app then only offers downloading the data
+          and canceling. Null otherwise.
       disclaimerAccepted:
         example: false
         type: boolean
@@ -3588,6 +3669,167 @@ paths:
       summary: Search and filter a person's own consultations
       tags:
       - consultations
+  /accounts/{accountId}/data-export:
+    post:
+      description: |-
+        A ZIP with everything the account recorded — its children, consultations (of the children and its own), medications
+        and every dose with its state, appointments, vaccinations and the card's photos, growth measurements, supplements and
+        activities with their doses, the medicine cabinet — as LEEME.txt, datos.json, one CSV per kind (UTF-8 with BOM) and
+        the photos. Any plan, also while the account's deletion is pending. Built on every request, never stored. If it breaks
+        half way the connection is cut, so a short file never looks complete.
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      produces:
+      - application/zip
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/DataExportError'
+        "403":
+          description: The account is not the session's
+          schema:
+            $ref: '#/definitions/DataExportError'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/DataExportError'
+        "500":
+          description: The data could not be read
+          schema:
+            $ref: '#/definitions/DataExportError'
+      security:
+      - ClerkSession: []
+      summary: Download all my data
+      tags:
+      - account
+  /accounts/{accountId}/deletion:
+    get:
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/AccountDeletion'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/AccountDeletionError'
+        "403":
+          description: The account is not the session's
+          schema:
+            $ref: '#/definitions/AccountDeletionError'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/AccountDeletionError'
+      security:
+      - ClerkSession: []
+      summary: Whether the account is scheduled for deletion
+      tags:
+      - account
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Needs the word "ELIMINAR" and a sign-in verified in the last 10 minutes (otherwise 403 with Clerk's
+        "reverification-error", which the app's Clerk component answers by asking for the password or code). Cancels the open
+        subscription first — if the provider fails, nothing is saved (502). Then the account is paused until the date: it can
+        only read its deletion, download its data and cancel. Its pending invitations and child-phone links stop working.
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: The confirmation word
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/AccountDeletionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/AccountDeletionRequested'
+        "400":
+          description: The confirmation word is not ELIMINAR
+          schema:
+            $ref: '#/definitions/AccountDeletionError'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/AccountDeletionError'
+        "403":
+          description: Not the session's account, or the sign-in is not recent
+          schema:
+            $ref: '#/definitions/AccountDeletionError'
+        "409":
+          description: The account is already scheduled for deletion
+          schema:
+            $ref: '#/definitions/AccountDeletionError'
+        "502":
+          description: The subscription could not be canceled; nothing was saved
+          schema:
+            $ref: '#/definitions/AccountDeletionError'
+      security:
+      - ClerkSession: []
+      summary: Ask to delete the account in 30 days
+      tags:
+      - account
+  /accounts/{accountId}/deletion/cancel:
+    post:
+      description: |-
+        Idempotent: without an open request it answers the same. A subscription canceled when the deletion was asked for
+        stays canceled.
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/AccountDeletion'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/AccountDeletionError'
+        "403":
+          description: The account is not the session's
+          schema:
+            $ref: '#/definitions/AccountDeletionError'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/AccountDeletionError'
+      security:
+      - ClerkSession: []
+      summary: Cancel the account's deletion
+      tags:
+      - account
   /accounts/{accountId}/disclaimer-acceptance:
     post:
       consumes:
@@ -6581,6 +6823,37 @@ paths:
       summary: The session's family
       tags:
       - family
+  /family/children-export:
+    post:
+      description: |-
+        The same ZIP as /accounts/{accountId}/data-export, limited to the children of the family's owner — never her own
+        consultations, routines or medicine cabinet. Only for an active member of a family whose owner asked to delete her
+        account; anyone else gets 404.
+      produces:
+      - application/zip
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/DataExportError'
+        "404":
+          description: Not a member of a family whose owner asked to delete her account
+          schema:
+            $ref: '#/definitions/DataExportError'
+        "500":
+          description: The data could not be read
+          schema:
+            $ref: '#/definitions/DataExportError'
+      security:
+      - ClerkSession: []
+      summary: Download the data of the family's children (while the owner's deletion
+        is pending)
+      tags:
+      - account
   /family/invitations:
     post:
       consumes:

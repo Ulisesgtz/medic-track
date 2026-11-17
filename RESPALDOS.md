@@ -104,9 +104,18 @@ Hace falta tu computadora con **Go** y las herramientas de **PostgreSQL 18** (`p
 
    Lo esperado: «restauración completa: dev/…, N tablas, conteos iguales». Si dice que hay tablas que no cuadran, **no la uses** y prueba con la copia anterior.
 5. **Revisar** la base restaurada: entra con `psql`, cuenta un par de tablas que conozcas y, si puedes, apunta un API de prueba a ella.
-6. **Solo después**, en el servicio del API de Railway, cambia `DATABASE_URL` a la base nueva y vuelve a desplegar. Cambia también la referencia del servicio `backup`.
-7. Lo que pasó entre la copia (03:00) y el incidente **no está** en la copia: se pierde como máximo un día.
-8. Cierra la terminal (o `unset BACKUP_RESTORE_TARGET`) y borra el archivo de tu llave.
+6. **Volver a borrar las cuentas eliminadas después de la copia** (spec 070). Una cuenta que alguien eliminó entre la copia y hoy ya no existe en Clerk, pero la copia la trae de vuelta con sus datos. Desde `backend/`, con la base **restaurada** en `DATABASE_URL` (igual que arriba, con `read -rs`, nunca en la línea del comando) y la `CLERK_SECRET_KEY` **del mismo ambiente** (la de DEV para DEV):
+
+   ```bash
+   export DATABASE_URL="$BACKUP_RESTORE_TARGET"
+   read -rs CLERK_SECRET_KEY && export CLERK_SECRET_KEY
+   go run ./cmd/accounts reconcile-deleted
+   ```
+
+   **Sin `--apply` solo lista** cuántas cuentas y sus ids, sin borrar nada. Revisa que sean pocas y que correspondan a cuentas que se eliminaron después de la hora de la copia; entonces repítelo con `--apply` para borrarlas de nuevo. Si son más del 20 % de las cuentas vinculadas a Clerk (o de `--max N`) se detiene sin borrar nada: casi seguro la `CLERK_SECRET_KEY` es de otra instancia; revísala antes de subir el límite.
+7. **Solo después**, en el servicio del API de Railway, cambia `DATABASE_URL` a la base nueva y vuelve a desplegar. Cambia también la referencia del servicio `backup`.
+8. Lo que pasó entre la copia (03:00) y el incidente **no está** en la copia: se pierde como máximo un día.
+9. Cierra la terminal (o `unset BACKUP_RESTORE_TARGET DATABASE_URL CLERK_SECRET_KEY`) y borra el archivo de tu llave.
 
 ### Cambiar una llave
 

@@ -32,15 +32,28 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
   const onFamilyPage = useMatch('/familia') !== null
   const onCabinetPage = useMatch('/botiquin/*') !== null
   const onPlansPage = useMatch('/planes') !== null
+  const onAccountPage = useMatch('/cuenta') !== null
   // Specs/033 part 3, 056 and 058: the person's own profile, apart from the children — one entry, «Mi perfil».
-  const onMyDay = [useMatch('/yo/*'), useMatch('/mis-suplementos/*'), useMatch('/mis-actividades/*')].some((m) => m !== null)
+  const onMyDay = [
+    useMatch('/yo/*'),
+    useMatch('/mis-suplementos/*'),
+    useMatch('/mis-actividades/*'),
+  ].some((m) => m !== null)
   const onShared = useMatch('/personas/:accountId/*')?.params.accountId
   // Every child is shared with the session (none of its own): the group is named after the family.
-  const groupLabel = onlySharedChildren(account) ? (account?.family ? familyOf(account.family.ownerName) : HOME.sharedTitle) : HOME.childrenTitle
+  const groupLabel = onlySharedChildren(account)
+    ? account?.family
+      ? familyOf(account.family.ownerName)
+      : HOME.sharedTitle
+    : HOME.childrenTitle
 
   return (
     <aside className="sticky top-0 flex h-screen w-[280px] shrink-0 flex-col gap-8 overflow-y-auto bg-ink px-6 py-7">
-      <Link to="/home" className="-my-[5px] flex min-h-11 items-center gap-2.5" aria-label="PediTrack — ir a mi home">
+      <Link
+        to="/home"
+        className="-my-[5px] flex min-h-11 items-center gap-2.5"
+        aria-label="PediTrack — ir a mi home"
+      >
         <Logo size={34} />
         <span className="text-lg font-black tracking-tight text-white">
           Pedi<span className="text-bright-soft">Track</span>
@@ -53,12 +66,16 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
         aria-current={onHome ? 'page' : undefined}
         className={`-mt-3 flex min-h-12 items-center rounded-2xl px-4 transition-colors duration-200 ${onHome ? 'bg-action' : 'hover:bg-ink-soft'}`}
       >
-        <span className={`text-base font-extrabold ${onHome ? 'text-white' : 'text-hint-border'}`}>Inicio</span>
+        <span className={`text-base font-extrabold ${onHome ? 'text-white' : 'text-hint-border'}`}>
+          Inicio
+        </span>
       </Link>
 
       <nav aria-label="Tus hijos" className="flex flex-col gap-2.5">
         {/* Specs/055: the group's name, as in the design («Tus hijos», or the family whose children the session only sees). */}
-        <p className="px-4 pt-1 text-xs font-extrabold tracking-[0.08em] text-bright-soft uppercase">{groupLabel}</p>
+        <p className="px-4 pt-1 text-xs font-extrabold tracking-[0.08em] text-bright-soft uppercase">
+          {groupLabel}
+        </p>
         {account?.children.map((child) => {
           const isActive = child.id === activeChildId
           return (
@@ -76,7 +93,9 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
                 {child.firstName}
               </span>
               {/* Inactive age: #62909d (the mock's #5b8b94 is 4.3:1 on ink, under the 4.5:1 minimum). */}
-              <span className={`shrink-0 text-[13px] font-semibold ${isActive ? 'text-hint-edge' : 'text-ink-muted'}`}>
+              <span
+                className={`shrink-0 text-[13px] font-semibold ${isActive ? 'text-hint-edge' : 'text-ink-muted'}`}
+              >
                 {formatAgeShort(child.birthDate)}
               </span>
             </Link>
@@ -103,7 +122,11 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
           onFamilyPage ? 'bg-action' : 'hover:bg-ink-soft'
         }`}
       >
-        <span className={`text-base font-extrabold ${onFamilyPage ? 'text-white' : 'text-hint-border'}`}>Familia</span>
+        <span
+          className={`text-base font-extrabold ${onFamilyPage ? 'text-white' : 'text-hint-border'}`}
+        >
+          Familia
+        </span>
       </Link>
       {/* specs/062: the family's medicine cabinet, in the Familia group (not for a Child-role member). */}
       {cabinetAccess(account).canView && (
@@ -112,19 +135,29 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
           aria-current={onCabinetPage ? 'page' : undefined}
           className={`flex min-h-12 items-center justify-between rounded-2xl px-4 transition-colors duration-200 ${onCabinetPage ? 'bg-action' : 'hover:bg-ink-soft'}`}
         >
-          <span className={`text-base font-extrabold ${onCabinetPage ? 'text-white' : 'text-hint-border'}`}>{CABINET.sidebar}</span>
+          <span
+            className={`text-base font-extrabold ${onCabinetPage ? 'text-white' : 'text-hint-border'}`}
+          >
+            {CABINET.sidebar}
+          </span>
         </Link>
       )}
 
       {account && (
         <nav aria-label="Personal" className="flex flex-col gap-2.5 border-t border-ink-edge pt-5">
-          <p className="px-4 text-xs font-extrabold tracking-[0.1em] text-ink-muted uppercase">Personal</p>
+          <p className="px-4 text-xs font-extrabold tracking-[0.1em] text-ink-muted uppercase">
+            Personal
+          </p>
           <Link
             to="/yo"
             aria-current={onMyDay ? 'page' : undefined}
             className={`flex min-h-12 items-center rounded-2xl px-4 transition-colors duration-200 ${onMyDay ? 'bg-action' : 'hover:bg-ink-soft'}`}
           >
-            <span className={`text-base font-extrabold ${onMyDay ? 'text-white' : 'text-hint-border'}`}>{PROFILE.sidebar}</span>
+            <span
+              className={`text-base font-extrabold ${onMyDay ? 'text-white' : 'text-hint-border'}`}
+            >
+              {PROFILE.sidebar}
+            </span>
           </Link>
           {/* Specs/058: somebody of the family who shares their own consultations with the session. */}
           {account.sharedProfiles?.map((p) => {
@@ -136,7 +169,11 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
                 aria-current={active ? 'page' : undefined}
                 className={`flex min-h-12 items-center rounded-2xl px-4 transition-colors duration-200 ${active ? 'bg-action' : 'hover:bg-ink-soft'}`}
               >
-                <span className={`text-base font-extrabold ${active ? 'text-white' : 'text-hint-border'}`}>{sharedEntry(p.firstName)}</span>
+                <span
+                  className={`text-base font-extrabold ${active ? 'text-white' : 'text-hint-border'}`}
+                >
+                  {sharedEntry(p.firstName)}
+                </span>
               </Link>
             )
           })}
@@ -154,6 +191,16 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
             }`}
           >
             Planes
+          </Link>
+          {/* Specs/070: download all the data, delete the account. */}
+          <Link
+            to="/cuenta"
+            aria-current={onAccountPage ? 'page' : undefined}
+            className={`flex min-h-11 items-center rounded-2xl px-4 text-[15px] font-extrabold transition-colors duration-200 ${
+              onAccountPage ? 'bg-action text-white' : 'text-hint-border hover:bg-ink-soft'
+            }`}
+          >
+            Mi cuenta
           </Link>
           {/* Specs/055: the account opens its menu, where «Cerrar sesión» is. */}
           <AccountMenu account={account} variant="sidebar" />

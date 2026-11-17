@@ -12,6 +12,9 @@ import { AppointmentHistoryPage } from './features/appointments/AppointmentHisto
 import { FakeCheckoutPage } from './features/plans/FakeCheckoutPage'
 import { PaymentReturnPage } from './features/plans/PaymentReturnPage'
 import { PlansPage } from './features/plans/PlansPage'
+import { AccountPage } from './features/account/AccountPage'
+import { DeleteAccountPage } from './features/account/DeleteAccountPage'
+import { PausedAccountGate } from './features/account/PausedAccountGate'
 import { ProfilePage } from './features/profile/ProfilePage'
 import { ProfileRedirect } from './features/profile/ProfileRedirect'
 import { SharedProfilePage } from './features/profile/SharedProfilePage'
@@ -56,7 +59,8 @@ function HomeRoute() {
   const { isLoaded, isSignedIn } = useAuth()
   const mode = useOfflineSession()
   // Without a network a child's phone (no parents' copy) still goes to its own screen, which opens offline too (specs/067).
-  if (readCredential() && ((isLoaded && !isSignedIn) || mode === 'gate')) return <Navigate to="/hijo/hoy" replace />
+  if (readCredential() && ((isLoaded && !isSignedIn) || mode === 'gate'))
+    return <Navigate to="/hijo/hoy" replace />
   return (
     <RequireSession>
       <HomePage />
@@ -75,331 +79,362 @@ function App() {
       <SessionCacheGuard />
       <OfflinePersistence />
       <BrowserRouter>
-        <Routes>
-          <Route path="/signup" element={<AccountSignupPage />} />
-          <Route
-            path="/registro/completar"
-            element={
-              <RequireSession>
-                <CompleteGoogleSignupPage />
-              </RequireSession>
-            }
-          />
-          <Route path="/sso-callback" element={<SsoCallbackPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/recuperar-contrasena" element={<ForgotPasswordPage />} />
-          <Route path="/home" element={<HomeRoute />} />
-          <Route
-            path="/children/:childId"
-            element={
-              <RequireSession>
-                <ChildDetailPage />
-              </RequireSession>
-            }
-          />
-          {/* specs/062: the family's medicine cabinet. */}
-          <Route
-            path="/botiquin"
-            element={
-              <RequireSession>
-                <CabinetPage />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/botiquin/nuevo"
-            element={
-              <RequireSession>
-                <CabinetFormPage key="new" />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/botiquin/:itemId"
-            element={
-              <RequireSession>
-                <CabinetItemPage />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/botiquin/:itemId/editar"
-            element={
-              <RequireSession>
-                <CabinetFormPage key="edit" />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/children/:childId/editar"
-            element={
-              <RequireSession>
-                <EditChildPage />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/children/:childId/crecimiento"
-            element={
-              <RequireSession>
-                <RequireConnection>
-                  <GrowthPage />
-                </RequireConnection>
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/children/:childId/crecimiento/nueva"
-            element={
-              <RequireSession>
-                <RequireConnection>
-                  <GrowthFormPage key="new" />
-                </RequireConnection>
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/children/:childId/crecimiento/:measurementId/editar"
-            element={
-              <RequireSession>
-                <RequireConnection>
-                  <GrowthFormPage key="edit" />
-                </RequireConnection>
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/children/:childId/cartilla"
-            element={
-              <RequireSession>
-                <VaccinationCardPage />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/children/:childId/historial"
-            element={
-              <RequireSession>
-                <RequireConnection>
-                  <HistoryPage />
-                </RequireConnection>
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/children/:childId/consultations/new"
-            element={
-              <RequireSession>
-                <NewConsultationPage />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/consultations/:consultationId"
-            element={
-              <RequireSession>
-                <ConsultationDetailPage />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/consultations/:consultationId/editar"
-            element={
-              <RequireSession>
-                <EditConsultationPage />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/children/:childId/suplementos/nueva"
-            element={
-              <RequireSession>
-                <RoutineFormPage kind="supplement" />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/children/:childId/actividades/nueva"
-            element={
-              <RequireSession>
-                <RoutineFormPage kind="activity" />
-              </RequireSession>
-            }
-          />
-          {/* specs/058: the person's own profile — their consultations, supplements and activities. */}
-          <Route
-            path="/yo"
-            element={
-              <RequireSession>
-                <ProfilePage />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/yo/consultas/nueva"
-            element={
-              <RequireSession>
-                <NewConsultationPage own />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/yo/historial"
-            element={
-              <RequireSession>
-                <RequireConnection>
-                  <HistoryPage own />
-                </RequireConnection>
-              </RequireSession>
-            }
-          />
-          {/* Somebody of the family who shares their own consultations with the session (specs/058). */}
-          <Route
-            path="/personas/:accountId"
-            element={
-              <RequireSession>
-                <SharedProfilePage />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/personas/:accountId/historial"
-            element={
-              <RequireSession>
-                <RequireConnection>
-                  <HistoryPage />
-                </RequireConnection>
-              </RequireSession>
-            }
-          />
-          {/* specs/056 and 058: «Mi día», «Mis suplementos» and «Mis actividades» are the profile now; old links and reminders still land. */}
-          <Route path="/mi-dia" element={<ProfileRedirect />} />
-          <Route path="/mis-suplementos" element={<Navigate to="/yo#suplementos" replace />} />
-          <Route path="/mis-actividades" element={<Navigate to="/yo#actividades" replace />} />
-          <Route
-            path="/mis-suplementos/nueva"
-            element={
-              <RequireSession>
-                <RoutineFormPage kind="supplement" personal />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/mis-actividades/nueva"
-            element={
-              <RequireSession>
-                <RoutineFormPage kind="activity" personal />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/suplementos/:routineId"
-            element={
-              <RequireSession>
-                <RoutineDetailPage />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/actividades/:routineId"
-            element={
-              <RequireSession>
-                <RoutineDetailPage />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/suplementos/:routineId/editar"
-            element={
-              <RequireSession>
-                <RoutineFormPage />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/actividades/:routineId/editar"
-            element={
-              <RequireSession>
-                <RoutineFormPage />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/citas/:appointmentId/editar"
-            element={
-              <RequireSession>
-                <AppointmentFormPage />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/consultations/:consultationId/cita/nueva"
-            element={
-              <RequireSession>
-                <AppointmentFormPage />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/children/:childId/citas/nueva"
-            element={
-              <RequireSession>
-                <AppointmentFormPage />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/children/:childId/citas"
-            element={
-              <RequireSession>
-                <AppointmentHistoryPage />
-              </RequireSession>
-            }
-          />
-          <Route
-            path="/familia"
-            element={
-              <RequireSession>
-                <RequireConnection>
-                  <FamilyPage />
-                </RequireConnection>
-              </RequireSession>
-            }
-          />
-          {/* Public on purpose: an invitation is opened before the person has a session; the page itself asks for one. */}
-          <Route path="/familia/invitacion" element={<InvitationPage />} />
-          {/* A child's own phone (specs/047): no Clerk session and no parents' shell; it carries its own credential. Each of these
+        {/* Specs/070: an account scheduled for deletion only sees its paused screen, on any route. */}
+        <PausedAccountGate>
+          <Routes>
+            <Route path="/signup" element={<AccountSignupPage />} />
+            <Route
+              path="/registro/completar"
+              element={
+                <RequireSession>
+                  <CompleteGoogleSignupPage />
+                </RequireSession>
+              }
+            />
+            <Route path="/sso-callback" element={<SsoCallbackPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/recuperar-contrasena" element={<ForgotPasswordPage />} />
+            <Route path="/home" element={<HomeRoute />} />
+            <Route
+              path="/children/:childId"
+              element={
+                <RequireSession>
+                  <ChildDetailPage />
+                </RequireSession>
+              }
+            />
+            {/* specs/062: the family's medicine cabinet. */}
+            <Route
+              path="/botiquin"
+              element={
+                <RequireSession>
+                  <CabinetPage />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/botiquin/nuevo"
+              element={
+                <RequireSession>
+                  <CabinetFormPage key="new" />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/botiquin/:itemId"
+              element={
+                <RequireSession>
+                  <CabinetItemPage />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/botiquin/:itemId/editar"
+              element={
+                <RequireSession>
+                  <CabinetFormPage key="edit" />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/children/:childId/editar"
+              element={
+                <RequireSession>
+                  <EditChildPage />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/children/:childId/crecimiento"
+              element={
+                <RequireSession>
+                  <RequireConnection>
+                    <GrowthPage />
+                  </RequireConnection>
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/children/:childId/crecimiento/nueva"
+              element={
+                <RequireSession>
+                  <RequireConnection>
+                    <GrowthFormPage key="new" />
+                  </RequireConnection>
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/children/:childId/crecimiento/:measurementId/editar"
+              element={
+                <RequireSession>
+                  <RequireConnection>
+                    <GrowthFormPage key="edit" />
+                  </RequireConnection>
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/children/:childId/cartilla"
+              element={
+                <RequireSession>
+                  <VaccinationCardPage />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/children/:childId/historial"
+              element={
+                <RequireSession>
+                  <RequireConnection>
+                    <HistoryPage />
+                  </RequireConnection>
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/children/:childId/consultations/new"
+              element={
+                <RequireSession>
+                  <NewConsultationPage />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/consultations/:consultationId"
+              element={
+                <RequireSession>
+                  <ConsultationDetailPage />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/consultations/:consultationId/editar"
+              element={
+                <RequireSession>
+                  <EditConsultationPage />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/children/:childId/suplementos/nueva"
+              element={
+                <RequireSession>
+                  <RoutineFormPage kind="supplement" />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/children/:childId/actividades/nueva"
+              element={
+                <RequireSession>
+                  <RoutineFormPage kind="activity" />
+                </RequireSession>
+              }
+            />
+            {/* specs/058: the person's own profile — their consultations, supplements and activities. */}
+            <Route
+              path="/yo"
+              element={
+                <RequireSession>
+                  <ProfilePage />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/yo/consultas/nueva"
+              element={
+                <RequireSession>
+                  <NewConsultationPage own />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/yo/historial"
+              element={
+                <RequireSession>
+                  <RequireConnection>
+                    <HistoryPage own />
+                  </RequireConnection>
+                </RequireSession>
+              }
+            />
+            {/* Somebody of the family who shares their own consultations with the session (specs/058). */}
+            <Route
+              path="/personas/:accountId"
+              element={
+                <RequireSession>
+                  <SharedProfilePage />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/personas/:accountId/historial"
+              element={
+                <RequireSession>
+                  <RequireConnection>
+                    <HistoryPage />
+                  </RequireConnection>
+                </RequireSession>
+              }
+            />
+            {/* specs/056 and 058: «Mi día», «Mis suplementos» and «Mis actividades» are the profile now; old links and reminders still land. */}
+            <Route path="/mi-dia" element={<ProfileRedirect />} />
+            <Route path="/mis-suplementos" element={<Navigate to="/yo#suplementos" replace />} />
+            <Route path="/mis-actividades" element={<Navigate to="/yo#actividades" replace />} />
+            <Route
+              path="/mis-suplementos/nueva"
+              element={
+                <RequireSession>
+                  <RoutineFormPage kind="supplement" personal />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/mis-actividades/nueva"
+              element={
+                <RequireSession>
+                  <RoutineFormPage kind="activity" personal />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/suplementos/:routineId"
+              element={
+                <RequireSession>
+                  <RoutineDetailPage />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/actividades/:routineId"
+              element={
+                <RequireSession>
+                  <RoutineDetailPage />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/suplementos/:routineId/editar"
+              element={
+                <RequireSession>
+                  <RoutineFormPage />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/actividades/:routineId/editar"
+              element={
+                <RequireSession>
+                  <RoutineFormPage />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/citas/:appointmentId/editar"
+              element={
+                <RequireSession>
+                  <AppointmentFormPage />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/consultations/:consultationId/cita/nueva"
+              element={
+                <RequireSession>
+                  <AppointmentFormPage />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/children/:childId/citas/nueva"
+              element={
+                <RequireSession>
+                  <AppointmentFormPage />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/children/:childId/citas"
+              element={
+                <RequireSession>
+                  <AppointmentHistoryPage />
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/familia"
+              element={
+                <RequireSession>
+                  <RequireConnection>
+                    <FamilyPage />
+                  </RequireConnection>
+                </RequireSession>
+              }
+            />
+            {/* Public on purpose: an invitation is opened before the person has a session; the page itself asks for one. */}
+            <Route path="/familia/invitacion" element={<InvitationPage />} />
+            {/* A child's own phone (specs/047): no Clerk session and no parents' shell; it carries its own credential. Each of these
               routes is also in CHILD_PAGES of vite.config.ts, so its HTML names the child's manifest (the installed app starts at /hijo). */}
-          <Route path="/hijo" element={<RedeemPage />} />
-          <Route path="/hijo/hoy" element={<ChildTodayPage />} />
-          <Route path="/" element={<Navigate to="/signup" replace />} />
-          {/* The plans (specs/034): every "Ver el plan completo" lands here. */}
-          <Route
-            path="/planes"
-            element={
-              <RequireSession>
-                <RequireConnection>
-                  <PlansPage />
-                </RequireConnection>
-              </RequireSession>
-            }
-          />
-          {/* Where the payment provider sends the person back (specs/045): it only asks the server what happened. */}
-          <Route
-            path="/planes/regreso"
-            element={
-              <RequireSession>
-                <PaymentReturnPage />
-              </RequireSession>
-            }
-          />
-          {/* The fake provider's payment page: only in the E2E and development builds (VITE_PAYMENTS_FAKE), never in production. */}
-          {import.meta.env.VITE_PAYMENTS_FAKE === 'true' && <Route path="/planes/pago-de-prueba" element={<FakeCheckoutPage />} />}
-          <Route
-            path="*"
-            element={<MessagePage title="Esta página no existe" message="Revisa la dirección o vuelve a tu home." />}
-          />
-        </Routes>
+            <Route path="/hijo" element={<RedeemPage />} />
+            <Route path="/hijo/hoy" element={<ChildTodayPage />} />
+            <Route path="/" element={<Navigate to="/signup" replace />} />
+            {/* The plans (specs/034): every "Ver el plan completo" lands here. */}
+            <Route
+              path="/planes"
+              element={
+                <RequireSession>
+                  <RequireConnection>
+                    <PlansPage />
+                  </RequireConnection>
+                </RequireSession>
+              }
+            />
+            {/* Specs/070: download all the data and delete the account. */}
+            <Route
+              path="/cuenta"
+              element={
+                <RequireSession>
+                  <RequireConnection>
+                    <AccountPage />
+                  </RequireConnection>
+                </RequireSession>
+              }
+            />
+            <Route
+              path="/cuenta/eliminar"
+              element={
+                <RequireSession>
+                  <RequireConnection>
+                    <DeleteAccountPage />
+                  </RequireConnection>
+                </RequireSession>
+              }
+            />
+            {/* Where the payment provider sends the person back (specs/045): it only asks the server what happened. */}
+            <Route
+              path="/planes/regreso"
+              element={
+                <RequireSession>
+                  <PaymentReturnPage />
+                </RequireSession>
+              }
+            />
+            {/* The fake provider's payment page: only in the E2E and development builds (VITE_PAYMENTS_FAKE), never in production. */}
+            {import.meta.env.VITE_PAYMENTS_FAKE === 'true' && (
+              <Route path="/planes/pago-de-prueba" element={<FakeCheckoutPage />} />
+            )}
+            <Route
+              path="*"
+              element={
+                <MessagePage
+                  title="Esta página no existe"
+                  message="Revisa la dirección o vuelve a tu home."
+                />
+              }
+            />
+          </Routes>
+        </PausedAccountGate>
       </BrowserRouter>
     </QueryClientProvider>
   )

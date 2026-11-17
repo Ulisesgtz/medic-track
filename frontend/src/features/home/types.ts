@@ -28,6 +28,9 @@ export interface FamilyMembership {
   ownerName: string
   plan: string
   readOnly: boolean
+  // Specs/070: set when the family's owner asked to delete her account. Until that date the person sees and marks her children
+  // and can download their data; then they stop seeing them.
+  deletionScheduledFor?: string | null
 }
 
 export interface Account {
@@ -50,6 +53,8 @@ export interface Account {
   // theirs with this one. Optional: a backend that predates it doesn't send them.
   consultationSharing?: { shared: boolean; changedAt: string | null }
   sharedProfiles?: SharedProfile[]
+  // Specs/070: set when the account asked to delete itself; the app then only offers downloading the data and canceling.
+  deletion?: { scheduledFor: string } | null
 }
 
 /** Somebody of the family who shares their own consultations with the session (specs/058). */

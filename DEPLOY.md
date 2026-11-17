@@ -319,3 +319,12 @@ El plan completo (MX$499 al año) se contrata desde `/planes`: el padre paga **e
 El código está listo, pero **todavía no corre en ningún ambiente**: falta que el dueño haga sus pasos (Cloudflare R2 pide
 registrar un método de pago). La guía completa —qué se respalda, los pasos del dueño, cómo restaurar, cambiar o perder una
 llave y el costo— está en **`RESPALDOS.md`**, y el pendiente en `BACKLOG.md`.
+## Eliminar la cuenta (spec 070)
+
+El padre elimina su cuenta desde «Mi cuenta» (`/cuenta/eliminar`): **30 días de gracia** con la cuenta en pausa y, al vencer, el API borra el usuario en Clerk y todos sus datos.
+
+1. **Migración `0037`** (`account_deletions` y las columnas de autor nulables) en la base de DEV **antes** de desplegar el backend nuevo (mismo método que la `0027`).
+2. **El barrido corre dentro del API** (cada 10 min, `accountdeletion.SweepInterval`): el backend debe estar siempre encendido. Necesita **`CLERK_SECRET_KEY`** (ya está para la autenticación): sin ella no puede borrar al usuario en Clerk y la cuenta se queda esperando. Si algo falla queda en `GET /ops/error-logs?endpointPrefix=job:account-deletion` (mensajes fijos con conteos).
+3. **Los correos** (al pedirlo, a la familia y al terminar) usan Resend como las invitaciones (`RESEND_API_KEY`, misma cuota diaria). **Sin `RESEND_API_KEY` no se mandan, pero el borrado sigue** igual.
+4. **Después de restaurar un respaldo**, correr `go run ./cmd/accounts reconcile-deleted` (con `DATABASE_URL` y `CLERK_SECRET_KEY`): **por omisión solo lista** (cuántas cuentas y sus ids, sin borrar nada); revisa que sean las que se eliminaron después del respaldo y repite con `--apply` para borrarlas de nuevo. Si hay más de `--max N` cuentas (por omisión el 20 % de las vinculadas a Clerk) se detiene sin borrar nada: casi seguro la `CLERK_SECRET_KEY` es de otra instancia; revísala antes de subir el límite.
+5. **Pendientes del dueño**: actualizar el aviso de privacidad (borrado, plazo de 30 días, descarga) y revisar con su contador cuánto se conserva (p. ej. la facturación).
