@@ -103,7 +103,7 @@ for (const design of designs) {
       const { email } = await seedAccount(page, child)
       await page.goto('/home')
       await openReminders(page)
-      await page.getByRole('button', { name: 'Activar recordatorios' }).click()
+      await page.getByRole('region', { name: 'Recordatorios de tomas' }).getByRole('button', { name: 'Activar recordatorios' }).click()
       await page.getByRole('dialog').getByRole('button', { name: /Mostrar detalle/ }).click()
       await expect(page.getByRole('region', { name: 'Recordatorios de tomas' })).toContainText('el detalle de la toma')
 

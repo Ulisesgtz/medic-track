@@ -3,6 +3,7 @@
   "short_name": "PediTrack",
   "description": "Registra consultas, recetas y tomas de medicamento de tus hijos.",
   "lang": "es-MX",
+  "id": "/home",
   "start_url": "/home",
   "scope": "/",
   "display": "standalone",

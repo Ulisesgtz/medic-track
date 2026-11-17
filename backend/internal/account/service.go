@@ -196,6 +196,12 @@ func (s *Service) AcceptDisclaimer(ctx context.Context, accountID uuid.UUID, ver
 	return s.repo.AcceptDisclaimer(ctx, accountID, version)
 }
 
+// SetFirstUseGuide closes (dismissed) or reopens the first-use guide of the home and returns its state
+// (specs/071-primer-uso-guiado). Idempotent.
+func (s *Service) SetFirstUseGuide(ctx context.Context, accountID uuid.UUID, dismissed bool) (FirstUseGuide, error) {
+	return s.repo.SetFirstUseGuideDismissed(ctx, accountID, dismissed)
+}
+
 // UpdateReminderDetail sets what the account's dose reminders show: "detailed" (medication, time
 // and child) or "generic" (FR-008, specs/011-recordatorios-push). Any other value is a
 // validation error.

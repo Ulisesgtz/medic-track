@@ -58,7 +58,7 @@ for (const design of designs) {
       await page.goto('/home')
 
       await expect(page.getByRole('main').getByRole('link', { name: 'Ver detalle de Luis' })).toBeVisible()
-      await expect(page.getByRole('region', { name: 'Antes de empezar' })).toBeVisible()
+      await expect(page.getByRole('dialog', { name: 'Antes de empezar' })).toBeVisible()
     })
 
     test('campos vacíos: pide correo y contraseña sin llamar a Clerk', async ({ page }) => {

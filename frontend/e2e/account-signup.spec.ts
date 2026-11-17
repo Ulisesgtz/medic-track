@@ -53,12 +53,16 @@ for (const design of designs) {
       await finishEmailVerificationIfAsked(page)
       await expect(page).toHaveURL(/\/home/)
 
-      const notice = page.getByRole('region', { name: 'Antes de empezar' })
+      const notice = page.getByRole('dialog', { name: 'Antes de empezar' })
       await expect(notice).toContainText('no sustituye una consulta médica')
       await expect(notice).toContainText('acude siempre a tu médico')
       const token = await sessionToken(page)
       const me = () => page.context().request.get('http://localhost:8080/accounts/me', { headers: { Authorization: `Bearer ${token}` } })
       expect((await (await me()).json()).disclaimerAccepted).toBe(false)
+
+      // specs/071: Escape does not close it; only «Entendido» does.
+      await page.keyboard.press('Escape')
+      await expect(notice).toBeVisible()
 
       await page.getByRole('button', { name: 'Entendido' }).click()
       await expect(notice).toHaveCount(0)

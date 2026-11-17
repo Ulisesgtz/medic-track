@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { useLogout } from '../auth/useLogout'
@@ -17,6 +17,10 @@ import { TuDia } from './TuDia'
 import { HomeSkeleton } from './HomeSkeleton'
 import { AccountMenu } from './AccountMenu'
 import { MoreLinks } from './MoreLinks'
+import { useReminders } from '../reminders/useReminders'
+import { ClosedNotice, FirstUseGuide } from '../firstUse/FirstUseGuide'
+import { useFirstUseGuide, type FirstUseGuideApi } from '../firstUse/useFirstUseGuide'
+import type { Account } from './types'
 import { CabinetEntry } from '../medicineCabinet/CabinetEntry'
 import { SharedProfilesLinks } from '../profile/SharedProfilesLinks'
 import { OfflineMissing } from '../../shared/offline/OfflineMissing'
@@ -28,6 +32,16 @@ import { needsConnection, showsLoadError } from '../../shared/offline/queryView'
  * separate designs (phone 390 px, web with the sidebar). Before that, the gap between signing up with Clerk and finishing
  * POST /accounts (FR-006, specs/008: «Falta terminar tu registro»), a load error and the skeletons while the account loads.
  */
+/**
+ * Holds what the first-use guide and «Lo demás» share (specs/071): one `useReminders` for both, so the row of the reminders says
+ * «Activados» as soon as the guide's third step turns them on.
+ */
+function GuideScope({ account, children }: { account: Account; children: (guide: FirstUseGuideApi) => ReactNode }) {
+  const reminders = useReminders(account)
+  const guide = useFirstUseGuide(account, reminders)
+  return <>{children(guide)}</>
+}
+
 export function HomePage() {
   const [showAddChild, setShowAddChild] = useState(false)
   const addChildButton = useRef<HTMLButtonElement>(null)
@@ -167,21 +181,34 @@ export function HomePage() {
       />
     )
 
+  if (!account) return null
+
   if (isDesktop) {
     return (
       <AppShell>
         <main className="min-h-screen min-w-0 bg-canvas px-6 py-8 leading-[normal] lg:px-12 lg:pt-11 lg:pb-14">
-          <div className="mx-auto flex max-w-[904px] flex-col gap-7">
-            <WelcomeDisclaimer account={account} />
-            {readOnly && <ReadOnlyNote variant="desktop" />}
-            {account && <FamilyDeletionNotice account={account} variant="desktop" />}
-            {account && <Greeting account={account} variant="desktop" />}
-            {account && <TuDia account={account} variant="desktop" />}
-            {childrenSection('desktop')}
-            {account && <CabinetEntry account={account} />}
-            {account && <SharedProfilesLinks account={account} variant="desktop" />}
-            {account && <MoreLinks account={account} variant="desktop" />}
-          </div>
+          <GuideScope account={account}>
+            {(guide) => (
+              <div className="mx-auto flex max-w-[904px] flex-col gap-7">
+                <WelcomeDisclaimer account={account} />
+                {readOnly && <ReadOnlyNote variant="desktop" />}
+                <FamilyDeletionNotice account={account} variant="desktop" />
+                <Greeting account={account} variant="desktop" />
+                <FirstUseGuide guide={guide} variant="desktop" />
+                <TuDia account={account} variant="desktop" />
+                {childrenSection('desktop')}
+                <CabinetEntry account={account} />
+                <SharedProfilesLinks account={account} variant="desktop" />
+                <MoreLinks
+                  account={account}
+                  variant="desktop"
+                  reminders={guide.reminders}
+                  guideRow={{ show: guide.reopenRow, onOpen: guide.reopen, busy: guide.busy }}
+                />
+                <ClosedNotice guide={guide} variant="desktop" />
+              </div>
+            )}
+          </GuideScope>
           {dialogs}
         </main>
       </AppShell>
@@ -194,23 +221,28 @@ export function HomePage() {
         className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col gap-5 bg-canvas px-5 pb-8 leading-[normal]"
         style={{ paddingTop: 'calc(0.5rem + env(safe-area-inset-top))' }}
       >
-        <div className="empty:hidden">
-          <WelcomeDisclaimer account={account} />
-        </div>
-        {readOnly && <ReadOnlyNote variant="phone" />}
-        {account && <FamilyDeletionNotice account={account} variant="phone" />}
-        {account && (
-          <Greeting
-            account={account}
-            variant="phone"
-            accountSlot={<AccountMenu account={account} variant="phone" />}
-          />
-        )}
-        {account && <TuDia account={account} variant="phone" />}
-        {childrenSection('phone')}
-        {account && <CabinetEntry account={account} />}
-        {account && <SharedProfilesLinks account={account} variant="phone" />}
-        {account && <MoreLinks account={account} variant="phone" />}
+        <GuideScope account={account}>
+          {(guide) => (
+            <>
+              <WelcomeDisclaimer account={account} />
+              {readOnly && <ReadOnlyNote variant="phone" />}
+              <FamilyDeletionNotice account={account} variant="phone" />
+              <Greeting account={account} variant="phone" accountSlot={<AccountMenu account={account} variant="phone" />} />
+              <FirstUseGuide guide={guide} variant="phone" />
+              <TuDia account={account} variant="phone" />
+              {childrenSection('phone')}
+              <CabinetEntry account={account} />
+              <SharedProfilesLinks account={account} variant="phone" />
+              <MoreLinks
+                account={account}
+                variant="phone"
+                reminders={guide.reminders}
+                guideRow={{ show: guide.reopenRow, onOpen: guide.reopen, busy: guide.busy }}
+              />
+              <ClosedNotice guide={guide} variant="phone" />
+            </>
+          )}
+        </GuideScope>
         {dialogs}
       </main>
     </AppShell>

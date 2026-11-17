@@ -118,6 +118,10 @@ export async function signUp(page: Page, data: SignupData = {}) {
   await page.getByRole('button', { name: 'Crear cuenta' }).click()
   await finishEmailVerificationIfAsked(page)
   await expect(page).toHaveURL(/\/home/, { timeout: 15_000 })
+  // The «Antes de empezar» window (specs/071) sits over the home of a new account: confirm it, like `seedAccount` does by API.
+  const notice = page.getByRole('dialog', { name: 'Antes de empezar' })
+  await notice.getByRole('button', { name: 'Entendido' }).click()
+  await expect(notice).toHaveCount(0)
 }
 
 /**

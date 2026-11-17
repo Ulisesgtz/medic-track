@@ -216,6 +216,7 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(fullAccount).Delete("/accounts/{accountId}/medicine-cabinet/{itemId}", d.Cabinet.DeleteItem)
 		r.With(seesAccount).Get("/accounts/{accountId}/medicine-cabinet/{itemId}/photo", d.Cabinet.GetPhoto)
 		r.With(ownsAccount).Post("/accounts/{accountId}/disclaimer-acceptance", d.Account.AcceptDisclaimer)
+		r.With(ownsAccount).Put("/accounts/{accountId}/first-use-guide", d.Account.SetFirstUseGuide)
 		r.With(ownsAccount).Patch("/accounts/{accountId}/reminder-settings", d.Account.UpdateReminderSettings)
 		r.With(ownsAccount).Post("/accounts/{accountId}/reminder-devices", d.Reminder.RegisterDevice)
 		r.With(ownsAccount).Post("/accounts/{accountId}/reminder-devices/remove", d.Reminder.RemoveDevice)

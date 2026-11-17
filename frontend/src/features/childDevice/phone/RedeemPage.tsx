@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { isInstalled, isIOS } from '../../reminders/deviceSupport'
+import { isIOS, isRunningInstalled } from '../../../shared/install'
 import { PHONE } from '../childText'
 import { redeemLink } from './api'
 import { AddToHomeArt, ConfirmArt, MenuArt, OpenArt } from './installArt'
@@ -33,7 +33,7 @@ export function RedeemPage() {
   const started = useRef(false)
   // Read once, on the first render: the effect below takes the secret out of the address bar.
   const [token] = useState(() => window.location.hash.replace(/^#/, ''))
-  const [installFirst] = useState(() => token !== '' && isIOS() && !isInstalled())
+  const [installFirst] = useState(() => token !== '' && isIOS() && !isRunningInstalled())
   const [failed, setFailed] = useState(false)
   const [busy, setBusy] = useState(() => token !== '' && !installFirst)
   // A pasted link keeps its form on screen while it is checked (and after a failure, with what was pasted).

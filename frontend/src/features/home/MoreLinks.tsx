@@ -5,21 +5,39 @@ import { ROLE_LABEL } from '../family/roles'
 import { useFamily } from '../family/useFamily'
 import { RemindersCardView } from '../reminders/RemindersCard'
 import { useReminders } from '../reminders/useReminders'
+import { FIRST_USE } from '../firstUse/firstUseText'
 import { HOME, caregiverOf, familyMembers, familyOf, planLabel } from './homeText'
 import type { Account } from './types'
 
 type Variant = 'phone' | 'desktop'
 
+interface GuideRow {
+  /** The row «Primeros pasos · Ver guía» (specs/071): only while the guide is closed and not complete on this device. */
+  show: boolean
+  onOpen: () => void
+  busy: boolean
+}
+
 /**
  * «Lo demás» at the bottom of the home (specs/055, US3): Familia, Planes, Recordatorios and Cerrar sesión, with their value, with
  * less weight than the day — rows of 52 px on the phone, a strip of four on the web. «Recordatorios» opens the reminders card
  * right under it (there is no page for them: activating asks the browser for permission from that card). A Caregiver has no
- * «Planes»: the family's plan is somebody else's.
+ * «Planes»: the family's plan is somebody else's. The caller holds `useReminders` (the first-use guide, specs/071, shares it) and may
+ * add the guide's own row on top.
  */
-export function MoreLinks({ account, variant }: { account: Account; variant: Variant }) {
+export function MoreLinks({
+  account,
+  variant,
+  reminders,
+  guideRow,
+}: {
+  account: Account
+  variant: Variant
+  reminders: ReturnType<typeof useReminders>
+  guideRow?: GuideRow
+}) {
   const desktop = variant === 'desktop'
   const logout = useLogout()
-  const reminders = useReminders(account)
   const family = useFamily().data
   const [remindersOpen, setRemindersOpen] = useState(false)
   const panelId = useId()
@@ -53,10 +71,16 @@ export function MoreLinks({ account, variant }: { account: Account; variant: Var
         aria-label={HOME.more}
         className={
           desktop
-            ? 'grid grid-cols-5 border-y border-hint-edge'
+            ? `grid border-y border-hint-edge ${guideRow?.show ? 'grid-cols-6' : 'grid-cols-5'}`
             : 'mt-2 flex flex-col border-t border-hint-edge'
         }
       >
+        {guideRow?.show && (
+          <button type="button" onClick={guideRow.onOpen} disabled={guideRow.busy} className={row}>
+            <span className={title('text-action')}>{FIRST_USE.reopenRow}</span>
+            <span className={value}>{FIRST_USE.reopenValue}</span>
+          </button>
+        )}
         <Link to="/familia" className={row}>
           <span className={title('text-ink')}>{HOME.family}</span>
           <span className={value}>{familyValue}</span>

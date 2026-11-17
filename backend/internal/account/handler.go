@@ -107,6 +107,37 @@ type accountResponse struct {
 	// Deletion is set when the account asked to delete itself (specs/070): the app then only offers downloading the data
 	// and canceling. Null otherwise.
 	Deletion *deletionInfo `json:"deletion"`
+	// FirstUseGuide is the state of the first-use guide of the home (specs/071-primer-uso-guiado).
+	FirstUseGuide *firstUseGuideResponse `json:"firstUseGuide"`
+}
+
+// firstUseGuideResponse is the first-use guide's server state: whether the account closed it and its oldest consultation.
+type firstUseGuideResponse struct {
+	Dismissed         bool                       `json:"dismissed" example:"false"`
+	FirstConsultation *firstConsultationResponse `json:"firstConsultation"`
+} // @name FirstUseGuide
+
+// firstConsultationResponse names the account's oldest consultation; childId is null for the person's own.
+type firstConsultationResponse struct {
+	ID         string  `json:"id" example:"3f0c0000-0000-0000-0000-000000000000"`
+	DoctorName string  `json:"doctorName" example:"Dra. López"`
+	ChildID    *string `json:"childId" example:"9a1b0000-0000-0000-0000-000000000000"`
+} // @name FirstConsultation
+
+type firstUseGuideRequest struct {
+	Dismissed *bool `json:"dismissed" example:"true"`
+}
+
+func toFirstUseGuideResponse(g FirstUseGuide) *firstUseGuideResponse {
+	out := &firstUseGuideResponse{Dismissed: g.Dismissed}
+	if c := g.FirstConsultation; c != nil {
+		out.FirstConsultation = &firstConsultationResponse{ID: c.ID.String(), DoctorName: c.DoctorName}
+		if c.ChildID != nil {
+			id := c.ChildID.String()
+			out.FirstConsultation.ChildID = &id
+		}
+	}
+	return out
 }
 
 type reminderSettingsRequest struct {
@@ -601,6 +632,48 @@ func (h *Handler) AcceptDisclaimer(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// SetFirstUseGuide handles PUT /accounts/{accountId}/first-use-guide
+// (specs/071-primer-uso-guiado/contracts/first-use-guide.md).
+//
+//	@Summary		Close or reopen the first-use guide of the home
+//	@Description	`dismissed: true` closes the guide («Ahora no»); `false` reopens it. Idempotent. Carries no health data.
+//	@Tags			accounts
+//	@Accept			json
+//	@Produce		json
+//	@Param			accountId	path		string					true	"Account UUID"
+//	@Param			payload		body		firstUseGuideRequest	true	"Whether the guide is closed"
+//	@Success		200			{object}	firstUseGuideResponse
+//	@Failure		400			{object}	errorResponseDoc			"Malformed JSON or missing boolean dismissed"
+//	@Failure		404			{object}	accountNotFoundResponseDoc	"No account exists for this id"
+//	@Security		ClerkSession
+//	@Failure		401		{object}	errorResponseDoc	"No valid Clerk session"
+//	@Failure		403		{object}	errorResponseDoc	"The session does not own this resource"
+//	@Router			/accounts/{accountId}/first-use-guide [put]
+func (h *Handler) SetFirstUseGuide(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxRequestBodyBytes)
+
+	id, err := uuid.Parse(chi.URLParam(r, "accountId"))
+	if err != nil {
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, accountNotFoundBody(), nil)
+		return
+	}
+	var req firstUseGuideRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Dismissed == nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusBadRequest, "invalid_request", "A boolean dismissed is required", &id)
+		return
+	}
+
+	guide, err := h.service.SetFirstUseGuide(r.Context(), id, *req.Dismissed)
+	switch {
+	case errors.Is(err, ErrAccountNotFound):
+		h.responder.WriteJSON(r.Context(), w, http.StatusNotFound, accountNotFoundBody(), nil)
+	case err != nil:
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not update the guide", &id)
+	default:
+		h.responder.WriteJSON(r.Context(), w, http.StatusOK, toFirstUseGuideResponse(guide), &id)
+	}
+}
+
 // UpdateReminderSettings handles PATCH /accounts/{accountId}/reminder-settings
 // (specs/011-recordatorios-push/contracts/reminders-api.md).
 //
@@ -769,5 +842,6 @@ func toAccountResponse(acc *Account) accountResponse {
 		ConsultationSharing: sharing,
 		SharedProfiles:      profiles,
 		Deletion:            deletion,
+		FirstUseGuide:       toFirstUseGuideResponse(acc.FirstUseGuide),
 	}
 }

@@ -40,7 +40,7 @@ for (const design of designs) {
       await expect(card.getByText(/^\d de 1$/)).toBeVisible()
       await expect(card.getByText('Actividades')).toBeVisible()
       await expect(card.getByText(/^\d+ de \d+ hechas$/)).toBeVisible()
-      await expect(main.getByText(/consultas?$/)).toHaveCount(0)
+      await expect(card.getByText(/consultas?$/)).toHaveCount(0)
 
       const mark = card.getByRole('button', { name: /^Marcar .* de Mateo$/ })
       const name = await mark.getAttribute('aria-label')

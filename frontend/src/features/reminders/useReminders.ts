@@ -138,5 +138,15 @@ export function useReminders(account: Account | undefined) {
     }
   }
 
-  return { state, busy, error, activate, deactivate, changeDetail }
+  /**
+   * Reads what the browser allows again (specs/071): the person may have changed the permission in the site settings while this page
+   * stayed open, and `support` was read once at mount. Returns what it found.
+   */
+  function recheck() {
+    const next = detectDeviceSupport()
+    setSupport(next)
+    return next
+  }
+
+  return { state, busy, error, activate, deactivate, changeDetail, recheck }
 }

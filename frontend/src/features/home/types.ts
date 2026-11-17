@@ -55,6 +55,15 @@ export interface Account {
   sharedProfiles?: SharedProfile[]
   // Specs/070: set when the account asked to delete itself; the app then only offers downloading the data and canceling.
   deletion?: { scheduledFor: string } | null
+  // Specs/071: the first-use guide of the home. Optional: a backend that predates it doesn't send it.
+  firstUseGuide?: FirstUseGuideState
+}
+
+/** What the server knows for the first-use guide: whether the account closed it and its oldest consultation (specs/071). */
+export interface FirstUseGuideState {
+  dismissed: boolean
+  // null when the account has no consultation; childId is null for the person's own consultation (specs/058).
+  firstConsultation: { id: string; doctorName: string; childId: string | null } | null
 }
 
 /** Somebody of the family who shares their own consultations with the session (specs/058). */

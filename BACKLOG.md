@@ -424,7 +424,8 @@ Principio I (la app guarda lo que el padre escribe; nunca evalúa ni sugiere).
   complementa los avisos push.
 - **«Repetir tratamiento» desde una consulta anterior** — precarga «Nueva consulta» con los medicamentos de una
   consulta previa; el padre confirma todo, la app no sugiere nada.
-- **Primer uso guiado** — tras el registro el inicio queda vacío. Tres pasos (foto de una receta, activar
+- **Primer uso guiado** — **en spec: `specs/071-primer-uso-guiado/`** (2026-11-16, mock de Claude Design en su
+  `referencia/`). Texto original: tras el registro el inicio queda vacío. Tres pasos (foto de una receta, activar
   recordatorios, instalar en la pantalla de inicio; en iPhone sin instalar no hay avisos). Necesita diseño.
 
 ### Operación y calidad
@@ -476,3 +477,10 @@ está en el PR de `feature/033c-rutinas-personales`. Queda por decidir y probar:
 - **Avisos de citas para el hijo** si algún día se quieren (hoy el teléfono del niño solo recibe avisos de tomas y actividades).
 - **Recortar lo que recibe el teléfono del hijo**: hoy comparte los handlers de los padres y le llegan notas de suplementos, quién creó cada uno, nombres de pila de quien marcó y el tratamiento activo; la pantalla no los muestra, pero la credencial sí los puede leer.
 - **Rotación de la credencial**: hoy la credencial previa (24 h de gracia) también puede renovarse; decidir si se exige la vigente.
+
+## Spec 071 — primer uso guiado (ideas para después, anotado 2026-11-16)
+
+- **Medir si la guía sirve.** Hoy no se cuenta cuántas cuentas la cierran con «Ahora no», cuántas la completan ni en qué paso se quedan: se decidió no guardar nada más que `first_use_guide_dismissed_at` (Principio II). Si el dueño quiere métricas, pensarlas agregadas y sin cuenta (un contador por paso), no por persona.
+- **La guía para quien entra por una invitación.** Un Tutor o un Cuidador que acepta una invitación no tiene hijo propio y no ve la guía (FR-024). Una versión suya —instalar y activar los avisos— está pensada pero no construida.
+- **Instalar desde Safari con el diálogo del navegador cuando exista.** Hoy solo Android y la computadora ofrecen `beforeinstallprompt`; en iPhone la guía muestra los tres pasos de «Compartir». Si Safari agrega una API, reemplazar el dibujo.
+- **Saber que la app quedó instalada sin reabrirla.** El paso 2 se marca al abrir PediTrack desde el ícono (`display-mode: standalone`); en iOS no hay evento al instalar. Aceptado.

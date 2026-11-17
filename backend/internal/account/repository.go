@@ -140,6 +140,9 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Account, error
 	if acc.DisclaimerAccepted, err = disclaimerAccepted(ctx, r.pool, id); err != nil {
 		return nil, err
 	}
+	if acc.FirstUseGuide, err = r.FirstUseGuide(ctx, id); err != nil {
+		return nil, err
+	}
 	return acc, nil
 }
 
@@ -225,6 +228,9 @@ func (r *Repository) AddChildIfUnderLimit(ctx context.Context, accountID uuid.UU
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("committing transaction: %w", err)
 	}
+	if acc.FirstUseGuide, err = r.FirstUseGuide(ctx, accountID); err != nil {
+		return nil, err
+	}
 	return acc, nil
 }
 
@@ -279,6 +285,9 @@ func (r *Repository) GetByClerkUserID(ctx context.Context, clerkUserID string) (
 		return nil, err
 	}
 	if acc.DisclaimerAccepted, err = disclaimerAccepted(ctx, r.pool, id); err != nil {
+		return nil, err
+	}
+	if acc.FirstUseGuide, err = r.FirstUseGuide(ctx, id); err != nil {
 		return nil, err
 	}
 	return acc, nil
@@ -414,4 +423,56 @@ func (r *Repository) UpdateReminderDetail(ctx context.Context, id uuid.UUID, det
 		return nil, ErrAccountNotFound
 	}
 	return r.GetByID(ctx, id)
+}
+
+// FirstUseGuide reads the state of the first-use guide: whether the account closed it and its oldest consultation
+// (specs/071-primer-uso-guiado), in ONE query because every GET /accounts/me asks for it. The consultation is any of the
+// account's, a child's or its own, «solo registro» included. An account that does not exist reads as "not closed, no
+// consultation": callers that need the account check it first.
+func (r *Repository) FirstUseGuide(ctx context.Context, accountID uuid.UUID) (FirstUseGuide, error) {
+	var (
+		guide  FirstUseGuide
+		id     *uuid.UUID
+		doctor *string
+		child  *uuid.UUID
+	)
+	err := r.pool.QueryRow(ctx, `
+		SELECT a.first_use_guide_dismissed_at IS NOT NULL, c.id, c.doctor_name, c.child_id
+		FROM accounts a
+		LEFT JOIN LATERAL (
+			SELECT id, doctor_name, child_id FROM consultations
+			WHERE account_id = a.id ORDER BY created_at, id LIMIT 1
+		) c ON true
+		WHERE a.id = $1
+	`, accountID).Scan(&guide.Dismissed, &id, &doctor, &child)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return guide, nil
+	}
+	if err != nil {
+		return FirstUseGuide{}, fmt.Errorf("reading first-use guide: %w", err)
+	}
+	if id != nil {
+		guide.FirstConsultation = &FirstConsultation{ID: *id, ChildID: child}
+		if doctor != nil {
+			guide.FirstConsultation.DoctorName = *doctor
+		}
+	}
+	return guide, nil
+}
+
+// SetFirstUseGuideDismissed closes (now) or reopens (NULL) the first-use guide and returns its new state. Idempotent:
+// closing a closed guide keeps the date it was closed. ErrAccountNotFound if the account does not exist.
+func (r *Repository) SetFirstUseGuideDismissed(ctx context.Context, accountID uuid.UUID, dismissed bool) (FirstUseGuide, error) {
+	tag, err := r.pool.Exec(ctx, `
+		UPDATE accounts
+		SET first_use_guide_dismissed_at = CASE WHEN $2 THEN COALESCE(first_use_guide_dismissed_at, now()) ELSE NULL END
+		WHERE id = $1
+	`, accountID, dismissed)
+	if err != nil {
+		return FirstUseGuide{}, fmt.Errorf("updating first-use guide: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return FirstUseGuide{}, ErrAccountNotFound
+	}
+	return r.FirstUseGuide(ctx, accountID)
 }

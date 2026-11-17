@@ -1,5 +1,5 @@
 import type { Browser, BrowserContext, Page } from '@playwright/test'
-import { test, expect, seedChild, apiPost, allowClerkOn } from './helpers'
+import { test, expect, seedAccount, seedChild, apiPost, allowClerkOn } from './helpers'
 
 // specs/067: the app installed on a phone opens without a signal and shows what it already saw — read only, with the hour of the
 // data; a computer keeps nothing. Needs the BUILT app (the service worker precaches only there): CI runs `vite preview`; locally,
@@ -117,6 +117,27 @@ test.describe('Sin conexión — app instalada en el teléfono (390 px)', () => 
     await context.setOffline(false)
     await expect(banner).toHaveText('', { timeout: 20_000 })
     await expect(page.getByRole('heading', { name: 'Mateo' })).toBeVisible()
+  })
+
+  test('una cuenta que no confirmó «Antes de empezar» ve su inicio guardado sin la ventana, que vuelve con la red', async ({ page, context }) => {
+    await asInstalledApp(context)
+    await seedAccount(page, [{ firstName: 'Mateo', lastName: 'Morales', birthDate: '2021-03-14' }], { acknowledgeDisclaimer: false })
+    await page.goto('/home')
+    await serviceWorkerReady(page)
+    const notice = page.getByRole('dialog', { name: 'Antes de empezar' })
+    await expect(notice).toBeVisible()
+    await expect.poll(async () => (await keptKeys(page)).some((k) => k.includes('"accounts"'))).toBe(true)
+
+    // Without a signal «Entendido» could not be saved and nothing else closes it: the saved home shows, with no window over it.
+    await context.setOffline(true)
+    await page.reload()
+    await expect(page.locator('[data-offline-banner]')).toHaveText(/^Sin conexión · datos de/)
+    await expect(page.getByText('Mateo').first()).toBeVisible()
+    await expect(notice).toHaveCount(0)
+
+    // With the network back the window comes back by itself.
+    await context.setOffline(false)
+    await expect(notice).toBeVisible({ timeout: 20_000 })
   })
 
   test('cerrar sesión deja el teléfono sin nada; sin señal pide conexión', async ({ page, context }) => {
