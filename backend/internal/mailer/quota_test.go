@@ -93,6 +93,18 @@ func TestQuotaReservesUpToTheCapAndNoFurther(t *testing.T) {
 	require.ErrorIs(t, err, ErrQuotaExceeded)
 }
 
+func TestQuotaAccountMailsHaveTheInvitationsCap(t *testing.T) {
+	q, _, _, _, _ := testQuota(t, smallCfg)
+	for i := 0; i < 8; i++ {
+		_, err := q.Reserve(context.Background(), ClassAccount)
+		require.NoError(t, err)
+	}
+	_, err := q.Reserve(context.Background(), ClassAccount)
+	require.ErrorIs(t, err, ErrQuotaExceeded)
+	_, err = q.Reserve(context.Background(), ClassDigest)
+	require.NoError(t, err, "the digest still has its places")
+}
+
 func TestQuotaKeepsTheLastPlacesForTheDigest(t *testing.T) {
 	q, _, _, pool, now := testQuota(t, smallCfg)
 	for i := 0; i < 8; i++ {

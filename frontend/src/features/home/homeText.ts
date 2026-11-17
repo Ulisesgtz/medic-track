@@ -36,6 +36,9 @@ export const HOME = {
   more: 'Más opciones',
   family: 'Familia',
   plans: 'Planes',
+  // Specs/070: «Mi cuenta» (download all the data, delete the account).
+  account: 'Mi cuenta',
+  accountValue: 'Tus datos',
   reminders: 'Recordatorios',
   logout: 'Cerrar sesión',
   remindersOn: 'Activados',

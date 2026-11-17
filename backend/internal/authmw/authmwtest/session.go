@@ -62,16 +62,23 @@ func (v *Verifier) Token(t *testing.T, clerkUserID string) string {
 // TokenForParty is Token with the "azp" claim (the origin Clerk issued the session to) set to party; empty leaves it out.
 func (v *Verifier) TokenForParty(t *testing.T, clerkUserID, party string) string {
 	t.Helper()
-	return v.token(t, clerkUserID, party, time.Now())
+	return v.token(t, clerkUserID, party, time.Now(), nil)
+}
+
+// TokenVerifiedMinutesAgo is Token whose session last verified its first factor `minutes` ago (Clerk's "fva" claim, used to
+// ask for a recent sign-in before a sensitive action, specs/070). -1 = never verified in this session.
+func (v *Verifier) TokenVerifiedMinutesAgo(t *testing.T, clerkUserID string, minutes int) string {
+	t.Helper()
+	return v.token(t, clerkUserID, "", time.Now(), []int{minutes, -1})
 }
 
 // TokenIssuedAt is Token issued at a given instant: a token from a clock ahead of this one (bugfix/068).
 func (v *Verifier) TokenIssuedAt(t *testing.T, clerkUserID string, issuedAt time.Time) string {
 	t.Helper()
-	return v.token(t, clerkUserID, "", issuedAt)
+	return v.token(t, clerkUserID, "", issuedAt, nil)
 }
 
-func (v *Verifier) token(t *testing.T, clerkUserID, party string, now time.Time) string {
+func (v *Verifier) token(t *testing.T, clerkUserID, party string, now time.Time, fva []int) string {
 	t.Helper()
 
 	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.RS256, Key: v.privKey}, nil)
@@ -86,6 +93,9 @@ func (v *Verifier) token(t *testing.T, clerkUserID, party string, now time.Time)
 	}
 	if party != "" {
 		claims["azp"] = party
+	}
+	if fva != nil {
+		claims["fva"] = fva
 	}
 	token, err := josejwt.Signed(signer).Claims(claims).CompactSerialize()
 	require.NoError(t, err)

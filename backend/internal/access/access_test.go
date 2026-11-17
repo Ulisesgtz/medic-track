@@ -256,6 +256,30 @@ func TestRoles_TheOwnersPlanCapsTheInvitedAtMark(t *testing.T) {
 	require.Equal(t, access.Mark, level(caregiver))
 }
 
+// specs/070: while the owner's deletion is pending her Tutors see and mark, nothing more; canceling gives it back.
+func TestRoles_AnOwnerWhoseDeletionIsPendingCapsHerTutorsAtMark(t *testing.T) {
+	pool := testPool(t)
+	repo := access.NewRepository(pool)
+	ctx := context.Background()
+	owner, acc := newAccount(t, pool, account.PlanPaid, 1)
+	child := acc.Children[0].ID
+	tutor, _ := newAccount(t, pool, account.PlanFree, 0)
+	join(t, pool, owner, tutor, "tutor", nil)
+	level := func() access.Level {
+		got, err := repo.OnChild(ctx, tutor.clerkID, child)
+		require.NoError(t, err)
+		return got.Level
+	}
+	require.Equal(t, access.Full, level())
+	_, err := pool.Exec(ctx, `INSERT INTO account_deletions (account_id, scheduled_for) VALUES ($1, now() + interval '30 days')`, acc.ID)
+	require.NoError(t, err)
+	t.Cleanup(func() { _, _ = pool.Exec(context.Background(), `DELETE FROM account_deletions WHERE account_id = $1`, acc.ID) })
+	require.Equal(t, access.Mark, level())
+	_, err = pool.Exec(ctx, `UPDATE account_deletions SET canceled_at = now() WHERE account_id = $1`, acc.ID)
+	require.NoError(t, err)
+	require.Equal(t, access.Full, level())
+}
+
 func TestOnAccount_AddingChildrenToAFamily(t *testing.T) {
 	pool := testPool(t)
 	repo := access.NewRepository(pool)

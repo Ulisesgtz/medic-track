@@ -42,7 +42,8 @@ export const GROWTH = {
   next: 'Medida siguiente',
   chartName: (indicator: Indicator, name: string) =>
     `Gráfica de ${indicator === 'weight' ? 'peso' : 'talla'} de ${name}. Los mismos datos están en Medidas anotadas.`,
-  noPoints: (indicator: Indicator) => (indicator === 'weight' ? 'Aún no hay medidas de peso.' : 'Aún no hay medidas de talla.'),
+  noPoints: (indicator: Indicator) =>
+    indicator === 'weight' ? 'Aún no hay medidas de peso.' : 'Aún no hay medidas de talla.',
   chartLoading: 'Cargando la gráfica',
   chartFailed: 'No pudimos cargar la gráfica.',
   retry: 'Reintentar',
@@ -57,14 +58,16 @@ export const GROWTH = {
   tableChosenBy: (sex: ReferenceSex, owner: string | null) =>
     `Curvas de la OMS para ${sex === 'female' ? 'niña' : 'niño'}. La tabla la elige ${owner ?? 'la familia'}.`,
   tableFailed: 'No pudimos guardar la tabla. Inténtalo de nuevo.',
-  referenceOff: 'La referencia de la OMS aún no está disponible; la gráfica muestra solo las medidas anotadas.',
+  referenceOff:
+    'La referencia de la OMS aún no está disponible; la gráfica muestra solo las medidas anotadas.',
   whoNote: 'Las curvas son la referencia de la OMS para niñas y niños nacidos a término.',
   whoNoteStrong: 'Tu pediatra es quien interpreta la gráfica.',
   beyondWeight: 'La referencia de la OMS de peso para la edad llega a los 10 años.',
   beyondHeight: 'La referencia de la OMS de talla para la edad llega a los 19 años.',
   // The free plan
   planBadge: 'Plan completo',
-  lockedBody: (name: string) => `Con el Plan completo ves las medidas de ${name} sobre las curvas de la OMS.`,
+  lockedBody: (name: string) =>
+    `Con el Plan completo ves las medidas de ${name} sobre las curvas de la OMS.`,
   showChart: 'Ver la gráfica',
   // The list / table
   listTitle: 'Medidas anotadas',
@@ -121,11 +124,17 @@ export function valueText(indicator: Indicator, value: number): string {
 
 /** «11.4 kg · 82 cm», only the values written. */
 export function valuesLine(weightKg: number | null, heightCm: number | null): string {
-  return [weightKg != null ? kgText(weightKg) : null, heightCm != null ? cmText(heightCm) : null].filter(Boolean).join(' · ')
+  return [weightKg != null ? kgText(weightKg) : null, heightCm != null ? cmText(heightCm) : null]
+    .filter(Boolean)
+    .join(' · ')
 }
 
 /** The child's detail summary (GrowthSection, not redesigned): «Última: 12.4 kg · 86 cm, 03 nov 2026». */
-export function lastLine(m: { measuredOn: string; weightKg: number | null; heightCm: number | null }): string {
+export function lastLine(m: {
+  measuredOn: string
+  weightKg: number | null
+  heightCm: number | null
+}): string {
   return `Última: ${valuesLine(m.weightKg, m.heightCm)}, ${formatDateShort(m.measuredOn)}`
 }
 
@@ -157,7 +166,8 @@ export function latestWhen(today: string, on: string): string {
 
 /** «Anotada por Ana». */
 export function byLine(name: string): string {
-  return `Anotada por ${name}`
+  // Empty when who wrote it down deleted their account (specs/070): the measurement stays, without a name.
+  return name ? `Anotada por ${name}` : ''
 }
 
 /** «Corregida el 3 oct 2026 por Luis». */
@@ -171,7 +181,12 @@ export function noteLine(note: string): string {
 }
 
 /** The web's reading on one line: «12 oct 2026 · 11.4 kg · 2 años 1 mes». */
-export function readingLine(date: string, indicator: Indicator, value: number, age: string): string {
+export function readingLine(
+  date: string,
+  indicator: Indicator,
+  value: number,
+  age: string,
+): string {
   return `${formatDateShortNoPad(date)} · ${valueText(indicator, value)} · ${age}`
 }
 

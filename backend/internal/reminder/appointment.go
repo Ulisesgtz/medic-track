@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/access"
+	"github.com/Ulisesgtz/medic-track/backend/internal/deletionstate"
 )
 
 // ClaimDueAppointmentNotices is ClaimDueDoses for the notices of a consultation's next appointment (specs/033, part 2): it claims,
@@ -53,6 +54,8 @@ func (r *Repository) ClaimDueAppointmentNotices(ctx context.Context, now time.Ti
 				SELECT 1 FROM reminder_devices rd
 				WHERE rd.account_id = a.id AND rd.active AND rd.activated_at <= cand.fire_at
 			)
+			  -- Specs/070: an account scheduled for deletion gets no reminder (others of the same child still do).
+			  AND NOT `+deletionstate.PendingAccountSQL("a.id")+`
 			  AND NOT EXISTS (SELECT 1 FROM appointment_muted am WHERE am.appointment_id = cand.appointment_id AND am.account_id = a.id)
 			  AND NOT EXISTS (SELECT 1 FROM appointment_notice_reminders nr WHERE nr.notice_id = cand.notice_id AND nr.account_id = a.id)
 			ORDER BY cand.fire_at, a.id

@@ -5,7 +5,20 @@ import type { CabinetUnit, Expires } from './types'
 // sentence here says a medicine expired, can or can't be used, or what to do with it (Principio I). cabinetText.test.ts reads
 // them all.
 
-export const MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+export const MONTHS = [
+  'ene',
+  'feb',
+  'mar',
+  'abr',
+  'may',
+  'jun',
+  'jul',
+  'ago',
+  'sep',
+  'oct',
+  'nov',
+  'dic',
+]
 
 export const CABINET = {
   entryTitle: 'Checa tus medicamentos',
@@ -41,8 +54,10 @@ export const CABINET = {
   readingPhone: 'El texto se lee en tu teléfono. Mientras, puedes capturar a mano.',
   readingWeb: 'El texto se lee en tu equipo. Mientras, puedes capturar a mano.',
   readTitle: 'Leído de tu foto · revísalo',
-  readPhone: 'Propusimos nombre, concentración y caducidad. Nada se guarda hasta que tocas Guardar.',
-  readWeb: 'Propusimos nombre, concentración y caducidad. Nada se guarda hasta que haces clic en Guardar.',
+  readPhone:
+    'Propusimos nombre, concentración y caducidad. Nada se guarda hasta que tocas Guardar.',
+  readWeb:
+    'Propusimos nombre, concentración y caducidad. Nada se guarda hasta que haces clic en Guardar.',
   noTextTitle: 'No encontramos texto',
   noTextBody: 'Captúralo a mano. La foto se guarda con el medicamento.',
   readTag: 'Leído de tu foto',
@@ -89,8 +104,18 @@ export const CABINET = {
   labels: { strength: 'Concentración', quantity: 'Cantidad', expires: 'Caduca', note: 'Nota' },
 }
 
-const UNIT_ONE: Record<CabinetUnit, string> = { box: 'caja', tablet: 'tableta', bottle: 'frasco', ml: 'ml' }
-const UNIT_MANY: Record<CabinetUnit, string> = { box: 'cajas', tablet: 'tabletas', bottle: 'frascos', ml: 'ml' }
+const UNIT_ONE: Record<CabinetUnit, string> = {
+  box: 'caja',
+  tablet: 'tableta',
+  bottle: 'frasco',
+  ml: 'ml',
+}
+const UNIT_MANY: Record<CabinetUnit, string> = {
+  box: 'cajas',
+  tablet: 'tabletas',
+  bottle: 'frascos',
+  ml: 'ml',
+}
 
 /** The chips of the form: «cajas», «tabletas», «frascos», «ml». */
 export const unitLabel = (unit: CabinetUnit) => UNIT_MANY[unit]
@@ -109,7 +134,8 @@ export function expiresDate(e: Expires): string {
 export const expiresLine = (e: Expires) => `Caduca: ${expiresDate(e)}`
 
 /** «7 medicamentos en el botiquín» (the home's entry). */
-export const entryCount = (n: number) => (n === 1 ? '1 medicamento en el botiquín' : `${n} medicamentos en el botiquín`)
+export const entryCount = (n: number) =>
+  n === 1 ? '1 medicamento en el botiquín' : `${n} medicamentos en el botiquín`
 
 /** «7 medicamentos» or, searching, «2 de 7 medicamentos». */
 export function listCount(shown: number, total: number, searching: boolean): string {
@@ -119,10 +145,11 @@ export function listCount(shown: number, total: number, searching: boolean): str
 
 export const noResults = (q: string) => `Ningún medicamento del botiquín se llama «${q}».`
 
-/** «Agregado por Ana · 6 nov». */
+/** «Agregado por Ana · 6 nov»; «Agregado el 6 nov» when who added it deleted their account (specs/070). */
 export function addedBy(name: string, at: string): string {
   const d = new Date(at)
-  return `Agregado por ${name} · ${d.getDate()} ${MONTHS[d.getMonth()]}`
+  const day = `${d.getDate()} ${MONTHS[d.getMonth()]}`
+  return name ? `Agregado por ${name} · ${day}` : `Agregado el ${day}`
 }
 
 /** «Editado por Luis · 7 nov». */
@@ -132,9 +159,15 @@ export function editedBy(name: string, at: string): string {
 }
 
 /** «Desde la consulta del 18 oct · Dra. Laura Cázares. El nombre viene de la receta; puedes cambiarlo.» */
-export function fromConsultation(consultDate: string, doctor: string): { lead: string; rest: string } {
+export function fromConsultation(
+  consultDate: string,
+  doctor: string,
+): { lead: string; rest: string } {
   const day = formatDateShort(consultDate).replace(/ \d{4}$/, '')
-  return { lead: `Desde la consulta del ${day}`, rest: ` · ${doctor}. El nombre viene de la receta; puedes cambiarlo.` }
+  return {
+    lead: `Desde la consulta del ${day}`,
+    rest: ` · ${doctor}. El nombre viene de la receta; puedes cambiarlo.`,
+  }
 }
 
 /** «Agregar Amoxicilina al botiquín» (the shortcut's accessible name). */

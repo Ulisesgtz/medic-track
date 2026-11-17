@@ -71,7 +71,15 @@ type familyMembershipResponse struct {
 	OwnerName      string `json:"ownerName" example:"Ana"`
 	Plan           string `json:"plan" enums:"free,paid" example:"paid"`
 	ReadOnly       bool   `json:"readOnly" example:"false"`
+	// DeletionScheduledFor (RFC 3339) is set when the family's owner asked to delete her account (specs/070): until then
+	// the person sees and marks the family's children and can download their data; on that date they stop seeing them.
+	DeletionScheduledFor *string `json:"deletionScheduledFor" example:"2026-12-12T18:00:00Z"`
 } // @name FamilyMembershipInfo
+
+// deletionInfo is the account's own pending deletion (specs/070).
+type deletionInfo struct {
+	ScheduledFor string `json:"scheduledFor" example:"2026-12-12T18:00:00Z"`
+} // @name AccountDeletionInfo
 
 type accountResponse struct {
 	ID          string          `json:"id" example:"e5f6a7b8-0000-0000-0000-000000000000"`
@@ -96,6 +104,9 @@ type accountResponse struct {
 	ConsultationSharing consultationSharingResponse `json:"consultationSharing"`
 	// SharedProfiles are the people who share their own consultations with this person and whose it can still see.
 	SharedProfiles []sharedProfileResponse `json:"sharedProfiles"`
+	// Deletion is set when the account asked to delete itself (specs/070): the app then only offers downloading the data
+	// and canceling. Null otherwise.
+	Deletion *deletionInfo `json:"deletion"`
 }
 
 type reminderSettingsRequest struct {
@@ -730,6 +741,14 @@ func toAccountResponse(acc *Account) accountResponse {
 			Role: acc.Family.Role, OwnerAccountID: acc.Family.OwnerAccountID.String(), OwnerName: acc.Family.OwnerName,
 			Plan: string(acc.Family.OwnerPlan), ReadOnly: acc.Family.ReadOnly(),
 		}
+		if d := acc.Family.DeletionScheduledFor; d != nil {
+			s := d.UTC().Format(time.RFC3339)
+			membership.DeletionScheduledFor = &s
+		}
+	}
+	var deletion *deletionInfo
+	if d := acc.DeletionScheduledFor; d != nil {
+		deletion = &deletionInfo{ScheduledFor: d.UTC().Format(time.RFC3339)}
 	}
 	sharing, profiles := toOwnSharingResponse(acc)
 	return accountResponse{
@@ -749,5 +768,6 @@ func toAccountResponse(acc *Account) accountResponse {
 
 		ConsultationSharing: sharing,
 		SharedProfiles:      profiles,
+		Deletion:            deletion,
 	}
 }

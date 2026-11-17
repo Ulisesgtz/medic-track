@@ -23,9 +23,9 @@ func NewRepository(pool *pgxpool.Pool) *Repository { return &Repository{pool: po
 // measurementSelect reads a measurement with the first names of who wrote it down and who corrected it. The e-mail is never read.
 const measurementSelect = `
 	SELECT m.id, m.child_id, to_char(m.measured_on, 'YYYY-MM-DD'), m.weight_kg::float8, m.height_cm::float8, m.note,
-	       cb.first_name, m.created_at, kb.first_name, m.corrected_at
+	       COALESCE(cb.first_name, ''), m.created_at, kb.first_name, m.corrected_at
 	FROM growth_measurements m
-	JOIN accounts cb ON cb.id = m.created_by_account_id
+	LEFT JOIN accounts cb ON cb.id = m.created_by_account_id
 	LEFT JOIN accounts kb ON kb.id = m.corrected_by_account_id`
 
 func scanMeasurement(row pgx.Row) (Measurement, error) {
@@ -160,9 +160,9 @@ func (r *Repository) Update(ctx context.Context, childID, id, actor uuid.UUID, c
 			RETURNING *
 		)
 		SELECT m.id, m.child_id, to_char(m.measured_on, 'YYYY-MM-DD'), m.weight_kg::float8, m.height_cm::float8, m.note,
-		       cb.first_name, m.created_at, kb.first_name, m.corrected_at
+		       COALESCE(cb.first_name, ''), m.created_at, kb.first_name, m.corrected_at
 		FROM updated m
-		JOIN accounts cb ON cb.id = m.created_by_account_id
+		LEFT JOIN accounts cb ON cb.id = m.created_by_account_id
 		LEFT JOIN accounts kb ON kb.id = m.corrected_by_account_id`,
 		id, childID, c.MeasuredOn, c.WeightKg, c.HeightCm, c.Note, actor))
 	if errors.Is(err, pgx.ErrNoRows) {

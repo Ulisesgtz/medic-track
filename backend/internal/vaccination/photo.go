@@ -91,8 +91,8 @@ func (r *Repository) AddPhoto(ctx context.Context, childID, actor uuid.UUID, pho
 // ListPhotos is the child's photos in the order they were saved, without the images.
 func (r *Repository) ListPhotos(ctx context.Context, childID uuid.UUID) ([]PhotoMeta, error) {
 	rows, err := r.pool.Query(ctx, `
-		SELECT p.id, p.child_id, p.created_at, a.first_name
-		FROM vaccine_card_photos p JOIN accounts a ON a.id = p.created_by_account_id
+		SELECT p.id, p.child_id, p.created_at, COALESCE(a.first_name, '')
+		FROM vaccine_card_photos p LEFT JOIN accounts a ON a.id = p.created_by_account_id
 		WHERE p.child_id = $1 ORDER BY p.created_at, p.id`, childID)
 	if err != nil {
 		return nil, fmt.Errorf("listing the photos: %w", err)

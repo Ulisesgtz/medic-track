@@ -11,15 +11,19 @@ import type { Appointment } from './types'
 const chip = {
   done: 'rounded-full border-[1.5px] border-hint-border bg-hint px-2.5 py-[3px] text-[13px] font-extrabold text-action',
   canceled: 'rounded-full bg-slate-100 px-2.5 py-1 text-[13px] font-extrabold text-slate-600',
-  unmarked: 'rounded-full border-[1.5px] border-dashed border-slate-500 bg-surface px-2.5 py-[3px] text-[13px] font-extrabold text-slate-600',
+  unmarked:
+    'rounded-full border-[1.5px] border-dashed border-slate-500 bg-surface px-2.5 py-[3px] text-[13px] font-extrabold text-slate-600',
 }
 
 /** «De la consulta del 1 sep · marcada por Ana», «· cancelada el 1 ago por Luis», «· nadie la marcó»: only a record. */
 function metaOf(a: Appointment): string {
   const from = `De la consulta del ${shortDayText(new Date(`${a.consultDate}T00:00:00`))}`
   const at = a.statusAt ? shortDayText(new Date(a.statusAt)) : ''
-  if (a.status === 'done') return `${from} · marcada por ${a.statusBy ?? 'alguien'}`
-  if (a.status === 'canceled') return `${from} · cancelada el ${at} por ${a.statusBy ?? 'alguien'}`
+  // `statusBy` is empty when who marked it deleted their account (specs/070): the state stays, without a name.
+  if (a.status === 'done')
+    return a.statusBy ? `${from} · marcada por ${a.statusBy}` : `${from} · realizada`
+  if (a.status === 'canceled')
+    return `${from} · cancelada el ${at}${a.statusBy ? ` por ${a.statusBy}` : ''}`
   return `${from} · nadie la marcó`
 }
 
@@ -32,14 +36,22 @@ function HistoryRow({ appointment, canMark }: { appointment: Appointment; canMar
         <span className="text-base font-extrabold text-ink">
           {shortDayText(start)} {start.getFullYear()} · {timeText(start)}
         </span>
-        <span className="text-[15px] text-body [overflow-wrap:anywhere]">{appointment.doctorName}</span>
-        {appointment.location && <span className="text-[13px] text-body [overflow-wrap:anywhere]">{appointment.location}</span>}
+        <span className="text-[15px] text-body [overflow-wrap:anywhere]">
+          {appointment.doctorName}
+        </span>
+        {appointment.location && (
+          <span className="text-[13px] text-body [overflow-wrap:anywhere]">
+            {appointment.location}
+          </span>
+        )}
         <span className="text-[13px] font-semibold text-slate-600">{metaOf(appointment)}</span>
       </div>
       <div className="flex shrink-0 flex-col items-start gap-2">
         {appointment.status === 'done' && <span className={chip.done}>Realizada</span>}
         {appointment.status === 'canceled' && <span className={chip.canceled}>Cancelada</span>}
-        {appointment.status === 'unmarked' && <span className={chip.unmarked}>Pasó sin marcar</span>}
+        {appointment.status === 'unmarked' && (
+          <span className={chip.unmarked}>Pasó sin marcar</span>
+        )}
         {appointment.status === 'unmarked' && canMark && (
           <button
             type="button"
@@ -93,22 +105,36 @@ export function AppointmentHistoryPage() {
     </RoutinePageFrame>
   )
 
-  if (query.isPending) return frame(<p className="text-base font-semibold text-action">Cargando…</p>)
-  if (query.isError || !data) return frame(<p className="text-base text-body">No se pudo cargar el historial de citas.</p>)
+  if (query.isPending)
+    return frame(<p className="text-base font-semibold text-action">Cargando…</p>)
+  if (query.isError || !data)
+    return frame(<p className="text-base text-body">No se pudo cargar el historial de citas.</p>)
 
   return frame(
     <div className="flex flex-col gap-4">
-      {data.next && <AppointmentCard key={data.next.id} appointment={data.next} access={access} consultationLink />}
+      {data.next && (
+        <AppointmentCard
+          key={data.next.id}
+          appointment={data.next}
+          access={access}
+          consultationLink
+        />
+      )}
       {data.history.length === 0 ? (
         <div className="flex flex-col gap-2 rounded-[22px] border-2 border-dashed border-hint-border px-[22px] py-6">
-          <h2 className="text-lg font-black tracking-[-0.02em] text-ink">Aún no hay citas anotadas</h2>
+          <h2 className="text-lg font-black tracking-[-0.02em] text-ink">
+            Aún no hay citas anotadas
+          </h2>
           <p className="text-[15px] leading-relaxed text-body">
-            Aquí quedan las citas que se anoten en las consultas de {name}: las realizadas, las canceladas y las que pasaron sin marcar.
+            Aquí quedan las citas que se anoten en las consultas de {name}: las realizadas, las
+            canceladas y las que pasaron sin marcar.
           </p>
         </div>
       ) : (
         <>
-          <p className="text-xs font-extrabold tracking-[0.1em] text-action uppercase">Anteriores</p>
+          <p className="text-xs font-extrabold tracking-[0.1em] text-action uppercase">
+            Anteriores
+          </p>
           <ul className="rounded-[22px] bg-surface px-5 py-1 shadow-[0_8px_20px_rgba(4,37,43,0.07)]">
             {data.history.map((a) => (
               <HistoryRow key={a.id} appointment={a} canMark={access.canMark} />

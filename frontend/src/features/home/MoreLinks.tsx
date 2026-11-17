@@ -51,7 +51,11 @@ export function MoreLinks({ account, variant }: { account: Account; variant: Var
     <div className="flex flex-col gap-4">
       <nav
         aria-label={HOME.more}
-        className={desktop ? 'grid grid-cols-4 border-y border-hint-edge' : 'mt-2 flex flex-col border-t border-hint-edge'}
+        className={
+          desktop
+            ? 'grid grid-cols-5 border-y border-hint-edge'
+            : 'mt-2 flex flex-col border-t border-hint-edge'
+        }
       >
         <Link to="/familia" className={row}>
           <span className={title('text-ink')}>{HOME.family}</span>
@@ -63,10 +67,20 @@ export function MoreLinks({ account, variant }: { account: Account; variant: Var
             <span className={value}>{planLabel(account)}</span>
           </Link>
         )}
-        <button type="button" aria-expanded={remindersOpen} aria-controls={panelId} onClick={() => setRemindersOpen((v) => !v)} className={row}>
+        <button
+          type="button"
+          aria-expanded={remindersOpen}
+          aria-controls={panelId}
+          onClick={() => setRemindersOpen((v) => !v)}
+          className={row}
+        >
           <span className={title('text-ink')}>{HOME.reminders}</span>
           <span className={value}>{remindersValue}</span>
         </button>
+        <Link to="/cuenta" className={row}>
+          <span className={title('text-ink')}>{HOME.account}</span>
+          <span className={value}>{HOME.accountValue}</span>
+        </Link>
         <button type="button" onClick={logout} className={row}>
           <span className={title('text-action')}>{HOME.logout}</span>
           {desktop && <span className={value} />}

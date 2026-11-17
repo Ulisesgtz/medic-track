@@ -24,10 +24,10 @@ func NewRepository(pool *pgxpool.Pool) *Repository { return &Repository{pool: po
 // e-mail is never read.
 const recordSelect = `
 	SELECT r.id, r.child_id, r.vaccine_code, COALESCE(c.name, r.custom_name), r.custom_name, to_char(r.applied_on, 'YYYY-MM-DD'),
-	       r.dose_number, r.lot, r.place, r.notes, cb.first_name, r.created_at, kb.first_name, r.corrected_at
+	       r.dose_number, r.lot, r.place, r.notes, COALESCE(cb.first_name, ''), r.created_at, kb.first_name, r.corrected_at
 	FROM vaccine_records r
 	LEFT JOIN vaccine_catalog c ON c.code = r.vaccine_code
-	JOIN accounts cb ON cb.id = r.created_by_account_id
+	LEFT JOIN accounts cb ON cb.id = r.created_by_account_id
 	LEFT JOIN accounts kb ON kb.id = r.corrected_by_account_id`
 
 func scanVaccination(row pgx.Row) (Vaccination, error) {
