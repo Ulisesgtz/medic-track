@@ -10,6 +10,8 @@ import { AccountMenu } from './AccountMenu'
 import { AddChildDialogs } from './AddChildDialogs'
 import { HOME, familyOf } from './homeText'
 import { addChildTarget, onlySharedChildren } from './plan'
+import { isOwnChild, showsOwnership } from '../family/merge/ownChildren'
+import { FAMILY_TAG, OWN_TAG } from '../family/merge/mergeText'
 
 interface ChildrenSidebarProps {
   /** The child whose screen is open, highlighted in the list. */
@@ -28,6 +30,7 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
   const addChildButton = useRef<HTMLButtonElement>(null)
   const query = useCurrentAccount()
   const account = query.data
+  const showOwnership = showsOwnership(account)
   const onHome = useMatch('/home') !== null
   const onFamilyPage = useMatch('/familia') !== null
   const onCabinetPage = useMatch('/botiquin/*') !== null
@@ -93,10 +96,11 @@ export function ChildrenSidebar({ activeChildId }: ChildrenSidebarProps) {
                 {child.firstName}
               </span>
               {/* Inactive age: #62909d (the mock's #5b8b94 is 4.3:1 on ink, under the 4.5:1 minimum). */}
+              {/* Specs/074: while own and family children are both on screen, each says whose it is (the mock's «Tuyo» / «Familia»). */}
               <span
-                className={`shrink-0 text-[13px] font-semibold ${isActive ? 'text-hint-edge' : 'text-ink-muted'}`}
+                className={`shrink-0 text-[13px] font-semibold ${isActive ? 'text-hint-edge' : showOwnership ? 'text-bright-soft' : 'text-ink-muted'}`}
               >
-                {formatAgeShort(child.birthDate)}
+                {showOwnership && account ? (isOwnChild(child, account) ? OWN_TAG : FAMILY_TAG) : formatAgeShort(child.birthDate)}
               </span>
             </Link>
           )

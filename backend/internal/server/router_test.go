@@ -26,6 +26,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/cabinet"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childprofile"
+	"github.com/Ulisesgtz/medic-track/backend/internal/childmerge"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childrecord"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/dataexport"
@@ -176,6 +177,7 @@ func newWorld(t *testing.T) *world {
 		Growth:       growth.NewHandler(growth.NewService(growth.NewRepository(pool)), responder),
 		ChildProfile: childprofile.NewHandler(childprofile.NewService(childprofile.NewRepository(pool)), responder),
 		ChildRecord:  childrecord.NewHandler(childrecord.NewRepository(pool), responder),
+		ChildMerge:   childmerge.NewHandler(childmerge.NewRepository(pool), responder),
 		HistoryExport: historyexport.NewHandler(historyexport.NewService(historyexport.NewRepository(pool), consultation.NewRepository(pool),
 			vaccination.NewRepository(pool)), responder),
 		AccountDeletion: accountdeletion.NewHandler(accountdeletion.NewService(accountdeletion.NewRepository(pool), pool,
@@ -269,6 +271,8 @@ func (w *world) routes() []struct {
 		{"cabinet photo", http.MethodGet, "/accounts/" + w.accountA.String() + "/medicine-cabinet/" + uuid.NewString() + "/photo", "", http.StatusNotFound},
 		{"accept disclaimer", http.MethodPost, "/accounts/" + w.accountA.String() + "/disclaimer-acceptance", `{}`, http.StatusBadRequest},
 		{"first use guide", http.MethodPut, "/accounts/" + w.accountA.String() + "/first-use-guide", `{}`, http.StatusBadRequest},
+		// Specs/074: hiding one's own children (a missing list is a 400 once past the guard).
+		{"hidden children", http.MethodPut, "/accounts/" + w.accountA.String() + "/hidden-children", `{}`, http.StatusBadRequest},
 		{"reminder settings", http.MethodPatch, "/accounts/" + w.accountA.String() + "/reminder-settings", `{}`, http.StatusBadRequest},
 		{"register reminder device", http.MethodPost, "/accounts/" + w.accountA.String() + "/reminder-devices", `{}`, http.StatusBadRequest},
 		{"remove reminder device", http.MethodPost, "/accounts/" + w.accountA.String() + "/reminder-devices/remove", `{}`, http.StatusBadRequest},
@@ -433,7 +437,7 @@ func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 // ownRoutes are the person's own account (their notice, reminder settings and devices): never a family's.
 // fullRoutes need the full level (the owner or a Tutor); every other protected route needs only Mark (see and mark).
 var (
-	ownRoutes = map[string]bool{"get deletion": true, "request deletion": true, "cancel deletion": true, "export my data": true, "search own consultations": true, "own history options": true, "export own history": true, "consultation sharing": true, "own consultations": true, "create own consultation": true, "own overview": true, "own appointments": true, "create own appointment": true, "get account": true, "accept disclaimer": true, "first use guide": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true, "get subscription": true, "subscribe": true, "cancel subscription": true}
+	ownRoutes = map[string]bool{"get deletion": true, "request deletion": true, "cancel deletion": true, "export my data": true, "search own consultations": true, "own history options": true, "export own history": true, "consultation sharing": true, "own consultations": true, "create own consultation": true, "own overview": true, "own appointments": true, "create own appointment": true, "get account": true, "accept disclaimer": true, "first use guide": true, "hidden children": true,"reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true, "get subscription": true, "subscribe": true, "cancel subscription": true}
 	// cabinetRoutes: the family's medicine cabinet (specs/062), not for a Child-role member.
 	cabinetRoutes = map[string]bool{"list cabinet": true, "cabinet item": true, "cabinet photo": true}
 	fullRoutes    = map[string]bool{"correct child": true, "save child record": true, "add growth": true, "correct growth": true, "remove growth": true, "choose growth table": true, "add to cabinet": true, "edit cabinet item": true, "remove cabinet item": true, "delete routine": true, "add child": true, "create consultation": true, "edit consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "record vaccination": true, "correct vaccination": true, "delete vaccination": true, "save card photo": true, "delete card photo": true, "edit appointment": true, "create device link": true, "remove device link": true, "choose device reminders": true, "mark appointment": true}

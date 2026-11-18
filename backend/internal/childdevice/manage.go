@@ -137,3 +137,36 @@ func (r *Repository) Rotate(ctx context.Context, linkID uuid.UUID, now time.Time
 	}
 	return credential, now.Add(RotateEvery), nil
 }
+
+// RevokeAllInTx removes, for good and at once, every phone and every unopened link of a child inside a transaction that belongs to
+// the caller (the same removal as Revoke, including turning off their reminder devices), and returns how many were removed. Used by
+// the union of two children (specs/074): the phones of the child that goes away must not reach the one that stays.
+func RevokeAllInTx(ctx context.Context, tx pgx.Tx, childID, actor uuid.UUID, now time.Time) (int, error) {
+	rows, err := tx.Query(ctx, `
+		UPDATE child_device_links
+		SET status = 'revoked', token_hash = NULL, credential_hash = NULL, credential_hash_previous = NULL, revoked_at = $2, revoked_by_account_id = $3
+		WHERE child_id = $1 AND status <> 'revoked'
+		RETURNING id`, childID, now, actor)
+	if err != nil {
+		return 0, fmt.Errorf("removing the child's phones: %w", err)
+	}
+	ids := []uuid.UUID{}
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return 0, fmt.Errorf("reading a removed phone: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, fmt.Errorf("removing the child's phones: %w", err)
+	}
+	if len(ids) > 0 {
+		if _, err := tx.Exec(ctx, `UPDATE reminder_devices SET active = false, deactivated_at = $2 WHERE child_link_id = ANY($1) AND active`, ids, now); err != nil {
+			return 0, fmt.Errorf("turning off the phones' reminders: %w", err)
+		}
+	}
+	return len(ids), nil
+}

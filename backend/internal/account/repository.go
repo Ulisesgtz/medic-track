@@ -107,27 +107,9 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Account, error
 		return nil, fmt.Errorf("querying account: %w", err)
 	}
 
-	rows, err := r.pool.Query(ctx, `
-		SELECT id, first_name, last_name, birth_date, height, weight, created_at, corrected_at,
-		       (SELECT first_name FROM accounts WHERE id = corrected_by_account_id)
-		FROM children WHERE account_id = $1 ORDER BY created_at ASC
-	`, id)
-	if err != nil {
-		return nil, fmt.Errorf("querying children: %w", err)
+	if acc.Children, acc.HiddenChildren, _, err = loadOwnChildren(ctx, r.pool, id); err != nil {
+		return nil, err
 	}
-	defer rows.Close()
-
-	for rows.Next() {
-		child := Child{AccountID: id}
-		if err := rows.Scan(&child.ID, &child.FirstName, &child.LastName, &child.BirthDate, &child.Height, &child.Weight, &child.CreatedAt, &child.CorrectedAt, &child.CorrectedBy); err != nil {
-			return nil, fmt.Errorf("scanning child: %w", err)
-		}
-		acc.Children = append(acc.Children, child)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating children: %w", err)
-	}
-	rows.Close()
 
 	// The answer to GET /accounts/{id}, the notice and the reminder settings is the same account as GET /accounts/me:
 	// the client replaces what it has with it, so it must carry the shared children too (specs/032).
@@ -141,6 +123,9 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (*Account, error
 		return nil, err
 	}
 	if acc.FirstUseGuide, err = r.FirstUseGuide(ctx, id); err != nil {
+		return nil, err
+	}
+	if err := r.fillMerges(ctx, acc); err != nil {
 		return nil, err
 	}
 	return acc, nil
@@ -175,31 +160,15 @@ func (r *Repository) AddChildIfUnderLimit(ctx context.Context, accountID uuid.UU
 		return nil, fmt.Errorf("querying account: %w", err)
 	}
 
-	rows, err := tx.Query(ctx, `
-		SELECT id, first_name, last_name, birth_date, height, weight, created_at, corrected_at,
-		       (SELECT first_name FROM accounts WHERE id = corrected_by_account_id)
-		FROM children WHERE account_id = $1 ORDER BY created_at ASC
-	`, accountID)
-	if err != nil {
-		return nil, fmt.Errorf("querying children: %w", err)
+	// The hidden children (specs/074) are not in the answer but still count for the limit of the plan.
+	var total int
+	if acc.Children, acc.HiddenChildren, total, err = loadOwnChildren(ctx, tx, accountID); err != nil {
+		return nil, err
 	}
-	for rows.Next() {
-		child := Child{AccountID: accountID}
-		if err := rows.Scan(&child.ID, &child.FirstName, &child.LastName, &child.BirthDate, &child.Height, &child.Weight, &child.CreatedAt, &child.CorrectedAt, &child.CorrectedBy); err != nil {
-			rows.Close()
-			return nil, fmt.Errorf("scanning child: %w", err)
-		}
-		acc.Children = append(acc.Children, child)
-	}
-	if err := rows.Err(); err != nil {
-		rows.Close()
-		return nil, fmt.Errorf("iterating children: %w", err)
-	}
-	rows.Close()
 
 	limit := ChildLimit(acc.Plan)
-	if len(acc.Children) >= limit {
-		return nil, &FreemiumLimitError{Limit: limit, Received: len(acc.Children) + 1}
+	if total >= limit {
+		return nil, &FreemiumLimitError{Limit: limit, Received: total + 1}
 	}
 
 	child := Child{
@@ -231,6 +200,9 @@ func (r *Repository) AddChildIfUnderLimit(ctx context.Context, accountID uuid.UU
 	if acc.FirstUseGuide, err = r.FirstUseGuide(ctx, accountID); err != nil {
 		return nil, err
 	}
+	if err := r.fillMerges(ctx, acc); err != nil {
+		return nil, err
+	}
 	return acc, nil
 }
 
@@ -256,27 +228,9 @@ func (r *Repository) GetByClerkUserID(ctx context.Context, clerkUserID string) (
 	}
 	acc.ID = id
 
-	rows, err := r.pool.Query(ctx, `
-		SELECT id, first_name, last_name, birth_date, height, weight, created_at, corrected_at,
-		       (SELECT first_name FROM accounts WHERE id = corrected_by_account_id)
-		FROM children WHERE account_id = $1 ORDER BY created_at ASC
-	`, id)
-	if err != nil {
-		return nil, fmt.Errorf("querying children: %w", err)
+	if acc.Children, acc.HiddenChildren, _, err = loadOwnChildren(ctx, r.pool, id); err != nil {
+		return nil, err
 	}
-	defer rows.Close()
-
-	for rows.Next() {
-		child := Child{AccountID: id}
-		if err := rows.Scan(&child.ID, &child.FirstName, &child.LastName, &child.BirthDate, &child.Height, &child.Weight, &child.CreatedAt, &child.CorrectedAt, &child.CorrectedBy); err != nil {
-			return nil, fmt.Errorf("scanning child: %w", err)
-		}
-		acc.Children = append(acc.Children, child)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterating children: %w", err)
-	}
-	rows.Close()
 
 	if err := r.addSharedChildren(ctx, acc); err != nil {
 		return nil, err
@@ -288,6 +242,9 @@ func (r *Repository) GetByClerkUserID(ctx context.Context, clerkUserID string) (
 		return nil, err
 	}
 	if acc.FirstUseGuide, err = r.FirstUseGuide(ctx, id); err != nil {
+		return nil, err
+	}
+	if err := r.fillMerges(ctx, acc); err != nil {
 		return nil, err
 	}
 	return acc, nil

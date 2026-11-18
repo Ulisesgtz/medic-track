@@ -17,6 +17,8 @@ export interface Child {
   // Specs/064: the last correction of the child's data (when, and the first name of who); null if never corrected.
   correctedAt?: string | null
   correctedBy?: string | null
+  // Specs/074: the times this child absorbed another record of a family member (when, and the first name of who merged).
+  merges?: { at: string; byFirstName: string | null }[]
 }
 
 export type FamilyRole = 'owner' | 'tutor' | 'caregiver' | 'child'
@@ -57,6 +59,8 @@ export interface Account {
   deletion?: { scheduledFor: string } | null
   // Specs/071: the first-use guide of the home. Optional: a backend that predates it doesn't send it.
   firstUseGuide?: FirstUseGuideState
+  // Specs/074: the children the person hid while using the family's records (they are not in `children`).
+  hiddenChildren?: { id: string; firstName: string }[]
 }
 
 /** What the server knows for the first-use guide: whether the account closed it and its oldest consultation (specs/071). */

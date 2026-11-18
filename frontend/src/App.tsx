@@ -22,6 +22,8 @@ import { RoutineDetailPage } from './features/supplements/RoutineDetailPage'
 import { RoutineFormPage } from './features/supplements/RoutineFormPage'
 import { FamilyPage } from './features/family/FamilyPage'
 import { InvitationPage } from './features/family/InvitationPage'
+import { HowToContinuePage } from './features/family/merge/HowToContinuePage'
+import { MergeFlow } from './features/family/merge/MergeFlow'
 import { NewConsultationPage } from './features/consultations/NewConsultationPage'
 import { EditConsultationPage } from './features/consultations/EditConsultationPage'
 import { ForgotPasswordPage } from './features/auth/ForgotPasswordPage'
@@ -382,6 +384,27 @@ function App() {
                   <RequireSession>
                     <RequireConnection>
                       <FamilyPage />
+                    </RequireConnection>
+                  </RequireSession>
+                }
+              />
+              {/* Specs/074: what to do with the children of one's own after joining a family, and the merge itself. */}
+              <Route
+                path="/familia/como-seguir"
+                element={
+                  <RequireSession>
+                    <RequireConnection>
+                      <HowToContinuePage />
+                    </RequireConnection>
+                  </RequireSession>
+                }
+              />
+              <Route
+                path="/familia/unir"
+                element={
+                  <RequireSession>
+                    <RequireConnection>
+                      <MergeFlow />
                     </RequireConnection>
                   </RequireSession>
                 }

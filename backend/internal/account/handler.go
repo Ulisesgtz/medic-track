@@ -64,6 +64,24 @@ type ChildResponse struct {
 	// never corrected (specs/064-editar-datos-hijo).
 	CorrectedAt *string `json:"correctedAt" example:"2026-11-09T16:20:00Z"`
 	CorrectedBy *string `json:"correctedBy" example:"Ana"`
+	// Merges are the unions that gave this child the records of another one the person had registered by themselves
+	// (specs/074-unir-hijo-duplicado): empty if none. ByFirstName is null if that account no longer exists.
+	Merges []childMergeResponse `json:"merges"`
+}
+
+type childMergeResponse struct {
+	At          string  `json:"at" example:"2026-12-03T16:20:00Z"`
+	ByFirstName *string `json:"byFirstName" example:"Laura"`
+} // @name ChildMergeInfo
+
+// hiddenChildResponse is a child the person hid; it is not in `children`.
+type hiddenChildResponse struct {
+	ID        string `json:"id" example:"a1b2c3d4-0000-0000-0000-000000000000"`
+	FirstName string `json:"firstName" example:"Mateo"`
+} // @name HiddenChild
+
+type hiddenChildrenRequest struct {
+	ChildIDs *[]string `json:"childIds"`
 }
 
 // familyMembershipResponse is the place of the session in somebody else's family (only when it has one).
@@ -92,6 +110,9 @@ type accountResponse struct {
 	StateCode   *string         `json:"stateCode" example:"MX-JAL"`
 	Plan        string          `json:"plan" example:"free"`
 	Children    []ChildResponse `json:"children"`
+	// HiddenChildren are the account's own children the person hid (specs/074): only while they are an active Tutor or Caregiver
+	// of a family. They are not in Children and still count for the plan's limit.
+	HiddenChildren []hiddenChildResponse `json:"hiddenChildren"`
 	// DisclaimerVersion is the version of the "Antes de empezar" notice the client must show, and
 	// DisclaimerAccepted whether this account already acknowledged it (specs/010-registro-aceptacion-aviso).
 	DisclaimerVersion  string `json:"disclaimerVersion" example:"2026-09-26"`
@@ -806,7 +827,12 @@ func ToChildResponse(c Child, role string, plan Plan, ownerID uuid.UUID) ChildRe
 		at := c.CorrectedAt.UTC().Format(time.RFC3339)
 		corrected = &at
 	}
+	merges := make([]childMergeResponse, 0, len(c.Merges))
+	for _, m := range c.Merges {
+		merges = append(merges, childMergeResponse{At: m.At.UTC().Format(time.RFC3339), ByFirstName: m.ByFirstName})
+	}
 	return ChildResponse{
+		Merges:      merges,
 		ID:          c.ID.String(),
 		FirstName:   c.FirstName,
 		LastName:    c.LastName,
@@ -831,6 +857,10 @@ func toAccountResponse(acc *Account) accountResponse {
 			role, plan, ownerID = "owner", acc.Plan, acc.ID
 		}
 		children = append(children, ToChildResponse(c, role, plan, ownerID))
+	}
+	hidden := make([]hiddenChildResponse, 0, len(acc.HiddenChildren))
+	for _, h := range acc.HiddenChildren {
+		hidden = append(hidden, hiddenChildResponse{ID: h.ID.String(), FirstName: h.FirstName})
 	}
 	var membership *familyMembershipResponse
 	if acc.Family != nil {
@@ -857,6 +887,8 @@ func toAccountResponse(acc *Account) accountResponse {
 		StateCode:   acc.StateCode,
 		Plan:        string(acc.Plan),
 		Children:    children,
+
+		HiddenChildren: hidden,
 
 		DisclaimerVersion:  CurrentDisclaimerVersion,
 		DisclaimerAccepted: acc.DisclaimerAccepted,

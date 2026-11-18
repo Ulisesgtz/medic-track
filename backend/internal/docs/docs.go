@@ -1110,6 +1110,82 @@ const docTemplate = `{
                 }
             }
         },
+        "/accounts/{accountId}/hidden-children": {
+            "put": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Replaces the set of hidden children: the ids in ` + "`" + `childIds` + "`" + ` are hidden (those already hidden keep their date) and the rest\nshow again. Hiding only has effect while the person is an active Tutor or Caregiver of a family; with no family a\nnon-empty list is a 409 ` + "`" + `no_family` + "`" + `. Nothing is deleted: the children still count for the plan's limit, show up in\nthe data download and keep their data; their reminders are not sent to the person's devices while hidden. Any plan.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "accounts"
+                ],
+                "summary": "Hide or show the person's own children",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Account UUID",
+                        "name": "accountId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The ids of the children to hide (an empty list shows them all)",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.hiddenChildrenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_account.accountResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Malformed JSON, no childIds, or an id that is not one of the account's children (childIds)",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session does not own this resource",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No account exists for this id",
+                        "schema": {
+                            "$ref": "#/definitions/AccountNotFoundResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "no_family: the account is not an active member of a family",
+                        "schema": {
+                            "$ref": "#/definitions/ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/accounts/{accountId}/history-options": {
             "get": {
                 "security": [
@@ -5988,6 +6064,169 @@ const docTemplate = `{
                 }
             }
         },
+        "/family/merge-options": {
+            "get": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "The person's own children (hidden ones too), the family's, whether the person can merge (Full over the family's\nchildren) and the pairs the app suggests by name. The suggestion is never applied by the server.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "family"
+                ],
+                "summary": "What the pairing screen shows",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ChildMergeOptions"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ChildMergeErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "The session is not an active Tutor or Caregiver of a family",
+                        "schema": {
+                            "$ref": "#/definitions/ChildMergeErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/family/merges": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Each pair in its own transaction, in the order received: all or nothing per pair. Everything that hung from the\nperson's child (consultations with their doses, marks and authors, symptoms, appointments, supplements and\nactivities, vaccines, card photos, measurements, the record sheet) moves to the family's child; the person's child\nis deleted and the union is recorded with numbers only. It cannot be undone. A pair that fails says why and leaves\nnothing changed; the others are not affected. An unexpected failure answers 500 with the results of the pairs\nthat were done. The ids and the choices travel in the body only.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "family"
+                ],
+                "summary": "Join the person's own children with the family's",
+                "parameters": [
+                    {
+                        "description": "The pairs and, per pair, what to keep of each field that differs",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ChildMergeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ChildMergeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "pairs or choices: malformed",
+                        "schema": {
+                            "$ref": "#/definitions/ChildMergeErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ChildMergeErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "no_family",
+                        "schema": {
+                            "$ref": "#/definitions/ChildMergeErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "An unexpected failure; the results say which pairs were done",
+                        "schema": {
+                            "$ref": "#/definitions/ChildMergeResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/family/merges/preview": {
+            "post": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Per pair: the fields that differ, what moves, the limits it would pass and whether the sheet's lists would be too\nlong. Writes nothing. The ids travel in the body, never in the address.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "family"
+                ],
+                "summary": "What a union would do",
+                "parameters": [
+                    {
+                        "description": "The pairs to preview",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/ChildMergeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/ChildMergePreviewResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "pairs: empty, more than 10, repeated or malformed",
+                        "schema": {
+                            "$ref": "#/definitions/ChildMergeErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/ChildMergeErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "merge_not_allowed: the person cannot do everything with the family's children",
+                        "schema": {
+                            "$ref": "#/definitions/ChildMergeErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "no_family, or not_found: a child that is not where the request says",
+                        "schema": {
+                            "$ref": "#/definitions/ChildMergeErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/healthz": {
             "get": {
                 "description": "200 when the process is alive and the database answers within 2 s; 503 otherwise. Public, never limited, never logged.",
@@ -7800,6 +8039,385 @@ const docTemplate = `{
                 "reason": {
                     "type": "string",
                     "example": "child_identity"
+                }
+            }
+        },
+        "ChildMergeChild": {
+            "type": "object",
+            "properties": {
+                "birthDate": {
+                    "type": "string",
+                    "example": "2022-03-03"
+                },
+                "counts": {
+                    "$ref": "#/definitions/ChildMergeCounts"
+                },
+                "firstName": {
+                    "type": "string"
+                },
+                "growthReferenceSex": {
+                    "type": "string"
+                },
+                "height": {
+                    "type": "number"
+                },
+                "hidden": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lastName": {
+                    "type": "string"
+                },
+                "record": {
+                    "$ref": "#/definitions/ChildMergeRecord"
+                },
+                "weight": {
+                    "type": "number"
+                }
+            }
+        },
+        "ChildMergeCounts": {
+            "type": "object",
+            "properties": {
+                "activeDevices": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "activities": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "cardPhotos": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "consultations": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "measurements": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "supplements": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "vaccines": {
+                    "type": "integer",
+                    "example": 9
+                }
+            }
+        },
+        "ChildMergeErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "pairs"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Between 1 and 10 different pairs are required"
+                }
+            }
+        },
+        "ChildMergeInfo": {
+            "type": "object",
+            "properties": {
+                "at": {
+                    "type": "string",
+                    "example": "2026-12-03T16:20:00Z"
+                },
+                "byFirstName": {
+                    "type": "string",
+                    "example": "Laura"
+                }
+            }
+        },
+        "ChildMergeMoves": {
+            "type": "object",
+            "properties": {
+                "activities": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "cardPhotos": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "consultations": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "devicesRemoved": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "measurements": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "record": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "supplements": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "vaccines": {
+                    "type": "integer",
+                    "example": 9
+                }
+            }
+        },
+        "ChildMergeOptions": {
+            "type": "object",
+            "properties": {
+                "canMerge": {
+                    "type": "boolean"
+                },
+                "familyChildren": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ChildMergeChild"
+                    }
+                },
+                "familyOwnerFirstName": {
+                    "type": "string"
+                },
+                "ownChildren": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ChildMergeChild"
+                    }
+                },
+                "suggestedPairs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ChildMergeSuggestedPair"
+                    }
+                }
+            }
+        },
+        "ChildMergeOverLimit": {
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "type": "string",
+                    "enum": [
+                        "supplements",
+                        "activities",
+                        "cardPhotos",
+                        "measurements",
+                        "consultationPhotos"
+                    ]
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "resulting": {
+                    "type": "integer"
+                }
+            }
+        },
+        "ChildMergePair": {
+            "type": "object",
+            "properties": {
+                "choices": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "familyChildId": {
+                    "type": "string",
+                    "example": "b1b2c3d4-0000-0000-0000-000000000000"
+                },
+                "ownChildId": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                }
+            }
+        },
+        "ChildMergePairPreview": {
+            "type": "object",
+            "properties": {
+                "differences": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "familyChildId": {
+                    "type": "string"
+                },
+                "moves": {
+                    "$ref": "#/definitions/ChildMergeMoves"
+                },
+                "overLimits": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ChildMergeOverLimit"
+                    }
+                },
+                "ownChildId": {
+                    "type": "string"
+                },
+                "recordTooLong": {
+                    "$ref": "#/definitions/ChildMergeTooLong"
+                }
+            }
+        },
+        "ChildMergePairResult": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "enum": [
+                        "merge_not_allowed",
+                        "not_found",
+                        "record_too_long",
+                        "birth_date_conflict",
+                        "choices_missing",
+                        "internal_error"
+                    ]
+                },
+                "familyChildId": {
+                    "type": "string"
+                },
+                "field": {
+                    "type": "string"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "list": {
+                    "type": "string"
+                },
+                "moves": {
+                    "$ref": "#/definitions/ChildMergeMoves"
+                },
+                "ownChildId": {
+                    "type": "string"
+                },
+                "resulting": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "merged",
+                        "failed"
+                    ]
+                }
+            }
+        },
+        "ChildMergePediatrician": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "office": {
+                    "type": "string"
+                },
+                "phone": {
+                    "type": "string"
+                }
+            }
+        },
+        "ChildMergePreviewResponse": {
+            "type": "object",
+            "properties": {
+                "pairs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ChildMergePairPreview"
+                    }
+                }
+            }
+        },
+        "ChildMergeRecord": {
+            "type": "object",
+            "properties": {
+                "allergies": {
+                    "type": "integer"
+                },
+                "bloodType": {
+                    "type": "string"
+                },
+                "conditions": {
+                    "type": "integer"
+                },
+                "exists": {
+                    "type": "boolean"
+                },
+                "generalNote": {
+                    "type": "string"
+                },
+                "pediatrician": {
+                    "$ref": "#/definitions/ChildMergePediatrician"
+                }
+            }
+        },
+        "ChildMergeRequest": {
+            "type": "object",
+            "properties": {
+                "pairs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ChildMergePair"
+                    }
+                }
+            }
+        },
+        "ChildMergeResponse": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ChildMergePairResult"
+                    }
+                }
+            }
+        },
+        "ChildMergeSuggestedPair": {
+            "type": "object",
+            "properties": {
+                "familyChildId": {
+                    "type": "string"
+                },
+                "ownChildId": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string",
+                    "enum": [
+                        "same_name"
+                    ]
+                }
+            }
+        },
+        "ChildMergeTooLong": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer"
+                },
+                "list": {
+                    "type": "string",
+                    "enum": [
+                        "allergies",
+                        "conditions"
+                    ]
+                },
+                "resulting": {
+                    "type": "integer"
                 }
             }
         },
@@ -9719,6 +10337,19 @@ const docTemplate = `{
                 }
             }
         },
+        "HiddenChild": {
+            "type": "object",
+            "properties": {
+                "firstName": {
+                    "type": "string",
+                    "example": "Mateo"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "a1b2c3d4-0000-0000-0000-000000000000"
+                }
+            }
+        },
         "HistoryOptionsResponse": {
             "type": "object",
             "properties": {
@@ -11093,6 +11724,13 @@ const docTemplate = `{
                     "type": "string",
                     "example": "Gómez"
                 },
+                "merges": {
+                    "description": "Merges are the unions that gave this child the records of another one the person had registered by themselves\n(specs/074-unir-hijo-duplicado): empty if none. ByFirstName is null if that account no longer exists.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ChildMergeInfo"
+                    }
+                },
                 "plan": {
                     "type": "string",
                     "enum": [
@@ -11157,6 +11795,13 @@ const docTemplate = `{
                 "lastName": {
                     "type": "string",
                     "example": "Gómez"
+                },
+                "merges": {
+                    "description": "Merges are the unions that gave this child the records of another one the person had registered by themselves\n(specs/074-unir-hijo-duplicado): empty if none. ByFirstName is null if that account no longer exists.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/ChildMergeInfo"
+                    }
                 },
                 "plan": {
                     "type": "string",
@@ -11256,6 +11901,13 @@ const docTemplate = `{
                             "$ref": "#/definitions/FirstUseGuide"
                         }
                     ]
+                },
+                "hiddenChildren": {
+                    "description": "HiddenChildren are the account's own children the person hid (specs/074): only while they are an active Tutor or Caregiver\nof a family. They are not in Children and still count for the plan's limit.",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/HiddenChild"
+                    }
                 },
                 "id": {
                     "type": "string",
@@ -11371,6 +12023,17 @@ const docTemplate = `{
                 "dismissed": {
                     "type": "boolean",
                     "example": true
+                }
+            }
+        },
+        "internal_account.hiddenChildrenRequest": {
+            "type": "object",
+            "properties": {
+                "childIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },

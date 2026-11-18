@@ -622,6 +622,264 @@ definitions:
         example: child_identity
         type: string
     type: object
+  ChildMergeChild:
+    properties:
+      birthDate:
+        example: "2022-03-03"
+        type: string
+      counts:
+        $ref: '#/definitions/ChildMergeCounts'
+      firstName:
+        type: string
+      growthReferenceSex:
+        type: string
+      height:
+        type: number
+      hidden:
+        type: boolean
+      id:
+        type: string
+      lastName:
+        type: string
+      record:
+        $ref: '#/definitions/ChildMergeRecord'
+      weight:
+        type: number
+    type: object
+  ChildMergeCounts:
+    properties:
+      activeDevices:
+        example: 1
+        type: integer
+      activities:
+        example: 0
+        type: integer
+      cardPhotos:
+        example: 0
+        type: integer
+      consultations:
+        example: 2
+        type: integer
+      measurements:
+        example: 1
+        type: integer
+      supplements:
+        example: 0
+        type: integer
+      vaccines:
+        example: 9
+        type: integer
+    type: object
+  ChildMergeErrorResponse:
+    properties:
+      error:
+        example: pairs
+        type: string
+      message:
+        example: Between 1 and 10 different pairs are required
+        type: string
+    type: object
+  ChildMergeInfo:
+    properties:
+      at:
+        example: "2026-12-03T16:20:00Z"
+        type: string
+      byFirstName:
+        example: Laura
+        type: string
+    type: object
+  ChildMergeMoves:
+    properties:
+      activities:
+        example: 0
+        type: integer
+      cardPhotos:
+        example: 0
+        type: integer
+      consultations:
+        example: 2
+        type: integer
+      devicesRemoved:
+        example: 1
+        type: integer
+      measurements:
+        example: 1
+        type: integer
+      record:
+        example: true
+        type: boolean
+      supplements:
+        example: 0
+        type: integer
+      vaccines:
+        example: 9
+        type: integer
+    type: object
+  ChildMergeOptions:
+    properties:
+      canMerge:
+        type: boolean
+      familyChildren:
+        items:
+          $ref: '#/definitions/ChildMergeChild'
+        type: array
+      familyOwnerFirstName:
+        type: string
+      ownChildren:
+        items:
+          $ref: '#/definitions/ChildMergeChild'
+        type: array
+      suggestedPairs:
+        items:
+          $ref: '#/definitions/ChildMergeSuggestedPair'
+        type: array
+    type: object
+  ChildMergeOverLimit:
+    properties:
+      kind:
+        enum:
+        - supplements
+        - activities
+        - cardPhotos
+        - measurements
+        - consultationPhotos
+        type: string
+      limit:
+        type: integer
+      resulting:
+        type: integer
+    type: object
+  ChildMergePair:
+    properties:
+      choices:
+        additionalProperties:
+          type: string
+        type: object
+      familyChildId:
+        example: b1b2c3d4-0000-0000-0000-000000000000
+        type: string
+      ownChildId:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+    type: object
+  ChildMergePairPreview:
+    properties:
+      differences:
+        items:
+          type: string
+        type: array
+      familyChildId:
+        type: string
+      moves:
+        $ref: '#/definitions/ChildMergeMoves'
+      overLimits:
+        items:
+          $ref: '#/definitions/ChildMergeOverLimit'
+        type: array
+      ownChildId:
+        type: string
+      recordTooLong:
+        $ref: '#/definitions/ChildMergeTooLong'
+    type: object
+  ChildMergePairResult:
+    properties:
+      error:
+        enum:
+        - merge_not_allowed
+        - not_found
+        - record_too_long
+        - birth_date_conflict
+        - choices_missing
+        - internal_error
+        type: string
+      familyChildId:
+        type: string
+      field:
+        type: string
+      limit:
+        type: integer
+      list:
+        type: string
+      moves:
+        $ref: '#/definitions/ChildMergeMoves'
+      ownChildId:
+        type: string
+      resulting:
+        type: integer
+      status:
+        enum:
+        - merged
+        - failed
+        type: string
+    type: object
+  ChildMergePediatrician:
+    properties:
+      name:
+        type: string
+      office:
+        type: string
+      phone:
+        type: string
+    type: object
+  ChildMergePreviewResponse:
+    properties:
+      pairs:
+        items:
+          $ref: '#/definitions/ChildMergePairPreview'
+        type: array
+    type: object
+  ChildMergeRecord:
+    properties:
+      allergies:
+        type: integer
+      bloodType:
+        type: string
+      conditions:
+        type: integer
+      exists:
+        type: boolean
+      generalNote:
+        type: string
+      pediatrician:
+        $ref: '#/definitions/ChildMergePediatrician'
+    type: object
+  ChildMergeRequest:
+    properties:
+      pairs:
+        items:
+          $ref: '#/definitions/ChildMergePair'
+        type: array
+    type: object
+  ChildMergeResponse:
+    properties:
+      results:
+        items:
+          $ref: '#/definitions/ChildMergePairResult'
+        type: array
+    type: object
+  ChildMergeSuggestedPair:
+    properties:
+      familyChildId:
+        type: string
+      ownChildId:
+        type: string
+      reason:
+        enum:
+        - same_name
+        type: string
+    type: object
+  ChildMergeTooLong:
+    properties:
+      limit:
+        type: integer
+      list:
+        enum:
+        - allergies
+        - conditions
+        type: string
+      resulting:
+        type: integer
+    type: object
   ChildNotFoundResponse:
     properties:
       error:
@@ -1994,6 +2252,15 @@ definitions:
       message:
         type: string
     type: object
+  HiddenChild:
+    properties:
+      firstName:
+        example: Mateo
+        type: string
+      id:
+        example: a1b2c3d4-0000-0000-0000-000000000000
+        type: string
+    type: object
   HistoryOptionsResponse:
     properties:
       doctors:
@@ -3015,6 +3282,13 @@ definitions:
       lastName:
         example: Gómez
         type: string
+      merges:
+        description: |-
+          Merges are the unions that gave this child the records of another one the person had registered by themselves
+          (specs/074-unir-hijo-duplicado): empty if none. ByFirstName is null if that account no longer exists.
+        items:
+          $ref: '#/definitions/ChildMergeInfo'
+        type: array
       plan:
         enum:
         - free
@@ -3069,6 +3343,13 @@ definitions:
       lastName:
         example: Gómez
         type: string
+      merges:
+        description: |-
+          Merges are the unions that gave this child the records of another one the person had registered by themselves
+          (specs/074-unir-hijo-duplicado): empty if none. ByFirstName is null if that account no longer exists.
+        items:
+          $ref: '#/definitions/ChildMergeInfo'
+        type: array
       plan:
         enum:
         - free
@@ -3142,6 +3423,13 @@ definitions:
         - $ref: '#/definitions/FirstUseGuide'
         description: FirstUseGuide is the state of the first-use guide of the home
           (specs/071-primer-uso-guiado).
+      hiddenChildren:
+        description: |-
+          HiddenChildren are the account's own children the person hid (specs/074): only while they are an active Tutor or Caregiver
+          of a family. They are not in Children and still count for the plan's limit.
+        items:
+          $ref: '#/definitions/HiddenChild'
+        type: array
       id:
         example: e5f6a7b8-0000-0000-0000-000000000000
         type: string
@@ -3227,6 +3515,13 @@ definitions:
       dismissed:
         example: true
         type: boolean
+    type: object
+  internal_account.hiddenChildrenRequest:
+    properties:
+      childIds:
+        items:
+          type: string
+        type: array
     type: object
   internal_account.reminderSettingsRequest:
     properties:
@@ -4217,6 +4512,60 @@ paths:
       security:
       - ClerkSession: []
       summary: Close or reopen the first-use guide of the home
+      tags:
+      - accounts
+  /accounts/{accountId}/hidden-children:
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Replaces the set of hidden children: the ids in `childIds` are hidden (those already hidden keep their date) and the rest
+        show again. Hiding only has effect while the person is an active Tutor or Caregiver of a family; with no family a
+        non-empty list is a 409 `no_family`. Nothing is deleted: the children still count for the plan's limit, show up in
+        the data download and keep their data; their reminders are not sent to the person's devices while hidden. Any plan.
+      parameters:
+      - description: Account UUID
+        in: path
+        name: accountId
+        required: true
+        type: string
+      - description: The ids of the children to hide (an empty list shows them all)
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/internal_account.hiddenChildrenRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_account.accountResponse'
+        "400":
+          description: Malformed JSON, no childIds, or an id that is not one of the
+            account's children (childIds)
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "403":
+          description: The session does not own this resource
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+        "404":
+          description: No account exists for this id
+          schema:
+            $ref: '#/definitions/AccountNotFoundResponse'
+        "409":
+          description: 'no_family: the account is not an active member of a family'
+          schema:
+            $ref: '#/definitions/ErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Hide or show the person's own children
       tags:
       - accounts
   /accounts/{accountId}/history-options:
@@ -7557,6 +7906,121 @@ paths:
       security:
       - ClerkSession: []
       summary: Remove a Caregiver or a Child-role member
+      tags:
+      - family
+  /family/merge-options:
+    get:
+      description: |-
+        The person's own children (hidden ones too), the family's, whether the person can merge (Full over the family's
+        children) and the pairs the app suggests by name. The suggestion is never applied by the server.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ChildMergeOptions'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ChildMergeErrorResponse'
+        "404":
+          description: The session is not an active Tutor or Caregiver of a family
+          schema:
+            $ref: '#/definitions/ChildMergeErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: What the pairing screen shows
+      tags:
+      - family
+  /family/merges:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Each pair in its own transaction, in the order received: all or nothing per pair. Everything that hung from the
+        person's child (consultations with their doses, marks and authors, symptoms, appointments, supplements and
+        activities, vaccines, card photos, measurements, the record sheet) moves to the family's child; the person's child
+        is deleted and the union is recorded with numbers only. It cannot be undone. A pair that fails says why and leaves
+        nothing changed; the others are not affected. An unexpected failure answers 500 with the results of the pairs
+        that were done. The ids and the choices travel in the body only.
+      parameters:
+      - description: The pairs and, per pair, what to keep of each field that differs
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/ChildMergeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ChildMergeResponse'
+        "400":
+          description: 'pairs or choices: malformed'
+          schema:
+            $ref: '#/definitions/ChildMergeErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ChildMergeErrorResponse'
+        "404":
+          description: no_family
+          schema:
+            $ref: '#/definitions/ChildMergeErrorResponse'
+        "500":
+          description: An unexpected failure; the results say which pairs were done
+          schema:
+            $ref: '#/definitions/ChildMergeResponse'
+      security:
+      - ClerkSession: []
+      summary: Join the person's own children with the family's
+      tags:
+      - family
+  /family/merges/preview:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Per pair: the fields that differ, what moves, the limits it would pass and whether the sheet's lists would be too
+        long. Writes nothing. The ids travel in the body, never in the address.
+      parameters:
+      - description: The pairs to preview
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/ChildMergeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ChildMergePreviewResponse'
+        "400":
+          description: 'pairs: empty, more than 10, repeated or malformed'
+          schema:
+            $ref: '#/definitions/ChildMergeErrorResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ChildMergeErrorResponse'
+        "403":
+          description: 'merge_not_allowed: the person cannot do everything with the
+            family''s children'
+          schema:
+            $ref: '#/definitions/ChildMergeErrorResponse'
+        "404":
+          description: 'no_family, or not_found: a child that is not where the request
+            says'
+          schema:
+            $ref: '#/definitions/ChildMergeErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: What a union would do
       tags:
       - family
   /healthz:

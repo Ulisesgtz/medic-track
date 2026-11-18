@@ -14,6 +14,7 @@ import { NextAppointmentCompact } from '../appointments/NextAppointmentCompact'
 import { ChildTodayCard } from '../childDetail/ChildTodayCard'
 import { CartillaSection, ConsultationsSection, DaySummaryCard, MoreRows, TreatmentCard } from '../childDetail/ChildDetailParts'
 import { CHILD, childSubtitle } from '../childDetail/childDetailText'
+import { MergedLine } from '../family/merge/MergedLine'
 import { ChildRecordSection } from '../childRecord/ChildRecordSection'
 import { RECORD } from '../childRecord/recordText'
 import { GrowthSection } from '../growth/GrowthSection'
@@ -159,6 +160,7 @@ export function ChildDetailPage() {
           <div className="mx-auto flex max-w-[904px] flex-col gap-6">
             {header}
             <ChildTodayCard childId={childId} childName={childName} variant="desktop" canManage={access.canAdd} />
+            <MergedLine merges={child?.merges} />
             <div className="grid grid-cols-[minmax(0,1fr)_296px] items-start gap-7">
               <div className="flex min-w-0 flex-col gap-6">{sections}</div>
               <aside className="sticky top-6 flex flex-col gap-4">
@@ -184,6 +186,7 @@ export function ChildDetailPage() {
           {appointment}
           {sections}
           {more}
+          <MergedLine merges={child?.merges} />
           {newConsultation ? <StickyActionBar variant="phone">{newConsultation}</StickyActionBar> : <div className="h-6" />}
         </div>
       </main>

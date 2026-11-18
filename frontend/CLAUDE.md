@@ -237,6 +237,15 @@ The entry is the row «Editar datos» of «Lo demás» (`MoreRows` in `features/
 
 E2E: `crecimiento.spec.ts` (Chromium, 390 and 1280 px: the owner's whole flow with ‹ › and the tabs, the free plan's notice and the 422 of the API, a Caregiver who sees and gets 403; it never depends on the WHO curves being on).
 
+## `src/features/family/merge/` — unir y ocultar hijos (spec 074)
+
+- Built **exactly** from Claude Design's mock (`specs/074-unir-hijo-duplicado/referencia/`), two designs with `useIsDesktop`; deviations in `referencia/desviaciones.md`. Every sentence lives in `mergeText.ts` (`mergeText.test.ts`: no «correcto», «el bueno», «parece el mismo», «mejor», «recomend», «felicidades», no red/amber classes).
+- `/familia/como-seguir` (`HowToContinuePage`: A, A2 without «Unir» for a Caregiver, F) — `InvitationPage` goes there after accepting when the account has own children and the role is Tutor/Caregiver; closing = keep both (nothing written). «Usar solo lo de la familia» = `PUT /accounts/{id}/hidden-children` with every own child.
+- `/familia/unir` (`MergeFlow`: `PairsStep` B → `DifferencesStep` C → `SummaryStep` D → `ResultStep` E1–E3): one `POST /family/merges/preview` when leaving B feeds C and D; «Unir» sends per pair only ids and `choices`; «Intentar de nuevo» resends only the failed pairs. `pairing.ts` mirrors the server's suggestion (name, never the birth date) only to show it.
+- `useMergeChildren` invalidates `['accounts','me']` and `['family']` and forgets the merged child's keys (memory and offline copy, `forgetChild`).
+- `MergedLine` (G, «Se unió el 3 dic con el registro de Laura» from `child.merges`), `HiddenChildren` (H1, in `AccountPage`), `OwnChildrenSection` (H2/H3, in `FamilyPage`); `ChildrenSidebar` shows «Tuyo»/«Familia» instead of the age while own and family children are both visible.
+- Both routes need a connection (`RequireConnection`) and are in `shared/clientErrors/routePatterns.ts`. E2E `e2e/unir-hijos.spec.ts`.
+
 ## `src/features/childRecord/` — ficha del hijo (spec 073)
 
 Built from Claude Design's mock (`specs/073-ficha-del-hijo/referencia/`, states A–G; deviations in `referencia/desviaciones.md`). **Shows what the family wrote and never evaluates** (Principio I): no «riesgo», «peligro», «grave», «urgente», never «Sin alergias» or «Sin padecimientos» (a group with nothing is simply not drawn), no red or amber in the view (the `error` token only in the form's field errors).
