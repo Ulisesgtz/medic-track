@@ -38,7 +38,7 @@ vi.mock('./share', () => ({
 }))
 
 const child = { firstName: 'Mateo', lastName: 'Morales' }
-const all: ExportRequest = { period: { kind: 'all' }, sections: { consultations: true, vaccinations: true, photos: false } }
+const all: ExportRequest = { period: { kind: 'all' }, sections: { record: true, consultations: true, vaccinations: true, photos: false } }
 
 function useWeb(web: boolean) {
   vi.stubGlobal('matchMedia', vi.fn().mockImplementation(() => ({ matches: web, addEventListener: vi.fn(), removeEventListener: vi.fn() })))
@@ -123,7 +123,7 @@ describe.each([
     await userEvent.click(screen.getByRole('radio', { name: /Usar los filtros/ }))
     await userEvent.click(screen.getByRole('switch', { name: 'Cartilla de vacunación' }))
     await userEvent.click(screen.getByRole('button', { name: 'Generar PDF' }))
-    expect(hook.generate).toHaveBeenCalledWith({ period: { kind: 'filters', filters }, sections: { consultations: true, vaccinations: false, photos: false } })
+    expect(hook.generate).toHaveBeenCalledWith({ period: { kind: 'filters', filters }, sections: { record: true, consultations: true, vaccinations: false, photos: false } })
     await userEvent.click(screen.getByRole('switch', { name: 'Consultas' }))
     expect(screen.getByRole('switch', { name: 'Consultas' })).toHaveAttribute('aria-checked', 'false')
     expect(screen.getByRole('button', { name: 'Generar PDF' })).toBeDisabled()
@@ -137,6 +137,20 @@ describe.each([
     await userEvent.click(photos)
     await userEvent.click(screen.getByRole('button', { name: 'Generar PDF' }))
     expect(hook.generate).toHaveBeenCalledWith({ ...all, sections: { ...all.sections, photos: true } })
+  })
+
+  it('«Incluir la ficha» is on from the start and goes in the request; off, it goes as false', async () => {
+    show()
+    const record = screen.getByRole('switch', { name: 'Incluir la ficha' })
+    expect(record).toHaveAttribute('aria-checked', 'true')
+    await userEvent.click(record)
+    await userEvent.click(screen.getByRole('button', { name: 'Generar PDF' }))
+    expect(hook.generate).toHaveBeenCalledWith({ ...all, sections: { ...all.sections, record: false } })
+  })
+
+  it('a person’s own history has no record switch', () => {
+    show({ childId: { kind: 'person', accountId: 'a1' } })
+    expect(screen.queryByRole('switch', { name: 'Incluir la ficha' })).not.toBeInTheDocument()
   })
 
   it('generating the photos says which one', () => {

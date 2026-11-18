@@ -15,6 +15,7 @@ import (
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/access"
 	"github.com/Ulisesgtz/medic-track/backend/internal/account"
+	"github.com/Ulisesgtz/medic-track/backend/internal/childrecord"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/historyexport"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
@@ -208,4 +209,39 @@ func TestGetPhoto_TheConsultationPhotoAlone(t *testing.T) {
 		r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/consultations/"+id+"/photo", nil))
 		require.Equal(t, want, rec.Code, id)
 	}
+}
+
+// sections.record is on by default; false leaves it out; the answer has no version or canEdit worth acting on.
+func TestExport_TheRecordSheetOnTheCover(t *testing.T) {
+	pool := testPool(t)
+	f := newFamily(t, pool, account.PlanPaid)
+	h := handler(t, &capture{})
+	period := `"period":{"kind":"all"}`
+
+	var body map[string]any
+	rec := post(t, h, f.childID.String(), `{`+period+`,"sections":{"consultations":true}}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Contains(t, body, "record")
+	require.Nil(t, body["record"], "no sheet yet")
+
+	content, errs := childrecord.Validate(childrecord.Content{
+		GeneralNote: strPtr("Usa lentes"), Pediatrician: &childrecord.Pediatrician{Name: strPtr("Dra. Ruiz"), Phone: strPtr("33 1234 5678")},
+		Allergies: []childrecord.Allergy{{Name: "Penicilina", Kind: strPtr("medication")}}, Conditions: []childrecord.Condition{{Name: "Asma"}},
+	})
+	require.Empty(t, errs)
+	_, err := childrecord.NewRepository(pool).Save(context.Background(), f.childID, f.accountID, content, 0)
+	require.NoError(t, err)
+
+	rec = post(t, h, f.childID.String(), `{`+period+`,"sections":{"consultations":true}}`)
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	record := body["record"].(map[string]any)
+	require.Equal(t, "Usa lentes", record["generalNote"])
+	require.Equal(t, "Dra. Ruiz", record["pediatrician"].(map[string]any)["name"])
+	require.Equal(t, "Penicilina", record["allergies"].([]any)[0].(map[string]any)["name"])
+	require.Equal(t, "Ana", record["updated"].(map[string]any)["by"])
+
+	rec = post(t, h, f.childID.String(), `{`+period+`,"sections":{"consultations":true,"record":false}}`)
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.Nil(t, body["record"])
 }

@@ -26,6 +26,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/cabinet"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childprofile"
+	"github.com/Ulisesgtz/medic-track/backend/internal/childrecord"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/dataexport"
 	"github.com/Ulisesgtz/medic-track/backend/internal/errorlog"
@@ -174,6 +175,7 @@ func newWorld(t *testing.T) *world {
 		Cabinet:      cabinet.NewHandler(cabinet.NewService(cabinet.NewRepository(pool)), responder),
 		Growth:       growth.NewHandler(growth.NewService(growth.NewRepository(pool)), responder),
 		ChildProfile: childprofile.NewHandler(childprofile.NewService(childprofile.NewRepository(pool)), responder),
+		ChildRecord:  childrecord.NewHandler(childrecord.NewRepository(pool), responder),
 		HistoryExport: historyexport.NewHandler(historyexport.NewService(historyexport.NewRepository(pool), consultation.NewRepository(pool),
 			vaccination.NewRepository(pool)), responder),
 		AccountDeletion: accountdeletion.NewHandler(accountdeletion.NewService(accountdeletion.NewRepository(pool), pool,
@@ -330,6 +332,8 @@ func (w *world) routes() []struct {
 		{"growth chart", http.MethodGet, "/children/" + w.childA.String() + "/growth-chart", "", http.StatusUnprocessableEntity},
 		// Specs/064: correcting the child's own data is Full; an empty body is a 400 before the database is asked.
 		{"correct child", http.MethodPut, "/children/" + w.childA.String(), `{}`, http.StatusBadRequest},
+		{"get child record", http.MethodGet, "/children/" + w.childA.String() + "/record", "", http.StatusOK},
+		{"save child record", http.MethodPut, "/children/" + w.childA.String() + "/record", `{}`, http.StatusBadRequest},
 		{"get subscription", http.MethodGet, "/accounts/" + w.accountA.String() + "/subscription", "", http.StatusOK},
 		{"subscribe", http.MethodPost, "/accounts/" + w.accountA.String() + "/subscription", "", http.StatusCreated},
 		{"cancel subscription", http.MethodPost, "/accounts/" + w.accountA.String() + "/subscription/cancel", "", http.StatusOK},
@@ -432,7 +436,7 @@ var (
 	ownRoutes = map[string]bool{"get deletion": true, "request deletion": true, "cancel deletion": true, "export my data": true, "search own consultations": true, "own history options": true, "export own history": true, "consultation sharing": true, "own consultations": true, "create own consultation": true, "own overview": true, "own appointments": true, "create own appointment": true, "get account": true, "accept disclaimer": true, "first use guide": true, "reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true, "get subscription": true, "subscribe": true, "cancel subscription": true}
 	// cabinetRoutes: the family's medicine cabinet (specs/062), not for a Child-role member.
 	cabinetRoutes = map[string]bool{"list cabinet": true, "cabinet item": true, "cabinet photo": true}
-	fullRoutes    = map[string]bool{"correct child": true, "add growth": true, "correct growth": true, "remove growth": true, "choose growth table": true, "add to cabinet": true, "edit cabinet item": true, "remove cabinet item": true, "delete routine": true, "add child": true, "create consultation": true, "edit consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "record vaccination": true, "correct vaccination": true, "delete vaccination": true, "save card photo": true, "delete card photo": true, "edit appointment": true, "create device link": true, "remove device link": true, "choose device reminders": true, "mark appointment": true}
+	fullRoutes    = map[string]bool{"correct child": true, "save child record": true, "add growth": true, "correct growth": true, "remove growth": true, "choose growth table": true, "add to cabinet": true, "edit cabinet item": true, "remove cabinet item": true, "delete routine": true, "add child": true, "create consultation": true, "edit consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "record vaccination": true, "correct vaccination": true, "delete vaccination": true, "save card photo": true, "delete card photo": true, "edit appointment": true, "create device link": true, "remove device link": true, "choose device reminders": true, "mark appointment": true}
 )
 
 func (w *world) setOwnerPlan(t *testing.T, plan string) {

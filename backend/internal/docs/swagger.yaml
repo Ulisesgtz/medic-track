@@ -643,6 +643,146 @@ definitions:
           $ref: '#/definitions/OverviewDoseResponse'
         type: array
     type: object
+  ChildRecordAllergy:
+    properties:
+      kind:
+        enum:
+        - medication
+        - food
+        - other
+        example: medication
+        type: string
+      name:
+        example: Penicilina
+        type: string
+      note:
+        example: le salen ronchas
+        type: string
+    type: object
+  ChildRecordCondition:
+    properties:
+      name:
+        example: Asma
+        type: string
+      note:
+        example: usa inhalador en crisis
+        type: string
+    type: object
+  ChildRecordConflictResponse:
+    properties:
+      current:
+        $ref: '#/definitions/ChildRecordResponse'
+      error:
+        example: record_conflict
+        type: string
+      message:
+        type: string
+    type: object
+  ChildRecordErrorResponse:
+    properties:
+      error:
+        example: child_not_found
+        type: string
+      message:
+        type: string
+    type: object
+  ChildRecordInput:
+    properties:
+      allergies:
+        items:
+          $ref: '#/definitions/ChildRecordAllergy'
+        type: array
+      bloodType:
+        example: O+
+        type: string
+      conditions:
+        items:
+          $ref: '#/definitions/ChildRecordCondition'
+        type: array
+      expectedVersion:
+        example: 3
+        type: integer
+      generalNote:
+        type: string
+      pediatrician:
+        $ref: '#/definitions/ChildRecordPediatrician'
+    type: object
+  ChildRecordPediatrician:
+    properties:
+      name:
+        example: Dra. Ruiz
+        type: string
+      office:
+        example: Torre Médica, piso 4
+        type: string
+      phone:
+        example: +52 33 1234 5678
+        type: string
+    type: object
+  ChildRecordResponse:
+    properties:
+      allergies:
+        items:
+          $ref: '#/definitions/ChildRecordAllergy'
+        type: array
+      bloodType:
+        enum:
+        - O+
+        - O-
+        - A+
+        - A-
+        - B+
+        - B-
+        - AB+
+        - AB-
+        - unknown
+        example: O+
+        type: string
+      canEdit:
+        type: boolean
+      conditions:
+        items:
+          $ref: '#/definitions/ChildRecordCondition'
+        type: array
+      exists:
+        type: boolean
+      generalNote:
+        type: string
+      pediatrician:
+        $ref: '#/definitions/ChildRecordPediatrician'
+      updated:
+        $ref: '#/definitions/ChildRecordUpdated'
+      version:
+        example: 3
+        type: integer
+    type: object
+  ChildRecordUpdated:
+    properties:
+      at:
+        example: "2026-11-17T18:05:00Z"
+        type: string
+      by:
+        example: Ana
+        type: string
+    type: object
+  ChildRecordValidationResponse:
+    properties:
+      details:
+        items:
+          properties:
+            field:
+              example: allergies[2].name
+              type: string
+            message:
+              type: string
+          type: object
+        type: array
+      error:
+        example: validation_error
+        type: string
+      message:
+        type: string
+    type: object
   ConsultationDetailResponse:
     properties:
       accountId:
@@ -1134,6 +1274,11 @@ definitions:
         $ref: '#/definitions/ExportAppointment'
       photos:
         $ref: '#/definitions/ExportPhotos'
+      record:
+        allOf:
+        - $ref: '#/definitions/ChildRecordResponse'
+        description: Record is the child's record sheet (without canEdit), or null
+          when it has none or wasn't asked for (specs/073).
       subject:
         description: |-
           Subject is "child" or, for a person's own history (specs/058), "person": then child is the person, with an empty
@@ -1307,6 +1452,12 @@ definitions:
         type: boolean
       photos:
         example: false
+        type: boolean
+      record:
+        description: 'Record asks for the child''s record sheet (specs/073); omitted
+          means true. Alone it isn''t enough: consultations or vaccinations are still
+          needed.'
+        example: true
         type: boolean
       vaccinations:
         example: true
@@ -6081,6 +6232,94 @@ paths:
       summary: A child's doses in a window and active treatment
       tags:
       - consultations
+  /children/{childId}/record:
+    get:
+      description: |-
+        The allergies, blood type, permanent conditions, pediatrician and general note the family wrote, as they wrote
+        them and in their order. A child without a sheet answers `exists: false` and empty lists. `canEdit` is true for
+        the full level (the owner, a Tutor of a paid family). Any plan. Never reachable from a child's own phone.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ChildRecordResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ChildRecordErrorResponse'
+        "403":
+          description: The session has no access to this child
+          schema:
+            $ref: '#/definitions/ChildRecordErrorResponse'
+        "404":
+          description: Malformed child id
+          schema:
+            $ref: '#/definitions/ChildRecordErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: A child's record sheet
+      tags:
+      - child-record
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Replaces the whole sheet. `expectedVersion` is the version the form was opened with (0 when there was none); if
+        someone saved meanwhile the answer is 409 `record_conflict` with the stored sheet as `current` and nothing is
+        written. Saving without changes writes nothing (version, author and date stay). Any plan; the full level only.
+        An invalid field is 400 with its name and never its value.
+      parameters:
+      - description: Child UUID
+        in: path
+        name: childId
+        required: true
+        type: string
+      - description: The whole sheet
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/ChildRecordInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/ChildRecordResponse'
+        "400":
+          description: An invalid field, a malformed body or no expectedVersion
+          schema:
+            $ref: '#/definitions/ChildRecordValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/ChildRecordErrorResponse'
+        "403":
+          description: The session can't change this child's sheet
+          schema:
+            $ref: '#/definitions/ChildRecordErrorResponse'
+        "404":
+          description: No child exists for this id
+          schema:
+            $ref: '#/definitions/ChildRecordErrorResponse'
+        "409":
+          description: Someone saved the sheet after it was opened
+          schema:
+            $ref: '#/definitions/ChildRecordConflictResponse'
+      security:
+      - ClerkSession: []
+      summary: Save a child's record sheet
+      tags:
+      - child-record
   /children/{childId}/routines:
     get:
       description: |-

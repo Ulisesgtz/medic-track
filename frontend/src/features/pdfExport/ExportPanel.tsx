@@ -69,11 +69,13 @@ export function ExportPanel({ childId, child, free, filters, origin = 'history',
   // A person's own history has no vaccination card (specs/058): the section is neither offered nor asked for.
   const person = typeof childId !== 'string' && childId.kind === 'person'
   const [vaccinations, setVaccinations] = useState(!person)
+  // specs/073: the child's record goes on the cover, on from the start; a person's own history has none.
+  const [record, setRecord] = useState(!person)
   const [photos, setPhotos] = useState(false)
 
   const period: ExportPeriod =
     kind === 'range' ? { kind, from, to } : kind === 'filters' && filters ? { kind, filters } : { kind: 'all' }
-  const sections = { consultations, vaccinations, photos }
+  const sections = { record: record && !person, consultations, vaccinations, photos }
   const ready = canGenerate(period, sections)
   const datesTurned = kind === 'range' && from !== '' && to !== '' && to < from
   const name = fullName(child)
@@ -172,6 +174,11 @@ export function ExportPanel({ childId, child, free, filters, origin = 'history',
 
           <div className="flex flex-col gap-1">
             <p className={`${eyebrow} mb-1.5`}>{PANEL.include}</p>
+            {!person && (
+              <Switch checked={record} onToggle={() => setRecord((v) => !v)} rule>
+                {PANEL.record}
+              </Switch>
+            )}
             <Switch checked={consultations} onToggle={() => setConsultations((v) => !v)} rule>
               {PANEL.consultations}
             </Switch>

@@ -81,6 +81,11 @@ func seedFamily(t *testing.T, pool *pgxpool.Pool) family {
 		f.CardPhoto, f.Child, f.Owner, pngBytes)
 	exec(`INSERT INTO growth_measurements (child_id, account_id, measured_on, weight_kg, created_by_account_id) VALUES ($1, $2, '2026-01-01', 12.5, $2)`,
 		f.Child, f.Owner)
+	exec(`INSERT INTO child_records (child_id, account_id, blood_type, general_note, pediatrician_name, version, updated_by_account_id)
+		VALUES ($1, $2, 'unknown', 'Usa lentes', 'Dra. Ruiz', 1, $3)`, f.Child, f.Owner, f.Tutor)
+	exec(`INSERT INTO child_record_allergies (child_id, account_id, position, name, kind) VALUES ($1, $2, 0, 'Penicilina', 'medication'), ($1, $2, 1, 'Cacahuate', NULL)`,
+		f.Child, f.Owner)
+	exec(`INSERT INTO child_record_conditions (child_id, account_id, position, name) VALUES ($1, $2, 0, 'Asma')`, f.Child, f.Owner)
 	exec(`INSERT INTO supplement_routines (id, account_id, child_id, name, period, times, first_date, utc_offset_minutes, generated_until, created_by_account_id)
 		VALUES ($1, $2, $3, 'Vitamina D', 'daily', '{08:00,20:00}', '2026-10-01', -360, now(), $2),
 		       (gen_random_uuid(), $2, NULL, 'Hierro propio', 'daily', '{09:00}', '2026-10-01', -360, now(), $2)`,
@@ -92,6 +97,9 @@ func seedFamily(t *testing.T, pool *pgxpool.Pool) family {
 
 	t.Cleanup(func() {
 		for _, sql := range []string{
+			`DELETE FROM child_record_allergies WHERE account_id = ANY($1)`,
+			`DELETE FROM child_record_conditions WHERE account_id = ANY($1)`,
+			`DELETE FROM child_records WHERE account_id = ANY($1)`,
 			`DELETE FROM supplement_doses WHERE routine_id IN (SELECT id FROM supplement_routines WHERE account_id = ANY($1))`,
 			`DELETE FROM supplement_routines WHERE account_id = ANY($1)`,
 			`DELETE FROM medicine_cabinet_items WHERE account_id = ANY($1)`,
@@ -151,6 +159,7 @@ func TestCollect_EverythingOfTheAccountAndNothingElse(t *testing.T) {
 	require.Equal(t, map[string]int{
 		"hijos": 1, "consultas": 2, "medicamentos": 1, "tomas": 3, "citas": 1, "vacunas": 1, "fotos_de_la_cartilla": 1,
 		"crecimiento": 1, "suplementos_y_actividades": 2, "tomas_de_rutinas": 2, "botiquin": 1,
+		"ficha": 1, "ficha_alergias": 2, "ficha_padecimientos": 1,
 	}, counts, "every kind, and nothing of the other account")
 
 	require.Equal(t, "Ñúñez", *column(t, table(t, e, "hijos"), 0, "apellido"))
@@ -173,6 +182,15 @@ func TestCollect_EverythingOfTheAccountAndNothingElse(t *testing.T) {
 		{Kind: "botiquin", ID: f.Cabinet, Ext: "jpg"},
 	}, e.Photos)
 	require.Equal(t, "2027-03", *column(t, table(t, e, "botiquin"), 0, "caducidad"))
+
+	record := table(t, e, "ficha")
+	require.Equal(t, "No lo sé", *column(t, record, 0, "tipo_de_sangre"))
+	require.Equal(t, "Beto", *column(t, record, 0, "actualizada_por"), "only the first name")
+	allergies := table(t, e, "ficha_alergias")
+	require.Equal(t, "Penicilina", *column(t, allergies, 0, "nombre"))
+	require.Equal(t, "medicamento", *column(t, allergies, 0, "tipo"))
+	require.Nil(t, column(t, allergies, 1, "tipo"))
+	require.Equal(t, "Asma", *column(t, table(t, e, "ficha_padecimientos"), 0, "nombre"))
 }
 
 func TestCollect_FamilyChildrenLeavesOutTheOwnersOwnData(t *testing.T) {
@@ -184,6 +202,7 @@ func TestCollect_FamilyChildrenLeavesOutTheOwnersOwnData(t *testing.T) {
 	for _, tb := range e.Tables {
 		require.NotEqual(t, "botiquin", tb.Name, "the medicine cabinet is the owner's, not the children's")
 	}
+	require.Len(t, table(t, e, "ficha").Rows, 1, "the children's record sheets are included")
 	require.Len(t, table(t, e, "consultas").Rows, 1, "not her own consultation")
 	require.Len(t, table(t, e, "suplementos_y_actividades").Rows, 1, "not her personal routine")
 	for _, p := range e.Photos {

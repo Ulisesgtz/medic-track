@@ -104,9 +104,19 @@ export function filtersText(period: ExportPeriod, symptomNames: Record<string, s
   return parts.length > 0 ? parts.join(' · ') : DOC.noFilters
 }
 
+/** Whether the record has anything to print (specs/073): asked for, present and not emptied. */
+export function showsRecord(request: ExportRequest, data: ExportData): boolean {
+  const r = data.record
+  if (request.sections.record === false || !r) return false
+  const p = r.pediatrician
+  const text = (v: string | null | undefined) => !!v && v.trim() !== ''
+  return r.allergies.length > 0 || r.conditions.length > 0 || r.bloodType !== null || text(r.generalNote) || (!!p && (text(p.name) || text(p.phone) || text(p.office)))
+}
+
 /** The cover's «Secciones». */
-export function sectionsText(sections: ExportRequest['sections']): string {
+export function sectionsText(sections: ExportRequest['sections'], withRecord = false): string {
   const parts: string[] = []
+  if (withRecord) parts.push(DOC.sectionRecord)
   if (sections.consultations) parts.push(DOC.sectionConsultations)
   if (sections.vaccinations) parts.push(DOC.sectionCard)
   if (sections.photos) parts.push(DOC.sectionPhotos)
@@ -128,7 +138,7 @@ export function coverRows(request: ExportRequest, data: ExportData, symptomNames
   const rows: CoverRow[] = [
     { label: DOC.periodLabel, value: periodText(request.period), strong: true },
     { label: DOC.filtersLabel, value: filtersText(request.period, symptomNames) },
-    { label: DOC.sectionsLabel, value: sectionsText(request.sections) },
+    { label: DOC.sectionsLabel, value: sectionsText(request.sections, showsRecord(request, data)) },
   ]
   if (request.sections.vaccinations && request.period.kind !== 'all' && data.vaccinations.length > 0) {
     rows.push({ label: DOC.cardLabel, value: DOC.cardWhole })

@@ -418,7 +418,7 @@ Principio I (la app guarda lo que el padre escribe; nunca evalúa ni sugiere).
 
 ### Producto
 
-- **Ficha de datos permanentes del hijo** — alergias, tipo de sangre, padecimientos y pediatra de cabecera, escritos
+- ~~**Ficha de datos permanentes del hijo**~~ **Hecho en `specs/073-ficha-del-hijo/`** (2026-11-17) — alergias, tipo de sangre, padecimientos y pediatra de cabecera, escritos
   tal cual por el padre; visibles en el detalle del hijo y en la portada del PDF. Hoy el hijo solo tiene nombre, fecha
   de nacimiento, talla y peso. (También aparece como «ficha de emergencia» en `docs/analisis-famitrack.md`.)
 - **Medicamento «por razón necesaria» (PRN)** — hoy todo medicamento exige frecuencia, duración y primera toma;
@@ -508,3 +508,10 @@ está en el PR de `feature/033c-rutinas-personales`. Queda por decidir y probar:
 - **La guía para quien entra por una invitación.** Un Tutor o un Cuidador que acepta una invitación no tiene hijo propio y no ve la guía (FR-024). Una versión suya —instalar y activar los avisos— está pensada pero no construida.
 - **Instalar desde Safari con el diálogo del navegador cuando exista.** Hoy solo Android y la computadora ofrecen `beforeinstallprompt`; en iPhone la guía muestra los tres pasos de «Compartir». Si Safari agrega una API, reemplazar el dibujo.
 - **Saber que la app quedó instalada sin reabrirla.** El paso 2 se marca al abrir PediTrack desde el ícono (`display-mode: standalone`); en iOS no hay evento al instalar. Aceptado.
+
+## Spec 073 — ficha del hijo (ideas para después y pendientes, anotado 2026-11-17)
+
+- **Ficha del titular** — la misma ficha (alergias, tipo de sangre, padecimientos, médico de cabecera) para la persona de la cuenta, en su perfil `/yo`. Hoy solo la tiene cada hijo.
+- **Compartir la ficha por QR** — una liga o un código de la ficha para mostrarla a un médico o a la escuela sin darles acceso a la cuenta. Pide decidir qué viaja, cuánto dura y que no pase por terceros (Principio II).
+- **Arrastrar para reordenar en la web** — hoy las alergias y los padecimientos se reordenan con «Subir»/«Bajar»; en la web se puede sumar arrastrar y soltar (manteniendo los botones por accesibilidad).
+- **Pendientes del dueño**: aplicar la migración `0039` en DEV **antes** del merge y actualizar el aviso de privacidad (la ficha guarda datos de salud escritos por la familia).

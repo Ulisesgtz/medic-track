@@ -202,4 +202,46 @@ describe('the history PDF', () => {
     expect(pages[first + 1]).toContain('18 oct 2026 · Dra. Laura Cázares (continuación)')
     expect(pages[first]).not.toContain('(continuación)')
   }, 120_000)
+
+  it('Ficha (specs/073, mock F): the record on the cover before the treatment, in «Secciones» and «Contenido», with its fixed sentence; none without it', async () => {
+    const withRecord = {
+      ...CASE_A,
+      data: {
+        ...CASE_A.data,
+        record: {
+          bloodType: 'O+' as const,
+          generalNote: 'Prefiere que le expliquen lo que le van a hacer antes de la revisión.',
+          pediatrician: { name: 'Dra. Laura Cázares', phone: '33 1234 5678', office: 'Consultorio 204' },
+          allergies: [
+            { name: 'Penicilina', kind: 'medication' as const, note: 'le salen ronchas' },
+            { name: 'Polen', kind: 'other' as const, note: null },
+          ],
+          conditions: [{ name: 'Asma', note: 'usa inhalador en crisis' }],
+          updated: { at: '2026-11-17T18:05:00Z', by: 'Ana' },
+        },
+      },
+    }
+    const { pages } = await pagesOf(input(withRecord))
+    const cover = pages[0]
+    for (const piece of [
+      'Ficha',
+      'Penicilina · Medicamento — le salen ronchas',
+      'Polen · Otra',
+      'Asma — usa inhalador en crisis',
+      'O+',
+      'Dra. Laura Cázares',
+      '33 1234 5678',
+      'Nota general · Prefiere que le expliquen',
+      'Lo anotado es lo que la familia escribió y no sustituye la opinión de su médico.',
+      'Ficha · Consultas · Cartilla de vacunación · Fotos (anexo)',
+      'Ficha del hijo',
+    ]) {
+      expect(says(cover, piece), piece).toBe(true)
+    }
+    expect(cover.indexOf('Penicilina')).toBeLessThan(cover.indexOf('Amoxicilina'))
+    const off = await pagesOf(input({ ...withRecord, request: { ...withRecord.request, sections: { ...withRecord.request.sections, record: false } } }))
+    expect(off.pages[0]).not.toContain('Penicilina')
+    const none = await pagesOf(input({ ...withRecord, data: { ...withRecord.data, record: null } }))
+    expect(none.pages[0]).not.toContain('Lo anotado es lo que la familia escribió')
+  }, 120_000)
 })

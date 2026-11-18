@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/access"
+	"github.com/Ulisesgtz/medic-track/backend/internal/childrecord"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/httpx"
 )
@@ -51,6 +52,8 @@ type sectionsRequest struct {
 	Consultations bool `json:"consultations" example:"true"`
 	Vaccinations  bool `json:"vaccinations" example:"true"`
 	Photos        bool `json:"photos" example:"false"`
+	// Record asks for the child's record sheet (specs/073); omitted means true. Alone it isn't enough: consultations or vaccinations are still needed.
+	Record *bool `json:"record" example:"true"`
 } // @name ExportSectionsRequest
 
 type exportRequest struct {
@@ -60,7 +63,8 @@ type exportRequest struct {
 
 // parseRequest checks the body and turns it into a Request; the history's criteria follow the history's own rules (specs/031).
 func parseRequest(body exportRequest) (Request, []httpx.FieldError) {
-	req := Request{PeriodKind: body.Period.Kind, Consultations: body.Sections.Consultations, Vaccinations: body.Sections.Vaccinations, Photos: body.Sections.Photos}
+	req := Request{PeriodKind: body.Period.Kind, Consultations: body.Sections.Consultations, Vaccinations: body.Sections.Vaccinations, Photos: body.Sections.Photos,
+		Record: body.Sections.Record == nil || *body.Sections.Record}
 	var errs []httpx.FieldError
 	day := func(field, value string, required bool) *time.Time {
 		if value == "" {
@@ -218,6 +222,8 @@ type documentResponse struct {
 	Consultations   []consultationResponse   `json:"consultations"`
 	Vaccinations    []vaccinationResponse    `json:"vaccinations"`
 	Photos          *photosResponse          `json:"photos"`
+	// Record is the child's record sheet (without canEdit), or null when it has none or wasn't asked for (specs/073).
+	Record *childrecord.Response `json:"record"`
 } // @name ExportDocument
 
 type errorDoc struct {
@@ -289,6 +295,10 @@ func toResponse(d *Document) documentResponse {
 			rv.Corrected = &correctedResponse{At: stamp(*v.CorrectedAt), By: v.CorrectedBy}
 		}
 		out.Vaccinations = append(out.Vaccinations, rv)
+	}
+	if d.Record != nil {
+		rr := childrecord.ToResponse(d.Record, false)
+		out.Record = &rr
 	}
 	if p := d.Photos; p != nil {
 		out.Photos = &photosResponse{Consultations: []consultationPhotoResponse{}, Card: []cardPhotoResponse{}}

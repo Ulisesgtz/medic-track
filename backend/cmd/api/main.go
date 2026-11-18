@@ -44,6 +44,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childprofile"
+	"github.com/Ulisesgtz/medic-track/backend/internal/childrecord"
 	"github.com/Ulisesgtz/medic-track/backend/internal/clienterror"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
 	"github.com/Ulisesgtz/medic-track/backend/internal/dataexport"
@@ -120,10 +121,13 @@ func main() {
 	growthService := growth.NewService(growth.NewRepository(pool))
 	growthService.SetReferenceEnabled(os.Getenv("WHO_GROWTH_REFERENCE_ENABLED") == "true")
 	growthHandler := growth.NewHandler(growthService, responder)
+	// The child's record sheet (specs/073); the PDF's cover reads it too.
+	childRecordRepo := childrecord.NewRepository(pool)
+	childRecordHandler := childrecord.NewHandler(childRecordRepo, responder)
 	// Correcting a child's own data (specs/064).
 	childProfileHandler := childprofile.NewHandler(childprofile.NewService(childprofile.NewRepository(pool)), responder)
 	// The history's PDF (specs/050): one read-only answer with everything the document shows; the PDF is made on the phone.
-	historyExportHandler := historyexport.NewHandler(historyexport.NewService(historyexport.NewRepository(pool), consultationRepo, vaccinationRepo), responder)
+	historyExportHandler := historyexport.NewHandler(historyexport.NewService(historyexport.NewRepository(pool), consultationRepo, vaccinationRepo).WithRecords(childRecordRepo), responder)
 
 	// Sharing with the family (specs/032): who can accept an invitation is decided by the session's verified e-mail.
 	familyService := family.NewService(family.NewRepository(pool), access.NewRepository(pool), family.EmailFunc(func(ctx context.Context, clerkUserID string) (string, error) {
@@ -302,6 +306,7 @@ func main() {
 		Cabinet:           cabinet.NewHandler(cabinet.NewService(cabinet.NewRepository(pool)), responder),
 		Growth:            growthHandler,
 		ChildProfile:      childProfileHandler,
+		ChildRecord:       childRecordHandler,
 		HistoryExport:     historyExportHandler,
 		AccountDeletion:   accountdeletion.NewHandler(deletionService, responder),
 		DeletionRepo:      deletionRepo,

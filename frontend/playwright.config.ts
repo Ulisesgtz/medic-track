@@ -30,6 +30,7 @@ const CROSS_BROWSER_SPECS = [
   'recordatorios',
   'primer-uso',
   'errores-cliente',
+  'ficha-del-hijo',
 ]
 for (const name of CROSS_BROWSER_SPECS) {
   // A renamed spec must not silently drop out of the cross-browser run.

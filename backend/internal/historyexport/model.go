@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/Ulisesgtz/medic-track/backend/internal/childrecord"
 )
 
 // Period kinds.
@@ -23,6 +25,8 @@ type Request struct {
 	Filters    Filters
 	// Sections chosen; at least one of Consultations and Vaccinations.
 	Consultations, Vaccinations, Photos bool
+	// Record asks for the child's record sheet on the cover (specs/073; on by default in the request).
+	Record bool
 }
 
 // Filters are the history's criteria (specs/031), for «Usar los filtros del historial».
@@ -157,4 +161,6 @@ type Document struct {
 	Consultations   []Consultation
 	Vaccinations    []Vaccination
 	Photos          *Photos
+	// Record is the child's record sheet, nil when it has none or wasn't asked for (specs/073).
+	Record *childrecord.Record
 }
