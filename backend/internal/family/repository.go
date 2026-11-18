@@ -514,7 +514,13 @@ func (r *Repository) Decline(ctx context.Context, tokenHash []byte, verifiedEmai
 // person registered stays in the family's account: nothing is copied or deleted. ErrMemberNotFound if the account belongs to
 // no family as an invited person.
 func (r *Repository) Leave(ctx context.Context, accountID uuid.UUID) error {
-	tag, err := r.pool.Exec(ctx, `
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("beginning leaving the family: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	tag, err := tx.Exec(ctx, `
 		UPDATE family_members SET status = 'left', ended_at = now(), ended_by_account_id = $1
 		WHERE account_id = $1 AND status = 'active'
 	`, accountID)
@@ -523,6 +529,22 @@ func (r *Repository) Leave(ctx context.Context, accountID uuid.UUID) error {
 	}
 	if tag.RowsAffected() == 0 {
 		return ErrMemberNotFound
+	}
+	// The children the person hid show again (specs/074): coming back to a family must not hide them a second time.
+	if err := showHiddenChildren(ctx, tx, accountID); err != nil {
+		return err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("committing leaving the family: %w", err)
+	}
+	return nil
+}
+
+// showHiddenChildren makes every child hidden by the account visible again (specs/074-unir-hijo-duplicado): who leaves a family,
+// or is removed from it, gets their own children back on their screens.
+func showHiddenChildren(ctx context.Context, tx pgx.Tx, accountID uuid.UUID) error {
+	if _, err := tx.Exec(ctx, `UPDATE children SET hidden_at = NULL WHERE account_id = $1 AND hidden_at IS NOT NULL`, accountID); err != nil {
+		return fmt.Errorf("showing the hidden children: %w", err)
 	}
 	return nil
 }
@@ -538,9 +560,10 @@ func (r *Repository) RemoveMember(ctx context.Context, familyID, memberID, actor
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	var role string
+	var memberAccount uuid.UUID
 	err = tx.QueryRow(ctx, `
-		SELECT role FROM family_members WHERE id = $1 AND family_account_id = $2 AND status = 'active' FOR UPDATE
-	`, memberID, familyID).Scan(&role)
+		SELECT role, account_id FROM family_members WHERE id = $1 AND family_account_id = $2 AND status = 'active' FOR UPDATE
+	`, memberID, familyID).Scan(&role, &memberAccount)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrMemberNotFound
 	}
@@ -554,6 +577,9 @@ func (r *Repository) RemoveMember(ctx context.Context, familyID, memberID, actor
 		UPDATE family_members SET status = 'removed', ended_at = now(), ended_by_account_id = $2 WHERE id = $1
 	`, memberID, actorAccountID); err != nil {
 		return fmt.Errorf("removing the member: %w", err)
+	}
+	if err := showHiddenChildren(ctx, tx, memberAccount); err != nil {
+		return err
 	}
 	return tx.Commit(ctx)
 }

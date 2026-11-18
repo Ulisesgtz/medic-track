@@ -44,6 +44,7 @@ func newTestRouterWithPool(t *testing.T) (http.Handler, *pgxpool.Pool, *authmwte
 	r.Post("/accounts/{accountId}/children", h.AddChild)
 	r.Post("/accounts/{accountId}/disclaimer-acceptance", h.AcceptDisclaimer)
 	r.Put("/accounts/{accountId}/first-use-guide", h.SetFirstUseGuide)
+	r.Put("/accounts/{accountId}/hidden-children", h.SetHiddenChildren)
 	r.Patch("/accounts/{accountId}/reminder-settings", h.UpdateReminderSettings)
 	return r, pool, verifier
 }

@@ -81,6 +81,9 @@ func seedFamily(t *testing.T, pool *pgxpool.Pool) family {
 		f.CardPhoto, f.Child, f.Owner, pngBytes)
 	exec(`INSERT INTO growth_measurements (child_id, account_id, measured_on, weight_kg, created_by_account_id) VALUES ($1, $2, '2026-01-01', 12.5, $2)`,
 		f.Child, f.Owner)
+	exec(`INSERT INTO child_merges (family_account_id, target_child_id, source_account_id, merged_by_account_id, counts)
+		VALUES ($1, $2, $3, $3, '{"consultations":2,"vaccines":9,"cardPhotos":1,"measurements":3,"supplements":1,"activities":0,"record":true,"devicesRemoved":1}')`,
+		f.Owner, f.Child, f.Tutor)
 	exec(`INSERT INTO child_records (child_id, account_id, blood_type, general_note, pediatrician_name, version, updated_by_account_id)
 		VALUES ($1, $2, 'unknown', 'Usa lentes', 'Dra. Ruiz', 1, $3)`, f.Child, f.Owner, f.Tutor)
 	exec(`INSERT INTO child_record_allergies (child_id, account_id, position, name, kind) VALUES ($1, $2, 0, 'Penicilina', 'medication'), ($1, $2, 1, 'Cacahuate', NULL)`,
@@ -111,6 +114,7 @@ func seedFamily(t *testing.T, pool *pgxpool.Pool) family {
 			`DELETE FROM medications WHERE consultation_id IN (SELECT id FROM consultations WHERE account_id = ANY($1))`,
 			`DELETE FROM consultation_symptoms WHERE account_id = ANY($1)`,
 			`DELETE FROM consultations WHERE account_id = ANY($1)`,
+			`DELETE FROM child_merges WHERE family_account_id = ANY($1)`,
 			`DELETE FROM family_members WHERE family_account_id = ANY($1)`,
 			`DELETE FROM children WHERE account_id = ANY($1)`,
 			`DELETE FROM accounts WHERE id = ANY($1)`,
@@ -159,8 +163,18 @@ func TestCollect_EverythingOfTheAccountAndNothingElse(t *testing.T) {
 	require.Equal(t, map[string]int{
 		"hijos": 1, "consultas": 2, "medicamentos": 1, "tomas": 3, "citas": 1, "vacunas": 1, "fotos_de_la_cartilla": 1,
 		"crecimiento": 1, "suplementos_y_actividades": 2, "tomas_de_rutinas": 2, "botiquin": 1,
-		"ficha": 1, "ficha_alergias": 2, "ficha_padecimientos": 1,
+		"ficha": 1, "ficha_alergias": 2, "ficha_padecimientos": 1, "uniones": 1,
 	}, counts, "every kind, and nothing of the other account")
+
+	// Specs/074: the unions, with numbers and the first name of who joined, never anything of the children.
+	unions := table(t, e, "uniones")
+	require.Equal(t, f.Child.String(), *column(t, unions, 0, "hijo_id"))
+	require.Equal(t, "Beto", *column(t, unions, 0, "unida_por"))
+	require.Equal(t, "2", *column(t, unions, 0, "consultas"))
+	require.Equal(t, "9", *column(t, unions, 0, "vacunas"))
+	require.Equal(t, "3", *column(t, unions, 0, "medidas"))
+	require.Equal(t, "sí", *column(t, unions, 0, "ficha"))
+	require.Equal(t, "1", *column(t, unions, 0, "telefonos_quitados"))
 
 	require.Equal(t, "Ñúñez", *column(t, table(t, e, "hijos"), 0, "apellido"))
 	consultations := table(t, e, "consultas")

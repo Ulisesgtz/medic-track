@@ -146,6 +146,15 @@ func collect(ctx context.Context, q Querier, scope Scope, now time.Time) (*Expor
 		{"ficha_padecimientos", `SELECT co.id::text, co.child_id::text, co.position::text, co.name, co.note
 			FROM child_record_conditions co WHERE co.account_id = $1 ORDER BY co.child_id, co.position`,
 			[]string{"id", "hijo_id", "orden", "nombre", "nota"}},
+		// Specs/074: the unions that gave a child the records of another one the person had registered by themselves. Numbers only.
+		{"uniones", `SELECT m.id::text, m.target_child_id::text, m.merged_at::text, a.first_name,
+				m.counts->>'consultations', m.counts->>'vaccines', m.counts->>'cardPhotos', m.counts->>'measurements',
+				m.counts->>'supplements', m.counts->>'activities', CASE WHEN (m.counts->>'record')::boolean THEN 'sí' ELSE 'no' END,
+				m.counts->>'devicesRemoved'
+			FROM child_merges m LEFT JOIN accounts a ON a.id = m.merged_by_account_id
+			WHERE m.family_account_id = $1 ORDER BY m.merged_at, m.id`,
+			[]string{"id", "hijo_id", "unida_el", "unida_por", "consultas", "vacunas", "fotos_de_la_cartilla", "medidas", "suplementos",
+				"actividades", "ficha", "telefonos_quitados"}},
 		{"suplementos_y_actividades", `SELECT r.id::text, r.child_id::text,
 				CASE r.kind WHEN 'supplement' THEN 'suplemento' ELSE 'actividad' END, r.name, nullif(r.note, ''),
 				CASE r.period WHEN 'daily' THEN 'todos los días' WHEN 'weekdays' THEN 'ciertos días' ELSE 'varias veces al día' END,

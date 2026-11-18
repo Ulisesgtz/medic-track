@@ -50,6 +50,22 @@ type Account struct {
 	// FirstUseGuide is the state of the first-use guide on the home (specs/071). Filled by the reads that fill
 	// DisclaimerAccepted; the zero value is "not closed, no consultation".
 	FirstUseGuide FirstUseGuide
+	// HiddenChildren are the account's own children the person hid (specs/074-unir-hijo-duplicado): effective only while the
+	// person is an active Tutor or Caregiver of a family (childhidden). They are NOT in Children.
+	HiddenChildren []HiddenChild
+}
+
+// HiddenChild is a child the person hid, as the «Hijos ocultos» list shows it.
+type HiddenChild struct {
+	ID        uuid.UUID
+	FirstName string
+}
+
+// ChildMerge is a union that gave this child the records of another one (specs/074): when and who (first name only; nil if that
+// account was deleted).
+type ChildMerge struct {
+	At          time.Time
+	ByFirstName *string
 }
 
 // FirstUseGuide is what the server knows for the first-use guide of the home (specs/071-primer-uso-guiado).
@@ -101,6 +117,8 @@ type Child struct {
 	// data (specs/064-editar-datos-hijo); nil if it was never corrected.
 	CorrectedAt *time.Time
 	CorrectedBy *string
+	// Merges are the unions that added records to this child, oldest first (specs/074); empty if none.
+	Merges []ChildMerge
 	// Role is the reader's role over this child: "" (or "owner") for the account's own children, else the
 	// role of the family membership that shares it. Plan is the plan of the family the child belongs to (the
 	// owner account's) and ReadOnly whether the reader can only see and mark (specs/032-compartir-con-familia).

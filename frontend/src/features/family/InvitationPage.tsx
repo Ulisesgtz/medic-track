@@ -16,6 +16,7 @@ import { acceptInvitation, declineInvitation, FamilyApiError, previewInvitation 
 import { clearPendingInvitation, readPendingInvitation, savePendingInvitation, tokenFromHash } from './pendingInvitation'
 import { formatInstant, namesText, ROLE_CAN, ROLE_CANNOT } from './roles'
 import { RoleChip } from './RoleChip'
+import type { Account } from '../home/types'
 import type { InvitationPreview } from './types'
 
 const solid =
@@ -247,6 +248,7 @@ function Offer({ token, offer, sessionEmail }: { token: string; offer: Invitatio
   const queryClient = useQueryClient()
   const logout = useLogout()
   const [answerError, setAnswerError] = useState<string | null>(null)
+  // Specs/074: a Tutor or Caregiver who already had children of their own is asked what to do with them before the home.
 
   const accept = useMutation({
     mutationFn: async () => acceptInvitation(token, await getToken()),
@@ -254,7 +256,9 @@ function Offer({ token, offer, sessionEmail }: { token: string; offer: Invitatio
       clearPendingInvitation()
       await queryClient.invalidateQueries({ queryKey: ['accounts', 'me'] })
       await queryClient.invalidateQueries({ queryKey: ['family'] })
-      navigate('/home', { replace: true })
+      const fresh = queryClient.getQueryData<Account>(['accounts', 'me'])
+      const hasOwnChildren = fresh ? fresh.children.some((c) => (c.accountId ?? fresh.id) === fresh.id) : false
+      navigate(hasOwnChildren && (offer.role === 'tutor' || offer.role === 'caregiver') ? '/familia/como-seguir' : '/home', { replace: true })
     },
     onError: (e) => setAnswerError(messageOf(e)),
   })

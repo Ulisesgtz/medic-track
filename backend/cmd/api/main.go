@@ -44,6 +44,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childprofile"
+	"github.com/Ulisesgtz/medic-track/backend/internal/childmerge"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childrecord"
 	"github.com/Ulisesgtz/medic-track/backend/internal/clienterror"
 	"github.com/Ulisesgtz/medic-track/backend/internal/consultation"
@@ -124,6 +125,8 @@ func main() {
 	// The child's record sheet (specs/073); the PDF's cover reads it too.
 	childRecordRepo := childrecord.NewRepository(pool)
 	childRecordHandler := childrecord.NewHandler(childRecordRepo, responder)
+	// Joining the person's own child with the family's (specs/074).
+	childMergeHandler := childmerge.NewHandler(childmerge.NewRepository(pool), responder)
 	// Correcting a child's own data (specs/064).
 	childProfileHandler := childprofile.NewHandler(childprofile.NewService(childprofile.NewRepository(pool)), responder)
 	// The history's PDF (specs/050): one read-only answer with everything the document shows; the PDF is made on the phone.
@@ -307,6 +310,7 @@ func main() {
 		Growth:            growthHandler,
 		ChildProfile:      childProfileHandler,
 		ChildRecord:       childRecordHandler,
+		ChildMerge:        childMergeHandler,
 		HistoryExport:     historyExportHandler,
 		AccountDeletion:   accountdeletion.NewHandler(deletionService, responder),
 		DeletionRepo:      deletionRepo,

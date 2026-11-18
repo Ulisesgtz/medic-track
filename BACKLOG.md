@@ -153,7 +153,9 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
 - ~~**Editar y eliminar suplementos y actividades**~~ — **hecho** en la spec 060 (`specs/060-eliminar-suplementos-actividades/`, decidido 2026-11-04): se elimina de verdad **solo si ninguna toma está marcada** (con marcas se finaliza y su historial queda), lo hacen la dueña y un Tutor (lo personal, solo su dueña) en cualquier plan, con confirmación neutral; se borran también sus tomas y avisos. Editar ya existía (spec 033).
 - ~~**Botiquín de la casa**~~ (pedido del dueño, 2026-11-06) — **hecho** en la spec 062 (`specs/062-botiquin/`): un botiquín de toda la familia, del plan completo, con foto de la caja que propone nombre, concentración y caducidad (leída en el teléfono); la caducidad es solo un dato. **Queda para después**: que la cantidad baje sola al marcar tomas de una consulta, avisos por caducidad y varios botiquines (la casa de los abuelos).
 - **Las consultas solo se editan, nunca se borran** (decisión del dueño, 2026-11-02) — la edición ya existe (spec 051); una consulta completa **no** se elimina. Solo se puede quitar un medicamento sin tomas marcadas al editar (spec 051).
-- **Un hijo registrado dos veces al unirse a una familia** (pedido del dueño, 2026-11-17) — hoy (spec 032) quien acepta
+- **Un hijo registrado dos veces al unirse a una familia** (pedido del dueño, 2026-11-17) — **hecho en
+  `specs/074-unir-hijo-duplicado/`** (2026-11-18; decididos: reglas a–g, unir irreversible con resumen y descarga,
+  «usar solo lo de la familia» oculta sin borrar, mock de Claude Design). Texto original: hoy (spec 032) quien acepta
   una invitación conserva su cuenta y sus hijos y ve los de la familia **junto** a los suyos: si los dos padres
   registraron al mismo niño, queda **duplicado** (dos registros que no se mezclan; lo anotado en la copia propia solo lo
   ve quien la anotó) y no hay forma de juntarlos ni de borrar uno (borrar un hijo está pendiente, spec 070).
@@ -444,6 +446,16 @@ Principio I (la app guarda lo que el padre escribe; nunca evalúa ni sugiere).
   especialidad y dirección; autocompletar en consultas y citas y un botón «Llamar». Semilla del canal B2B2C.
 - **Documentos y estudios por hijo** — análisis, radiografías, póliza: se guardan, no se leen. Depende de mover las
   fotos a object storage (sección Backend).
+- **Crecimiento: dejar de ofrecer la comparación con la OMS al pasar la edad de su curva** (pedido del dueño,
+  2026-11-18; spec 063/065). Las curvas de la OMS llegan a **10 años en peso** (120 meses) y a **19 años en talla**
+  (228 meses), confirmado en `backend/internal/growth` (`MaxMonths`). Pedido: cuando el hijo pase la edad máxima de una
+  curva, (1) **no mostrar esa curva** para registrar nuevas medidas que comparar (pestaña Peso pasados los 10, Talla
+  pasados los 19); (2) si tiene medidas **anteriores** a esa edad, la gráfica solo muestra esas medidas antiguas con su
+  curva, como registro; (3) **no dejar anotar** ese dato para la comparación una vez cumplida la edad máxima. A decidir
+  en su spec: si el peso o la talla se pueden seguir anotando **solo como registro** (lista/tabla sin gráfica) o se
+  bloquea del todo el campo; qué pasa con «Anotarlo también como medida de hoy» (spec 064) y con el peso del registro
+  del hijo; los textos (neutros, Principio I: nada de «ya no necesita»); y que el servidor lo decida (no solo la
+  pantalla).
 - **Agregar la cita al calendario del teléfono** — un archivo `.ics` generado en el dispositivo, sin terceros;
   complementa los avisos push.
 - **«Repetir tratamiento» desde una consulta anterior** — precarga «Nueva consulta» con los medicamentos de una

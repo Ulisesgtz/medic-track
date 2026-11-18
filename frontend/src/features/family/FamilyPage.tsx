@@ -17,6 +17,7 @@ import { InviteForm } from './InviteForm'
 import { liveEmailStatus } from './emailStatus'
 import { PARENT } from '../childDevice/childText'
 import { InviteLink } from './InviteLink'
+import { OwnChildrenSection } from './merge/OwnChildrenSection'
 import { MembersList } from './MembersList'
 import { namesText, ROLE_LABEL } from './roles'
 import type { CreatedInvitation, FamilyInvitation, FamilyMember, FamilyView, InviteRole } from './types'
@@ -226,6 +227,9 @@ export function FamilyPage() {
               ))}
             </ul>
           </section>
+        )}
+        {(d.role === 'tutor' || d.role === 'caregiver') && account && (
+          <OwnChildrenSection account={account} canMerge={d.role === 'tutor' && paid && !d.readOnly} variant={variant} />
         )}
         {d.role !== 'owner' && (
           <section className={`flex flex-col gap-3 ${isDesktop ? 'rounded-[22px] bg-surface p-6 shadow-[0_8px_20px_rgba(4,37,43,0.07)]' : 'pt-1'}`}>

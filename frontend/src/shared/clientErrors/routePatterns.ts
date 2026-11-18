@@ -47,6 +47,8 @@ export const ROUTE_PATTERNS: readonly string[] = [
   '/children/:childId/citas',
   '/familia',
   '/familia/invitacion',
+  '/familia/como-seguir',
+  '/familia/unir',
   '/hijo',
   '/hijo/hoy',
   '/',

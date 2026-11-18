@@ -346,3 +346,53 @@ func TestRotate_ADatabaseFailureIsA500(t *testing.T) {
 	r.ServeHTTP(rec, req)
 	require.Equal(t, http.StatusInternalServerError, rec.Code, "the middleware can't read the database")
 }
+
+func TestRevokeAllInTx_RemovesEveryPhoneAndLinkOfOneChild(t *testing.T) {
+	pool := testPool(t)
+	repo := childdevice.NewRepository(pool)
+	f := newFamily(t, pool, account.PlanPaid)
+	other := newFamily(t, pool, account.PlanPaid)
+	ctx := context.Background()
+	now := time.Now().UTC().Truncate(time.Second)
+	cred, linkID := activeDevice(t, pool, f, "Teléfono", now.Add(-time.Hour))
+	_, err := pool.Exec(ctx, `INSERT INTO reminder_devices (child_link_id, endpoint, p256dh, auth) VALUES ($1, $2, 'k', 'a')`,
+		linkID, "https://fcm.googleapis.com/"+uuid.NewString())
+	require.NoError(t, err)
+	_, pending, err := repo.Create(ctx, f.childID, f.accountID, "Sin abrir", now)
+	require.NoError(t, err)
+	keep, _ := activeDevice(t, pool, other, "Ajeno", now.Add(-time.Hour))
+
+	tx, err := pool.Begin(ctx)
+	require.NoError(t, err)
+	n, err := childdevice.RevokeAllInTx(ctx, tx, f.childID, f.accountID, now)
+	require.NoError(t, err)
+	require.Equal(t, 2, n)
+	require.NoError(t, tx.Commit(ctx))
+
+	_, err = repo.Authenticate(ctx, hashOf(t, cred), now)
+	require.ErrorIs(t, err, childdevice.ErrNotFound)
+	_, err = repo.Redeem(ctx, pending, now)
+	require.ErrorIs(t, err, childdevice.ErrNotFound)
+	_, err = repo.Authenticate(ctx, hashOf(t, keep), now)
+	require.NoError(t, err, "another child's phone is untouched")
+	var active bool
+	require.NoError(t, pool.QueryRow(ctx, `SELECT active FROM reminder_devices WHERE child_link_id = $1`, linkID).Scan(&active))
+	require.False(t, active)
+
+	tx, err = pool.Begin(ctx)
+	require.NoError(t, err)
+	n, err = childdevice.RevokeAllInTx(ctx, tx, f.childID, f.accountID, now)
+	require.NoError(t, err)
+	require.Equal(t, 0, n, "nothing left to remove")
+	require.NoError(t, tx.Rollback(ctx))
+}
+
+func TestRevokeAllInTx_ClosedTransactionFails(t *testing.T) {
+	pool := testPool(t)
+	ctx := context.Background()
+	tx, err := pool.Begin(ctx)
+	require.NoError(t, err)
+	require.NoError(t, tx.Rollback(ctx))
+	_, err = childdevice.RevokeAllInTx(ctx, tx, uuid.New(), uuid.New(), time.Now())
+	require.Error(t, err)
+}

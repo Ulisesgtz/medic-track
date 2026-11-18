@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/Ulisesgtz/medic-track/backend/internal/access"
+	"github.com/Ulisesgtz/medic-track/backend/internal/childhidden"
 	"github.com/Ulisesgtz/medic-track/backend/internal/deletionstate"
 )
 
@@ -114,6 +115,8 @@ func (r *Repository) ClaimDueDoses(ctx context.Context, now time.Time, window ti
 			)
 			  -- Specs/070: an account scheduled for deletion gets no reminder (others of the same child still do).
 			  AND NOT `+deletionstate.PendingAccountSQL("a.id")+`
+			  -- Specs/074: nor of a child its owner hid (the child's own phone still gets it).
+			  AND `+childhidden.NotHiddenChildSQL("cand.child_id")+`
 			  AND NOT EXISTS (SELECT 1 FROM dose_reminders dr WHERE dr.dose_id = cand.id AND dr.account_id = a.id)
 			ORDER BY cand.scheduled_at, a.id
 			LIMIT 500

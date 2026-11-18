@@ -6,6 +6,7 @@ import { pageHeaderButton } from '../../shared/ui/pageHeaderButton'
 import { ACCOUNT } from './accountText'
 import { downloadMyData } from './api'
 import { DownloadCard, cardClass } from './DownloadCard'
+import { HiddenChildren } from '../family/merge/HiddenChildren'
 
 /**
  * `/cuenta` (specs/070, contracts/ui.md): the session's e-mail, plan and family, «Descargar todos mis datos» (any plan) and the
@@ -35,6 +36,8 @@ export function AccountPage() {
       subtitle={subtitle}
       maxWidth="max-w-[720px]"
     >
+      {/* Specs/074: the children hidden while using the family's records, with «Volver a mostrar». */}
+      {account && <HiddenChildren account={account} variant={variant} />}
       {account && (
         <DownloadCard variant={variant} fetchFile={(token) => downloadMyData(account.id, token)} />
       )}

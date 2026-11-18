@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Ulisesgtz/medic-track/backend/internal/childhidden"
 	"github.com/Ulisesgtz/medic-track/backend/internal/deletionstate"
 )
 
@@ -42,6 +43,8 @@ func (r *Repository) ClaimDueSupplementDoses(ctx context.Context, now time.Time,
 			)
 			  -- Specs/070: an account scheduled for deletion gets no reminder (others of the same child still do).
 			  AND NOT `+deletionstate.PendingAccountSQL("a.id")+`
+			  -- Specs/074: nor of a child its owner hid (the child's own phone still gets it).
+			  AND `+childhidden.NotHiddenChildSQL("cand.child_id")+`
 			  AND NOT EXISTS (SELECT 1 FROM supplement_muted sm WHERE sm.routine_id = cand.routine_id AND sm.account_id = a.id)
 			  AND NOT EXISTS (SELECT 1 FROM supplement_dose_reminders dr WHERE dr.dose_id = cand.id AND dr.account_id = a.id)
 			ORDER BY cand.scheduled_at, a.id

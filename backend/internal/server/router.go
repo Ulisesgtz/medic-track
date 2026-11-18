@@ -20,6 +20,7 @@ import (
 	"github.com/Ulisesgtz/medic-track/backend/internal/cabinet"
 	"github.com/Ulisesgtz/medic-track/backend/internal/catalog"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childdevice"
+	"github.com/Ulisesgtz/medic-track/backend/internal/childmerge"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childprofile"
 	"github.com/Ulisesgtz/medic-track/backend/internal/childrecord"
 	"github.com/Ulisesgtz/medic-track/backend/internal/clienterror"
@@ -62,6 +63,8 @@ type Deps struct {
 	ChildProfile *childprofile.Handler
 	// ChildRecord is a child's record sheet: allergies, blood type, conditions, pediatrician (specs/073).
 	ChildRecord *childrecord.Handler
+	// ChildMerge: joining the person's own child with the family's and the pairing screen (specs/074). Nil = the routes are not registered.
+	ChildMerge *childmerge.Handler
 	// AccountDeletion and DeletionRepo: asking for, reading and canceling an account's deletion, and the guard that pauses an
 	// account scheduled for deletion on every other route (specs/070). Nil = none of it is registered.
 	AccountDeletion *accountdeletion.Handler
@@ -252,6 +255,8 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(seesAccount).Get("/accounts/{accountId}/medicine-cabinet/{itemId}/photo", d.Cabinet.GetPhoto)
 		r.With(ownsAccount).Post("/accounts/{accountId}/disclaimer-acceptance", d.Account.AcceptDisclaimer)
 		r.With(ownsAccount).Put("/accounts/{accountId}/first-use-guide", d.Account.SetFirstUseGuide)
+		// Hiding the person's own children while they are in somebody's family (specs/074): the person's own account, any plan.
+		r.With(ownsAccount).Put("/accounts/{accountId}/hidden-children", d.Account.SetHiddenChildren)
 		r.With(ownsAccount).Patch("/accounts/{accountId}/reminder-settings", d.Account.UpdateReminderSettings)
 		r.With(ownsAccount).Post("/accounts/{accountId}/reminder-devices", d.Reminder.RegisterDevice)
 		r.With(ownsAccount).Post("/accounts/{accountId}/reminder-devices/remove", d.Reminder.RemoveDevice)
@@ -274,6 +279,13 @@ func NewRouter(d Deps) *chi.Mux {
 		r.Post("/family/invitations/{invitationId}/cancel", d.Family.CancelInvitation)
 		r.Post("/family/members/{memberId}/remove", d.Family.RemoveMember)
 		r.Post("/family/leave", d.Family.LeaveFamily)
+		// Joining the person's own child with the family's (specs/074): the family is the session's own, no id names it; the ids of the
+		// children travel in the body and the handler checks them under the lock of the union. Never under /child-device.
+		if d.ChildMerge != nil {
+			r.Get("/family/merge-options", d.ChildMerge.GetOptions)
+			r.Post("/family/merges/preview", d.ChildMerge.Preview)
+			r.Post("/family/merges", d.ChildMerge.Merge)
+		}
 
 		r.Get("/reminders/config", d.Reminder.GetConfig)
 

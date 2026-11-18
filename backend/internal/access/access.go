@@ -284,3 +284,23 @@ func (r *Repository) OnAppointment(ctx context.Context, clerkUserID string, appo
 	}
 	return r.run(ctx, onAppointmentQuery(byClerkUser), clerkUserID, appointmentID)
 }
+
+// RowQuerier is a pool or a transaction.
+type RowQuerier interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+}
+
+// LevelOnAccountIn is what an account (not a session) can do with a family's owner account, read with the caller's own pool or
+// transaction (the union of two children, specs/074, decides it inside its transaction). The same rule as OnAccount.
+func LevelOnAccountIn(ctx context.Context, q RowQuerier, actorAccountID, ownerAccountID uuid.UUID) (Level, error) {
+	var actor uuid.UUID
+	var level int
+	err := q.QueryRow(ctx, onAccountQuery(byAccount), actorAccountID, ownerAccountID).Scan(&actor, &level)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return None, nil
+	}
+	if err != nil {
+		return None, fmt.Errorf("resolving access: %w", err)
+	}
+	return Level(level), nil
+}

@@ -144,6 +144,10 @@ INSERT INTO consultation_appointments (id, consultation_id, child_id, account_id
 INSERT INTO appointment_muted (appointment_id, account_id) VALUES (':XAppointment', ':A');
 INSERT INTO child_device_links (id, child_id, account_id, name, created_by_account_id, status, revoked_at, revoked_by_account_id, expires_at)
   VALUES (':XLink', ':CX', ':X', 'Tel Pablo', ':A', 'revoked', now(), ':A', now());
+
+-- Unions of children (specs/074): B joined a child into A's Mateo, and A joined one into X's Pablo.
+INSERT INTO child_merges (family_account_id, target_child_id, source_account_id, merged_by_account_id, counts)
+  VALUES (':A', ':C1', ':B', ':B', '{}'), (':X', ':CX', ':A', ':A', '{}');
 `
 
 func (w world) sql() string {
@@ -276,6 +280,13 @@ func TestPurge_WhatItWroteOnAnotherFamilyStaysWithoutItsName(t *testing.T) {
 	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM child_records WHERE child_id = $1`, w.C1).Scan(&sheets))
 	require.Zero(t, sheets, "A's own children's sheets are gone")
 
+	// The union A made into X's child stays, without A; the one into A's own child is gone with A's family (specs/074).
+	var merges int
+	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM child_merges WHERE target_child_id = $1 AND source_account_id IS NULL AND merged_by_account_id IS NULL`, w.CX).Scan(&merges))
+	require.Equal(t, 1, merges)
+	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM child_merges WHERE family_account_id = $1`, w.A).Scan(&merges))
+	require.Zero(t, merges)
+
 	var children, members int
 	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM children WHERE account_id = $1`, w.X).Scan(&children))
 	require.Equal(t, 1, children, "X's family is intact")
@@ -302,9 +313,27 @@ func TestPurge_AnInvitedPersonLeavesTheFamilyIntact(t *testing.T) {
 	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM doses WHERE id = $1 AND taken AND taken_by_account_id IS NULL`,
 		uuid.MustParse("44444444-0000-0000-0000-"+w.A.String()[24:])).Scan(&n))
 	require.Equal(t, 1, n, "B's mark stays, without B's name")
+	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM child_merges WHERE family_account_id = $1 AND source_account_id IS NULL AND merged_by_account_id IS NULL`, w.A).Scan(&n))
+	require.Equal(t, 1, n, "the union B made stays in A's family, without B (specs/074)")
 	require.NoError(t, pool.QueryRow(ctx, `SELECT count(*) FROM family_members WHERE account_id = $1`, w.B).Scan(&n))
 	require.Zero(t, n)
 	require.Empty(t, countRefs(t, pool, uuidColumns(t, pool), w.B))
+}
+
+// When the family's owner is purged the members stop being members, so the children they hid (specs/074) are shown again.
+func TestPurge_MembersOfAPurgedFamilyGetTheirHiddenChildrenBack(t *testing.T) {
+	pool := testPool(t)
+	ctx := context.Background()
+	w := seedWorld(t, pool)
+	child := uuid.New()
+	_, err := pool.Exec(ctx, `INSERT INTO children (id, account_id, first_name, last_name, birth_date, hidden_at) VALUES ($1, $2, 'Mateo', 'Purga', '2020-01-01', now())`, child, w.B)
+	require.NoError(t, err)
+
+	purge(t, pool, w.A) // B is a member of A's family
+
+	var hidden bool
+	require.NoError(t, pool.QueryRow(ctx, `SELECT hidden_at IS NOT NULL FROM children WHERE id = $1`, child).Scan(&hidden))
+	require.False(t, hidden)
 }
 
 // TestPurge_KnowsEveryTable fails when a table that can hang from an account (a key towards accounts or children, or towards

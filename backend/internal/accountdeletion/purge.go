@@ -53,6 +53,8 @@ var purgeSteps = []purgeStep{
 	{"child_device_links", `UPDATE child_device_links SET revoked_by_account_id = NULL WHERE revoked_by_account_id = $1`},
 	{"children", `UPDATE children SET corrected_by_account_id = NULL WHERE corrected_by_account_id = $1`},
 	{"child_records", `UPDATE child_records SET updated_by_account_id = NULL WHERE updated_by_account_id = $1`},
+	{"child_merges", `UPDATE child_merges SET source_account_id = NULL WHERE source_account_id = $1`},
+	{"child_merges", `UPDATE child_merges SET merged_by_account_id = NULL WHERE merged_by_account_id = $1`},
 	{"consultations", `UPDATE consultations SET edited_by_account_id = NULL WHERE edited_by_account_id = $1`},
 	{"family_members", `UPDATE family_members SET invited_by_account_id = NULL WHERE invited_by_account_id = $1`},
 	{"family_members", `UPDATE family_members SET ended_by_account_id = NULL WHERE ended_by_account_id = $1`},
@@ -92,7 +94,10 @@ var purgeSteps = []purgeStep{
 	{"personal_routine_notices", `DELETE FROM personal_routine_notices WHERE account_id = $1`},
 	{"own_consultation_sharing", `DELETE FROM own_consultation_sharing WHERE account_id = $1`},
 
-	// 4. Its family (and its membership in another one).
+	// 4. Its family (and its membership in another one). The members stop being members, so what they hid (specs/074: a child
+	// hidden because the family has its twin) is shown again: it must not hide by itself if they join another family.
+	{"children", `UPDATE children SET hidden_at = NULL WHERE hidden_at IS NOT NULL AND account_id IN (
+		SELECT account_id FROM family_members WHERE family_account_id = $1 AND status = 'active')`},
 	{"family_invitations", `DELETE FROM family_invitations WHERE family_account_id = $1 OR member_id IN (` + ownMemberships + `)`},
 	{"family_members", `DELETE FROM family_members WHERE family_account_id = $1 OR account_id = $1`},
 
@@ -100,6 +105,7 @@ var purgeSteps = []purgeStep{
 	{"disclaimer_acceptances", `DELETE FROM disclaimer_acceptances WHERE account_id = $1`},
 	{"payment_events", `DELETE FROM payment_events WHERE subscription_id IN (` + ownSubscriptionIDs + `)`},
 	{"subscriptions", `DELETE FROM subscriptions WHERE account_id = $1`},
+	{"child_merges", `DELETE FROM child_merges WHERE family_account_id = $1`},
 	{"children", `DELETE FROM children WHERE account_id = $1`},
 	{"error_logs", `UPDATE error_logs SET account_id = NULL WHERE account_id = $1`},
 	{"accounts", `DELETE FROM accounts WHERE id = $1`},
