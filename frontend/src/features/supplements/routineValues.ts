@@ -1,5 +1,6 @@
 import { dayKey } from '../consultations/treatmentDays'
 import { dayMonthYear } from './scheduleText'
+import { ACTIVITY_TYPE_TEXT } from './activityTypeText'
 import type { Routine, RoutineInput, RoutineKind } from './types'
 
 // The supplement and activity forms' values and what can be told about them before asking the server (which checks everything
@@ -32,9 +33,11 @@ export interface FormValues {
   firstDate: string
   endMode: 'none' | 'date'
   endDate: string
+  /** Activities: the catalog code of its type; empty until the parent picks one (specs/075). */
+  activityType: string
 }
 
-export type FieldErrors = Partial<Record<'name' | 'times' | 'weekdays' | 'windowStart' | 'windowEnd' | 'every' | 'firstDate' | 'endDate', string>>
+export type FieldErrors = Partial<Record<'name' | 'activityType' | 'times' | 'weekdays' | 'windowStart' | 'windowEnd' | 'every' | 'firstDate' | 'endDate', string>>
 
 /** The values a new one starts with: no hours at all (nothing suggests a schedule — specs/035 D8), from today, without an end. */
 export function newRoutineValues(kind: RoutineKind, now: Date = new Date()): FormValues {
@@ -54,6 +57,7 @@ export function newRoutineValues(kind: RoutineKind, now: Date = new Date()): For
     firstDate: dayKey(now),
     endMode: 'none',
     endDate: '',
+    activityType: '',
   }
 }
 
@@ -79,8 +83,11 @@ export function valuesOf(routine: Routine): FormValues {
     firstDate: routine.firstDate,
     endMode: routine.endDate ? 'date' : 'none',
     endDate: routine.endDate ?? '',
+    activityType: routine.activityType ?? '',
   }
 }
+
+const ACTIVITY_TYPE_MESSAGE = ACTIVITY_TYPE_TEXT.missing
 
 const NAME_MESSAGE: Record<RoutineKind, string> = {
   supplement: 'Escribe el nombre del suplemento.',
@@ -91,6 +98,7 @@ const NAME_MESSAGE: Record<RoutineKind, string> = {
 export function serverMessage(kind: RoutineKind, field: string): string | undefined {
   const messages: Record<string, string> = {
     name: NAME_MESSAGE[kind],
+    activityType: ACTIVITY_TYPE_MESSAGE,
     times: 'Revisa las horas: de 1 a 6, sin repetir.',
     weekdays: 'Elige al menos un día.',
     windowStart: 'Elige la hora en que empieza.',
@@ -105,6 +113,7 @@ export function serverMessage(kind: RoutineKind, field: string): string | undefi
 /** The form field each server field is drawn under. */
 export const FIELD_OF_SERVER: Record<string, keyof FieldErrors> = {
   name: 'name',
+  activityType: 'activityType',
   times: 'times',
   weekdays: 'weekdays',
   windowStart: 'windowStart',
@@ -126,6 +135,7 @@ export function validateValues(v: FormValues): FieldErrors {
   const errors: FieldErrors = {}
   const activity = v.kind === 'activity'
   if (v.name.trim() === '') errors.name = NAME_MESSAGE[v.kind]
+  if (activity && v.activityType === '') errors.activityType = ACTIVITY_TYPE_MESSAGE
   const checkTimes = () => {
     if (v.times.some((t) => t === '')) errors.times = 'Elige la hora.'
     else if (new Set(v.times).size !== v.times.length) errors.times = 'Esta hora ya está en la lista.'
@@ -166,6 +176,8 @@ export function toInput(v: FormValues): RoutineInput {
     firstDate: v.firstDate,
     endDate: v.endMode === 'date' ? v.endDate : null,
     utcOffsetMinutes: -new Date().getTimezoneOffset(),
+    // Only an activity has a type (specs/075).
+    ...(v.kind === 'activity' ? { activityType: v.activityType } : {}),
   }
   if (v.kind === 'activity' && v.activityMode === 'fixed') {
     // At fixed hours: the same fields a supplement sends — every day or on the chosen ones.

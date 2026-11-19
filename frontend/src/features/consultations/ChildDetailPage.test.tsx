@@ -285,7 +285,7 @@ describe('ChildDetailPage — phone (design A)', () => {
     stubApi()
     renderPage()
     expect(await screen.findByText('Sin suplementos registrados')).toBeInTheDocument()
-    expect(screen.getByText('Sin actividades registradas')).toBeInTheDocument()
+    expect(screen.getByText('Aún no hay actividades')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /Agregar dosis o fotos/ })).toHaveAttribute('href', '/children/child-1/cartilla')
   })
 

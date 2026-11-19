@@ -2526,6 +2526,35 @@ const docTemplate = `{
                 }
             }
         },
+        "/catalog/activity-types": {
+            "get": {
+                "description": "Every activity type of the catalog in order, retired ones included (` + "`" + `active: false` + "`" + `) so the screens can name\nthe segments of activities that still have them; the form only offers the active ones\n(specs/075-tipos-de-actividad/contracts/api.md).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "catalog"
+                ],
+                "summary": "List the types an activity can have",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/ActivityTypeResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Unexpected server error",
+                        "schema": {
+                            "$ref": "#/definitions/NotFoundResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/catalog/countries": {
             "get": {
                 "description": "Read-only catalog used to populate the país selector (contracts/get-catalog.md).",
@@ -6767,6 +6796,76 @@ const docTemplate = `{
                 }
             }
         },
+        "/routines/{routineId}/activity-type": {
+            "put": {
+                "security": [
+                    {
+                        "ClerkSession": []
+                    }
+                ],
+                "description": "Changes ONLY the type, in any state (active, paused, ended) and with no paid plan: the type only organizes the\nlist. Doses, marks and reminders are not touched. A supplement has no type (400 activityType not_allowed); a\ncode that does not exist or was retired is 400 activityType invalid (the one it already has is accepted).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "supplements"
+                ],
+                "summary": "Change the type of an activity",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Routine UUID",
+                        "name": "routineId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "The type",
+                        "name": "payload",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/SupplementActivityTypeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementRoutineResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "A supplement, or an invalid type",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementValidationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "No valid Clerk session",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "The session can't change this routine",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No such routine",
+                        "schema": {
+                            "$ref": "#/definitions/SupplementErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/routines/{routineId}/done": {
             "post": {
                 "security": [
@@ -7302,6 +7401,23 @@ const docTemplate = `{
                 "otherCount": {
                     "type": "integer",
                     "example": 0
+                }
+            }
+        },
+        "ActivityTypeResponse": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "code": {
+                    "type": "string",
+                    "example": "sports"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Deportiva"
                 }
             }
         },
@@ -10880,6 +10996,15 @@ const docTemplate = `{
                 }
             }
         },
+        "SupplementActivityTypeRequest": {
+            "type": "object",
+            "properties": {
+                "activityType": {
+                    "type": "string",
+                    "example": "arts"
+                }
+            }
+        },
         "SupplementDoneRequest": {
             "type": "object",
             "properties": {
@@ -11052,6 +11177,11 @@ const docTemplate = `{
         "SupplementRoutineRequest": {
             "type": "object",
             "properties": {
+                "activityType": {
+                    "description": "ActivityType: the catalog code of an activity's type; required to create an activity, not allowed on a supplement; an\nedit that leaves it out keeps the saved one (specs/075).",
+                    "type": "string",
+                    "example": "sports"
+                },
                 "endDate": {
                     "type": "string",
                     "example": "2026-10-20"
@@ -11128,6 +11258,11 @@ const docTemplate = `{
         "SupplementRoutineResponse": {
             "type": "object",
             "properties": {
+                "activityType": {
+                    "description": "ActivityType: the catalog code of an activity's type (specs/075); null on a supplement.",
+                    "type": "string",
+                    "example": "sports"
+                },
                 "canEdit": {
                     "description": "CanEdit: the session can do everything AND the owner's plan is paid (so the app doesn't offer a button that would answer 422/403).",
                     "type": "boolean",

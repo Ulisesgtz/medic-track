@@ -23,6 +23,8 @@ type Input struct {
 	FirstDate        string   `json:"firstDate"`
 	EndDate          *string  `json:"endDate"`
 	UtcOffsetMinutes int      `json:"utcOffsetMinutes"`
+	// ActivityType (specs/075): required to create an activity, not allowed on a supplement; an edit that leaves it out keeps it.
+	ActivityType *string `json:"activityType"`
 }
 
 // ValidateInput checks every rule of data-model.md and returns the routine's schedule normalized: name trimmed, times
@@ -49,6 +51,7 @@ func validateInput(in Input, now time.Time, checkFirstDate bool) (Routine, Valid
 	if r.Kind != KindSupplement && r.Kind != KindActivity {
 		add("kind", "must be supplement or activity")
 	}
+	r.ActivityType = validActivityType(in.ActivityType, r.Kind, checkFirstDate, add)
 	if n := utf8.RuneCountInString(r.Name); n == 0 {
 		add("name", "name is required")
 	} else if n > MaxNameLength {
@@ -101,6 +104,23 @@ func validateInput(in Input, now time.Time, checkFirstDate bool) (Routine, Valid
 		}
 	}
 	return r, errs
+}
+
+// validActivityType checks the shape of the type (specs/075): an activity needs one when it is created, a supplement never has
+// one; whether the code exists and is still offered is checked against the catalog inside the repository's transaction. An edit
+// that leaves it out (nil or empty) keeps the saved one.
+func validActivityType(in *string, kind Kind, creating bool, add func(field, msg string)) *string {
+	sent := in != nil && strings.TrimSpace(*in) != ""
+	switch {
+	case kind == KindSupplement && sent:
+		add("activityType", "not_allowed")
+	case kind == KindActivity && sent:
+		code := strings.TrimSpace(*in)
+		return &code
+	case kind == KindActivity && creating:
+		add("activityType", "required")
+	}
+	return nil
 }
 
 // validTimes checks 1–6 distinct "HH:MM" and returns them sorted.

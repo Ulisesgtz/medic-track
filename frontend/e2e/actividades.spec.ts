@@ -9,6 +9,7 @@ import {
   inviteViaApi,
   localToday,
   personalActivityViaApi,
+  pickActivityType,
   queryDb,
   routineViaApi,
   secondPerson,
@@ -51,7 +52,7 @@ for (const design of designs) {
       // Two sections, one under the other: Suplementos first, then Actividades, each with its own invitation.
       await expect(main.getByRole('heading', { name: 'Suplementos', level: 2 })).toBeVisible()
       await expect(main.getByRole('heading', { name: 'Actividades', level: 2 })).toBeVisible()
-      await expect(main.getByText('Sin actividades registradas')).toBeVisible()
+      await expect(main.getByText('Aún no hay actividades')).toBeVisible()
       await expectNoHorizontalScroll(page)
       await main.getByRole('link', { name: '+ Agregar actividad' }).click()
 
@@ -65,6 +66,8 @@ for (const design of designs) {
       await page.getByLabel('Cantidad').fill('1')
       await expect(page.getByText('Con esto, cada día hay 24 avisos: el primero a las 00:00 y el último a las 23:00.')).toBeVisible()
       await expectNoHorizontalScroll(page)
+      await pickActivityType(page, 'Hábitos y cuidado diario')
+      await pickActivityType(page, 'Hábitos y cuidado diario')
       await page.getByRole('button', { name: 'Guardar actividad' }).click()
 
       // The detail: a count and a bar, never 24 chips; «Realizado» is the main action.
@@ -95,7 +98,7 @@ for (const design of designs) {
       // one row with «Realizado».
       await page.goto(`/children/${owner.childId}`)
       const row = main.getByRole('region', { name: 'Actividades' }).getByRole('link').filter({ hasText: 'Tomar agua' })
-      await expect(row).toContainText('Cada hora, de 00:00 a 23:00')
+      await expect(row).toContainText('Cada hora · 00:00 a 23:00')
       await expect(row).toContainText('Activa')
       const today = main.getByRole('region', { name: 'Hoy' })
       await expect(today.getByText('1 de 24 hechas')).toBeVisible()
@@ -154,6 +157,8 @@ for (const design of designs) {
       // The form repeats what was chosen (spec 042).
       await expect(page.getByText('Todos los días a las 17:00.')).toBeVisible()
       await expectNoHorizontalScroll(page)
+      await pickActivityType(page, 'Hábitos y cuidado diario')
+      await pickActivityType(page, 'Hábitos y cuidado diario')
       await page.getByRole('button', { name: 'Guardar actividad' }).click()
 
       // Every day was chosen, so there is a dose today at 17:00: one «Realizado» marks it.
@@ -279,7 +284,7 @@ for (const design of designs) {
       await expect(main.getByRole('link', { name: '+ Agregar actividad' })).toHaveCount(0)
       const { day, offset } = localToday()
       const refused = await request.post(`${API}/children/${owner.childId}/routines`, {
-        data: { kind: 'activity', name: 'x', period: 'window', windowStart: '08:00', windowEnd: '10:00', intervalMinutes: 60, firstDate: day, utcOffsetMinutes: offset },
+        data: { kind: 'activity', activityType: 'habits', name: 'x', period: 'window', windowStart: '08:00', windowEnd: '10:00', intervalMinutes: 60, firstDate: day, utcOffsetMinutes: offset },
         headers: { Authorization: `Bearer ${owner.token}` },
       })
       expect(refused.status()).toBe(422)
@@ -292,10 +297,9 @@ for (const design of designs) {
       await page.getByRole('button', { name: 'Realizado: Tomar agua' }).click()
       await expect(page.getByText('1 de 24')).toBeVisible()
       await expect(page.getByRole('link', { name: 'Editar' })).toHaveCount(0)
-      await page.getByRole('button', { name: 'Pausar' }).click()
-      await expect(page.getByText('Pausada', { exact: true })).toBeVisible()
-      await page.getByRole('button', { name: 'Reanudar' }).click()
-      await expect(page.getByRole('dialog').getByRole('heading', { name: 'Suplementos y actividades' })).toBeVisible()
+      // Mock D2 (specs/075): with the plan lapsed an activity only shows, marks and changes its type — no Pausar nor Reanudar.
+      await expect(page.getByText(/^Tu plan completo venció\./)).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Pausar' })).toHaveCount(0)
     })
   })
 
@@ -326,6 +330,8 @@ for (const design of designs) {
       await pickTime(page, 'Desde las', '00:00')
       await pickTime(page, 'Hasta las', '23:00')
       await page.getByLabel('Cantidad').fill('1')
+      await pickActivityType(page, 'Hábitos y cuidado diario')
+      await pickActivityType(page, 'Hábitos y cuidado diario')
       await page.getByRole('button', { name: 'Guardar actividad' }).click()
 
       // Its detail: no family wording, «Tus avisos», and the last mark says only the hour.
@@ -371,7 +377,7 @@ for (const design of designs) {
       await expect(acts.getByRole('button', { name: /Agregar actividades/ })).toContainText('Plan completo')
       await expect(page.getByRole('link', { name: '+ Agregar actividad' })).toHaveCount(0)
       await page.goto(`/actividades/${activity.id}`)
-      await expect(page.getByText(/Con el plan gratuito puedes ver la actividad y marcar «Realizado»/)).toBeVisible()
+      await expect(page.getByText(/Tu plan completo venció. Puedes ver la actividad, marcar «Realizado» y cambiar su tipo/)).toBeVisible()
       await page.getByRole('button', { name: 'Realizado: Pararse a estirar' }).click()
       await expect(page.getByText('1 de 24')).toBeVisible()
       await expect(page.getByRole('button', { name: 'Pausar' })).toHaveCount(0)

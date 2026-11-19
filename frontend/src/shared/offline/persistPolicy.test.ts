@@ -17,6 +17,7 @@ describe('shouldPersist', () => {
     [['family']],
     [['child-device', 'overview', 'c1', 'x']],
     [['catalog', 'countries']],
+    [['catalog', 'activity-types']],
   ])('keeps %j', (key) => {
     expect(shouldPersist(key, 'success')).toBe(true)
   })

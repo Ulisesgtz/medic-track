@@ -60,6 +60,8 @@ export interface Routine {
   nextDose: RoutineDose | null
   /** The dose of an activity at fixed hours marked most recently, of any day (null for the rest and while none was marked). */
   lastDone?: RoutineDose | null
+  /** The catalog code of an activity's type (specs/075); null on a supplement. */
+  activityType?: string | null
 }
 
 export interface RoutineList {
@@ -84,6 +86,8 @@ export interface RoutineInput {
   firstDate: string
   endDate: string | null
   utcOffsetMinutes: number
+  /** Required to create an activity; not sent for a supplement; an edit that leaves it out keeps the saved one (specs/075). */
+  activityType?: string
 }
 
 /** The person's own routines (specs/033, part 3): the same list plus whether they pressed «Entendido» on the section's first-time notice. */

@@ -41,6 +41,22 @@ export async function fetchVaccines(): Promise<Vaccine[]> {
   return res.json()
 }
 
+/** A type of activity (specs/075): the category the parent picks. A retired one (`active: false`) still names the activities that have it. */
+export interface ActivityType {
+  code: string
+  name: string
+  active: boolean
+}
+
+/** Every activity type, in catalog order, retired ones included (the form offers only the active ones). */
+export async function fetchActivityTypes(): Promise<ActivityType[]> {
+  const res = await fetch(`${API_BASE_URL}/catalog/activity-types`)
+  if (!res.ok) {
+    throw new Error(`Failed to fetch activity types: ${res.status}`)
+  }
+  return res.json()
+}
+
 export async function fetchCountries(): Promise<CatalogCountry[]> {
   const res = await fetch(`${API_BASE_URL}/catalog/countries`)
   if (!res.ok) {

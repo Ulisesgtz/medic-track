@@ -59,7 +59,7 @@ func TestCreate_EachPeriodKeepsItsOwnFields(t *testing.T) {
 	require.Equal(t, 0, got.IntervalMinutes)
 	require.Equal(t, supplement.KindSupplement, got.Kind)
 
-	activity := supplement.Routine{Kind: supplement.KindActivity, Name: "Tomar agua", Period: supplement.PeriodWindow, WindowStart: "06:00", WindowEnd: "08:00", IntervalMinutes: 60, FirstDate: "2026-10-05", EndDate: "2026-10-06", UtcOffsetMinutes: -360}
+	activity := supplement.Routine{Kind: supplement.KindActivity, ActivityType: activityTypeHabits(), Name: "Tomar agua", Period: supplement.PeriodWindow, WindowStart: "06:00", WindowEnd: "08:00", IntervalMinutes: 60, FirstDate: "2026-10-05", EndDate: "2026-10-06", UtcOffsetMinutes: -360}
 	id, err = repo.Create(ctx, f.childID, activity, f.accountID)
 	require.NoError(t, err)
 	got, err = repo.Get(ctx, id, fixedNow.AddDate(0, 0, -1), wide)
@@ -380,9 +380,9 @@ func TestListByChild_AnActivityAtFixedHoursAlwaysKnowsItsNextDose(t *testing.T) 
 	ctx := context.Background()
 
 	// Practice every day at 17:00 (fixed hours) and a drinking-water activity from 08:00 to 20:00 every two hours (window).
-	fixed, err := repo.Create(ctx, f.childID, supplement.Routine{Kind: supplement.KindActivity, Name: "Practica", Period: supplement.PeriodDaily, Times: []string{"17:00"}, FirstDate: "2026-10-05"}, f.accountID)
+	fixed, err := repo.Create(ctx, f.childID, supplement.Routine{Kind: supplement.KindActivity, ActivityType: activityTypeHabits(), Name: "Practica", Period: supplement.PeriodDaily, Times: []string{"17:00"}, FirstDate: "2026-10-05"}, f.accountID)
 	require.NoError(t, err)
-	window, err := repo.Create(ctx, f.childID, supplement.Routine{Kind: supplement.KindActivity, Name: "Agua", Period: supplement.PeriodWindow, WindowStart: "08:00", WindowEnd: "20:00", IntervalMinutes: 120, FirstDate: "2026-10-05"}, f.accountID)
+	window, err := repo.Create(ctx, f.childID, supplement.Routine{Kind: supplement.KindActivity, ActivityType: activityTypeHabits(), Name: "Agua", Period: supplement.PeriodWindow, WindowStart: "08:00", WindowEnd: "20:00", IntervalMinutes: 120, FirstDate: "2026-10-05"}, f.accountID)
 	require.NoError(t, err)
 
 	from := time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC)
@@ -405,9 +405,9 @@ func TestListByChild_AnActivityAtFixedHoursKnowsItsLastMarkedDoseOfAnyDay(t *tes
 	repo := newRepo(pool)
 	f := newFamily(t, pool, account.PlanPaid)
 	ctx := context.Background()
-	id, err := repo.Create(ctx, f.childID, supplement.Routine{Kind: supplement.KindActivity, Name: "Practica", Period: supplement.PeriodDaily, Times: []string{"17:00"}, FirstDate: "2026-10-05"}, f.accountID)
+	id, err := repo.Create(ctx, f.childID, supplement.Routine{Kind: supplement.KindActivity, ActivityType: activityTypeHabits(), Name: "Practica", Period: supplement.PeriodDaily, Times: []string{"17:00"}, FirstDate: "2026-10-05"}, f.accountID)
 	require.NoError(t, err)
-	window, err := repo.Create(ctx, f.childID, supplement.Routine{Kind: supplement.KindActivity, Name: "Agua", Period: supplement.PeriodWindow, WindowStart: "08:00", WindowEnd: "20:00", IntervalMinutes: 120, FirstDate: "2026-10-05"}, f.accountID)
+	window, err := repo.Create(ctx, f.childID, supplement.Routine{Kind: supplement.KindActivity, ActivityType: activityTypeHabits(), Name: "Agua", Period: supplement.PeriodWindow, WindowStart: "08:00", WindowEnd: "20:00", IntervalMinutes: 120, FirstDate: "2026-10-05"}, f.accountID)
 	require.NoError(t, err)
 
 	day1 := time.Date(2026, 10, 5, 0, 0, 0, 0, time.UTC)

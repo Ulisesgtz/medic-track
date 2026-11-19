@@ -108,6 +108,9 @@ func TestRepository_ConnectionErrors(t *testing.T) {
 
 	_, err = repo.ListVaccines(context.Background())
 	require.Error(t, err)
+
+	_, err = repo.ListActivityTypes(context.Background())
+	require.Error(t, err)
 }
 
 func TestRepository_ListSymptoms_TheSeededCatalogInOrder(t *testing.T) {
@@ -235,4 +238,38 @@ func TestRepository_ListVaccines_FollowsTheCatalogTable(t *testing.T) {
 	}
 	require.Contains(t, codes, added)
 	require.Equal(t, added, codes[len(codes)-1], "added last by sort_order")
+}
+
+func TestRepository_ListActivityTypes_TheSeededCatalogInOrder(t *testing.T) {
+	repo := catalog.NewRepository(testPool(t))
+
+	types, err := repo.ListActivityTypes(context.Background())
+
+	require.NoError(t, err)
+	var seeded []string
+	for _, at := range types {
+		if !strings.HasPrefix(at.Code, "test_") {
+			seeded = append(seeded, at.Code)
+		}
+	}
+	require.Equal(t, []string{"school", "sports", "arts", "therapy", "habits", "other"}, seeded[:6])
+	require.Equal(t, catalog.ActivityType{Code: "school", Name: "Escolar", Active: true}, types[0])
+}
+
+// A retired type stays in the list with active=false (it names the segments of activities that still have it) (specs/075).
+func TestRepository_ListActivityTypes_IncludesTheRetired(t *testing.T) {
+	pool := testPool(t)
+	repo := catalog.NewRepository(pool)
+	ctx := context.Background()
+	retired := "test_retired_" + uuid.NewString()[:8]
+	base := 1_000_000 + rand.IntN(1_000_000_000)
+	_, err := pool.Exec(ctx, `INSERT INTO activity_types (code, name, sort_order, active) VALUES ($1, 'Retirada', $2, false)`, retired, base)
+	require.NoError(t, err)
+	t.Cleanup(func() { _, _ = pool.Exec(context.Background(), `DELETE FROM activity_types WHERE code = $1`, retired) })
+
+	types, err := repo.ListActivityTypes(ctx)
+
+	require.NoError(t, err)
+	last := types[len(types)-1]
+	require.Equal(t, catalog.ActivityType{Code: retired, Name: "Retirada", Active: false}, last)
 }

@@ -1,9 +1,13 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { ACTIVITY_TYPES_QUERY_KEY } from '../../shared/catalog/useCatalog'
 import { errorClass, fieldBorder, fieldRoutine, fieldRoutineMultiline, labelClass } from '../../shared/ui/formStyles'
 import { Notice } from '../../shared/ui/Notice'
 import { StickyActionBar } from '../../shared/ui/StickyActionBar'
 import { useIsDesktop } from '../../shared/ui/useIsDesktop'
 import { TimeField } from '../../shared/ui/TimeField'
+import { ActivityTypePicker } from './ActivityTypePicker'
+import { ACTIVITY_TYPE_TEXT } from './activityTypeText'
 import { SupplementApiError } from './api'
 import {
   FIELD_OF_SERVER,
@@ -227,6 +231,7 @@ export function RoutineForm({ kind, routine, onSubmit, onCancel, onPlanRequired,
   const nameRef = useRef<HTMLInputElement>(null)
   // specs/056 (research R3): saving sits in a bar pinned to the bottom on the phone.
   const desktop = useIsDesktop()
+  const queryClient = useQueryClient()
 
   const dirty = useMemo(() => JSON.stringify(values) !== JSON.stringify(initial), [values, initial])
   useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange])
@@ -253,6 +258,11 @@ export function RoutineForm({ kind, routine, onSubmit, onCancel, onPlanRequired,
           if (field) next[field] = serverMessage(kind, d.field)
         }
         setErrors(next)
+        if (next.activityType) {
+          // The type was retired since the catalog was read: read it again, with no cache, and let the parent choose another.
+          void queryClient.refetchQueries({ queryKey: ACTIVITY_TYPES_QUERY_KEY })
+          if (!editing) set('activityType', '')
+        }
         if (Object.keys(next).length === 0) setNotice(`No se pudo guardar ${noun}. Revisa los datos e inténtalo de nuevo.`)
       } else if (error instanceof SupplementApiError && error.kind === 'plan_required') {
         onPlanRequired()
@@ -316,6 +326,20 @@ export function RoutineForm({ kind, routine, onSubmit, onCancel, onPlanRequired,
           </span>
         )}
       </div>
+
+      {activity && (
+        <ActivityTypePicker
+          value={values.activityType}
+          onChange={(code) => set('activityType', code)}
+          legend={
+            <>
+              {ACTIVITY_TYPE_TEXT.legend} <span className="font-semibold text-muted">· {ACTIVITY_TYPE_TEXT.required}</span>
+            </>
+          }
+          hint={ACTIVITY_TYPE_TEXT.hint}
+          error={errors.activityType}
+        />
+      )}
 
       {activity && (
         <fieldset className="flex flex-col gap-2.5">

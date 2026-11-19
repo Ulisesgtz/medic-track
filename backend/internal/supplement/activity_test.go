@@ -19,7 +19,7 @@ import (
 // the day, and supplements and activities are listed and capped apart.
 
 func activityBody(name, start, end string, every int) string {
-	return fmt.Sprintf(`{"kind":"activity","name":%q,"note":"","period":"window","windowStart":%q,"windowEnd":%q,"intervalMinutes":%d,"weekdays":[],"firstDate":%q,"utcOffsetMinutes":0}`,
+	return fmt.Sprintf(`{"kind":"activity","activityType":"sports","name":%q,"note":"","period":"window","windowStart":%q,"windowEnd":%q,"intervalMinutes":%d,"weekdays":[],"firstDate":%q,"utcOffsetMinutes":0}`,
 		name, start, end, every, today())
 }
 
@@ -82,7 +82,7 @@ func TestActivity_InvalidWindowsAreRefusedWithTheirField(t *testing.T) {
 	for field, body := range map[string]string{
 		"windowEnd":       activityBody("x", "10:00", "09:00", 30),
 		"intervalMinutes": activityBody("x", "08:00", "09:00", 3),
-		"period":          fmt.Sprintf(`{"kind":"activity","name":"x","period":"interval","firstDate":%q}`, today()),
+		"period":          fmt.Sprintf(`{"kind":"activity","activityType":"sports","name":"x","period":"interval","firstDate":%q}`, today()),
 	} {
 		code, got := e.do(t, e.owner, http.MethodPost, path, body)
 		require.Equal(t, http.StatusBadRequest, code, got)
@@ -181,7 +181,7 @@ func TestMarkNext_TwoPeopleAtOnceMarkTwoDifferentDoses(t *testing.T) {
 	repo := newRepo(pool)
 	f := newFamily(t, pool, account.PlanPaid)
 	ctx := context.Background()
-	id, err := repo.Create(ctx, f.childID, supplement.Routine{Kind: supplement.KindActivity, Name: "Estirar", Period: supplement.PeriodWindow,
+	id, err := repo.Create(ctx, f.childID, supplement.Routine{Kind: supplement.KindActivity, ActivityType: activityTypeHabits(), Name: "Estirar", Period: supplement.PeriodWindow,
 		WindowStart: "08:00", WindowEnd: "08:10", IntervalMinutes: 5, FirstDate: "2026-10-05"}, f.accountID) // 08:00, 08:05, 08:10
 	require.NoError(t, err)
 
@@ -207,7 +207,7 @@ func TestMarkNext_TwoPeopleAtOnceMarkTwoDifferentDoses(t *testing.T) {
 	require.ErrorIs(t, err, supplement.ErrNothingToMark)
 
 	// Only the window asked for counts.
-	other, err := repo.Create(ctx, f.childID, supplement.Routine{Kind: supplement.KindActivity, Name: "Caminar", Period: supplement.PeriodWindow,
+	other, err := repo.Create(ctx, f.childID, supplement.Routine{Kind: supplement.KindActivity, ActivityType: activityTypeHabits(), Name: "Caminar", Period: supplement.PeriodWindow,
 		WindowStart: "08:00", WindowEnd: "08:10", IntervalMinutes: 5, FirstDate: "2026-10-05"}, f.accountID)
 	require.NoError(t, err)
 	_, err = repo.MarkNext(ctx, other, day.AddDate(0, 0, 30), day.AddDate(0, 0, 31), supplement.Actor{AccountID: f.accountID})
@@ -273,7 +273,7 @@ func TestPersonalActivities_AreCappedAndListedApartFromPersonalSupplements(t *te
 
 func TestActivity_AtFixedHoursIsCreatedAndMarkedWithRealizado(t *testing.T) {
 	e := newEnv(t, account.PlanPaid)
-	body := fmt.Sprintf(`{"kind":"activity","name":"Práctica de fut","note":"","period":"daily","times":["00:00","23:30"],"weekdays":[],"firstDate":%q,"utcOffsetMinutes":0}`, today())
+	body := fmt.Sprintf(`{"kind":"activity","activityType":"sports","name":"Práctica de fut","note":"","period":"daily","times":["00:00","23:30"],"weekdays":[],"firstDate":%q,"utcOffsetMinutes":0}`, today())
 	code, got := e.do(t, e.owner, http.MethodPost, "/children/"+e.childID.String()+"/routines", body)
 	require.Equal(t, http.StatusCreated, code, got)
 	require.Equal(t, "activity", got["kind"])
@@ -287,7 +287,7 @@ func TestActivity_AtFixedHoursIsCreatedAndMarkedWithRealizado(t *testing.T) {
 	require.Contains(t, first["scheduledAt"], "T00:00:00Z")
 
 	// A supplement can't be a window, and an activity can be neither «cada N horas» nor hourless.
-	bad := fmt.Sprintf(`{"kind":"activity","name":"x","period":"daily","times":[],"firstDate":%q}`, today())
+	bad := fmt.Sprintf(`{"kind":"activity","activityType":"sports","name":"x","period":"daily","times":[],"firstDate":%q}`, today())
 	code, _ = e.do(t, e.owner, http.MethodPost, "/children/"+e.childID.String()+"/routines", bad)
 	require.Equal(t, http.StatusBadRequest, code)
 }

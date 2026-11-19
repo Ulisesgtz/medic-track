@@ -142,6 +142,7 @@ func NewRouter(d Deps) *chi.Mux {
 	r.Get("/catalog/countries/{countryCode}/states", d.Catalog.ListStates)
 	r.Get("/catalog/symptoms", d.Catalog.ListSymptoms)
 	r.Get("/catalog/vaccines", d.Catalog.ListVaccines)
+	r.Get("/catalog/activity-types", d.Catalog.ListActivityTypes)
 
 	// The app reports its own errors here (specs/072): public, under the general limit and a limit of its own that nothing
 	// else shares (a flood of reports must never use up "Tomada" or the invitations). Every rejection is unlogged.
@@ -336,6 +337,8 @@ func NewRouter(d Deps) *chi.Mux {
 		r.With(seesRoutine).Put("/routines/{routineId}/my-reminders", d.Supplement.SetMyReminders)
 		r.With(seesRoutine).Post("/routines/{routineId}/done", d.Supplement.MarkRoutineDone)
 		r.With(fullRoutine).Patch("/routines/{routineId}", d.Supplement.UpdateRoutine)
+		// Specs/075: only the type of an activity, any state, no plan.
+		r.With(fullRoutine).Put("/routines/{routineId}/activity-type", d.Supplement.SetActivityType)
 		r.With(fullRoutine).Post("/routines/{routineId}/pause", d.Supplement.PauseRoutine)
 		r.With(fullRoutine).Post("/routines/{routineId}/resume", d.Supplement.ResumeRoutine)
 		r.With(fullRoutine).Post("/routines/{routineId}/finish", d.Supplement.FinishRoutine)

@@ -19,6 +19,7 @@ import {
   markRoutineDone,
   pauseRoutine,
   resumeRoutine,
+  setActivityType,
   setMyReminders,
   updateRoutine,
   updateRoutineDose,
@@ -121,6 +122,16 @@ export function useResumeRoutine(routineId: string) {
   return useMutation({
     // The routine's times are read in the zone of the device that resumes it.
     mutationFn: async () => resumeRoutine(routineId, -new Date().getTimezoneOffset(), await getToken()),
+    onSuccess: refresh,
+  })
+}
+
+/** specs/075: changes only the type of an activity (any state, any plan); the detail and the sections reload. */
+export function useSetActivityType(routineId: string) {
+  const { getToken } = useAuth()
+  const refresh = useRefreshAfterChange()
+  return useMutation({
+    mutationFn: async (activityType: string) => setActivityType(routineId, activityType, await getToken()),
     onSuccess: refresh,
   })
 }

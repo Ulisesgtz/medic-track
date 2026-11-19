@@ -70,7 +70,7 @@ func TestDeviceMarks_RealizadoByThePhoneAndItsLastMark(t *testing.T) {
 	repo := newRepo(pool)
 	f := newFamily(t, pool, account.PlanPaid)
 	ctx := context.Background()
-	id, err := repo.Create(ctx, f.childID, supplement.Routine{Kind: supplement.KindActivity, Name: "Estirar", Period: supplement.PeriodWindow,
+	id, err := repo.Create(ctx, f.childID, supplement.Routine{Kind: supplement.KindActivity, ActivityType: activityTypeHabits(), Name: "Estirar", Period: supplement.PeriodWindow,
 		WindowStart: "08:00", WindowEnd: "08:10", IntervalMinutes: 5, FirstDate: "2026-10-05"}, f.accountID)
 	require.NoError(t, err)
 	phone := phoneOf(t, pool, f)

@@ -141,17 +141,23 @@ func (r *Repository) Update(ctx context.Context, routineID uuid.UUID, in Routine
 	if err := requirePaid(s); err != nil {
 		return err
 	}
+	// A type that was sent must be offered, unless it is the one the routine already has (a retired one it keeps).
+	if in.ActivityType != nil && (s.view.ActivityType == nil || *s.view.ActivityType != *in.ActivityType) {
+		if err := checkActivityTypeOffered(ctx, tx, in.ActivityType); err != nil {
+			return err
+		}
+	}
 	now := r.now()
 	horizon := now.AddDate(0, 0, HorizonDays)
 	if _, err := tx.Exec(ctx, `
 		UPDATE supplement_routines
-		SET name = $2, note = $3, period = $4, times = $5::text[]::time[], weekdays = $6::smallint[],
+		SET activity_type = COALESCE($15, activity_type), name = $2, note = $3, period = $4, times = $5::text[]::time[], weekdays = $6::smallint[],
 		    window_start = NULLIF($7, '')::time, window_end = NULLIF($8, '')::time, interval_minutes = $9,
 		    first_date = $10::date, end_date = NULLIF($11, '')::date, utc_offset_minutes = $12, generated_until = $13,
 		    updated_at = $14
 		WHERE id = $1`,
 		routineID, in.Name, in.Note, string(in.Period), nonNil(in.Times), smallInts(in.Weekdays), in.WindowStart, in.WindowEnd,
-		nullableInt(in.IntervalMinutes), in.FirstDate, in.EndDate, in.UtcOffsetMinutes, horizon, now); err != nil {
+		nullableInt(in.IntervalMinutes), in.FirstDate, in.EndDate, in.UtcOffsetMinutes, horizon, now, in.ActivityType); err != nil {
 		return fmt.Errorf("updating routine: %w", err)
 	}
 	if err := dropFutureUnmarked(ctx, tx, routineID, now); err != nil {
@@ -164,6 +170,39 @@ func (r *Repository) Update(ctx context.Context, routineID uuid.UUID, in Routine
 		}
 	}
 	return commit(ctx, tx)
+}
+
+// SetActivityType changes ONLY the type of an activity (specs/075): in any state (active, paused, ended) and with no plan — the
+// type only organizes the list, it never charges (Principio IV). It writes `activity_type` and `updated_at`; doses, marks and
+// reminders are not touched. ValidationErrors `not_allowed` for a supplement, `invalid` for a code that does not exist or was
+// retired (unless it is the one it already has: idempotent). It returns the routine's UTC offset to read "today" in.
+func (r *Repository) SetActivityType(ctx context.Context, routineID uuid.UUID, code string) (int, error) {
+	// Only the routine is locked, not the owner account (specs/075): changing a type is no plan, cap or schedule decision, so it
+	// never waits for — nor holds up — a creation or an edit of the same account.
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("starting transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	s, err := scanRoutine(tx.QueryRow(ctx, routineSelect+` WHERE r.id = $1 FOR UPDATE OF r`, routineID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, ErrRoutineNotFound
+	}
+	if err != nil {
+		return 0, fmt.Errorf("reading routine: %w", err)
+	}
+	if s.view.Kind != KindActivity {
+		return 0, ValidationErrors{{Field: "activityType", Message: "not_allowed"}}
+	}
+	if s.view.ActivityType == nil || *s.view.ActivityType != code {
+		if err := checkActivityTypeOffered(ctx, tx, &code); err != nil {
+			return 0, err
+		}
+		if _, err := tx.Exec(ctx, `UPDATE supplement_routines SET activity_type = $2, updated_at = $3 WHERE id = $1`, routineID, code, r.now()); err != nil {
+			return 0, fmt.Errorf("changing the activity type: %w", err)
+		}
+	}
+	return s.view.UtcOffsetMinutes, commit(ctx, tx)
 }
 
 // Finish ends the routine for good: no more doses or reminders; the future unmarked doses disappear and the history stays.

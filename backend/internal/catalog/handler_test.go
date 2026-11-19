@@ -25,6 +25,7 @@ func newTestRouter(t *testing.T) http.Handler {
 	r.Get("/catalog/countries/{countryCode}/states", h.ListStates)
 	r.Get("/catalog/symptoms", h.ListSymptoms)
 	r.Get("/catalog/vaccines", h.ListVaccines)
+	r.Get("/catalog/activity-types", h.ListActivityTypes)
 	return r
 }
 
@@ -65,6 +66,13 @@ func TestHandler_InternalErrors(t *testing.T) {
 	r.Get("/catalog/countries/{countryCode}/states", h.ListStates)
 	r.Get("/catalog/symptoms", h.ListSymptoms)
 	r.Get("/catalog/vaccines", h.ListVaccines)
+	r.Get("/catalog/activity-types", h.ListActivityTypes)
+
+	t.Run("ListActivityTypes", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/catalog/activity-types", nil))
+		require.Equal(t, http.StatusInternalServerError, rec.Code)
+	})
 
 	t.Run("ListVaccines", func(t *testing.T) {
 		rec := httptest.NewRecorder()
@@ -126,4 +134,17 @@ func TestHandler_ListVaccines(t *testing.T) {
 	var body []map[string]string
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
 	require.Equal(t, map[string]string{"code": "bcg", "name": "BCG"}, body[0], "only a code and a name: no age, schedule or dose")
+}
+
+func TestHandler_ListActivityTypes(t *testing.T) {
+	router := newTestRouter(t)
+
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/catalog/activity-types", nil))
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	var body []map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	require.GreaterOrEqual(t, len(body), 6)
+	require.Equal(t, map[string]any{"code": "school", "name": "Escolar", "active": true}, body[0])
 }

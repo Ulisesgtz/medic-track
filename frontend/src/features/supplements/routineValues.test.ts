@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { everyMinutes, newRoutineValues, serverMessage, toInput, validateValues, valuesOf } from './routineValues'
+import { FIELD_OF_SERVER, everyMinutes, newRoutineValues, serverMessage, toInput, validateValues, valuesOf } from './routineValues'
 import type { Routine } from './types'
 
 const supplement = () => ({ ...newRoutineValues('supplement', new Date(2026, 9, 6)), name: 'Vitamina D', times: ['08:00'] })
 const activity = () => ({
   ...newRoutineValues('activity', new Date(2026, 9, 6)),
   name: 'Tomar agua',
+  activityType: 'habits',
   windowStart: '08:00',
   windowEnd: '20:00',
   every: '1',
@@ -54,6 +55,31 @@ describe('validateValues · supplement', () => {
     )
     expect(validateValues({ ...supplement(), endMode: 'date', endDate: '2026-10-06' })).toEqual({})
     expect(validateValues({ ...supplement(), firstDate: '', endMode: 'date', endDate: '2026-10-01' }).endDate).toBeUndefined()
+  })
+})
+
+describe('activity type (specs/075)', () => {
+  it('starts with none chosen and a new activity cannot be saved without one', () => {
+    expect(newRoutineValues('activity', new Date(2026, 9, 6)).activityType).toBe('')
+    expect(validateValues({ ...activity(), activityType: '' }).activityType).toBe('Elige el tipo de actividad.')
+    expect(validateValues(activity()).activityType).toBeUndefined()
+  })
+
+  it('a supplement has none to ask', () => {
+    expect(validateValues(supplement()).activityType).toBeUndefined()
+    expect('activityType' in toInput(supplement())).toBe(false)
+  })
+
+  it('is sent with an activity, at fixed hours too, and the server field is drawn under its own field', () => {
+    expect(toInput(activity())).toMatchObject({ kind: 'activity', activityType: 'habits' })
+    expect(toInput({ ...activity(), activityMode: 'fixed', times: ['17:00'] })).toMatchObject({ activityType: 'habits' })
+    expect(serverMessage('activity', 'activityType')).toBe('Elige el tipo de actividad.')
+    expect(FIELD_OF_SERVER.activityType).toBe('activityType')
+  })
+
+  it('comes back from the saved routine', () => {
+    expect(valuesOf({ kind: 'activity', activityType: 'sports', times: [], weekdays: [], period: 'window' } as never).activityType).toBe('sports')
+    expect(valuesOf({ kind: 'supplement', activityType: null, times: ['08:00'], weekdays: [], period: 'daily' } as never).activityType).toBe('')
   })
 })
 

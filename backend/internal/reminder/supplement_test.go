@@ -294,8 +294,8 @@ func TestClaimDueSupplementDoses_AnActivityIsClaimedWithItsOwnSource(t *testing.
 	ready(t, owner, repo, now)
 	var id uuid.UUID
 	require.NoError(t, pool.QueryRow(context.Background(), `
-		INSERT INTO supplement_routines (account_id, child_id, kind, name, period, window_start, window_end, interval_minutes, first_date, utc_offset_minutes, generated_until, created_by_account_id)
-		VALUES ($1, $2, 'activity', 'Tomar agua', 'window', '08:00', '20:00', 60, current_date - 2, 0, now() + interval '14 days', $1)
+		INSERT INTO supplement_routines (account_id, child_id, kind, name, period, window_start, window_end, interval_minutes, first_date, utc_offset_minutes, generated_until, created_by_account_id, activity_type)
+		VALUES ($1, $2, 'activity', 'Tomar agua', 'window', '08:00', '20:00', 60, current_date - 2, 0, now() + interval '14 days', $1, 'habits')
 		RETURNING id`, owner.accountID, owner.childID).Scan(&id))
 	dose := supplementDose(t, pool, id, now.Add(-5*time.Minute), false)
 

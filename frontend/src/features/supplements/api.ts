@@ -118,6 +118,11 @@ export function deleteRoutine(routineId: string, token: string | null): Promise<
   return call('DELETE', `/routines/${routineId}`, token, undefined, 'Unexpected error deleting the routine')
 }
 
+/** PUT /routines/{id}/activity-type (specs/075): only the type of an activity, in any state and with no plan. */
+export function setActivityType(routineId: string, activityType: string, token: string | null): Promise<Routine> {
+  return call('PUT', `/routines/${routineId}/activity-type`, token, { activityType }, 'Unexpected error changing the activity type')
+}
+
 /** PUT /routines/{id}/my-reminders: the session's own reminders of the routine, on or off. */
 export function setMyReminders(routineId: string, enabled: boolean, token: string | null): Promise<{ myReminders: boolean }> {
   return call('PUT', `/routines/${routineId}/my-reminders`, token, { enabled }, 'Unexpected error saving the reminder choice')
