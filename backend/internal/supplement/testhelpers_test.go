@@ -84,3 +84,9 @@ func closedSupplementPool(t *testing.T, _ *pgxpool.Pool) *pgxpool.Pool {
 	pool.Close()
 	return pool
 }
+
+// activityTypeHabits is the type the activities of these tests have: every activity needs one (specs/075).
+func activityTypeHabits() *string {
+	code := "habits"
+	return &code
+}

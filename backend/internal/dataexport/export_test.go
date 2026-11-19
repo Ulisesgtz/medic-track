@@ -176,6 +176,8 @@ func TestCollect_EverythingOfTheAccountAndNothingElse(t *testing.T) {
 	require.Equal(t, "sí", *column(t, unions, 0, "ficha"))
 	require.Equal(t, "1", *column(t, unions, 0, "telefonos_quitados"))
 
+	require.Nil(t, column(t, table(t, e, "suplementos_y_actividades"), 0, "tipo_de_actividad"), "a supplement has no type")
+
 	require.Equal(t, "Ñúñez", *column(t, table(t, e, "hijos"), 0, "apellido"))
 	consultations := table(t, e, "consultas")
 	require.Equal(t, "Fiebre", *column(t, consultations, 0, "sintomas"))
@@ -325,4 +327,25 @@ func TestExtension(t *testing.T) {
 	require.Equal(t, "heic", Extension([]byte("\x00\x00\x00\x18ftypheic")))
 	require.Equal(t, "bin", Extension([]byte("hello")))
 	require.Equal(t, "bin", Extension(nil))
+}
+
+// Specs/075: an activity's type goes out by its name.
+func TestCollect_AnActivityCarriesItsTypeByName(t *testing.T) {
+	pool := testPool(t)
+	f := seedFamily(t, pool)
+	_, err := pool.Exec(context.Background(), `INSERT INTO supplement_routines (account_id, child_id, kind, name, period, times, first_date, utc_offset_minutes, generated_until, created_by_account_id, activity_type)
+		VALUES ($1, $2, 'activity', 'Fut', 'daily', '{17:00}', '2026-10-01', -360, now(), $1, 'sports')`, f.Owner, f.Child)
+	require.NoError(t, err)
+
+	e, err := Collect(context.Background(), pool, FamilyChildren(f.Owner), exportNow)
+	require.NoError(t, err)
+	rows := table(t, e, "suplementos_y_actividades")
+	var found bool
+	for i := range rows.Rows {
+		if v := column(t, rows, i, "nombre"); v != nil && *v == "Fut" {
+			found = true
+			require.Equal(t, "Deportiva", *column(t, rows, i, "tipo_de_actividad"))
+		}
+	}
+	require.True(t, found)
 }

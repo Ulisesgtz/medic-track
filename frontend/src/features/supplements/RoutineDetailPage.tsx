@@ -11,8 +11,11 @@ import { SupplementApiError } from './api'
 import { DayProgress } from './DayProgress'
 import { DeleteRoutineDialog } from './DeleteRoutineDialog'
 import { deleteCopy } from './deleteCopy'
+import { ActivityTypeDialog } from './ActivityTypeDialog'
+import { ACTIVITY_TYPE_TEXT, changeLabel } from './activityTypeText'
+import { useActivityTypes } from '../../shared/catalog/useCatalog'
 import { FinishRoutineDialog } from './FinishRoutineDialog'
-import { useDeleteRoutine, useFinishRoutine, usePauseRoutine, useResumeRoutine, useRoutine, useRoutineDoseToggle } from './hooks'
+import { useDeleteRoutine, useFinishRoutine, usePauseRoutine, useResumeRoutine, useRoutine, useRoutineDoseToggle, useSetActivityType } from './hooks'
 import { MyRemindersToggle } from './MyRemindersToggle'
 import { RealizadoButton } from './RealizadoButton'
 import { RoutineDoseChip } from './RoutineDoseChip'
@@ -182,12 +185,17 @@ export function RoutineDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const deleteButtonRef = useRef<HTMLButtonElement>(null)
+  const [typeOpen, setTypeOpen] = useState(false)
+  const [typeError, setTypeError] = useState<string | null>(null)
+  const typeButtonRef = useRef<HTMLButtonElement>(null)
+  const activityTypes = useActivityTypes()
 
   const query = useRoutine(routineId, day)
   const pause = usePauseRoutine(routineId ?? '')
   const resume = useResumeRoutine(routineId ?? '')
   const finish = useFinishRoutine(routineId ?? '')
   const remove = useDeleteRoutine(routineId ?? '')
+  const setType = useSetActivityType(routineId ?? '')
 
   const routine = query.data
   const childId = routine?.childId ?? undefined
@@ -239,7 +247,8 @@ export function RoutineDetailPage() {
   const rows = detailRows(routine, personal)
   // Their own: they are its owner (Full) once the account is known; with the plan not paid only «Finalizar» is left (mock G3).
   const canManage = accountQuery.data !== undefined && (personal || access.canAdd)
-  const planLapsed = personal && !routine.canEdit
+  // Mock D2 (specs/075): an activity with the plan lapsed — a child's too — only shows, marks and changes its type.
+  const planLapsed = canManage && !routine.canEdit && (personal || activity)
   const paused = routine.status === 'paused'
   const ended = routine.status === 'ended'
 
@@ -314,9 +323,41 @@ export function RoutineDetailPage() {
     </div>
   )
 
+  // specs/075: the type of an activity and «Cambiar» for who can do everything — any plan, also paused or finished (it only moves
+  // the activity to another group). An answer from before the field has none: no row.
+  const typeName = (Array.isArray(activityTypes.data) ? activityTypes.data.find((t) => t.code === routine.activityType)?.name : undefined) ?? ''
+  const doSetType = (code: string) => {
+    setTypeError(null)
+    setType.mutate(code, {
+      onSuccess: () => setTypeOpen(false),
+      onError: () => setTypeError(ACTIVITY_TYPE_TEXT.saveFailed),
+    })
+  }
   const dataCard = (
     <div className={`${card} flex flex-col gap-4 p-[22px]`}>
       <dl className="flex flex-col gap-3">
+        {activity && routine.activityType && (
+          <div className="flex items-center justify-between gap-2.5">
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <dt className="text-[13px] font-bold text-ink">{ACTIVITY_TYPE_TEXT.rowLabel}</dt>
+              <dd className="text-[15px] leading-normal text-body [overflow-wrap:anywhere]">{typeName}</dd>
+            </div>
+            {canManage && (
+              <button
+                ref={typeButtonRef}
+                type="button"
+                aria-label={changeLabel(typeName)}
+                onClick={() => {
+                  setTypeError(null)
+                  setTypeOpen(true)
+                }}
+                className="inline-flex min-h-11 shrink-0 cursor-pointer items-center bg-transparent px-3.5 text-[15px] font-extrabold text-action underline focus:outline-none focus-visible:ring-2 focus-visible:ring-action"
+              >
+                {ACTIVITY_TYPE_TEXT.change}
+              </button>
+            )}
+          </div>
+        )}
         {rows.map((r) => (
           <div key={r.k} className="flex flex-col gap-0.5">
             <dt className="text-[13px] font-bold text-ink">{r.k}</dt>
@@ -328,7 +369,7 @@ export function RoutineDetailPage() {
         <div className="flex flex-col gap-1.5 pt-1">
           <p role="note" className="rounded-[14px] border-[1.5px] border-hint-border bg-hint px-4 py-3.5 text-sm leading-normal text-body">
             {activity
-              ? 'Con el plan gratuito puedes ver la actividad y marcar «Realizado». Para editar, pausar o reanudar se necesita el plan completo.'
+              ? ACTIVITY_TYPE_TEXT.planLapsed
               : 'Con el plan gratuito puedes ver y marcar las tomas. Para editar, pausar o reanudar se necesita el plan completo.'}
           </p>
           <Link to="/planes" className="inline-flex min-h-11 items-center self-start text-[15px] font-extrabold text-action hover:underline">
@@ -438,6 +479,17 @@ export function RoutineDetailPage() {
           onCancel={() => setDeleteOpen(false)}
           opener={deleteButtonRef}
           personal={personal}
+        />
+      )}
+      {typeOpen && routine.activityType && (
+        <ActivityTypeDialog
+          activityName={routine.name}
+          current={routine.activityType}
+          busy={setType.isPending}
+          error={typeError}
+          onSave={doSetType}
+          onCancel={() => setTypeOpen(false)}
+          opener={typeButtonRef}
         />
       )}
       {planOpen && <FreemiumLimitModal reason="supplements" onStayFree={() => setPlanOpen(false)} onViewPlans={() => navigate('/planes')} />}

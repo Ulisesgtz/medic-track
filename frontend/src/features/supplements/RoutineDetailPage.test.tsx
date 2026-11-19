@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RoutineDetailPage } from './RoutineDetailPage'
-import { TODAY, account, activity, at, callsOf, dose, fixedActivity, routine, stubApi, stubWeb } from './supplements.test-utils'
+import { ACTIVITY_TYPES, TODAY, account, activity, at, callsOf, dose, fixedActivity, routine, stubApi, stubWeb } from './supplements.test-utils'
 
 function renderDetail(path = '/suplementos/r1') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
@@ -484,7 +484,7 @@ describe('RoutineDetailPage · actividad', () => {
     expect(screen.queryByText('Agregada por')).not.toBeInTheDocument()
     expect(screen.getByText('Última marcada')).toBeInTheDocument()
     expect(screen.queryByText(/^por /)).not.toBeInTheDocument()
-    expect(screen.getByText(/Con el plan gratuito puedes ver la actividad y marcar «Realizado»/)).toBeInTheDocument()
+    expect(screen.getByText(/Tu plan completo venció\. Puedes ver la actividad, marcar «Realizado» y cambiar su tipo\. Para editar, pausar o reanudar se necesita el plan completo\./)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Ver el plan completo →' })).toHaveAttribute('href', '/planes')
     expect(screen.queryByRole('button', { name: 'Pausar' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Editar' })).not.toBeInTheDocument()
@@ -594,5 +594,161 @@ describe('RoutineDetailPage · eliminar (specs/060)', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Eliminar' }))
     expect(await screen.findByText('YO')).toBeInTheDocument()
     expect(callsOf(mock)).toContain('DELETE /routines/a1')
+  })
+})
+
+describe('RoutineDetailPage · tipo de actividad (spec 075)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(TODAY)
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  const setup = () => userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+  const sports = activity({ id: 'a1', name: 'Tomar agua', activityType: 'sports' })
+  const types = { 'GET /catalog/activity-types': { body: ACTIVITY_TYPES } }
+
+  it('shows «Tipo» with the name and «Cambiar», and a supplement has neither', async () => {
+    api(sports, { ...types, 'GET /routines/a1': { body: sports } })
+    renderDetail('/actividades/a1')
+    expect(await screen.findByText('Tipo')).toBeInTheDocument()
+    expect(await screen.findByText('Deportiva')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Cambiar el tipo de actividad, ahora / })).toBeInTheDocument()
+  })
+
+  it('has no «Tipo» row on a supplement', async () => {
+    api(active, types)
+    renderDetail()
+    await screen.findByText('Probiótico')
+    expect(screen.queryByText('Tipo')).not.toBeInTheDocument()
+  })
+
+  it('names a retired type from the catalog', async () => {
+    const old = activity({ id: 'a1', activityType: 'old' })
+    api(old, { ...types })
+    renderDetail('/actividades/a1')
+    expect(await screen.findByText('Antigua')).toBeInTheDocument()
+  })
+
+  it('changes the type from the dialog with the current one marked, and saves only the new one', async () => {
+    const mock = api(sports, { ...types, 'PUT /routines/a1/activity-type': { body: { ...sports, activityType: 'arts' } } })
+    renderDetail('/actividades/a1')
+    const user = setup()
+    await user.click(await screen.findByRole('button', { name: /^Cambiar el tipo de actividad, ahora / }))
+    const dialog = await screen.findByRole('dialog', { name: 'Tipo de actividad' })
+    expect(within(dialog).getByText('Solo organiza la lista. No cambia los horarios ni los avisos.')).toBeInTheDocument()
+    expect(within(dialog).getByText('Tomar agua')).toBeInTheDocument()
+    expect(within(dialog).getByText('Elige un tipo · Actual: Deportiva')).toBeInTheDocument()
+    expect(await within(dialog).findByRole('radio', { name: 'Deportiva' })).toBeChecked()
+    expect(within(dialog).queryByRole('radio', { name: 'Antigua' })).not.toBeInTheDocument()
+    await user.click(within(dialog).getByRole('radio', { name: 'Artística y cultural' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    const put = mock.mock.calls.find(([, init]) => init?.method === 'PUT')!
+    expect(JSON.parse(put[1].body)).toEqual({ activityType: 'arts' })
+    expect(String(put[0])).toMatch(/\/routines\/a1\/activity-type$/)
+  })
+
+  it('does nothing when the same one is kept, and Cancelar and Escape leave it as it was', async () => {
+    const mock = api(sports, { ...types })
+    renderDetail('/actividades/a1')
+    const user = setup()
+    await user.click(await screen.findByRole('button', { name: /^Cambiar el tipo de actividad, ahora / }))
+    await user.click(await within(await screen.findByRole('dialog')).findByRole('button', { name: 'Guardar' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /^Cambiar el tipo de actividad, ahora / }))
+    await user.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancelar' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /^Cambiar el tipo de actividad, ahora / }))
+    await screen.findByRole('dialog')
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(mock.mock.calls.some(([, init]) => init?.method === 'PUT')).toBe(false)
+  })
+
+  it('says it could not save and keeps the dialog open', async () => {
+    api(sports, { ...types, 'PUT /routines/a1/activity-type': { status: 400, body: { error: 'validation_error', message: 'x', details: [{ field: 'activityType', message: 'invalid' }] } } })
+    renderDetail('/actividades/a1')
+    const user = setup()
+    await user.click(await screen.findByRole('button', { name: /^Cambiar el tipo de actividad, ahora / }))
+    const dialog = await screen.findByRole('dialog')
+    await user.click(await within(dialog).findByRole('radio', { name: 'Escolar' }))
+    await user.click(within(dialog).getByRole('button', { name: 'Guardar' }))
+    expect(await within(dialog).findByText('No se pudo cambiar el tipo. Inténtalo de nuevo.')).toBeInTheDocument()
+  })
+
+  it('is offered with the plan lapsed and on a paused or finished activity, by who can do everything', async () => {
+    const lapsed = activity({ id: 'a1', activityType: 'sports', canEdit: false, status: 'ended', endedAt: at(9), doses: [] })
+    api(lapsed, { ...types }, account({ plan: 'free' }))
+    renderDetail('/actividades/a1')
+    expect(await screen.findByRole('button', { name: /^Cambiar el tipo de actividad, ahora / })).toBeInTheDocument()
+  })
+
+  it('is not offered to a Caregiver, who still sees the type', async () => {
+    api(sports, { ...types }, caregiverAccount)
+    renderDetail('/actividades/a1')
+    expect(await screen.findByText('Deportiva')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Cambiar el tipo de actividad, ahora / })).not.toBeInTheDocument()
+  })
+
+  it('draws the dialog as a bottom sheet on the phone and centered on the web', async () => {
+    api(sports, { ...types })
+    renderDetail('/actividades/a1')
+    const user = setup()
+    await user.click(await screen.findByRole('button', { name: /^Cambiar el tipo de actividad, ahora / }))
+    expect(await screen.findByRole('dialog')).toHaveClass('rounded-t-[28px]')
+    await user.keyboard('{Escape}')
+    stubWeb(true)
+    await user.click(screen.getByRole('button', { name: /^Cambiar el tipo de actividad, ahora / }))
+    expect(await screen.findByRole('dialog')).toHaveClass('w-[520px]')
+  })
+
+  it('with the plan lapsed an activity of a child only shows, marks and changes its type: the note of the mock, no Pausar nor Editar', async () => {
+    const lapsed = activity({ id: 'a1', activityType: 'sports', canEdit: false })
+    api(lapsed, { ...types }, account({ plan: 'free' }))
+    renderDetail('/actividades/a1')
+    expect(await screen.findByText(/^Tu plan completo venció\./)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Ver el plan completo →' })).toHaveAttribute('href', '/planes')
+    expect(screen.getByRole('button', { name: /^Cambiar el tipo de actividad, ahora / })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /Realizado/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Pausar' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Editar' })).not.toBeInTheDocument()
+  })
+
+  it('a finished activity keeps «Cambiar» and has no «Realizado» nor Pausar', async () => {
+    const done = activity({ id: 'a1', activityType: 'sports', status: 'ended', endedAt: at(9), doses: [] })
+    api(done, { ...types })
+    renderDetail('/actividades/a1')
+    expect(await screen.findByRole('button', { name: /^Cambiar el tipo de actividad, ahora / })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Realizado/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Pausar' })).not.toBeInTheDocument()
+  })
+
+  it('puts «Tipo» first in the data, as underlined text 44 px high (not an outline button)', async () => {
+    api(sports, { ...types })
+    renderDetail('/actividades/a1')
+    const button = await screen.findByRole('button', { name: 'Cambiar el tipo de actividad, ahora Deportiva' })
+    expect(button).toHaveClass('underline', 'min-h-11')
+    expect(button).not.toHaveClass('border-2')
+    expect(button).toHaveTextContent('Cambiar')
+    const terms = screen.getAllByRole('term').map((t) => t.textContent)
+    expect(terms[0]).toBe('Tipo')
+  })
+
+  it('never shows the code of the type while the catalog is not there: an empty value and a button name without it', async () => {
+    api(sports, { 'GET /catalog/activity-types': { status: 500, body: {} } })
+    renderDetail('/actividades/a1')
+    const button = await screen.findByRole('button', { name: 'Cambiar el tipo de actividad' })
+    expect(button).toBeInTheDocument()
+    expect(screen.queryByText('sports')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /sports/ })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('term')[0].parentElement).toHaveTextContent(/^Tipo$/)
+    await setup().click(button)
+    expect(await screen.findByText('Elige un tipo')).toBeInTheDocument()
+    expect(screen.queryByText(/Actual: sports/)).not.toBeInTheDocument()
   })
 })

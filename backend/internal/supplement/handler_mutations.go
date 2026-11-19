@@ -17,6 +17,10 @@ type resumeRequest struct {
 	UtcOffsetMinutes int `json:"utcOffsetMinutes" example:"-360"`
 } // @name SupplementResumeRequest
 
+type activityTypeRequest struct {
+	ActivityType string `json:"activityType" example:"arts"`
+} // @name SupplementActivityTypeRequest
+
 type doneRequest struct {
 	From string `json:"from" example:"2026-10-08T06:00:00Z"`
 	To   string `json:"to" example:"2026-10-09T06:00:00Z"`
@@ -106,6 +110,44 @@ func (h *Handler) UpdateRoutine(w http.ResponseWriter, r *http.Request) {
 	view, err := h.service.Update(ctx, id, Input(req), actorOf(ctx))
 	if err != nil {
 		h.writeMutationError(ctx, w, err, actorOf(ctx), "Could not update the routine")
+		return
+	}
+	h.writeRoutine(w, r, view)
+}
+
+// SetActivityType handles PUT /routines/{routineId}/activity-type.
+//
+//	@Summary		Change the type of an activity
+//	@Description	Changes ONLY the type, in any state (active, paused, ended) and with no paid plan: the type only organizes the
+//	@Description	list. Doses, marks and reminders are not touched. A supplement has no type (400 activityType not_allowed); a
+//	@Description	code that does not exist or was retired is 400 activityType invalid (the one it already has is accepted).
+//	@Tags			supplements
+//	@Accept			json
+//	@Produce		json
+//	@Param			routineId	path		string					true	"Routine UUID"
+//	@Param			payload		body		activityTypeRequest		true	"The type"
+//	@Success		200			{object}	routineResponse
+//	@Failure		400			{object}	validationDoc	"A supplement, or an invalid type"
+//	@Failure		404			{object}	errorDoc		"No such routine"
+//	@Security		ClerkSession
+//	@Failure		401			{object}	errorDoc	"No valid Clerk session"
+//	@Failure		403			{object}	errorDoc	"The session can't change this routine"
+//	@Router			/routines/{routineId}/activity-type [put]
+func (h *Handler) SetActivityType(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodyBytes)
+	id, ok := h.routineIDParam(w, r)
+	if !ok {
+		return
+	}
+	var req activityTypeRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		h.responder.WriteJSONError(ctx, w, http.StatusBadRequest, "validation_error", "Malformed JSON body", nil)
+		return
+	}
+	view, err := h.service.SetActivityType(ctx, id, req.ActivityType, actorOf(ctx))
+	if err != nil {
+		h.writeMutationError(ctx, w, err, actorOf(ctx), "Could not change the activity type")
 		return
 	}
 	h.writeRoutine(w, r, view)

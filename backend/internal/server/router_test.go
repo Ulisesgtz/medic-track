@@ -302,6 +302,7 @@ func (w *world) routes() []struct {
 		{"routine done", http.MethodPost, "/routines/" + w.routineA.String() + "/done", `{"from":"2026-01-15T00:00:00Z","to":"2026-01-16T00:00:00Z"}`, http.StatusConflict},
 		// In this order: the owner is on the free plan, so editing and resuming are the plan's and pausing and finishing never are.
 		{"edit routine", http.MethodPatch, "/routines/" + w.routineA.String(), `{}`, http.StatusBadRequest},
+		{"routine activity type", http.MethodPut, "/routines/" + w.routineA.String() + "/activity-type", `{"activityType":"sports"}`, http.StatusBadRequest},
 		{"pause routine", http.MethodPost, "/routines/" + w.routineA.String() + "/pause", "", http.StatusOK},
 		{"resume routine", http.MethodPost, "/routines/" + w.routineA.String() + "/resume", `{"utcOffsetMinutes":0}`, http.StatusUnprocessableEntity},
 		{"finish routine", http.MethodPost, "/routines/" + w.routineA.String() + "/finish", "", http.StatusOK},
@@ -430,6 +431,7 @@ func TestRouter_TheCatalogStaysPublic(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.do(t, http.MethodGet, "/catalog/countries", "", "").Code)
 	require.Equal(t, http.StatusOK, w.do(t, http.MethodGet, "/catalog/symptoms", "", "").Code)
 	require.Equal(t, http.StatusOK, w.do(t, http.MethodGet, "/catalog/vaccines", "", "").Code)
+	require.Equal(t, http.StatusOK, w.do(t, http.MethodGet, "/catalog/activity-types", "", "").Code)
 }
 
 // ---- Specs/032-compartir-con-familia: the matrix of roles over every route.
@@ -440,7 +442,7 @@ var (
 	ownRoutes = map[string]bool{"get deletion": true, "request deletion": true, "cancel deletion": true, "export my data": true, "search own consultations": true, "own history options": true, "export own history": true, "consultation sharing": true, "own consultations": true, "create own consultation": true, "own overview": true, "own appointments": true, "create own appointment": true, "get account": true, "accept disclaimer": true, "first use guide": true, "hidden children": true,"reminder settings": true, "register reminder device": true, "remove reminder device": true, "personal routines": true, "create personal routine": true, "personal routines notice": true, "get subscription": true, "subscribe": true, "cancel subscription": true}
 	// cabinetRoutes: the family's medicine cabinet (specs/062), not for a Child-role member.
 	cabinetRoutes = map[string]bool{"list cabinet": true, "cabinet item": true, "cabinet photo": true}
-	fullRoutes    = map[string]bool{"correct child": true, "save child record": true, "add growth": true, "correct growth": true, "remove growth": true, "choose growth table": true, "add to cabinet": true, "edit cabinet item": true, "remove cabinet item": true, "delete routine": true, "add child": true, "create consultation": true, "edit consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "record vaccination": true, "correct vaccination": true, "delete vaccination": true, "save card photo": true, "delete card photo": true, "edit appointment": true, "create device link": true, "remove device link": true, "choose device reminders": true, "mark appointment": true}
+	fullRoutes    = map[string]bool{"correct child": true, "save child record": true, "add growth": true, "correct growth": true, "remove growth": true, "choose growth table": true, "add to cabinet": true, "edit cabinet item": true, "remove cabinet item": true, "delete routine": true, "add child": true, "create consultation": true, "edit consultation": true, "end treatment": true, "extend treatment": true, "create routine": true, "edit routine": true, "routine activity type": true, "pause routine": true, "resume routine": true, "finish routine": true, "create appointment": true, "create appointment of a child": true, "record vaccination": true, "correct vaccination": true, "delete vaccination": true, "save card photo": true, "delete card photo": true, "edit appointment": true, "create device link": true, "remove device link": true, "choose device reminders": true, "mark appointment": true}
 )
 
 func (w *world) setOwnerPlan(t *testing.T, plan string) {

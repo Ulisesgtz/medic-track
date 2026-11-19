@@ -48,7 +48,7 @@ func TestClaimDueChildDevices_TheDosesSupplementsAndActivitiesOfItsChild(t *test
 	routine := f.routine(t, pool, "active")
 	sup := supplementDose(t, pool, routine, now.Add(-4*time.Minute), false)
 	activity := f.routine(t, pool, "active")
-	_, err := pool.Exec(context.Background(), `UPDATE supplement_routines SET kind = 'activity', period = 'window', times = '{}', window_start = '08:00', window_end = '09:00', interval_minutes = 30 WHERE id = $1`, activity)
+	_, err := pool.Exec(context.Background(), `UPDATE supplement_routines SET kind = 'activity', activity_type = 'habits', period = 'window', times = '{}', window_start = '08:00', window_end = '09:00', interval_minutes = 30 WHERE id = $1`, activity)
 	require.NoError(t, err)
 	act := supplementDose(t, pool, activity, now.Add(-3*time.Minute), false)
 

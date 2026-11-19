@@ -5,6 +5,10 @@ import { useLocalDay } from '../../shared/useLocalDay'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
 import { CHILD, addRoutine, emptyRoutines, planRoutines } from '../childDetail/childDetailText'
+import { useActivityTypes } from '../../shared/catalog/useCatalog'
+import { emptyActivities } from './activityTypeText'
+import { ActivitySegmentCard } from './ActivitySegments'
+import { groupByActivityType } from './groupByActivityType'
 import { usePersonalRoutines, useRoutineAccess, useRoutines } from './hooks'
 import { MY_DAY } from './myDayText'
 import { routineFrequency, routineStatusLabel } from './scheduleText'
@@ -79,34 +83,59 @@ export function RegistroCompacto({
   const childAccess = useRoutineAccess(accountQuery.data, personal ? undefined : childId, list?.paidPlan)
   // The person's own: their plan (or their paid family's) decides, never a role (specs/033 part 3).
   const access = personal ? { canCreate: list?.paidPlan === true, showPlan: list?.paidPlan === false } : childAccess
+  // specs/075: «Actividades» is split into one segment per type; without the catalog the list stays whole, as before.
+  const activityTypes = useActivityTypes()
   const [planOpen, setPlanOpen] = useState(false)
   const opener = useRef<HTMLButtonElement>(null)
   const closePlan = useCallback(() => setPlanOpen(false), [])
   const desktop = variant === 'desktop'
 
   const name = personal ? (kind === 'activity' ? MY_DAY.myActivities : MY_DAY.mySupplements) : kind === 'activity' ? CHILD.activities : CHILD.supplements
+  // Mock A (specs/075): «Actividades» carries its «+ Agregar actividad» in the header row, in outline; the rest of the sections keep theirs below.
+  const addInHeader = kind === 'activity'
   const title = (
-    <h2 className={`flex min-h-11 items-center font-extrabold text-ink ${desktop ? 'text-[19px]' : 'text-[18px]'}`}>
+    <h2 className={`flex min-h-11 items-center text-ink ${addInHeader ? (desktop ? 'text-xl font-black tracking-[-0.02em]' : 'text-[18px] font-extrabold tracking-[-0.02em]') : `font-extrabold ${desktop ? 'text-[19px]' : 'text-[18px]'}`}`}>
       {name}
     </h2>
   )
+  const headerAdd =
+    addInHeader && list && access.canCreate && list.activeCount < list.limit ? (
+      <Link
+        to={copy.newPath(personal ? null : (childId ?? null))}
+        className={`inline-flex min-h-11 items-center justify-center rounded-[14px] border-2 border-action bg-transparent font-extrabold text-action hover:bg-hint focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-offset-2 ${desktop ? 'px-[18px] text-[15px]' : 'px-3 text-[14px]'}`}
+      >
+        {addRoutine(kind)}
+      </Link>
+    ) : null
   const body = () => {
     if (query.isPending) return <p className="text-[15px] text-muted">Cargando…</p>
     if (query.isError || !list) return <p className="text-[15px] text-body">{personal ? copy.personalLoadFailed : copy.loadFailed}</p>
     const routines = [...list.routines].sort((a, b) => Number(b.status === 'active') - Number(a.status === 'active'))
     const atCap = list.activeCount >= list.limit
+    const segments = kind === 'activity' ? groupByActivityType(routines, activityTypes.data) : null
     return (
       <>
         {routines.length > 0 ? (
-          <div className={card}>
-            {routines.map((r) => (
-              <Row key={r.id} routine={r} variant={variant} />
-            ))}
+          segments ? (
+            segments.map((segment) => <ActivitySegmentCard key={segment.code} segment={segment} variant={variant} />)
+          ) : (
+            <div className={card}>
+              {routines.map((r) => (
+                <Row key={r.id} routine={r} variant={variant} />
+              ))}
+            </div>
+          )
+        ) : kind === 'activity' ? (
+          <div className={`flex flex-col gap-1.5 rounded-[22px] border-2 border-dashed border-hint-border ${desktop ? 'p-6' : 'px-[18px] py-5'}`}>
+            <span className="text-[17px] font-extrabold text-ink">{emptyActivities.title}</span>
+            <p className="m-0 text-[15px] leading-[1.55] text-body">
+              {emptyActivities.text(personal ? null : (accountQuery.data?.children.find((c) => c.id === childId)?.firstName ?? null))}
+            </p>
           </div>
         ) : (
-          <p className="text-[15px] text-muted">{personal ? (kind === 'activity' ? MY_DAY.emptyActivities : MY_DAY.emptySupplements) : emptyRoutines(kind)}</p>
+          <p className="text-[15px] text-muted">{personal ? MY_DAY.emptySupplements : emptyRoutines(kind)}</p>
         )}
-        {access.canCreate && !atCap && (
+        {access.canCreate && !atCap && !addInHeader && (
           <Link
             to={copy.newPath(personal ? null : (childId ?? null))}
             className={`inline-flex items-center justify-center border-2 border-dashed border-hint-border text-[15px] font-extrabold text-action hover:bg-hint ${desktop ? 'min-h-11 self-start rounded-[14px] px-[18px]' : 'min-h-[52px] rounded-2xl'}`}
@@ -131,8 +160,15 @@ export function RegistroCompacto({
   }
 
   return (
-    <section id={sectionId} aria-label={name} className={`flex scroll-mt-16 flex-col ${desktop ? 'gap-3' : 'gap-2.5'}`}>
-      {title}
+    <section id={sectionId} aria-label={name} className={`flex scroll-mt-16 flex-col ${desktop || (addInHeader && (list?.routines.length ?? 0) > 0) ? 'gap-3' : 'gap-2.5'}`}>
+      {addInHeader ? (
+        <div className="flex items-center justify-between gap-2.5">
+          {title}
+          {headerAdd}
+        </div>
+      ) : (
+        title
+      )}
       {body()}
       {planOpen && <FreemiumLimitModal reason="supplements" onStayFree={closePlan} onViewPlans={() => navigate('/planes')} opener={opener} />}
     </section>

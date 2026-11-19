@@ -16,7 +16,7 @@ func valid() Input {
 }
 
 func activity() Input {
-	return Input{Kind: "activity", Name: "Tomar agua", Period: "window", WindowStart: ptr("08:00"), WindowEnd: ptr("20:00"), IntervalMinutes: ptr(60), FirstDate: "2026-10-05"}
+	return Input{Kind: "activity", ActivityType: ptr("sports"), Name: "Tomar agua", Period: "window", WindowStart: ptr("08:00"), WindowEnd: ptr("20:00"), IntervalMinutes: ptr(60), FirstDate: "2026-10-05"}
 }
 
 func fields(errs ValidationErrors) map[string]string {
@@ -54,7 +54,7 @@ func TestValidateInput_OnlyTheFieldsOfItsPeriodStay(t *testing.T) {
 		t.Fatalf("weekdays: %+v %v", r, errs)
 	}
 
-	act := Input{Kind: "activity", Name: "x", Period: "window", WindowStart: ptr("6:00"), WindowEnd: ptr("20:00"), IntervalMinutes: ptr(60), FirstDate: "2026-10-05", Times: []string{"08:00"}, Weekdays: []int{4, 0}}
+	act := Input{Kind: "activity", ActivityType: ptr("sports"), Name: "x", Period: "window", WindowStart: ptr("6:00"), WindowEnd: ptr("20:00"), IntervalMinutes: ptr(60), FirstDate: "2026-10-05", Times: []string{"08:00"}, Weekdays: []int{4, 0}}
 	if _, errs = ValidateInput(act, now); fields(errs)["windowStart"] == "" {
 		t.Fatalf("6:00 isn't HH:MM: %v", errs)
 	}
@@ -164,7 +164,7 @@ func TestDomainErrorsUnwrap(t *testing.T) {
 }
 
 func TestValidateInput_AnActivityCanBeAtFixedHours(t *testing.T) {
-	in := Input{Kind: "activity", Name: "Práctica de fut", Period: "weekdays", Times: []string{"17:00"}, Weekdays: []int{3, 1}, FirstDate: "2026-10-05", WindowStart: ptr("08:00"), IntervalMinutes: ptr(30)}
+	in := Input{Kind: "activity", ActivityType: ptr("sports"), Name: "Práctica de fut", Period: "weekdays", Times: []string{"17:00"}, Weekdays: []int{3, 1}, FirstDate: "2026-10-05", WindowStart: ptr("08:00"), IntervalMinutes: ptr(30)}
 	r, errs := ValidateInput(in, now)
 	if errs.HasErrors() || r.Kind != KindActivity || r.Period != PeriodWeekdays || len(r.Times) != 1 || r.Weekdays[0] != 1 || r.Weekdays[1] != 3 {
 		t.Fatalf("fixed-hour activity: %+v %v", r, errs)

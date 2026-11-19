@@ -332,6 +332,7 @@ export async function activityViaApi(
 ): Promise<{ id: string; name: string; doses: { id: string; scheduledAt: string; taken: boolean }[] }> {
   return routineViaApi(request, token, childId, {
     kind: 'activity',
+    activityType: 'habits',
     name: 'Tomar agua',
     period: 'window',
     times: [],
@@ -410,6 +411,7 @@ export async function personalActivityViaApi(
 ) {
   return personalRoutineViaApi(request, token, accountId, {
     kind: 'activity',
+    activityType: 'habits',
     name: 'Pararse a estirar',
     period: 'window',
     times: [],
@@ -418,6 +420,11 @@ export async function personalActivityViaApi(
     intervalMinutes: 60,
     ...overrides,
   })
+}
+
+/** Picks the type of an activity in its form (specs/075): the pills are labels with a hidden radio, so the label is tapped. */
+export async function pickActivityType(page: Page, name: string) {
+  await page.locator('label', { hasText: new RegExp(`^${name}$`) }).click()
 }
 
 /**

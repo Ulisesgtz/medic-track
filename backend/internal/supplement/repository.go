@@ -41,7 +41,7 @@ const routineSelect = `
 	       CASE WHEN r.child_id IS NULL AND (owner.plan = 'paid' OR EXISTS (
 		       SELECT 1 FROM family_members fm JOIN accounts fo ON fo.id = fm.family_account_id
 		       WHERE fm.account_id = owner.id AND fm.status = 'active' AND fo.plan = 'paid')) THEN 'paid' ELSE owner.plan::text END,
-	       EXISTS (SELECT 1 FROM supplement_doses sd WHERE sd.routine_id = r.id AND sd.taken)
+	       EXISTS (SELECT 1 FROM supplement_doses sd WHERE sd.routine_id = r.id AND sd.taken), r.activity_type
 	FROM supplement_routines r
 	LEFT JOIN accounts c ON c.id = r.created_by_account_id
 	JOIN accounts owner ON owner.id = r.account_id`
@@ -62,7 +62,7 @@ func scanRoutine(row pgx.Row) (scanned, error) {
 	v := &s.view
 	err := row.Scan(&v.ID, &v.AccountID, &v.ChildID, &kind, &v.Name, &v.Note, &period, &times, &weekdays, &windowStart,
 		&windowEnd, &intervalMinutes, &v.FirstDate, &endDate, &offset, &status, &v.PausedAt, &v.EndedAt, &s.generatedUntil,
-		&v.CreatedAt, &v.CreatedBy, &plan, &v.HasMarks)
+		&v.CreatedAt, &v.CreatedBy, &plan, &v.HasMarks, &v.ActivityType)
 	if err != nil {
 		return s, err
 	}
@@ -124,6 +124,9 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, in Routine, 
 	if err := checkActiveCap(ctx, tx, childID, in.Kind); err != nil {
 		return uuid.Nil, err
 	}
+	if err := checkActivityTypeOffered(ctx, tx, in.ActivityType); err != nil {
+		return uuid.Nil, err
+	}
 
 	id, err := r.insertRoutine(ctx, tx, accountID, &childID, in, createdBy)
 	if err != nil {
@@ -135,6 +138,23 @@ func (r *Repository) Create(ctx context.Context, childID uuid.UUID, in Routine, 
 	return id, nil
 }
 
+// checkActivityTypeOffered says whether the code exists in the catalog and is still offered (active); nil (a supplement) passes.
+// It runs inside the writing transaction, so a type retired between the form and the save is a field error, not a dangling key.
+func checkActivityTypeOffered(ctx context.Context, q querier, code *string) error {
+	if code == nil {
+		return nil
+	}
+	var active bool
+	err := q.QueryRow(ctx, `SELECT active FROM activity_types WHERE code = $1`, *code).Scan(&active)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && !active) {
+		return invalidActivityType()
+	}
+	if err != nil {
+		return fmt.Errorf("reading the activity type: %w", err)
+	}
+	return nil
+}
+
 // insertRoutine writes the routine and its first doses (from its first day up to HorizonDays ahead, research R2) inside the caller's
 // transaction. `childID` is nil for a person's own routine (part 3).
 func (r *Repository) insertRoutine(ctx context.Context, tx pgx.Tx, accountID uuid.UUID, childID *uuid.UUID, in Routine, createdBy uuid.UUID) (uuid.UUID, error) {
@@ -144,12 +164,12 @@ func (r *Repository) insertRoutine(ctx context.Context, tx pgx.Tx, accountID uui
 	err := tx.QueryRow(ctx, `
 		INSERT INTO supplement_routines
 			(account_id, child_id, kind, name, note, period, times, weekdays, window_start, window_end, interval_minutes,
-				 first_date, end_date, utc_offset_minutes, generated_until, created_by_account_id)
+				 first_date, end_date, utc_offset_minutes, generated_until, created_by_account_id, activity_type)
 			VALUES ($1, $2, $3, $4, $5, $6, $7::text[]::time[], $8::smallint[], NULLIF($9, '')::time, NULLIF($10, '')::time,
-			        $11, $12::date, NULLIF($13, '')::date, $14, $15, $16)
+			        $11, $12::date, NULLIF($13, '')::date, $14, $15, $16, $17)
 			RETURNING id`,
 		accountID, childID, string(in.Kind), in.Name, in.Note, string(in.Period), nonNil(in.Times), smallInts(in.Weekdays),
-		in.WindowStart, in.WindowEnd, nullableInt(in.IntervalMinutes), in.FirstDate, in.EndDate, in.UtcOffsetMinutes, horizon, createdBy,
+		in.WindowStart, in.WindowEnd, nullableInt(in.IntervalMinutes), in.FirstDate, in.EndDate, in.UtcOffsetMinutes, horizon, createdBy, in.ActivityType,
 	).Scan(&id)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("inserting routine: %w", err)

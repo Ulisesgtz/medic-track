@@ -84,6 +84,8 @@ type Routine struct {
 	EndDate          string   // "YYYY-MM-DD", empty = no end
 	UtcOffsetMinutes int
 	Status           Status
+	// ActivityType is the code of an activity's type (specs/075); nil for a supplement. On input, nil = not sent.
+	ActivityType *string
 }
 
 // Dose is one scheduled intake of a routine.

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { fetchCountries, fetchStates, fetchSymptoms, fetchVaccines } from './api'
+import { fetchActivityTypes, fetchCountries, fetchStates, fetchSymptoms, fetchVaccines } from './api'
 
 /** Key of the symptoms catalog; invalidated when the server says a chosen symptom was retired. */
 export const SYMPTOMS_QUERY_KEY = ['catalog', 'symptoms'] as const
@@ -27,6 +27,21 @@ export function useVaccines() {
   return useQuery({
     queryKey: VACCINES_QUERY_KEY,
     queryFn: fetchVaccines,
+    staleTime: 10 * 60 * 1000,
+  })
+}
+
+/** Key of the activity types catalog; reloaded with no cache when the server says a chosen type was retired. */
+export const ACTIVITY_TYPES_QUERY_KEY = ['catalog', 'activity-types'] as const
+
+/**
+ * The activity types (specs/075): the form's choices (the active ones) and the names of the segments of «Actividades» (all of them).
+ * Maintained on the server like the symptoms, so a change shows up on the next load.
+ */
+export function useActivityTypes() {
+  return useQuery({
+    queryKey: ACTIVITY_TYPES_QUERY_KEY,
+    queryFn: fetchActivityTypes,
     staleTime: 10 * 60 * 1000,
   })
 }

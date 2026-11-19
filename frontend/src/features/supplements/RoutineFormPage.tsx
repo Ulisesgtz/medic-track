@@ -9,7 +9,8 @@ import { useChildAccess } from '../family/useChildAccess'
 import { AppShell } from '../home/AppShell'
 import { PageHeader, type PageHeaderProps } from '../../shared/ui/PageHeader'
 import { useSidebarSession } from '../home/useSidebarSession'
-import { useCreatePersonalRoutine, useCreateRoutine, useRoutine, useUpdateRoutine } from './hooks'
+import { useCreatePersonalRoutine, useCreateRoutine, useRoutine, useSetActivityType, useUpdateRoutine } from './hooks'
+import { toInput, valuesOf } from './routineValues'
 import { RoutineForm } from './RoutineForm'
 import type { RoutineInput, RoutineKind } from './types'
 
@@ -113,6 +114,7 @@ export function RoutineFormPage({ kind: creatingKind = 'supplement', personal: c
   const createMutation = useCreateRoutine(childId ?? '')
   const createPersonalMutation = useCreatePersonalRoutine(accountQuery.data?.id ?? '')
   const updateMutation = useUpdateRoutine(routineId ?? '')
+  const setTypeMutation = useSetActivityType(routineId ?? '')
 
   const dirtyRef = useRef(false)
   const [dirty, setDirty] = useState(false)
@@ -170,7 +172,14 @@ export function RoutineFormPage({ kind: creatingKind = 'supplement', personal: c
   const leave = () => guard.guardAction(() => navigate(backTo))
 
   async function save(input: RoutineInput) {
-    const saved = editing
+    // specs/075 (SC-004): when the type is the ONLY thing that changed, only the type is sent — the full edit would rebuild the future
+    // doses and ask for the plan, and a type change does neither.
+    const { activityType: savedType, ...savedRest } = routine ? toInput(valuesOf(routine)) : ({} as RoutineInput)
+    const { activityType: newType, ...newRest } = input
+    const onlyTheType = editing && routine !== undefined && newType !== undefined && newType !== (savedType ?? undefined) && JSON.stringify(savedRest) === JSON.stringify(newRest)
+    const saved = onlyTheType
+      ? await setTypeMutation.mutateAsync(newType)
+      : editing
       ? await updateMutation.mutateAsync(input)
       : personal
         ? await createPersonalMutation.mutateAsync(input)

@@ -39,6 +39,11 @@ type PlanLimitError struct{ Reason string }
 func (e *PlanLimitError) Error() string { return ErrPlanRequired.Error() }
 func (e *PlanLimitError) Unwrap() error { return ErrPlanRequired }
 
+// invalidActivityType is the field error of a type that does not exist or was retired (specs/075).
+func invalidActivityType() ValidationErrors {
+	return ValidationErrors{{Field: "activityType", Message: "invalid"}}
+}
+
 // ValidationError describes one invalid field of a request.
 type ValidationError struct {
 	Field   string

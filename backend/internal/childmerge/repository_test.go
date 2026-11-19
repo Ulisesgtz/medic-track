@@ -494,3 +494,22 @@ func TestOptions_ShowsTheSheetSummary(t *testing.T) {
 	require.Equal(t, 1, rec.Conditions)
 	require.False(t, opts.FamilyChildren[0].Record.Exists)
 }
+
+// Specs/075: an activity that is joined keeps its type (the row moves as it is).
+func TestMerge_AnActivityKeepsItsType(t *testing.T) {
+	w := newWorld(t, "tutor", account.PlanPaid)
+	ctx := context.Background()
+	var id uuid.UUID
+	require.NoError(t, w.pool.QueryRow(ctx, `
+		INSERT INTO supplement_routines (account_id, child_id, kind, name, period, times, first_date, utc_offset_minutes, generated_until, created_by_account_id, activity_type)
+		VALUES ($1, $2, 'activity', 'Fut', 'daily', ARRAY['17:00'::time], current_date, -360, now(), $1, 'sports') RETURNING id`, w.laura, w.lauraChild).Scan(&id))
+
+	_, err := childmerge.NewRepository(w.pool).Merge(ctx, w.laura, w.pair(nil))
+	require.NoError(t, err)
+
+	var child uuid.UUID
+	var kind string
+	require.NoError(t, w.pool.QueryRow(ctx, `SELECT child_id, activity_type FROM supplement_routines WHERE id = $1`, id).Scan(&child, &kind))
+	require.Equal(t, w.anaChild, child)
+	require.Equal(t, "sports", kind)
+}

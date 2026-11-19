@@ -31,3 +31,11 @@ type Symptom struct {
 	Name     string
 	Category string
 }
+
+// ActivityType is an entry of the activity types catalog (specs/075): the category a parent picks for an activity. Active = still
+// offered; a retired one keeps naming the activities that have it.
+type ActivityType struct {
+	Code   string
+	Name   string
+	Active bool
+}

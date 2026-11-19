@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { fetchCountries, fetchStates, fetchSymptoms, fetchVaccines } from './api'
+import { fetchActivityTypes, fetchCountries, fetchStates, fetchSymptoms, fetchVaccines } from './api'
 
 describe('catalog api', () => {
   beforeEach(() => {
@@ -40,6 +40,16 @@ describe('catalog api', () => {
 
     vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 500 } as Response)
     await expect(fetchVaccines()).rejects.toThrow('Failed to fetch vaccines: 500')
+  })
+
+  it('fetchActivityTypes returns every type with its state, and throws when the response is not ok', async () => {
+    const types = [{ code: 'school', name: 'Escolar', active: true }]
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: true, json: async () => types } as Response)
+    await expect(fetchActivityTypes()).resolves.toEqual(types)
+    expect(vi.mocked(fetch).mock.calls[0][0]).toMatch(/\/catalog\/activity-types$/)
+
+    vi.mocked(fetch).mockResolvedValueOnce({ ok: false, status: 500 } as Response)
+    await expect(fetchActivityTypes()).rejects.toThrow('Failed to fetch activity types: 500')
   })
 
   it('fetchStates throws on a non-404 error response', async () => {

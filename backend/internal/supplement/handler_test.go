@@ -95,6 +95,7 @@ func newEnv(t *testing.T, plan account.Plan) *env {
 	r.With(seesRoutine).Put("/routines/{routineId}/my-reminders", h.SetMyReminders)
 	r.With(seesRoutine).Post("/routines/{routineId}/done", h.MarkRoutineDone)
 	r.With(fullRoutine).Patch("/routines/{routineId}", h.UpdateRoutine)
+	r.With(fullRoutine).Put("/routines/{routineId}/activity-type", h.SetActivityType)
 	r.With(fullRoutine).Post("/routines/{routineId}/pause", h.PauseRoutine)
 	r.With(fullRoutine).Post("/routines/{routineId}/resume", h.ResumeRoutine)
 	r.With(fullRoutine).Post("/routines/{routineId}/finish", h.FinishRoutine)

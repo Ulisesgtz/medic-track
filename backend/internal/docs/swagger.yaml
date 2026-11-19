@@ -89,6 +89,18 @@ definitions:
         example: 0
         type: integer
     type: object
+  ActivityTypeResponse:
+    properties:
+      active:
+        example: true
+        type: boolean
+      code:
+        example: sports
+        type: string
+      name:
+        example: Deportiva
+        type: string
+    type: object
   AppointmentErrorResponse:
     properties:
       error:
@@ -2658,6 +2670,12 @@ definitions:
       subscription:
         $ref: '#/definitions/SubscriptionInfo'
     type: object
+  SupplementActivityTypeRequest:
+    properties:
+      activityType:
+        example: arts
+        type: string
+    type: object
   SupplementDoneRequest:
     properties:
       from:
@@ -2783,6 +2801,12 @@ definitions:
     type: object
   SupplementRoutineRequest:
     properties:
+      activityType:
+        description: |-
+          ActivityType: the catalog code of an activity's type; required to create an activity, not allowed on a supplement; an
+          edit that leaves it out keeps the saved one (specs/075).
+        example: sports
+        type: string
       endDate:
         example: "2026-10-20"
         type: string
@@ -2841,6 +2865,11 @@ definitions:
     type: object
   SupplementRoutineResponse:
     properties:
+      activityType:
+        description: 'ActivityType: the catalog code of an activity''s type (specs/075);
+          null on a supplement.'
+        example: sports
+        type: string
       canEdit:
         description: 'CanEdit: the session can do everything AND the owner''s plan
           is paid (so the app doesn''t offer a button that would answer 422/403).'
@@ -5489,6 +5518,28 @@ paths:
       summary: Mark an appointment done or canceled
       tags:
       - appointments
+  /catalog/activity-types:
+    get:
+      description: |-
+        Every activity type of the catalog in order, retired ones included (`active: false`) so the screens can name
+        the segments of activities that still have them; the form only offers the active ones
+        (specs/075-tipos-de-actividad/contracts/api.md).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/ActivityTypeResponse'
+            type: array
+        "500":
+          description: Unexpected server error
+          schema:
+            $ref: '#/definitions/NotFoundResponse'
+      summary: List the types an activity can have
+      tags:
+      - catalog
   /catalog/countries:
     get:
       description: Read-only catalog used to populate the país selector (contracts/get-catalog.md).
@@ -8392,6 +8443,54 @@ paths:
       security:
       - ClerkSession: []
       summary: Edit a supplement routine
+      tags:
+      - supplements
+  /routines/{routineId}/activity-type:
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Changes ONLY the type, in any state (active, paused, ended) and with no paid plan: the type only organizes the
+        list. Doses, marks and reminders are not touched. A supplement has no type (400 activityType not_allowed); a
+        code that does not exist or was retired is 400 activityType invalid (the one it already has is accepted).
+      parameters:
+      - description: Routine UUID
+        in: path
+        name: routineId
+        required: true
+        type: string
+      - description: The type
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/SupplementActivityTypeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/SupplementRoutineResponse'
+        "400":
+          description: A supplement, or an invalid type
+          schema:
+            $ref: '#/definitions/SupplementValidationResponse'
+        "401":
+          description: No valid Clerk session
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "403":
+          description: The session can't change this routine
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+        "404":
+          description: No such routine
+          schema:
+            $ref: '#/definitions/SupplementErrorResponse'
+      security:
+      - ClerkSession: []
+      summary: Change the type of an activity
       tags:
       - supplements
   /routines/{routineId}/done:

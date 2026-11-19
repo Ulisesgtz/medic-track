@@ -2,6 +2,7 @@ package supplement
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -140,6 +141,19 @@ func (s *Service) Update(ctx context.Context, routineID uuid.UUID, in Input, act
 		return nil, err
 	}
 	return s.viewToday(ctx, routineID, routine.UtcOffsetMinutes, actor)
+}
+
+// SetActivityType changes only the type of an activity, with no plan and in any state (specs/075).
+func (s *Service) SetActivityType(ctx context.Context, routineID uuid.UUID, code string, actor uuid.UUID) (*RoutineView, error) {
+	code = strings.TrimSpace(code)
+	if code == "" {
+		return nil, ValidationErrors{{Field: "activityType", Message: "required"}}
+	}
+	offset, err := s.repo.SetActivityType(ctx, routineID, code)
+	if err != nil {
+		return nil, err
+	}
+	return s.viewToday(ctx, routineID, offset, actor)
 }
 
 // Pause pauses an active routine.

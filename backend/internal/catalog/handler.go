@@ -102,6 +102,38 @@ func (h *Handler) ListVaccines(w http.ResponseWriter, r *http.Request) {
 	h.responder.WriteJSON(r.Context(), w, http.StatusOK, resp, nil)
 }
 
+// ActivityTypeResponse is the JSON of one activity type of the catalog (specs/075).
+type ActivityTypeResponse struct {
+	Code   string `json:"code" example:"sports"`
+	Name   string `json:"name" example:"Deportiva"`
+	Active bool   `json:"active" example:"true"`
+} // @name ActivityTypeResponse
+
+// ListActivityTypes handles GET /catalog/activity-types.
+//
+//	@Summary	List the types an activity can have
+//	@Description	Every activity type of the catalog in order, retired ones included (`active: false`) so the screens can name
+//	@Description	the segments of activities that still have them; the form only offers the active ones
+//	@Description	(specs/075-tipos-de-actividad/contracts/api.md).
+//	@Tags		catalog
+//	@Produce	json
+//	@Success	200	{array}		ActivityTypeResponse
+//	@Failure	500	{object}	notFoundResponseDoc	"Unexpected server error"
+//	@Router		/catalog/activity-types [get]
+func (h *Handler) ListActivityTypes(w http.ResponseWriter, r *http.Request) {
+	types, err := h.repo.ListActivityTypes(r.Context())
+	if err != nil {
+		h.responder.WriteJSONError(r.Context(), w, http.StatusInternalServerError, "internal_error", "Could not load activity types", nil)
+		return
+	}
+
+	resp := make([]ActivityTypeResponse, 0, len(types))
+	for _, t := range types {
+		resp = append(resp, ActivityTypeResponse{Code: t.Code, Name: t.Name, Active: t.Active})
+	}
+	h.responder.WriteJSON(r.Context(), w, http.StatusOK, resp, nil)
+}
+
 // ListSymptoms handles GET /catalog/symptoms.
 //
 //	@Summary	List the symptoms a parent can mark

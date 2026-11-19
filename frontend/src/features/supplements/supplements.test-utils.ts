@@ -3,6 +3,15 @@ import type { Routine, RoutineDose, RoutineList } from './types'
 
 // Fixtures and a fetch router for the supplements' tests: the screens ask for the account, the routines and the doses.
 
+/** The activity types catalog (specs/075), with one retired so the segments name it. */
+export const ACTIVITY_TYPES = [
+  { code: 'school', name: 'Escolar', active: true },
+  { code: 'sports', name: 'Deportiva', active: true },
+  { code: 'arts', name: 'Artística y cultural', active: true },
+  { code: 'old', name: 'Antigua', active: false },
+  { code: 'habits', name: 'Hábitos y cuidado diario', active: true },
+]
+
 export const TODAY = new Date(2026, 9, 6, 15, 10) // Tue 6 Oct 2026, 15:10 local
 
 export const at = (hour: number, minute = 0, day = 6) => new Date(2026, 9, day, hour, minute).toISOString()
@@ -38,6 +47,7 @@ export function routine(over: Partial<Routine> = {}): Routine {
     progress: { taken: 1, elapsed: 1, total: 6 },
     doses: [dose('d1', 8, { taken: true, takenBy: { name: 'Ana', at: at(8, 5), mine: true } })],
     nextDose: null,
+    activityType: null,
     ...over,
   }
 }
@@ -48,6 +58,7 @@ export function activity(over: Partial<Routine> = {}): Routine {
     id: 'a1',
     kind: 'activity',
     name: 'Tomar agua',
+    activityType: 'habits',
     period: 'window',
     times: [],
     windowStart: '08:00',

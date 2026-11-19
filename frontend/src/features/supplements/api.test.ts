@@ -12,6 +12,7 @@ import {
   markRoutineDone,
   pauseRoutine,
   resumeRoutine,
+  setActivityType,
   setMyReminders,
   updateRoutine,
   updateRoutineDose,
@@ -177,5 +178,26 @@ describe('«Realizado» (specs/035)', () => {
   it('knows when there is nothing left to mark', async () => {
     stub(409, { error: 'nothing_to_mark', message: 'x' })
     await expect(markRoutineDone('a1', new Date(), new Date(), null)).rejects.toMatchObject({ kind: 'nothing_to_mark' })
+  })
+})
+
+describe('setActivityType (specs/075)', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('PUTs only the code in the body and never in the address', async () => {
+    const mock = stub(200, { id: 'a1', activityType: 'arts' })
+    await expect(setActivityType('a1', 'arts', 'tok')).resolves.toMatchObject({ activityType: 'arts' })
+    const [url, init] = mock.mock.calls[0]
+    expect(String(url)).toMatch(/\/routines\/a1\/activity-type$/)
+    expect(init.method).toBe('PUT')
+    expect(JSON.parse(init.body)).toEqual({ activityType: 'arts' })
+    expect(init.headers.Authorization).toBe('Bearer tok')
+  })
+
+  it('maps a refusal to a validation error with its field', async () => {
+    stub(400, { error: 'validation_error', message: 'x', details: [{ field: 'activityType', message: 'invalid' }] })
+    await expect(setActivityType('a1', 'old', null)).rejects.toMatchObject({ kind: 'validation_error', details: [{ field: 'activityType', message: 'invalid' }] })
+    stub(403, { error: 'forbidden' })
+    await expect(setActivityType('a1', 'arts', null)).rejects.toBeInstanceOf(SupplementApiError)
   })
 })

@@ -91,6 +91,26 @@ func (r *Repository) ListVaccines(ctx context.Context) ([]Vaccine, error) {
 	return vaccines, rows.Err()
 }
 
+// ListActivityTypes returns EVERY activity type in the catalog's order, retired ones included (`Active` false): the screens
+// name the segments of activities that still have a retired type; the form only offers the active ones (specs/075).
+func (r *Repository) ListActivityTypes(ctx context.Context) ([]ActivityType, error) {
+	rows, err := r.pool.Query(ctx, `SELECT code, name, active FROM activity_types ORDER BY sort_order`)
+	if err != nil {
+		return nil, fmt.Errorf("querying activity types: %w", err)
+	}
+	defer rows.Close()
+
+	types := []ActivityType{}
+	for rows.Next() {
+		var t ActivityType
+		if err := rows.Scan(&t.Code, &t.Name, &t.Active); err != nil {
+			return nil, fmt.Errorf("scanning activity type: %w", err)
+		}
+		types = append(types, t)
+	}
+	return types, rows.Err()
+}
+
 // ListStatesByCountry returns every state belonging to countryCode, ordered by name.
 func (r *Repository) ListStatesByCountry(ctx context.Context, countryCode string) ([]State, error) {
 	rows, err := r.pool.Query(ctx,

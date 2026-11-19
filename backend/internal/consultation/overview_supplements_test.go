@@ -96,8 +96,8 @@ func TestGetOverview_ActivitiesOfTheChildAreNotInTheTodayList(t *testing.T) {
 	childID := createTestChild(t, pool)
 	var activity uuid.UUID
 	require.NoError(t, pool.QueryRow(context.Background(), `
-		INSERT INTO supplement_routines (account_id, child_id, kind, name, period, window_start, window_end, interval_minutes, first_date, utc_offset_minutes, generated_until, created_by_account_id)
-		SELECT ch.account_id, ch.id, 'activity', 'Tomar agua', 'window', '08:00', '20:00', 60, current_date - 2, 0, now() + interval '14 days', ch.account_id
+		INSERT INTO supplement_routines (account_id, child_id, kind, name, period, window_start, window_end, interval_minutes, first_date, utc_offset_minutes, generated_until, created_by_account_id, activity_type)
+		SELECT ch.account_id, ch.id, 'activity', 'Tomar agua', 'window', '08:00', '20:00', 60, current_date - 2, 0, now() + interval '14 days', ch.account_id, 'habits'
 		FROM children ch WHERE ch.id = $1
 		RETURNING id`, childID).Scan(&activity))
 	at := time.Now().UTC().Truncate(time.Hour)

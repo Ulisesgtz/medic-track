@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   activityPreview,
   activityRange,
+  activityRowText,
+  compactDays,
   activityRule,
   dayCount,
   dayMonth,
@@ -309,5 +311,25 @@ describe('detailRows', () => {
     expect(crossMonth[1].v).toBe('Del 17 sep al 3 oct 2026')
     const noEndDate = detailRows(routine({ status: 'ended', firstDate: '2026-09-17', endDate: null, endedAt: new Date(2026, 9, 3, 12).toISOString() }))
     expect(noEndDate[1].v).toBe('Del 17 sep al 3 oct 2026')
+  })
+})
+
+describe('activityRowText (specs/075, mock A)', () => {
+  it('says the days compactly', () => {
+    expect(compactDays([])).toBe('Todos los días')
+    expect(compactDays([0, 1, 2, 3, 4, 5, 6])).toBe('Todos los días')
+    expect(compactDays([4, 0, 2, 1, 3])).toBe('Lun a vie')
+    expect(compactDays([1, 3])).toBe('Mar y jue')
+    expect(compactDays([5])).toBe('Sáb')
+    expect(compactDays([0, 2, 4])).toBe('Lun, Mié, Vie')
+  })
+
+  it('words the second line of the row as the mock does', () => {
+    const base = { weekdays: [], times: [], windowStart: null, windowEnd: null, intervalMinutes: null }
+    expect(activityRowText({ ...base, period: 'weekdays', weekdays: [0, 1, 2, 3, 4], times: ['18:00'] })).toBe('Lun a vie · 18:00')
+    expect(activityRowText({ ...base, period: 'weekdays', weekdays: [1, 3], times: ['17:00'] })).toBe('Mar y jue · 17:00')
+    expect(activityRowText({ ...base, period: 'daily', times: ['07:00', '19:00'] })).toBe('Todos los días · 07:00 y 19:00')
+    expect(activityRowText({ ...base, period: 'window', windowStart: '08:00', windowEnd: '20:00', intervalMinutes: 60 })).toBe('Cada hora · 08:00 a 20:00')
+    expect(activityRowText({ ...base, period: 'window', weekdays: [5], windowStart: '08:00', windowEnd: '09:00', intervalMinutes: 30 })).toBe('Sáb · Cada 30 min · 08:00 a 09:00')
   })
 })

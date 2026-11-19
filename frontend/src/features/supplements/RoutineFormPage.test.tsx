@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RoutineFormPage } from './RoutineFormPage'
-import { TODAY, account, activity, at, callsOf, routine, stubApi, stubWeb } from './supplements.test-utils'
+import { ACTIVITY_TYPES, TODAY, account, activity, at, callsOf, routine, stubApi, stubWeb } from './supplements.test-utils'
 import { pickTime } from '../../shared/ui/timeField.test-utils'
 
 function renderAt(path: string) {
@@ -39,6 +39,7 @@ function api(extra: Parameters<typeof stubApi>[0] = {}, acc: unknown = account()
     'GET /accounts/me': { body: acc },
     'POST /children/child-1/routines': { status: 201, body: created },
     'POST /accounts/a1/routines': { status: 201, body: created },
+    'GET /catalog/activity-types': { body: ACTIVITY_TYPES },
     ...extra,
   })
 }
@@ -283,6 +284,7 @@ describe('RoutineFormPage — nueva actividad', () => {
   const setup = () => userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
   const fill = async (user: ReturnType<typeof setup>, every = '1') => {
     await user.type(await screen.findByLabelText('Nombre'), 'Tomar agua')
+    await user.click(await screen.findByRole('radio', { name: 'Hábitos y cuidado diario' }))
     await pickTime(user, 'Desde las', '08:00')
     await pickTime(user, 'Hasta las', '20:00')
     await user.type(screen.getByLabelText('Cantidad'), every)
@@ -331,14 +333,17 @@ describe('RoutineFormPage — nueva actividad', () => {
     expect(screen.getByText('De una a seis horas.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Guardar actividad' }))
     expect(screen.getByText('Elige la hora.')).toBeInTheDocument()
+    expect(screen.getByText('Elige el tipo de actividad.')).toBeInTheDocument()
+    expect(mock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
 
+    await user.click(screen.getByRole('radio', { name: 'Deportiva' }))
     await pickTime(user, 'Hora', '17:00')
     await user.click(screen.getByRole('radio', { name: 'Ciertos días de la semana' }))
     await user.click(screen.getByRole('button', { name: 'martes' }))
     await user.click(screen.getByRole('button', { name: 'jueves' }))
     await user.click(screen.getByRole('button', { name: 'Guardar actividad' }))
     expect(await screen.findByText('DETALLE ACTIVIDAD')).toBeInTheDocument()
-    expect(body(mock)).toMatchObject({ kind: 'activity', period: 'weekdays', times: ['17:00'], weekdays: [1, 3], windowStart: null, windowEnd: null, intervalMinutes: null })
+    expect(body(mock)).toMatchObject({ kind: 'activity', period: 'weekdays', times: ['17:00'], weekdays: [1, 3], windowStart: null, windowEnd: null, intervalMinutes: null, activityType: 'sports' })
   })
 
   it('«Cuándo se hace» is two option cards with an example each, and «A una hora fija» orders its fields as the design: days, then hours', async () => {
@@ -512,6 +517,148 @@ describe('RoutineFormPage — nueva actividad', () => {
     api({}, account({ plan: 'free' }, { role: 'caregiver', plan: 'paid', readOnly: false, accountId: 'owner' }))
     renderAt(NEW_ACTIVITY)
     expect(await screen.findByText('Solo un Tutor puede agregar o editar actividades.')).toBeInTheDocument()
+  })
+})
+
+describe('RoutineFormPage — tipo de actividad (spec 075)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(TODAY)
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  const setup = () => userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+
+  it('offers the active types in their order with NONE chosen, never a retired one, and a supplement has no such field', async () => {
+    api()
+    renderAt(NEW_ACTIVITY)
+    const group = await screen.findByRole('group', { name: /Tipo de actividad/ })
+    const radios = await within(group).findAllByRole('radio')
+    expect(radios.map((r) => r.closest('label')?.textContent)).toEqual(['Escolar', 'Deportiva', 'Artística y cultural', 'Hábitos y cuidado diario'])
+    for (const r of radios) expect(r).not.toBeChecked()
+    expect(within(group).getByText('· Obligatorio')).toBeInTheDocument()
+    expect(screen.getByText('Solo sirve para ordenar la lista de actividades.')).toBeInTheDocument()
+  })
+
+  it('sits right after the name, in both designs', async () => {
+    for (const web of [false, true]) {
+      stubWeb(web)
+      api()
+      renderAt(NEW_ACTIVITY)
+      const name = await screen.findByLabelText('Nombre')
+      const group = screen.getByRole('group', { name: /Tipo de actividad/ })
+      expect(name.compareDocumentPosition(group) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      expect(screen.getByRole('group', { name: 'Cuándo se hace' }).compareDocumentPosition(group) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy()
+      cleanup()
+    }
+  })
+
+  it('keeps «Guardar» enabled and, saving with none chosen, frames the group in ink with the sentence linked to it (no red)', async () => {
+    const mock = api()
+    renderAt(NEW_ACTIVITY)
+    const user = setup()
+    await user.type(await screen.findByLabelText('Nombre'), 'Fut')
+    const save = screen.getByRole('button', { name: 'Guardar actividad' })
+    expect(save).toBeEnabled()
+    await user.click(save)
+    const group = screen.getByRole('group', { name: /Tipo de actividad/ })
+    expect(group).toHaveClass('border-ink')
+    expect(group).not.toHaveClass('border-red-700')
+    const alert = within(group).getByRole('alert')
+    expect(alert).toHaveTextContent('Elige el tipo de actividad.')
+    expect(alert).not.toHaveClass('text-red-700')
+    expect(group).toHaveAttribute('aria-describedby', alert.id)
+    expect(screen.getByLabelText('Nombre')).toHaveValue('Fut')
+    expect(mock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false)
+    expect(save).toBeEnabled()
+  })
+
+  it('has no type field in a supplement', async () => {
+    api()
+    renderAt(NEW)
+    await screen.findByLabelText('Nombre')
+    expect(screen.queryByRole('group', { name: /Tipo de actividad/ })).not.toBeInTheDocument()
+  })
+
+  it('chooses one, and a second tap on another moves the choice', async () => {
+    api()
+    renderAt(NEW_ACTIVITY)
+    const user = setup()
+    await user.click(await screen.findByRole('radio', { name: 'Escolar' }))
+    expect(screen.getByRole('radio', { name: 'Escolar' })).toBeChecked()
+    await user.click(screen.getByRole('radio', { name: 'Deportiva' }))
+    expect(screen.getByRole('radio', { name: 'Escolar' })).not.toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Deportiva' })).toBeChecked()
+    expect(screen.getByText('Deportiva').closest('label')).toHaveClass('bg-ink')
+  })
+
+  it('says the catalog could not load, without blocking the page', async () => {
+    api({ 'GET /catalog/activity-types': { status: 500, body: {} } })
+    renderAt(NEW_ACTIVITY)
+    expect(await screen.findByText('No pudimos cargar los tipos de actividad. Inténtalo de nuevo.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Nombre')).toBeInTheDocument()
+  })
+
+  it('shows the saved type chosen when editing, also a retired one, and sends it', async () => {
+    const act = activity({ id: 'a1', activityType: 'old' })
+    const mock = api({ 'GET /routines/a1': { body: act }, 'PATCH /routines/a1': { body: act } })
+    renderAt('/actividades/a1/editar')
+    expect(await screen.findByRole('radio', { name: 'Antigua' })).toBeChecked()
+    await setup().click(screen.getByRole('button', { name: 'Guardar cambios' }))
+    expect(await screen.findByText('DETALLE ACTIVIDAD')).toBeInTheDocument()
+    expect(body(mock, 'PATCH')).toMatchObject({ activityType: 'old' })
+  })
+
+  it('changing ONLY the type sends only the type (no PATCH, so the future doses are not rebuilt) and goes to the detail', async () => {
+    const act = activity({ id: 'a1', activityType: 'habits' })
+    const mock = api({ 'GET /routines/a1': { body: act }, 'PUT /routines/a1/activity-type': { body: { ...act, activityType: 'sports' } } })
+    renderAt('/actividades/a1/editar')
+    const user = setup()
+    await user.click(await screen.findByRole('radio', { name: 'Deportiva' }))
+    await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+    expect(await screen.findByText('DETALLE ACTIVIDAD')).toBeInTheDocument()
+    expect(callsOf(mock)).toContain('PUT /routines/a1/activity-type')
+    expect(callsOf(mock)).not.toContain('PATCH /routines/a1')
+    expect(body(mock, 'PUT')).toEqual({ activityType: 'sports' })
+  })
+
+  it('changing the type AND something else sends the whole edit, with the type in it', async () => {
+    const act = activity({ id: 'a1', activityType: 'habits' })
+    const mock = api({ 'GET /routines/a1': { body: act }, 'PATCH /routines/a1': { body: act } })
+    renderAt('/actividades/a1/editar')
+    const user = setup()
+    await user.click(await screen.findByRole('radio', { name: 'Escolar' }))
+    const name = screen.getByLabelText('Nombre')
+    await user.clear(name)
+    await user.type(name, 'Agua')
+    await user.click(screen.getByRole('button', { name: 'Guardar cambios' }))
+    expect(await screen.findByText('DETALLE ACTIVIDAD')).toBeInTheDocument()
+    expect(callsOf(mock)).not.toContain('PUT /routines/a1/activity-type')
+    expect(body(mock, 'PATCH')).toMatchObject({ name: 'Agua', activityType: 'school' })
+  })
+
+  it('draws the refusal of a retired type, empties the choice and reads the catalog again', async () => {
+    const mock = api({
+      'POST /children/child-1/routines': {
+        status: 400,
+        body: { error: 'validation_error', message: 'x', details: [{ field: 'activityType', message: 'invalid' }] },
+      },
+    })
+    renderAt(NEW_ACTIVITY)
+    const user = setup()
+    await user.type(await screen.findByLabelText('Nombre'), 'Tomar agua')
+    await user.click(await screen.findByRole('radio', { name: 'Escolar' }))
+    await pickTime(user, 'Desde las', '08:00')
+    await pickTime(user, 'Hasta las', '20:00')
+    await user.type(screen.getByLabelText('Cantidad'), '1')
+    await user.click(screen.getByRole('button', { name: 'Guardar actividad' }))
+    expect(await screen.findByText('Elige el tipo de actividad.')).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: 'Escolar' })).not.toBeChecked()
+    expect(callsOf(mock).filter((c) => c === 'GET /catalog/activity-types').length).toBeGreaterThanOrEqual(2)
   })
 })
 

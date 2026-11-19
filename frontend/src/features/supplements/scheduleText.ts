@@ -91,6 +91,26 @@ export function everyText(minutes: number): string {
   return `Cada ${minutes} min`
 }
 
+/**
+ * The days as the compact row of an activity says them (specs/075, mock A): «Todos los días», a run of three or more as «Lun a vie»,
+ * two days as «Mar y jue», one as «Sáb», and any other mix listed («Lun, Mié, Vie»).
+ */
+export function compactDays(weekdays: number[]): string {
+  if (everyDay(weekdays)) return 'Todos los días'
+  const days = [...weekdays].sort((a, b) => a - b)
+  const run = days.every((d, i) => i === 0 || d === days[i - 1] + 1)
+  if (days.length >= 3 && run) return `${WEEKDAYS_SHORT[days[0]]} a ${WEEKDAYS_SHORT[days[days.length - 1]].toLowerCase()}`
+  if (days.length === 2) return `${WEEKDAYS_SHORT[days[0]]} y ${WEEKDAYS_SHORT[days[1]].toLowerCase()}`
+  return days.map((d) => WEEKDAYS_SHORT[d]).join(', ')
+}
+
+/** The second line of an activity's row (mock A): «Lun a vie · 18:00», «Mar y jue · 17:00» or «Cada hora · 08:00 a 20:00». */
+export function activityRowText(r: Pick<Routine, 'period' | 'times' | 'weekdays' | 'windowStart' | 'windowEnd' | 'intervalMinutes'>): string {
+  if (r.period !== 'window') return `${compactDays(r.weekdays)} · ${joinTimes(r.times)}`
+  const days = everyDay(r.weekdays) ? '' : `${compactDays(r.weekdays)} · `
+  return `${days}${everyText(r.intervalMinutes ?? 0)} · ${r.windowStart ?? ''} a ${r.windowEnd ?? ''}`
+}
+
 /** An activity's rule: "Cada hora, de 08:00 a 20:00" or, at fixed hours, "Mar, Jue · a las 17:00". */
 export function activityRule(
   r: Pick<

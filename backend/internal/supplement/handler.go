@@ -84,6 +84,8 @@ type routineResponse struct {
 	NextDose *doseResponse `json:"nextDose"`
 	// LastDone: the dose of an activity at fixed hours marked most recently, of any day; null for the rest or while none was marked.
 	LastDone *doseResponse `json:"lastDone"`
+	// ActivityType: the catalog code of an activity's type (specs/075); null on a supplement.
+	ActivityType *string `json:"activityType" example:"sports"`
 } // @name SupplementRoutineResponse
 
 type routineListResponse struct {
@@ -108,6 +110,9 @@ type createRoutineRequest struct {
 	FirstDate        string  `json:"firstDate" example:"2026-10-05"`
 	EndDate          *string `json:"endDate" example:"2026-10-20"`
 	UtcOffsetMinutes int     `json:"utcOffsetMinutes" example:"-360"`
+	// ActivityType: the catalog code of an activity's type; required to create an activity, not allowed on a supplement; an
+	// edit that leaves it out keeps the saved one (specs/075).
+	ActivityType *string `json:"activityType" example:"sports"`
 } // @name SupplementRoutineRequest
 
 type updateDoseRequest struct {
@@ -181,7 +186,7 @@ func toRoutineResponse(v RoutineView, level access.Level, actor uuid.UUID) routi
 		WindowStart: optString(v.WindowStart), WindowEnd: optString(v.WindowEnd),
 		FirstDate: v.FirstDate, EndDate: optString(v.EndDate), Status: string(v.Status),
 		PausedAt: optTime(v.PausedAt), EndedAt: optTime(v.EndedAt), CreatedBy: v.CreatedBy, CreatedAt: formatTime(v.CreatedAt),
-		CanEdit: level == access.Full && v.PaidPlan, MyReminders: v.MyReminders, HasMarks: v.HasMarks,
+		CanEdit: level == access.Full && v.PaidPlan, MyReminders: v.MyReminders, HasMarks: v.HasMarks, ActivityType: v.ActivityType,
 		Progress: progressResponse{Taken: v.Progress.Taken, Elapsed: v.Progress.Elapsed, Total: v.Progress.Total},
 		Doses:    make([]doseResponse, 0, len(v.Doses)),
 	}

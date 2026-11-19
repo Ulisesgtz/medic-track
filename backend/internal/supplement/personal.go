@@ -50,6 +50,9 @@ func (r *Repository) CreatePersonal(ctx context.Context, accountID uuid.UUID, in
 	if err := checkPersonalCap(ctx, tx, accountID, in.Kind); err != nil {
 		return uuid.Nil, err
 	}
+	if err := checkActivityTypeOffered(ctx, tx, in.ActivityType); err != nil {
+		return uuid.Nil, err
+	}
 	id, err := r.insertRoutine(ctx, tx, accountID, nil, in, accountID)
 	if err != nil {
 		return uuid.Nil, err

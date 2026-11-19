@@ -156,15 +156,15 @@ func collect(ctx context.Context, q Querier, scope Scope, now time.Time) (*Expor
 			[]string{"id", "hijo_id", "unida_el", "unida_por", "consultas", "vacunas", "fotos_de_la_cartilla", "medidas", "suplementos",
 				"actividades", "ficha", "telefonos_quitados"}},
 		{"suplementos_y_actividades", `SELECT r.id::text, r.child_id::text,
-				CASE r.kind WHEN 'supplement' THEN 'suplemento' ELSE 'actividad' END, r.name, nullif(r.note, ''),
+				CASE r.kind WHEN 'supplement' THEN 'suplemento' ELSE 'actividad' END, aty.name, r.name, nullif(r.note, ''),
 				CASE r.period WHEN 'daily' THEN 'todos los días' WHEN 'weekdays' THEN 'ciertos días' ELSE 'varias veces al día' END,
 				nullif(array_to_string(ARRAY(SELECT to_char(t, 'HH24:MI') FROM unnest(r.times) t), ' '), ''),
 				nullif(array_to_string(r.weekdays, ' '), ''),
 				to_char(r.window_start, 'HH24:MI'), to_char(r.window_end, 'HH24:MI'), r.interval_minutes::text,
 				r.first_date::text, r.end_date::text,
 				CASE r.status WHEN 'active' THEN 'activa' WHEN 'paused' THEN 'en pausa' ELSE 'finalizada' END
-			FROM supplement_routines r WHERE ` + routinesOf + ` ORDER BY r.created_at, r.id`,
-			[]string{"id", "hijo_id", "tipo", "nombre", "nota", "periodo", "horas", "dias_de_la_semana", "desde", "hasta",
+			FROM supplement_routines r LEFT JOIN activity_types aty ON aty.code = r.activity_type WHERE ` + routinesOf + ` ORDER BY r.created_at, r.id`,
+			[]string{"id", "hijo_id", "tipo", "tipo_de_actividad", "nombre", "nota", "periodo", "horas", "dias_de_la_semana", "desde", "hasta",
 				"cada_minutos", "inicio", "fin", "estado"}},
 	}
 	if !scope.ChildrenOnly {
