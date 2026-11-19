@@ -456,6 +456,34 @@ Principio I (la app guarda lo que el padre escribe; nunca evalúa ni sugiere).
   bloquea del todo el campo; qué pasa con «Anotarlo también como medida de hoy» (spec 064) y con el peso del registro
   del hijo; los textos (neutros, Principio I: nada de «ya no necesita»); y que el servidor lo decida (no solo la
   pantalla).
+- **Familia: quien ya paga o ya es dueña de una familia acepta otra invitación** (anotado 2026-11-18, revisión tras la
+  spec 074; specs 032/045). Hoy `family.Repository.Accept` solo revisa que la dueña que invita tenga el plan vigente y
+  que la persona no sea ya **integrante** de otra familia. Dos huecos: (1) **su suscripción propia se sigue cobrando**:
+  nada la cancela ni le avisa al aceptar (`covered_by_family` solo impide contratar una nueva); si une a sus hijos con
+  los de la familia (spec 074), paga por algo que ya le cubre la familia. Decidir: solo avisarle al aceptar («Tu plan se
+  sigue cobrando; puedes cancelar la renovación y lo conservas hasta <fecha>») u ofrecer ahí cancelar la renovación (sin
+  reembolso). (2) **La dueña de una familia con invitados puede aceptar otra** (no hay revisión; la spec 074 en sus casos
+  límite supone que no puede): quedaría dueña de la suya y Tutora en la otra, y si une un hijo, sus propios invitados
+  (p. ej. una Cuidadora) probablemente pierden el acceso a ese hijo sin aviso (no probado). Decidir: impedirle aceptar
+  (409, «sal de tu familia o quita a tus invitados primero») o permitirlo con advertencia; corregir el caso límite de
+  la spec 074 según lo que se decida.
+- **Tipo de actividad del hijo y actividades separadas por tipo** (pedido del dueño, 2026-11-19; specs 035/036). Al
+  crear o editar una actividad del hijo, el padre elige su **tipo**; en la sección «Actividades» del detalle del hijo
+  (y en su lista) se agrupan **por segmentos de ese tipo**, en un orden fijo, y los segmentos vacíos no se muestran.
+  Tipos propuestos (catálogo cerrado, como los síntomas de la spec 012, ampliable con SQL):
+  1. **Escolar** — clases, tareas, horario de la escuela, regularización.
+  2. **Deportiva** — fútbol, natación, entrenamientos, partidos.
+  3. **Artística y cultural** — música, danza, dibujo, teatro, idiomas.
+  4. **Terapia y seguimiento** — terapia de lenguaje, física, ocupacional, psicológica (solo el registro, sin
+     interpretar nada; Principio I).
+  5. **Hábitos y cuidado diario** — tomar agua, lavarse los dientes, dormir, leer (aquí caen las actividades que ya
+     existen, por omisión).
+  6. **Otra** — lo que no encaja.
+  A decidir en su spec: si el tipo es obligatorio (o «Hábitos» por omisión); si se puede escribir un tipo propio; si las
+  actividades **personales** del titular (`/yo`) también llevan tipo; si «Hoy» del hijo, la tarjeta del inicio y el
+  teléfono del hijo agrupan o solo la sección del detalle; un icono o color por tipo (sin rojo/verde/ámbar de alerta);
+  y el diseño (mock de Claude Design, dos diseños). Servidor: columna con el tipo en `supplement_routines` (solo para
+  `kind = 'activity'`), migración con el valor por omisión para las actividades existentes, y el tipo en la API.
 - **Agregar la cita al calendario del teléfono** — un archivo `.ics` generado en el dispositivo, sin terceros;
   complementa los avisos push.
 - **«Repetir tratamiento» desde una consulta anterior** — precarga «Nueva consulta» con los medicamentos de una
