@@ -467,7 +467,9 @@ Principio I (la app guarda lo que el padre escribe; nunca evalúa ni sugiere).
   (p. ej. una Cuidadora) probablemente pierden el acceso a ese hijo sin aviso (no probado). Decidir: impedirle aceptar
   (409, «sal de tu familia o quita a tus invitados primero») o permitirlo con advertencia; corregir el caso límite de
   la spec 074 según lo que se decida.
-- **Tipo de actividad del hijo y actividades separadas por tipo** (pedido del dueño, 2026-11-19; specs 035/036). Al
+- **Tipo de actividad del hijo y actividades separadas por tipo** — **en `specs/075-tipos-de-actividad/`** (2026-11-19:
+  tipo obligatorio, solo catálogo, segmentos solo en la sección «Actividades» del hijo y de `/yo`, también lo personal,
+  con iconos; cambiar el tipo sin plan). Texto original (pedido del dueño, 2026-11-19; specs 035/036). Al
   crear o editar una actividad del hijo, el padre elige su **tipo**; en la sección «Actividades» del detalle del hijo
   (y en su lista) se agrupan **por segmentos de ese tipo**, en un orden fijo, y los segmentos vacíos no se muestran.
   Tipos propuestos (catálogo cerrado, como los síntomas de la spec 012, ampliable con SQL):
