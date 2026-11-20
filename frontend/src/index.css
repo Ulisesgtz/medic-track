@@ -59,3 +59,27 @@
 body {
   @apply bg-canvas text-ink;
 }
+
+/*
+ * bugfix/079: Safari on the iPhone draws a native date field with a minimum width of its own and ignores the card's width,
+ * so it ran past the card's edge («Nueva consulta», signup, add child, vaccines…). The same goes for the time field
+ * («Primera toma» of the web design, on an iPad) and any month or date-and-time field a screen adds later. Without the native look it takes the
+ * width it is given; the value is aligned to the left like every other field. One rule for every date field of the app.
+ */
+@layer base {
+  input[type='date'],
+  input[type='time'],
+  input[type='month'],
+  input[type='datetime-local'] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+    max-width: 100%;
+  }
+  input[type='date']::-webkit-date-and-time-value,
+  input[type='time']::-webkit-date-and-time-value,
+  input[type='month']::-webkit-date-and-time-value,
+  input[type='datetime-local']::-webkit-date-and-time-value {
+    text-align: left;
+  }
+}
