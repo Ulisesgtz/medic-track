@@ -100,4 +100,16 @@ type Chart struct {
 	ReferenceAvailable bool
 	WeightReference    *Reference
 	HeightReference    *Reference
+	Limits             Limits
 }
+
+// Limit is where the WHO curve of one indicator ends: its last month and how many of the child's measurements of that
+// indicator are after it (they are not in the chart's points, only in the list).
+type Limit struct {
+	MaxMonths int
+	Later     int
+}
+
+// Limits is the end of the weight curve and of the height curve. It does not depend on the chosen table or on the curves
+// being switched on.
+type Limits struct{ Weight, Height Limit }

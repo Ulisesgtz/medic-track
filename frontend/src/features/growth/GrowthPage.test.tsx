@@ -318,15 +318,164 @@ describe('GrowthPage (spec 065)', () => {
     expect(screen.queryByRole('note')).not.toBeInTheDocument()
   })
 
-  it('a measurement past the reference says so, a tab with no values says so', async () => {
-    const old = mockChart()
-    api({
-      acc: account({ children: [{ ...mateo, birthDate: '2014-01-01' }] }),
-      growth: mockList({ birthDate: '2014-01-01' }),
-      chartReply: { body: { ...old, birthDate: '2014-01-01', points: { weight: [{ measuredOn: '2026-01-01', months: 144, value: 40 }], height: [] } } },
+  // Spec 076: Mateo, born 2014-01-01, is 12 years old «today» (24 Oct 2026): the weight curve ended at 10, the height curve at 19.
+  const OLD = '2014-01-01'
+  const oldChart = (over: Partial<GrowthChart> = {}) =>
+    mockChart({
+      birthDate: OLD,
+      points: {
+        weight: [
+          { measuredOn: '2022-10-10', months: 105.3, value: 24 },
+          { measuredOn: '2023-10-10', months: 117.3, value: 27 },
+          { measuredOn: '2024-01-01', months: 120, value: 29.5 },
+        ],
+        height: [
+          { measuredOn: '2022-10-10', months: 105.3, value: 125 },
+          { measuredOn: '2026-10-12', months: 153.4, value: 150 },
+        ],
+      },
+      limits: { weight: { maxMonths: 120, later: 2 }, height: { maxMonths: 228, later: 0 } },
+      ...over,
     })
+  const oldApi = (body: GrowthChart) =>
+    api({ acc: account({ children: [{ ...mateo, birthDate: OLD }] }), growth: mockList({ birthDate: OLD }), chartReply: { body } })
+
+  it('A: the weight axis ends at 10 years with the fixed note between the references; the reading counts only what is drawn', async () => {
+    oldApi(oldChart())
     renderAt(PATH, <GrowthPage />, ROUTE)
-    expect(await screen.findByText('La referencia de la OMS de peso para la edad llega a los 10 años.')).toBeInTheDocument()
+    await screen.findByRole('img', { name: /Gráfica de peso/ })
+    // An older child starts in the whole curve; «0–3 años» is not offered without measurements there.
+    expect(screen.getByRole('button', { name: 'Hasta 10 años' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByRole('button', { name: '0–3 años' })).not.toBeInTheDocument()
+    const note = screen.getByRole('note')
+    const paragraphs = within(note).getAllByText(/./)
+    expect(paragraphs.map((p) => p.textContent)).toEqual([
+      'Las curvas son la referencia de la OMS para niñas y niños nacidos a término.',
+      'La curva de peso de la OMS llega a los 10 años. Las medidas de después están en Medidas anotadas.',
+      'Tu pediatra es quien interpreta la gráfica.',
+    ])
+    expect(within(reading()).getByText('29.5 kg')).toBeInTheDocument()
+    expect(within(reading()).getByText('Medida 3 de 3 en la gráfica de peso')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Medida siguiente' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Medida anterior' })).toBeEnabled()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Medida anterior' }))
+    await user.click(screen.getByRole('button', { name: 'Medida anterior' }))
+    expect(within(reading()).getByText('Medida 1 de 3 en la gráfica de peso')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Medida anterior' })).toBeDisabled()
+  })
+
+  it('A2: the other tab keeps its own age and has no fixed note nor counter', async () => {
+    oldApi(oldChart())
+    renderAt(PATH, <GrowthPage />, ROUTE)
+    await screen.findByRole('img', { name: /Gráfica de peso/ })
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('tab', { name: 'Talla' }))
+    expect(screen.getByRole('button', { name: 'Hasta 19 años' })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByText(/Medida \d de \d en la gráfica/)).not.toBeInTheDocument()
+    expect(within(screen.getByRole('note')).queryByText(/llega a los/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Ir a Medidas anotadas ↓')).not.toBeInTheDocument()
+  })
+
+  it('D on the web: the counter sits under the one-line reading', async () => {
+    stubWeb(true)
+    oldApi(oldChart())
+    renderAt(PATH, <GrowthPage />, ROUTE)
+    expect(await screen.findByText('Medida 3 de 3 en la gráfica de peso')).toBeInTheDocument()
+    expect(await screen.findByText('1 ene 2024 · 29.5 kg · 10 años')).toBeInTheDocument()
+    expect(within(screen.getByRole('note')).getByText(/llega a los 10 años/)).toBeInTheDocument()
+  })
+
+  it('«0–3 años» is offered when there are drawn measurements in the first 36 months', async () => {
+    oldApi(oldChart({ points: { weight: [{ measuredOn: '2015-06-01', months: 17, value: 10 }, { measuredOn: '2023-10-10', months: 117, value: 27 }], height: [] } }))
+    renderAt(PATH, <GrowthPage />, ROUTE)
+    await screen.findByRole('img', { name: /Gráfica de peso/ })
+    expect(screen.getByRole('button', { name: 'Hasta 10 años' })).toHaveAttribute('aria-pressed', 'true')
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: '0–3 años' }))
+    expect(screen.getByRole('button', { name: '0–3 años' })).toHaveAttribute('aria-pressed', 'true')
+    // The range chosen in one tab that the other doesn't offer falls back to its own start.
+    await user.click(screen.getByRole('tab', { name: 'Talla' }))
+    expect(screen.queryByRole('button', { name: '0–3 años' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Hasta 19 años' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('B: a tab whose curve ended before every measurement is one sentence and a link; the tabs stay', async () => {
+    oldApi(
+      oldChart({
+        points: { weight: [], height: [{ measuredOn: '2026-10-12', months: 153.4, value: 150 }] },
+        limits: { weight: { maxMonths: 120, later: 3 }, height: { maxMonths: 228, later: 0 } },
+      }),
+    )
+    renderAt(PATH, <GrowthPage />, ROUTE)
+    expect(await screen.findByText('La curva de peso de la OMS llega a los 10 años. Las medidas de Mateo están en Medidas anotadas.')).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Peso', selected: true })).toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: /Gráfica/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Rango de edad' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Medida anterior' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('group', { name: 'Tabla de la OMS' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Tu pediatra es quien interpreta la gráfica.')).not.toBeInTheDocument()
+    const scrolled = vi.fn()
+    const section = screen.getByRole('region', { name: 'Medidas anotadas' })
+    section.scrollIntoView = scrolled
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('link', { name: 'Ir a Medidas anotadas ↓' }))
+    expect(scrolled).toHaveBeenCalled()
+    expect(section).toHaveFocus()
+    // The other tab still has its chart.
+    await user.click(screen.getByRole('tab', { name: 'Talla' }))
+    expect(screen.getByRole('img', { name: /Gráfica de talla/ })).toBeInTheDocument()
+  })
+
+  it('B2 on the web: the same sentence with the name of the child', async () => {
+    stubWeb(true)
+    oldApi(oldChart({ points: { weight: [], height: [{ measuredOn: '2026-10-12', months: 153.4, value: 150 }] }, limits: { weight: { maxMonths: 120, later: 1 }, height: { maxMonths: 228, later: 0 } } }))
+    renderAt(PATH, <GrowthPage />, ROUTE)
+    expect(await screen.findByText(/Las medidas de Mateo están en Medidas anotadas/)).toBeInTheDocument()
+    expect(screen.getByRole('table', { name: 'Medidas anotadas' })).toBeInTheDocument()
+  })
+
+  it('C: nothing the curves cover — no tabs, a title, the sentence of both curves and the link', async () => {
+    oldApi(oldChart({ points: { weight: [], height: [] }, limits: { weight: { maxMonths: 120, later: 2 }, height: { maxMonths: 228, later: 1 } } }))
+    renderAt(PATH, <GrowthPage />, ROUTE)
+    expect(await screen.findByRole('heading', { name: 'Gráfica de crecimiento' })).toBeInTheDocument()
+    expect(screen.getByText('Las curvas de la OMS llegan a los 10 años en peso y a los 19 en talla. Sus medidas están en Medidas anotadas.')).toBeInTheDocument()
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Ir a Medidas anotadas ↓' })).toBeInTheDocument()
+  })
+
+  it('C on the web', async () => {
+    stubWeb(true)
+    oldApi(oldChart({ points: { weight: [], height: [] }, limits: { weight: { maxMonths: 120, later: 2 }, height: { maxMonths: 228, later: 1 } } }))
+    renderAt(PATH, <GrowthPage />, ROUTE)
+    expect(await screen.findByRole('heading', { name: 'Gráfica de crecimiento' })).toBeInTheDocument()
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument()
+  })
+
+  it('US3: a measurement written after the curve is in the list and in «Última medida», not in the chart', async () => {
+    // The newest of the list is 11.4 kg · 82 cm (12 Oct 2026), 12 years after birth: the server leaves it out of the chart's weight.
+    oldApi(oldChart())
+    renderAt(PATH, <GrowthPage />, ROUTE)
+    await screen.findByRole('img', { name: /Gráfica de peso/ })
+    expect(screen.getByRole('region', { name: 'Última medida' })).toHaveTextContent('11.4 kg · 82 cm')
+    expect(screen.getAllByText('12 oct 2026').length).toBeGreaterThan(0)
+    expect(within(reading()).getByText('29.5 kg')).toBeInTheDocument()
+    expect(within(reading()).queryByText('11.4 kg')).not.toBeInTheDocument()
+  })
+
+  it('without the WHO curves an older child still gets the fixed note and the whole range', async () => {
+    oldApi(oldChart({ reference: { available: false, source: '', weight: { maxMonths: 0, curves: [] }, height: { maxMonths: 0, curves: [] } } }))
+    renderAt(PATH, <GrowthPage />, ROUTE)
+    await screen.findByRole('img', { name: /Gráfica de peso/ })
+    expect(screen.getByText(/La referencia de la OMS aún no está disponible/)).toBeInTheDocument()
+    expect(screen.getByText('La curva de peso de la OMS llega a los 10 años. Las medidas de después están en Medidas anotadas.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Todo' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('a tab with no values and nothing after the curve still says so', async () => {
+    api({ chartReply: { body: mockChart({ points: { weight: [{ measuredOn: '2026-10-12', months: 25, value: 11.4 }], height: [] } }) } })
+    renderAt(PATH, <GrowthPage />, ROUTE)
+    await screen.findByRole('img', { name: /Gráfica de peso/ })
     const user = userEvent.setup()
     await user.click(screen.getByRole('tab', { name: 'Talla' }))
     expect(screen.getByText('Aún no hay medidas de talla.')).toBeInTheDocument()

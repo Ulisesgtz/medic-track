@@ -1,4 +1,4 @@
-import { acceptViaApi, allowClerkOn, apiPost, designs, expect, inviteViaApi, secondPerson, seedChild, test } from './helpers'
+import { acceptViaApi, allowClerkOn, apiPost, designs, expect, inviteViaApi, secondPerson, seedAccount, seedChild, test } from './helpers'
 
 // specs/063 + 065: a child's measurements and the growth chart rebuilt from Claude Design's mock, with real people (Clerk dev
 // instance and the backend), at 390 and 1280 px. The child of seedChild was born on 2021-03-14. The WHO curves may be switched off
@@ -56,6 +56,65 @@ for (const design of designs) {
       await page.getByRole('button', { name: 'Quitar 14 mar 2022' }).click()
       await page.getByRole('dialog').getByRole('button', { name: 'Quitar' }).click()
       await expect(page.getByText('1 medida', { exact: true })).toBeVisible()
+    })
+
+    // specs/076: the chart stops where the WHO curve does. A child older than the curve keeps every measurement in the list.
+    const note = 'La curva de peso de la OMS llega a los 10 años. Las medidas de después están en Medidas anotadas.'
+
+    test('A: the weight chart ends at 10 years with the fixed note and counts what it draws; the list keeps all', async ({ page }) => {
+      await allowClerkOn(page)
+      const { account, token } = await seedAccount(page, [{ firstName: 'Mateo', lastName: 'Morales', birthDate: '2012-03-14' }])
+      const childId: string = account.children[0].id
+      const request = page.context().request
+      for (const [measuredOn, weightKg, heightCm] of [['2020-06-01', 24, 118], ['2021-03-14', 28, 130], ['2022-03-14', 31, 135], ['2023-05-20', 40, 142]] as const) {
+        await apiPost(request, token, `/children/${childId}/growth-measurements`, { measuredOn, weightKg, heightCm, note: '' })
+      }
+      await page.goto(`/children/${childId}/crecimiento`)
+      const chart = page.getByRole('region', { name: 'Gráfica de crecimiento' })
+      await expect(chart.getByRole('img', { name: /Gráfica de peso de/ })).toBeVisible()
+      await expect(chart.getByRole('button', { name: 'Hasta 10 años' })).toHaveAttribute('aria-pressed', 'true')
+      await expect(chart.getByText(note)).toBeVisible()
+      await expect(chart.getByText('Medida 3 de 3 en la gráfica de peso')).toBeVisible()
+      await expect(chart.getByRole('button', { name: 'Medida siguiente' })).toBeDisabled()
+      await expect(chart.getByText('31.0 kg').first()).toBeVisible()
+      // «Última medida» and the list still have the measurement the chart leaves out.
+      await expect(page.getByRole('region', { name: 'Última medida' })).toContainText('40.0 kg · 142 cm')
+      await expect(page.getByText('4 medidas')).toBeVisible()
+      // The height tab has its own curve (19 years): all four measurements, no note.
+      await chart.getByRole('tab', { name: 'Talla' }).click()
+      await expect(chart.getByRole('img', { name: /Gráfica de talla de/ })).toBeVisible()
+      await expect(chart.getByText(note)).toHaveCount(0)
+      await expect(chart.getByRole('button', { name: 'Hasta 19 años' })).toBeVisible()
+    })
+
+    test('B: a tab without anything the curve covers is one sentence and a link to the list', async ({ page }) => {
+      await allowClerkOn(page)
+      const { account, token } = await seedAccount(page, [{ firstName: 'Sofía', lastName: 'Morales', birthDate: '2012-03-14' }])
+      const childId: string = account.children[0].id
+      const request = page.context().request
+      await apiPost(request, token, `/children/${childId}/growth-measurements`, { measuredOn: '2023-05-20', weightKg: 40, heightCm: 142, note: '' })
+      await page.goto(`/children/${childId}/crecimiento`)
+      const chart = page.getByRole('region', { name: 'Gráfica de crecimiento' })
+      await expect(chart.getByText('La curva de peso de la OMS llega a los 10 años. Las medidas de Sofía están en Medidas anotadas.')).toBeVisible()
+      await expect(chart.getByRole('img')).toHaveCount(0)
+      await expect(chart.getByRole('button', { name: 'Medida anterior' })).toHaveCount(0)
+      await chart.getByRole('link', { name: 'Ir a Medidas anotadas ↓' }).click()
+      await expect(page.getByRole('region', { name: 'Medidas anotadas' })).toBeInViewport()
+      await chart.getByRole('tab', { name: 'Talla' }).click()
+      await expect(chart.getByRole('img', { name: /Gráfica de talla de/ })).toBeVisible()
+    })
+
+    test('C: a young adult whose two curves ended before their measurement has no tabs, a title and one sentence', async ({ page }) => {
+      await allowClerkOn(page)
+      const other = await seedAccount(page, [{ firstName: 'Daniel', lastName: 'Morales', birthDate: '2004-03-14' }])
+      const otherId: string = other.account.children[0].id
+      await apiPost(page.context().request, other.token, `/children/${otherId}/growth-measurements`, { measuredOn: '2025-01-10', weightKg: 70, heightCm: 175, note: '' })
+      await page.goto(`/children/${otherId}/crecimiento`)
+      const only = page.getByRole('region', { name: 'Gráfica de crecimiento' })
+      await expect(only.getByRole('heading', { name: 'Gráfica de crecimiento' })).toBeVisible()
+      await expect(only.getByText('Las curvas de la OMS llegan a los 10 años en peso y a los 19 en talla. Sus medidas están en Medidas anotadas.')).toBeVisible()
+      await expect(only.getByRole('tab')).toHaveCount(0)
+      await expect(page.getByRole('region', { name: 'Última medida' })).toContainText('70.0 kg · 175 cm')
     })
 
     test('on the free plan the measurements are written down and the chart opens the plan notice, with no data', async ({ page }) => {

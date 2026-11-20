@@ -110,12 +110,26 @@ type chartPointsDoc struct {
 	Height []chartPointDoc `json:"height"`
 } // @name GrowthChartPoints
 
+type limitDoc struct {
+	// MaxMonths is the last month of the WHO curve of the indicator (weight 120, height 228).
+	MaxMonths int `json:"maxMonths" example:"120"`
+	// Later is how many measurements of the indicator are after that age: they are not in points, only in the list.
+	Later int `json:"later" example:"1"`
+} // @name GrowthLimit
+
+type limitsDoc struct {
+	Weight limitDoc `json:"weight"`
+	Height limitDoc `json:"height"`
+} // @name GrowthLimits
+
 type chartResponse struct {
 	BirthDate    string         `json:"birthDate" example:"2025-06-10"`
 	ReferenceSex *string        `json:"referenceSex" example:"male"`
 	Points       chartPointsDoc `json:"points"`
 	// Reference is null until a WHO table is chosen for the child.
 	Reference *referenceDoc `json:"reference"`
+	// Limits is always present: where each curve ends and how many measurements are after it.
+	Limits limitsDoc `json:"limits"`
 } // @name GrowthChart
 
 type errorDoc struct {
@@ -462,6 +476,10 @@ func (h *Handler) GetChart(w http.ResponseWriter, r *http.Request) {
 	out := chartResponse{
 		BirthDate: c.BirthDate, ReferenceSex: sexPtr(c.Sex),
 		Points: chartPointsDoc{Weight: points(c.Weight), Height: points(c.Height)},
+		Limits: limitsDoc{
+			Weight: limitDoc{MaxMonths: c.Limits.Weight.MaxMonths, Later: c.Limits.Weight.Later},
+			Height: limitDoc{MaxMonths: c.Limits.Height.MaxMonths, Later: c.Limits.Height.Later},
+		},
 	}
 	if c.WeightReference != nil && c.HeightReference != nil {
 		out.Reference = &referenceDoc{Available: c.ReferenceAvailable, Source: referenceSource, Weight: curve(c.WeightReference), Height: curve(c.HeightReference)}

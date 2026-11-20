@@ -56,6 +56,7 @@ export function chart(over: Partial<GrowthChart> = {}): GrowthChart {
       ],
       height: [{ measuredOn: '2025-11-03', months: 16.79, value: 76.5 }],
     },
+    limits: { weight: { maxMonths: 120, later: 0 }, height: { maxMonths: 228, later: 0 } },
     reference: {
       available: true,
       source: 'OMS: Patrones de Crecimiento Infantil (2006) y Referencia de Crecimiento 2007',

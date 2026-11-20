@@ -2055,6 +2055,11 @@ definitions:
       birthDate:
         example: "2025-06-10"
         type: string
+      limits:
+        allOf:
+        - $ref: '#/definitions/GrowthLimits'
+        description: 'Limits is always present: where each curve ends and how many
+          measurements are after it.'
       points:
         $ref: '#/definitions/GrowthChartPoints'
       reference:
@@ -2134,6 +2139,26 @@ definitions:
         type: string
       message:
         type: string
+    type: object
+  GrowthLimit:
+    properties:
+      later:
+        description: 'Later is how many measurements of the indicator are after that
+          age: they are not in points, only in the list.'
+        example: 1
+        type: integer
+      maxMonths:
+        description: MaxMonths is the last month of the WHO curve of the indicator
+          (weight 120, height 228).
+        example: 120
+        type: integer
+    type: object
+  GrowthLimits:
+    properties:
+      height:
+        $ref: '#/definitions/GrowthLimit'
+      weight:
+        $ref: '#/definitions/GrowthLimit'
     type: object
   GrowthList:
     properties:

@@ -32,8 +32,12 @@ describe('growthText — the record never evaluates (Principio I)', () => {
     byLine('Ana'),
     correctedLine({ at: '2026-10-03T10:00:00Z', by: { name: 'Luis' } }),
     readingLine('2026-10-12', 'weight', 11.4, '2 años 1 mes'),
+    GROWTH.limitNote('weight', 10),
+    GROWTH.limitNote('height', 19),
+    GROWTH.readingCount(3, 3, 'weight'),
+    GROWTH.noChartTab('weight', 10, 'Mateo'),
   ]
-  it.each(['normal', 'bajo', 'alto', 'riesgo', 'sobrepeso', 'desnutri', 'obes', 'por debajo', 'por encima', 'debería', 'debes', 'percentil de', 'preocup', 'alerta', 'tarde'])(
+  it.each(['normal', 'bajo', 'alto', 'riesgo', 'sobrepeso', 'desnutri', 'obes', 'por debajo', 'por encima', 'debería', 'debes', 'percentil de', 'preocup', 'alerta', 'tarde', 'ya no', 'fuera de rango', 'excede'])(
     'no sentence says «%s»',
     (word) => {
       for (const s of sentences) expect(s.toLowerCase()).not.toContain(word)

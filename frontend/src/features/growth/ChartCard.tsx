@@ -1,11 +1,10 @@
-import { useRef, useState, type KeyboardEvent } from 'react'
+import { useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
 import { GrowthChart } from './GrowthChart'
 import { WhoNote, growthCard } from './GrowthCards'
 import {
   axisValues,
-  fullRangeMonths,
   rangeLabel,
-  shortRangeMonths,
+  rangePlan,
   visibleCurves,
   visiblePoints,
   yAxis,
@@ -14,8 +13,6 @@ import {
 import { ageAt } from './growthAge'
 import { GROWTH, readingLine, readingMeta, valueText } from './growthText'
 import type { GrowthChart as Chart, Indicator, ReferenceSex } from './types'
-
-const REFERENCE_END: Record<Indicator, number> = { weight: 120, height: 228 }
 
 interface ChartCardProps {
   chart: Chart
@@ -38,7 +35,7 @@ interface ChartCardProps {
  */
 export function ChartCard({ chart, childName, today, canEdit, ownerName, desktop, onChooseSex, choosingSex, chooseFailed }: ChartCardProps) {
   const [indicator, setIndicator] = useState<Indicator>('weight')
-  const [range, setRange] = useState<RangeKind>('short')
+  const [range, setRange] = useState<RangeKind | null>(null)
   // The chosen measurement by its date and its place among that day's (two can share a date).
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const tabs = useRef<(HTMLButtonElement | null)[]>([])
@@ -47,17 +44,16 @@ export function ChartCard({ chart, childName, today, canEdit, ownerName, desktop
   const referenceOff = reference != null && !reference.available
   const noSex = chart.referenceSex == null
   const curveSet = reference?.available && !noSex ? reference[indicator] : null
-  // The WHO reference's ends are fixed (weight to 10 years, height to 19): «Hasta 10 años» is offered before a table is chosen too.
-  const refMax = curveSet?.maxMonths ?? (referenceOff ? null : REFERENCE_END[indicator])
+  // The axis ends where the WHO curve does (the server's `limits`, also before a table is chosen): the points are already only the
+  // ones that curve covers (spec 076).
+  const limit = chart.limits[indicator]
+  const refMax = referenceOff ? null : limit.maxMonths
 
   const allPoints = [...chart.points[indicator]].sort((a, b) => a.months - b.months)
-  const lastMonths = allPoints.length ? allPoints[allPoints.length - 1].months : 0
-  // A child older than the reference keeps their points: the range reaches the last measurement (drawn without curves past it).
-  const cap = refMax == null ? null : Math.max(refMax, Math.ceil(lastMonths / 12) * 12)
-  const shortMonths = shortRangeMonths(chart.birthDate, today, cap)
-  const fullMonths = fullRangeMonths(cap, shortMonths, lastMonths)
-  const fullIsReference = refMax != null && fullMonths === refMax
-  const xMax = range === 'short' ? shortMonths : fullMonths
+  const plan = rangePlan(chart.birthDate, today, refMax, allPoints)
+  const fullIsReference = refMax != null && plan.full === refMax
+  const chosenRange: RangeKind = range === 'short' && plan.short != null ? 'short' : range === 'full' ? 'full' : plan.initial
+  const xMax = chosenRange === 'short' && plan.short != null ? plan.short : plan.full
   const points = visiblePoints(allPoints, xMax)
   const curves = curveSet ? visibleCurves(curveSet.curves, xMax) : []
   const y = yAxis(axisValues(points, curves))
@@ -82,9 +78,17 @@ export function ChartCard({ chart, childName, today, canEdit, ownerName, desktop
   }
 
   const ranges: { kind: RangeKind; label: string }[] = [
-    { kind: 'short', label: rangeLabel('short', shortMonths, fullIsReference) },
-    ...(fullMonths > shortMonths ? [{ kind: 'full' as const, label: rangeLabel('full', fullMonths, fullIsReference) }] : []),
+    ...(plan.short != null ? [{ kind: 'short' as const, label: rangeLabel('short', plan.short, fullIsReference) }] : []),
+    ...(plan.full > (plan.short ?? 0) ? [{ kind: 'full' as const, label: rangeLabel('full', plan.full, fullIsReference) }] : []),
   ]
+
+  // «Ir a Medidas anotadas ↓»: jumps to the list or the table (a real link, but the router's address is left alone).
+  const goToList = (e: MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault()
+    const target = document.getElementById('medidas')
+    target?.scrollIntoView({ block: 'start' })
+    target?.focus({ preventScroll: true })
+  }
 
   const tabList = (
     <div
@@ -120,7 +124,7 @@ export function ChartCard({ chart, childName, today, canEdit, ownerName, desktop
   const rangeGroup = (
     <div role="group" aria-label={GROWTH.rangeLabel} className="flex flex-wrap gap-2">
       {ranges.map((r) => {
-        const on = range === r.kind
+        const on = chosenRange === r.kind
         return (
           <button
             key={r.kind}
@@ -144,20 +148,27 @@ export function ChartCard({ chart, childName, today, canEdit, ownerName, desktop
         aria-label={dir === 'prev' ? GROWTH.previous : GROWTH.next}
         disabled={disabled}
         onClick={() => selected != null && choose(dir === 'prev' ? selected - 1 : selected + 1)}
-        className={`flex size-11 flex-none cursor-pointer items-center justify-center rounded-xl border-[1.5px] border-hint-border bg-surface text-[22px] font-extrabold text-action disabled:cursor-default ${disabled ? 'opacity-40' : ''}`}
+        className={`flex size-11 flex-none cursor-pointer items-center justify-center rounded-xl border-[1.5px] border-hint-border bg-surface text-[22px] font-extrabold text-action disabled:cursor-not-allowed ${disabled ? 'opacity-40' : ''}`}
       >
         {dir === 'prev' ? '‹' : '›'}
       </button>
     )
   }
 
+  const counter =
+    limit.later > 0 && selected != null ? (
+      <span className="text-[13px] leading-[normal] font-semibold text-muted">{GROWTH.readingCount(selected + 1, points.length, indicator)}</span>
+    ) : null
   const reading =
     point == null ? (
       <p className={`text-body ${desktop ? 'text-[16px]' : 'text-[15px]'}`}>{GROWTH.noPoints(indicator)}</p>
     ) : desktop ? (
       <div aria-live="polite" className="flex items-center gap-3">
         {arrow('prev')}
-        <span className="text-[18px] font-extrabold text-ink tabular-nums">{readingLine(point.measuredOn, indicator, point.value, age)}</span>
+        <span className="flex flex-col gap-px">
+          <span className="text-[18px] font-extrabold text-ink tabular-nums">{readingLine(point.measuredOn, indicator, point.value, age)}</span>
+          {counter}
+        </span>
         {arrow('next')}
       </div>
     ) : (
@@ -166,6 +177,7 @@ export function ChartCard({ chart, childName, today, canEdit, ownerName, desktop
         <div className="flex min-w-0 flex-1 flex-col gap-px text-center">
           <span className="text-[18px] leading-[normal] font-black text-ink tabular-nums">{valueText(indicator, point.value)}</span>
           <span className="text-[14px] leading-[normal] font-medium text-body">{readingMeta(point.measuredOn, age)}</span>
+          {counter}
         </div>
         {arrow('next')}
       </div>
@@ -203,7 +215,7 @@ export function ChartCard({ chart, childName, today, canEdit, ownerName, desktop
     !noSex && !referenceOff && chart.referenceSex ? (
       canEdit ? (
         <div className={`flex ${desktop ? 'flex-none flex-col gap-1.5' : 'items-center justify-between gap-3'}`}>
-          <span className="text-[14px] font-bold text-body">{GROWTH.tablePick}</span>
+          <span className="text-[14px] leading-[normal] font-bold text-body">{GROWTH.tablePick}</span>
           <div role="group" aria-label={GROWTH.tableGroup} className="flex flex-none gap-1 rounded-[13px] border border-hint-border bg-hint p-[3px]">
             {(['female', 'male'] as const).map((sex) => {
               const on = chart.referenceSex === sex
@@ -229,11 +241,12 @@ export function ChartCard({ chart, childName, today, canEdit, ownerName, desktop
       )
     ) : null
 
-  const beyond = curveSet && points.some((p) => p.months > curveSet.maxMonths) ? (indicator === 'weight' ? GROWTH.beyondWeight : GROWTH.beyondHeight) : null
+  // The fixed sentence of the mock: only in the tab whose curve ends before some of the child's measurements.
+  const limitNote = limit.later > 0 && allPoints.length > 0 ? GROWTH.limitNote(indicator, limit.maxMonths / 12) : null
   const notes = (
     <>
       {referenceOff ? <p className="text-[14px] leading-[1.45] text-body">{GROWTH.referenceOff}</p> : null}
-      {beyond ? <p className="text-[14px] leading-[1.45] text-body">{beyond}</p> : null}
+      {referenceOff && limitNote ? <p className="text-[14px] leading-[1.45] text-body">{limitNote}</p> : null}
       {chooseFailed ? (
         <p role="alert" className="text-[14px] text-body">
           {GROWTH.tableFailed}
@@ -258,8 +271,40 @@ export function ChartCard({ chart, childName, today, canEdit, ownerName, desktop
     </div>
   )
 
+  const none = (text: string) => (
+    <div className={`flex flex-col gap-1.5 rounded-[14px] border border-hint-border bg-hint ${desktop ? 'px-5 py-[18px]' : 'p-4'}`}>
+      <p className={`leading-normal font-semibold text-ink ${desktop ? 'text-[17px]' : 'text-[16px]'}`}>{text}</p>
+      <a href="#medidas" onClick={goToList} className="inline-flex min-h-11 items-center self-start text-[15px] font-extrabold text-action hover:text-ink hover:underline">
+        {GROWTH.goToList}
+      </a>
+    </div>
+  )
+  const cardClass = `${growthCard} flex flex-col ${desktop ? 'gap-4 p-6' : 'gap-3 p-4'}`
+
+  // C: no tab has anything the curves cover, but something was written after them: no tabs, no axes, one sentence.
+  const laterTotal = chart.limits.weight.later + chart.limits.height.later
+  if (chart.points.weight.length === 0 && chart.points.height.length === 0 && laterTotal > 0) {
+    return (
+      <section aria-label={GROWTH.chartSection} className={cardClass}>
+        <h2 className={`leading-[normal] font-extrabold text-ink ${desktop ? 'text-[20px]' : 'text-[18px]'}`}>{GROWTH.chartSection}</h2>
+        {none(GROWTH.noChartAny(chart.limits.weight.maxMonths / 12, chart.limits.height.maxMonths / 12))}
+      </section>
+    )
+  }
+  // B: this tab's curve ended before every measurement of it: the tabs stay, the rest of the card is one sentence.
+  if (allPoints.length === 0 && limit.later > 0) {
+    return (
+      <section aria-label={GROWTH.chartSection} className={cardClass}>
+        {tabList}
+        <div id="growth-tabpanel" role="tabpanel" aria-labelledby={`growth-tab-${indicator}`}>
+          {none(GROWTH.noChartTab(indicator, limit.maxMonths / 12, childName))}
+        </div>
+      </section>
+    )
+  }
+
   return (
-    <section aria-label={GROWTH.chartSection} className={`${growthCard} flex flex-col ${desktop ? 'gap-4 p-6' : 'gap-3 p-4'}`}>
+    <section aria-label={GROWTH.chartSection} className={cardClass}>
       {desktop ? (
         <div className="flex flex-wrap items-center justify-between gap-4">
           {tabList}
@@ -277,13 +322,13 @@ export function ChartCard({ chart, childName, today, canEdit, ownerName, desktop
       {notes}
       {desktop ? (
         <div className="flex items-center gap-5">
-          {referenceOff ? null : <WhoNote desktop className="min-w-0 flex-1" />}
+          {referenceOff ? null : <WhoNote desktop className="min-w-0 flex-1" limitNote={limitNote} />}
           {sexPick}
         </div>
       ) : (
         <>
           {sexPick}
-          {referenceOff ? null : <WhoNote desktop={false} />}
+          {referenceOff ? null : <WhoNote desktop={false} limitNote={limitNote} />}
         </>
       )}
     </section>

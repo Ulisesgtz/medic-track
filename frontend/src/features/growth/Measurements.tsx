@@ -53,7 +53,7 @@ function Title({ count, desktop }: { count: number; desktop: boolean }) {
 /** The phone's list: date and values, age and who wrote it, the note, the correction and the actions. */
 export function MeasurementsList({ measurements, birthDate, childId, canEdit, onRemove }: MeasurementsProps) {
   return (
-    <section aria-label={GROWTH.listTitle} className="flex flex-col gap-2.5 leading-[normal]">
+    <section id="medidas" tabIndex={-1} aria-label={GROWTH.listTitle} className="flex flex-col gap-2.5 leading-[normal] outline-none">
       <Title count={measurements.length} desktop={false} />
       <ul className="flex flex-col gap-px overflow-hidden rounded-2xl border border-line bg-hint-edge">
         {measurements.map((m) => (
@@ -85,7 +85,7 @@ const columns = 'grid grid-cols-[132px_128px_96px_96px_minmax(0,1fr)_168px] gap-
 /** The web's table: Fecha · Edad · Peso · Talla · Anotada por, and the actions at the right; an empty value is «—». */
 export function MeasurementsTable({ measurements, birthDate, childId, canEdit, onRemove }: MeasurementsProps) {
   return (
-    <section aria-label={GROWTH.listTitle} className="flex flex-col gap-3 leading-[normal]">
+    <section id="medidas" tabIndex={-1} aria-label={GROWTH.listTitle} className="flex flex-col gap-3 leading-[normal] outline-none">
       <Title count={measurements.length} desktop />
       <div role="table" aria-label={GROWTH.listTitle} className="flex flex-col gap-px overflow-hidden rounded-2xl border border-line bg-hint-edge">
         <div role="row" className={`${columns} bg-canvas px-5 py-3 text-[13px] font-extrabold tracking-[0.04em] text-muted uppercase`}>
