@@ -467,6 +467,11 @@ Principio I (la app guarda lo que el padre escribe; nunca evalúa ni sugiere).
   (p. ej. una Cuidadora) probablemente pierden el acceso a ese hijo sin aviso (no probado). Decidir: impedirle aceptar
   (409, «sal de tu familia o quita a tus invitados primero») o permitirlo con advertencia; corregir el caso límite de
   la spec 074 según lo que se decida.
+- **Selección en azul: casos que quedaron fuera de la spec 078** (decisión del dueño, 2026-11-20). La spec 078 pasa la opción
+  elegida de los controles de la tinta oscura al azul de acción; por ahora se dejaron igual, para revisarlos después: (1) la
+  celda del **día elegido del calendario del tratamiento** (tinta con puntos de colores encima, spec 022); (2) las **pestañas
+  Peso / Talla** y la tabla **Niña / Niño** de crecimiento (la activa lleva borde de acción sobre blanco); (3) el borde de
+  **«Tu plan actual»** en Planes (estado informativo, no un control).
 - **Tipo de actividad del hijo y actividades separadas por tipo** — **en `specs/075-tipos-de-actividad/`** (2026-11-19:
   tipo obligatorio, solo catálogo, segmentos solo en la sección «Actividades» del hijo y de `/yo`, también lo personal,
   con iconos; cambiar el tipo sin plan). Texto original (pedido del dueño, 2026-11-19; specs 035/036). Al
