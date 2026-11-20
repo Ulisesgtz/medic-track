@@ -9,7 +9,9 @@ export function StickyActionBar({ variant, children }: { variant: 'phone' | 'des
   if (variant === 'desktop') return <div className="flex justify-end gap-2.5 pt-2">{children}</div>
   return (
     <div
-      className="sticky bottom-0 z-10 -mx-5 mt-2 flex flex-col gap-2 border-t border-hint-edge bg-canvas px-5 pt-3 [&>*]:w-full"
+      // `[&>*]:flex-none`: the buttons bring a flex-basis meant for the web's row (`flex-[2_1_180px]`); in this column it would
+      // become their height (a 180 px «Guardar»). Here each one keeps its own height.
+      className="sticky bottom-0 z-10 -mx-5 mt-2 flex flex-col gap-2 border-t border-hint-edge bg-canvas px-5 pt-3 [&>*]:w-full [&>*]:flex-none"
       style={{ paddingBottom: 'calc(1.625rem + env(safe-area-inset-bottom))' }}
     >
       {children}

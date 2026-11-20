@@ -40,6 +40,11 @@ for (const design of designs) {
 
       const save = page.getByRole('button', { name: 'Guardar actividad' })
       await expect(save).toBeEnabled()
+      // The buttons of the bar keep their own height (on the phone they used to grow to 120 and 180 px).
+      for (const button of [save, page.getByRole('button', { name: 'Cancelar' })]) {
+        const box = await button.boundingBox()
+        expect(box?.height ?? 0).toBeLessThan(64)
+      }
       await save.click()
       await expect(group.getByText('Elige el tipo de actividad.')).toBeVisible()
       await expect(page.getByLabel('Nombre')).toHaveValue('Práctica de fut')

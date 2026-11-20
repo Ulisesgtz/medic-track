@@ -10,7 +10,7 @@ describe('StickyActionBar', () => {
       </StickyActionBar>,
     )
     const bar = screen.getByRole('button', { name: 'Guardar suplemento' }).parentElement!
-    expect(bar).toHaveClass('sticky', 'bottom-0', 'border-hint-edge', '[&>*]:w-full')
+    expect(bar).toHaveClass('sticky', 'bottom-0', 'border-hint-edge', '[&>*]:w-full', '[&>*]:flex-none')
     expect(bar).not.toHaveClass('fixed')
     expect(bar.style.paddingBottom).toContain('safe-area-inset-bottom')
   })
