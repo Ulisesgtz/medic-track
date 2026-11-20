@@ -446,7 +446,7 @@ Principio I (la app guarda lo que el padre escribe; nunca evalúa ni sugiere).
   especialidad y dirección; autocompletar en consultas y citas y un botón «Llamar». Semilla del canal B2B2C.
 - **Documentos y estudios por hijo** — análisis, radiografías, póliza: se guardan, no se leen. Depende de mover las
   fotos a object storage (sección Backend).
-- **Crecimiento: dejar de ofrecer la comparación con la OMS al pasar la edad de su curva** (pedido del dueño,
+- **Crecimiento: dejar de ofrecer la comparación con la OMS al pasar la edad de su curva** — **en `specs/076-curva-oms-por-edad/`** (2026-11-19: la medida se sigue anotando; la gráfica de cada indicador termina en la edad de su curva). Texto original (pedido del dueño,
   2026-11-18; spec 063/065). Las curvas de la OMS llegan a **10 años en peso** (120 meses) y a **19 años en talla**
   (228 meses), confirmado en `backend/internal/growth` (`MaxMonths`). Pedido: cuando el hijo pase la edad máxima de una
   curva, (1) **no mostrar esa curva** para registrar nuevas medidas que comparar (pestaña Peso pasados los 10, Talla
