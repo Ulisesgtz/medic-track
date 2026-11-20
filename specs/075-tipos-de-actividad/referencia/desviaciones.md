@@ -2,7 +2,9 @@
 
 Mock: `Tipos de actividad PediTrack.dc.html` (estados A, A2, A3, B, C, C2, D, D1, D2, D3, E). Medidas, textos, SVG de los iconos y
 colores tomados del HTML del mock. El dueño decidió implementar también el estado E (iconos por tipo: no es desviación). Lo que
-sigue es lo que **no** es igual y por qué; cada punto espera la aprobación del dueño.
+sigue es lo que **no** es igual y por qué.
+
+**Aprobadas por el dueño el 2026-11-19: todas las desviaciones de esta lista.**
 
 ## Medición (hecha, 2026-11-19)
 
