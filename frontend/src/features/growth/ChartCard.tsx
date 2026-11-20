@@ -13,6 +13,7 @@ import {
 import { ageAt } from './growthAge'
 import { GROWTH, readingLine, readingMeta, valueText } from './growthText'
 import type { GrowthChart as Chart, Indicator, ReferenceSex } from './types'
+import { selectedFill } from '../../shared/ui/selection'
 
 interface ChartCardProps {
   chart: Chart
@@ -131,7 +132,7 @@ export function ChartCard({ chart, childName, today, canEdit, ownerName, desktop
             type="button"
             aria-pressed={on}
             onClick={() => setRange(r.kind)}
-            className={`min-h-11 cursor-pointer rounded-full border-[1.5px] text-[15px] ${desktop ? 'px-[18px]' : 'px-4'} ${on ? 'border-ink bg-ink font-extrabold text-white' : 'border-hint-border bg-surface font-bold text-action'}`}
+            className={`min-h-11 cursor-pointer rounded-full border-[1.5px] text-[15px] ${desktop ? 'px-[18px]' : 'px-4'} ${on ? `${selectedFill} font-extrabold` : 'border-hint-border bg-surface font-bold text-action'}`}
           >
             {r.label}
           </button>

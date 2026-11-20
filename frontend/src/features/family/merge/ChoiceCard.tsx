@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { selectedCard, selectedDot, selectedDotRing } from '../../../shared/ui/selection'
 
 /**
  * The selectable card of the mock (a real radio with its label: the keyboard and the screen reader understand it). The chosen
@@ -22,12 +23,12 @@ export function ChoiceCard({
     <label
       className={`relative flex cursor-pointer items-start gap-3.5 rounded-[22px] border-2 bg-surface has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-action ${
         compact ? 'px-3.5 py-3' : 'p-4 shadow-[0_8px_20px_rgba(4,37,43,0.07)]'
-      } ${checked ? 'border-ink' : 'border-hint-edge'}`}
+      } ${checked ? selectedCard : 'border-hint-edge'}`}
     >
       <input type="radio" name={name} checked={checked} onChange={onChange} className="absolute h-px w-px opacity-0" />
       <span
         aria-hidden="true"
-        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${checked ? 'border-ink bg-ink' : 'border-slate-400 bg-surface'}`}
+        className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 ${checked ? `${selectedDotRing} ${selectedDot}` : 'border-slate-400 bg-surface'}`}
       >
         {checked && (
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" className="text-white">

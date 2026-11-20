@@ -24,6 +24,7 @@ import {
 } from './routineValues'
 import { PERIOD_OPTIONS, WEEKDAY_SEGMENTS, activityPreview, fixedPreview } from './scheduleText'
 import type { Routine, RoutineInput, RoutineKind } from './types'
+import { selectedCard, selectedDot, selectedDotRing, selectedFill } from '../../shared/ui/selection'
 
 interface RoutineFormProps {
   /** Supplement (fixed hours) or activity (from one hour to another every so often, or at fixed hours); an edit keeps its routine's. */
@@ -42,9 +43,9 @@ interface RoutineFormProps {
 }
 
 const segmented = 'grid overflow-hidden rounded-[14px] border-[1.5px] border-slate-300'
-const segmentOn = 'bg-ink text-white'
+const segmentOn = selectedFill
 const segmentOff = 'bg-surface text-ink hover:bg-hint'
-const segmentBase = 'min-h-12 cursor-pointer text-[15px] font-extrabold focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-inset'
+const segmentBase = 'min-h-12 cursor-pointer text-[15px] font-extrabold focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-inset'
 /** A date field: never wider than its card (iOS draws the native one past it) and, on the web, no wider than a date needs. */
 const dateField = `${fieldRoutine} appearance-none min-w-0 max-w-full sm:max-w-[220px] [&::-webkit-date-and-time-value]:text-left`
 
@@ -121,15 +122,15 @@ function OptionCards<T extends string>({
           <label
             key={option.value}
             className={`flex cursor-pointer items-start gap-3 rounded-[14px] px-4 py-3.5 ${
-              on ? 'border-2 border-ink bg-hint px-[15px] py-[13px]' : 'border-[1.5px] border-slate-300 bg-surface hover:bg-hint'
+              on ? `border-2 ${selectedCard} bg-hint px-[15px] py-[13px]` : 'border-[1.5px] border-slate-300 bg-surface hover:bg-hint'
             } has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-action has-[:focus-visible]:ring-offset-2`}
           >
             <input type="radio" name={name} value={option.value} checked={on} onChange={() => onChange(option.value)} className="sr-only" />
             <span
               aria-hidden="true"
-              className={`mt-px flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 ${on ? 'border-ink' : 'border-slate-500'}`}
+              className={`mt-px flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 ${on ? selectedDotRing : 'border-slate-500'}`}
             >
-              {on && <span className="h-2.5 w-2.5 rounded-full bg-ink" />}
+              {on && <span className={`h-2.5 w-2.5 rounded-full ${selectedDot}`} />}
             </span>
             <span className="flex flex-col gap-0.5">
               <span className="text-base font-extrabold text-ink">{option.label}</span>

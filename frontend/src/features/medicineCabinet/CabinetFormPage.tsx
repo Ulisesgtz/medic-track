@@ -18,6 +18,7 @@ import { CABINET, MONTHS, fromConsultation, unitLabel } from './cabinetText'
 import { useCabinetItem, useCabinetPhoto, useSaveCabinetItem } from './hooks'
 import { parseMedicineText } from './parseMedicineText'
 import { CABINET_UNITS, type FromConsultation } from './types'
+import { selectedFill } from '../../shared/ui/selection'
 
 type PhotoState = 'none' | 'reading' | 'read' | 'noText' | 'saved'
 
@@ -298,7 +299,7 @@ export function CabinetFormPage() {
                     type="button"
                     aria-pressed={on}
                     onClick={() => set('unit', on ? '' : u)}
-                    className={`min-h-11 cursor-pointer rounded-xl border-[1.5px] px-2 text-[14px] font-extrabold ${on ? 'border-ink bg-ink text-white' : 'border-calendar-muted bg-surface text-ink'}`}
+                    className={`min-h-11 cursor-pointer rounded-xl border-[1.5px] px-2 text-[14px] font-extrabold ${on ? selectedFill : 'border-calendar-muted bg-surface text-ink'}`}
                   >
                     {unitLabel(u)}
                   </button>

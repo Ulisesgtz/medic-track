@@ -50,6 +50,7 @@ Tokens de color y tipografía viven en el bloque `@theme` de `src/index.css`; la
 
 - Un solo botón sólido (`--color-confirmed`) por pantalla; las acciones secundarias van con contorno
   `--color-action`.
+- **Lo elegido va en `--color-action` con texto blanco** (spec 078): segmentados, chips y pastillas con `selectedFill`; tarjetas de opción con borde y punto `selectedCard`/`selectedDotRing`/`selectedDot` (todos en `shared/ui/selection.ts`), siempre con una segunda señal (palomita, punto o relleno). La tinta queda para texto, bandas y botones de confirmación; `shared/ui/noInkSelection.test.ts` lo vigila.
 - Texto blanco solo sobre `--color-ink`, `--color-action` y `--color-confirmed`. Sobre `--color-bright`
   y `--color-pending` va tinta oscura.
 - Ámbar (`--color-pending`) significa "el padre no lo ha marcado", nunca una advertencia médica
