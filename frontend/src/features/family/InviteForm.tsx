@@ -5,6 +5,7 @@ import { Notice } from '../../shared/ui/Notice'
 import { FamilyApiError } from './api'
 import { ROLE_CHOICE, ROLE_LABEL } from './roles'
 import type { InviteRole } from './types'
+import { selectedCard, selectedDot, selectedDotRing } from '../../shared/ui/selection'
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 const ROLES: InviteRole[] = ['tutor', 'caregiver']
@@ -149,15 +150,15 @@ export function InviteForm({ onInvite, pending, full, names, plural, max, varian
             <label
               key={r}
               className={`flex min-h-11 cursor-pointer items-start gap-3 rounded-[14px] p-4 focus-within:ring-2 focus-within:ring-ink focus-within:ring-offset-2 ${
-                chosen ? 'border-2 border-ink bg-hint p-[15px]' : 'border-[1.5px] border-slate-300 bg-surface'
+                chosen ? `border-2 ${selectedCard} bg-hint p-[15px]` : 'border-[1.5px] border-slate-300 bg-surface'
               }`}
             >
               <input type="radio" name="invite-role" value={r} checked={chosen} onChange={() => setRole(r)} className="peer sr-only" />
               <span
                 aria-hidden="true"
-                className={`mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 ${chosen ? 'border-ink' : 'border-slate-500'}`}
+                className={`mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 ${chosen ? selectedDotRing : 'border-slate-500'}`}
               >
-                {chosen && <span className="h-2.5 w-2.5 rounded-full bg-ink" />}
+                {chosen && <span className={`h-2.5 w-2.5 rounded-full ${selectedDot}`} />}
               </span>
               <span className="flex min-w-0 flex-col gap-1">
                 <span className="text-base font-extrabold text-ink">{ROLE_LABEL[r]}</span>

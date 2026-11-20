@@ -49,6 +49,7 @@ puntos son cian: relleno `#22d3ee`, vacío `#a5f3fc`.
 Reglas:
 
 - Un solo botón sólido por pantalla (`--color-confirmed`); las acciones secundarias van con contorno `--color-action` de 2 px.
+- **Lo elegido va en `--color-action` con texto blanco y una segunda señal** (spec 078; blanco sobre `action` = 5.36:1): segmentados, chips y pastillas de rango se rellenan; las tarjetas de opción llevan borde y punto `action`. La tinta queda para texto, bandas y botones de confirmación, nunca para una opción elegida. Clases en `shared/ui/selection.ts`.
 - Texto blanco solo sobre `--color-ink`, `--color-action` y `--color-confirmed`. Nunca sobre `--color-bright` ni `--color-pending` (ahí va tinta oscura).
 - Ámbar significa "el padre no lo ha marcado". No existe rojo de alerta médica en la app (Principio I). El único rojo permitido es `red-700` para errores de validación de formulario y la acción destructiva "Quitar" — nunca para datos de salud.
 - Tintas de texto sobre superficies de estado: `--color-on-pending` (#451a03) sobre ámbar, `--color-pending-strong` (#92400e) sobre `--color-pending-soft`, `--color-confirmed-strong` (#065f46) sobre `--color-confirmed-soft`.

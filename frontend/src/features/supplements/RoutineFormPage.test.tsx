@@ -593,7 +593,7 @@ describe('RoutineFormPage — tipo de actividad (spec 075)', () => {
     await user.click(screen.getByRole('radio', { name: 'Deportiva' }))
     expect(screen.getByRole('radio', { name: 'Escolar' })).not.toBeChecked()
     expect(screen.getByRole('radio', { name: 'Deportiva' })).toBeChecked()
-    expect(screen.getByText('Deportiva').closest('label')).toHaveClass('bg-ink')
+    expect(screen.getByText('Deportiva').closest('label')).toHaveClass('bg-action')
   })
 
   it('says the catalog could not load, without blocking the page', async () => {

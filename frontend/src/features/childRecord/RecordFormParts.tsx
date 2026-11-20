@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import type { UseFormRegisterReturn } from 'react-hook-form'
 import { FORM, RECORD, bloodLabel, itemLegend, itemWord } from './recordText'
 import { ALLERGY_KINDS, BLOOD_TYPES, type AllergyKind, type BloodType } from './types'
+import { selectedFill } from '../../shared/ui/selection'
 
 // specs/073 (mock «Ficha del hijo PediTrack», state D): the pieces of the form. The field errors use the system's red (`error`
 // token) with bold text and a counter — the owner's decision of 2026-11-17 (contracts/ui.md, deviation 2); the record itself, seen,
@@ -95,7 +96,7 @@ export function Pills<T extends string>({
           return (
             <label
               key={option}
-              className={`relative inline-flex min-h-11 ${minWidth} cursor-pointer items-center justify-center rounded-full border-[1.5px] px-3.5 text-[15px] font-extrabold focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-action ${chosen ? 'border-ink bg-ink text-white' : 'border-hint-border bg-surface text-action'}`}
+              className={`relative inline-flex min-h-11 ${minWidth} cursor-pointer items-center justify-center rounded-full border-[1.5px] px-3.5 text-[15px] font-extrabold focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-action ${chosen ? selectedFill : 'border-hint-border bg-surface text-action'}`}
             >
               <input
                 type="radio"

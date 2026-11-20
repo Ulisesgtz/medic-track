@@ -3,11 +3,12 @@ import { useActivityTypes } from '../../shared/catalog/useCatalog'
 import { Notice } from '../../shared/ui/Notice'
 import { ACTIVITY_TYPE_TEXT } from './activityTypeText'
 import { offeredTypes } from './groupByActivityType'
+import { selectedFill } from '../../shared/ui/selection'
 
 const chip =
   'relative inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border-[1.5px] px-3.5 text-[15px] leading-[normal] font-extrabold transition-colors duration-200 has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-action has-[:focus-visible]:ring-offset-2'
 const chipOff = 'border-hint-border bg-surface text-action hover:bg-hint'
-const chipOn = 'border-ink bg-ink text-white'
+const chipOn = selectedFill
 
 interface ActivityTypePickerProps {
   /** The chosen type's code; empty while none is picked. */

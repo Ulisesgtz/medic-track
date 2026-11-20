@@ -19,6 +19,7 @@ import {
 } from './appointmentText'
 import type { AppointmentErrors, AppointmentValues } from './appointmentValues'
 import type { NoticeInput } from './types'
+import { selectedFill } from '../../shared/ui/selection'
 
 interface AppointmentFieldsProps {
   value: AppointmentValues
@@ -397,8 +398,8 @@ function NoticePanel({ initial, start, existing, onSave, onDiscard }: NoticePane
       role="radio"
       aria-checked={kind === value}
       onClick={() => setKind(value)}
-      className={`min-h-11 cursor-pointer text-sm font-extrabold focus:outline-none focus-visible:ring-2 focus-visible:ring-action focus-visible:ring-inset ${
-        kind === value ? 'bg-ink text-white' : 'bg-surface text-ink hover:bg-hint'
+      className={`min-h-11 cursor-pointer text-sm font-extrabold focus:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-inset ${
+        kind === value ? selectedFill : 'bg-surface text-ink hover:bg-hint'
       }`}
     >
       {text}
