@@ -14,6 +14,8 @@ import {
   wholeYears,
   xTicks,
   yAxis,
+  monthsOld,
+  rangePlan,
 } from './chartModel'
 
 // The mock's data: Mateo, born 12 Sep 2024, «today» 24 Oct 2026 (specs/065 referencia).
@@ -127,5 +129,24 @@ describe('chartModel — what is shown, where, and the nearest point', () => {
     expect(smoothPath([[0, 0], [10, 10]])).toBe('M0.0 0.0 C1.7 1.7 8.3 8.3 10.0 10.0')
     expect(smoothPath([[0, 0], [10, 10], [20, 0]]).split(' C')).toHaveLength(3)
     expect(spreadLabels([100, 95, 104, 40], 14)).toEqual([109, 95, 123, 40])
+  })
+})
+
+describe('chartModel — the ranges of one tab (spec 076)', () => {
+  const p = (months: number) => ({ measuredOn: '2026-01-01', months, value: 10 })
+  it('counts the completed months of age', () => {
+    expect(monthsOld('2024-09-12', '2026-10-24')).toBe(25)
+    expect(monthsOld('2024-09-12', '2026-09-11')).toBe(23)
+    expect(monthsOld('2030-01-01', '2026-01-01')).toBe(0)
+  })
+  it('up to 36 months the rule of spec 065 holds', () => {
+    expect(rangePlan('2024-09-12', '2026-10-24', 120, [p(25)])).toEqual({ short: 36, full: 120, initial: 'short' })
+    expect(rangePlan('2024-09-12', '2026-10-24', null, [p(25)])).toEqual({ short: 36, full: 36, initial: 'short' })
+  })
+  it('an older child starts in the whole curve and «0–3 años» needs measurements in those months', () => {
+    expect(rangePlan('2014-01-01', '2026-10-24', 120, [p(105), p(120)])).toEqual({ short: null, full: 120, initial: 'full' })
+    expect(rangePlan('2014-01-01', '2026-10-24', 120, [p(17), p(120)])).toEqual({ short: 36, full: 120, initial: 'full' })
+    expect(rangePlan('2014-01-01', '2026-10-24', 228, [])).toEqual({ short: null, full: 228, initial: 'full' })
+    expect(rangePlan('2014-01-01', '2026-10-24', null, [p(17)])).toEqual({ short: null, full: 36, initial: 'full' })
   })
 })

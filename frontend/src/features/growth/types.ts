@@ -51,10 +51,17 @@ export interface Curve {
   curves: CurvePoint[]
 }
 
+/** Where the WHO curve of one indicator ends and how many measurements of it are after (not in `points`, only in the list). */
+export interface CurveLimit {
+  maxMonths: number
+  later: number
+}
+
 export interface GrowthChart {
   birthDate: string
   referenceSex: ReferenceSex | null
   points: { weight: ChartPoint[]; height: ChartPoint[] }
+  limits: { weight: CurveLimit; height: CurveLimit }
   reference: { available: boolean; source: string; weight: Curve; height: Curve } | null
 }
 

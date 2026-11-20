@@ -62,13 +62,14 @@ export function RegisteredBox({
 }
 
 /** The fixed sentences under the chart (inside its card, or alone in the empty and free-plan states). */
-export function WhoNote({ desktop, className = '' }: { desktop: boolean; className?: string }) {
+export function WhoNote({ desktop, className = '', limitNote = null }: { desktop: boolean; className?: string; limitNote?: string | null }) {
   return (
     <div
       role="note"
       className={`flex flex-col rounded-[14px] border border-hint-border bg-hint leading-[1.45] text-body ${desktop ? 'gap-0.5 px-4 py-3 text-[15px]' : 'gap-1 px-3.5 py-3 text-[14px]'} ${className}`}
     >
       <p>{GROWTH.whoNote}</p>
+      {limitNote ? <p>{limitNote}</p> : null}
       <p className="font-bold text-ink">{GROWTH.whoNoteStrong}</p>
     </div>
   )

@@ -36,6 +36,13 @@ export function wholeYears(birthDate: string, today: string): number {
   return Math.max(years, 0)
 }
 
+/** Completed months of age today. */
+export function monthsOld(birthDate: string, today: string): number {
+  const [by, bm, bd] = birthDate.split('-').map(Number)
+  const [y, m, d] = today.split('-').map(Number)
+  return Math.max((y - by) * 12 + (m - bm) - (d < bd ? 1 : 0), 0)
+}
+
 /** The default range: from birth to the whole year after the child's age, never past the reference's end. */
 export function shortRangeMonths(birthDate: string, today: string, refMax: number | null): number {
   const months = 12 * (wholeYears(birthDate, today) + 1)
@@ -46,6 +53,29 @@ export function shortRangeMonths(birthDate: string, today: string, refMax: numbe
 export function fullRangeMonths(refMax: number | null, shortMonths: number, lastPointMonths: number): number {
   if (refMax != null) return refMax
   return Math.max(shortMonths, Math.ceil(lastPointMonths / 12) * 12)
+}
+
+export interface RangePlan {
+  /** The short range's end in months, or null when it is not offered. */
+  short: number | null
+  full: number
+  initial: RangeKind
+}
+
+/**
+ * The ranges of one tab (spec 076, the mock's decision 5). Up to 36 months of age the rule of spec 065 holds (short = the year after
+ * the child's age, full = the reference). A child older than that starts in the whole reference («Hasta 10 años»), and «0–3 años» is
+ * offered only when there are drawn measurements in those first 36 months.
+ */
+export function rangePlan(birthDate: string, today: string, refMax: number | null, points: ChartPoint[]): RangePlan {
+  const lastMonths = points.reduce((max, p) => Math.max(max, p.months), 0)
+  if (monthsOld(birthDate, today) > 36) {
+    const full = fullRangeMonths(refMax, 36, lastMonths)
+    return { short: full > 36 && points.some((p) => p.months <= 36) ? 36 : null, full, initial: 'full' }
+  }
+  const short = shortRangeMonths(birthDate, today, refMax)
+  const full = fullRangeMonths(refMax, short, lastMonths)
+  return { short, full: Math.max(full, short), initial: 'short' }
 }
 
 /** «0–3 años», «0–1 año», «Hasta 10 años», «Hasta 19 años» or «Todo» without a reference. */

@@ -76,7 +76,9 @@ func (s *Service) Chart(ctx context.Context, childID uuid.UUID) (Chart, error) {
 		return Chart{}, err
 	}
 	out := Chart{BirthDate: c.BirthDate.Format("2006-01-02"), Sex: c.Sex, Weight: []ChartPoint{}, Height: []ChartPoint{},
-		ReferenceAvailable: s.referenceEnabled}
+		ReferenceAvailable: s.referenceEnabled,
+		Limits:             Limits{Weight: Limit{MaxMonths: WeightMaxMonths}, Height: Limit{MaxMonths: HeightMaxMonths}}}
+	weightUntil, heightUntil := drawableUntil(c.BirthDate, WeightMaxMonths), drawableUntil(c.BirthDate, HeightMaxMonths)
 	// The list is newest first; the chart goes in the order of time.
 	for i := len(ms) - 1; i >= 0; i-- {
 		m := ms[i]
@@ -86,10 +88,18 @@ func (s *Service) Chart(ctx context.Context, childID uuid.UUID) (Chart, error) {
 		}
 		months := AgeInMonths(c.BirthDate, on)
 		if m.WeightKg != nil {
-			out.Weight = append(out.Weight, ChartPoint{MeasuredOn: m.MeasuredOn, Months: months, Value: *m.WeightKg})
+			if on.After(weightUntil) {
+				out.Limits.Weight.Later++
+			} else {
+				out.Weight = append(out.Weight, ChartPoint{MeasuredOn: m.MeasuredOn, Months: months, Value: *m.WeightKg})
+			}
 		}
 		if m.HeightCm != nil {
-			out.Height = append(out.Height, ChartPoint{MeasuredOn: m.MeasuredOn, Months: months, Value: *m.HeightCm})
+			if on.After(heightUntil) {
+				out.Limits.Height.Later++
+			} else {
+				out.Height = append(out.Height, ChartPoint{MeasuredOn: m.MeasuredOn, Months: months, Value: *m.HeightCm})
+			}
 		}
 	}
 	if c.Sex != nil {

@@ -62,8 +62,16 @@ export const GROWTH = {
     'La referencia de la OMS aún no está disponible; la gráfica muestra solo las medidas anotadas.',
   whoNote: 'Las curvas son la referencia de la OMS para niñas y niños nacidos a término.',
   whoNoteStrong: 'Tu pediatra es quien interpreta la gráfica.',
-  beyondWeight: 'La referencia de la OMS de peso para la edad llega a los 10 años.',
-  beyondHeight: 'La referencia de la OMS de talla para la edad llega a los 19 años.',
+  // Spec 076: the curves end at 10 years (weight) and 19 (height); what is after is only in «Medidas anotadas».
+  limitNote: (indicator: Indicator, years: number) =>
+    `La curva de ${indicator === 'weight' ? 'peso' : 'talla'} de la OMS llega a los ${years} años. Las medidas de después están en Medidas anotadas.`,
+  readingCount: (n: number, total: number, indicator: Indicator) =>
+    `Medida ${n} de ${total} en la gráfica de ${indicator === 'weight' ? 'peso' : 'talla'}`,
+  noChartTab: (indicator: Indicator, years: number, name: string) =>
+    `La curva de ${indicator === 'weight' ? 'peso' : 'talla'} de la OMS llega a los ${years} años. Las medidas de ${name} están en Medidas anotadas.`,
+  noChartAny: (weightYears: number, heightYears: number) =>
+    `Las curvas de la OMS llegan a los ${weightYears} años en peso y a los ${heightYears} en talla. Sus medidas están en Medidas anotadas.`,
+  goToList: 'Ir a Medidas anotadas ↓',
   // The free plan
   planBadge: 'Plan completo',
   lockedBody: (name: string) =>

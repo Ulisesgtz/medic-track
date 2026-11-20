@@ -10151,6 +10151,14 @@ const docTemplate = `{
                     "type": "string",
                     "example": "2025-06-10"
                 },
+                "limits": {
+                    "description": "Limits is always present: where each curve ends and how many measurements are after it.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/GrowthLimits"
+                        }
+                    ]
+                },
                 "points": {
                     "$ref": "#/definitions/GrowthChartPoints"
                 },
@@ -10267,6 +10275,32 @@ const docTemplate = `{
                 },
                 "message": {
                     "type": "string"
+                }
+            }
+        },
+        "GrowthLimit": {
+            "type": "object",
+            "properties": {
+                "later": {
+                    "description": "Later is how many measurements of the indicator are after that age: they are not in points, only in the list.",
+                    "type": "integer",
+                    "example": 1
+                },
+                "maxMonths": {
+                    "description": "MaxMonths is the last month of the WHO curve of the indicator (weight 120, height 228).",
+                    "type": "integer",
+                    "example": 120
+                }
+            }
+        },
+        "GrowthLimits": {
+            "type": "object",
+            "properties": {
+                "height": {
+                    "$ref": "#/definitions/GrowthLimit"
+                },
+                "weight": {
+                    "$ref": "#/definitions/GrowthLimit"
                 }
             }
         },
