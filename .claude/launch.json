@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "frontend"],
       "port": 5173
+    },
+    {
+      "name": "site",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["--prefix", "site", "vite", "preview", "site", "--port", "4180", "--strictPort"],
+      "port": 4180
     }
   ]
 }

@@ -238,6 +238,7 @@ desarrollo; es normal). En el teléfono sigue `PROBAR.md` (instalar, **Activar r
 - Claves VAPID de producción.
 - Desplegar desde `master` (merge `develop → master`), como pide la constitución.
 - Correo del dominio (`@pedi-track.com`): decidir proveedor antes de tocar los registros `MX` (ver `BACKLOG.md`).
+- El sitio público y la mudanza de la app a `app.pedi-track.com`: ver la sección «Sitio público y producción» (spec 080).
 
 ## Seguridad del despliegue (spec 037)
 
@@ -342,3 +343,31 @@ El padre elimina su cuenta desde «Mi cuenta» (`/cuenta/eliminar`): **30 días 
 3. **Los correos** (al pedirlo, a la familia y al terminar) usan Resend como las invitaciones (`RESEND_API_KEY`, misma cuota diaria). **Sin `RESEND_API_KEY` no se mandan, pero el borrado sigue** igual.
 4. **Después de restaurar un respaldo**, correr `go run ./cmd/accounts reconcile-deleted` (con `DATABASE_URL` y `CLERK_SECRET_KEY`): **por omisión solo lista** (cuántas cuentas y sus ids, sin borrar nada); revisa que sean las que se eliminaron después del respaldo y repite con `--apply` para borrarlas de nuevo. Si hay más de `--max N` cuentas (por omisión el 20 % de las vinculadas a Clerk) se detiene sin borrar nada: casi seguro la `CLERK_SECRET_KEY` es de otra instancia; revísala antes de subir el límite.
 5. **Pendientes del dueño**: actualizar el aviso de privacidad (borrado, plazo de 30 días, descarga) y revisar con su contador cuánto se conserva (p. ej. la facturación).
+
+## Sitio público y producción (spec 080)
+
+El sitio público (`pedi-track.com`: inicio, funciones, planes, privacidad, preguntas frecuentes, instalar, blog y los documentos legales) vive en `site/`, aparte de la app. Es HTML estático (React + Vite, armado al compilar, sin React en el navegador) y no llama a ningún servicio. **Mientras no lances, DEV no cambia**: la app sigue en `dev.pedi-track.com` y el sitio solo se revisa en su vista previa de Pages. En producción la app **nace** en `app.pedi-track.com` (nunca ha estado publicada, no hay usuarios que mudar).
+
+**Antes de lanzar** (`SITE_ENV=production npm run build` falla, y nombra cada pendiente, mientras falte algo; `site/scripts/production-check.ts`):
+- los correos `contactEmail` y `privacyEmail` en `site/content/site.json`;
+- completar los corchetes `[ ]` de `legal/*.md` (razón social, domicilio, correo, fecha, IVA, reembolsos, facturación, titular, ciudad);
+- que un abogado revise los tres documentos y poner `"reviewedByLawyer": true` (y la `date`, AAAA-MM-DD) en `legal/estado.json`;
+- artículos del blog con `ready: true` (sin ninguno no hay blog ni enlace «Blog»: es correcto).
+
+**Pasos del dueño**, en este orden:
+
+1. **Proyecto de Pages del sitio.** Cloudflare Pages, proyecto nuevo `peditrack-site`, conectado al repositorio: raíz `site`, comando `npm ci && npm run build`, salida `dist` (es decir, `site/dist`), rama de producción `master`. Variables de entorno: `SITE_ENV=production` (en la vista previa de `develop` déjala **sin definir**: así todas las páginas llevan `noindex` y la nota de borrador) y, solo si la app no está en `https://app.pedi-track.com`, `SITE_APP_ORIGIN` (en la vista previa conviene `https://dev.pedi-track.com` para que los botones lleven a DEV). Opcionalmente `SITE_ORIGIN` (por omisión `https://pedi-track.com`). **Con `SITE_ENV=production` el build se detiene hasta que no quede ningún pendiente de la lista de arriba.** Revisa la vista previa de `develop` antes de seguir.
+2. **La app en `app.pedi-track.com`.** En el proyecto de Pages que ya existe (el de la app), agrega el dominio personalizado `app.pedi-track.com`. No cambia código: las ligas salen de `window.location.origin` y de variables.
+3. **Railway (API de producción):** `FRONTEND_ORIGIN=https://app.pedi-track.com` (CORS, `back_url` de Mercado Pago, liga de los correos de invitación), `CLERK_AUTHORIZED_PARTIES=https://app.pedi-track.com` y `PAYMENTS_WEBHOOK_URL` con el dominio del API de producción.
+4. **Clerk de producción:** el dominio y las redirecciones permitidas en `app.pedi-track.com`, y **Google OAuth** con credenciales propias y ese origen (Clerk no copia la configuración de desarrollo).
+5. **Mercado Pago:** el aviso (webhook) de producción hacia el API de producción (ver «Cobro del plan completo»).
+6. **Better Stack:** dos monitores de producción, `https://pedi-track.com/` (el sitio) y `https://app.pedi-track.com/` (la app), además del `/healthz` del API.
+7. **DNS en Cloudflare:** `app` (CNAME al proyecto de la app) y la raíz y `www` (al proyecto `peditrack-site`), los tres **proxied**. Asigna `pedi-track.com` y `www.pedi-track.com` al proyecto `peditrack-site` **el día del lanzamiento**, no antes.
+   - **`www` a la raíz (paso obligatorio):** `_redirects` de Pages no admite otro dominio como origen, así que se hace con una **Redirect Rule** de la zona en Cloudflare (Rules → Redirect Rules → Create rule): si el nombre de host es `www.pedi-track.com`, redirigir (dinámico) a `concat("https://pedi-track.com", http.request.uri.path)`, o en la plantilla «Redirect from WWW to root» `https://pedi-track.com/${1}` con `www.pedi-track.com/*`, estado `301` y **conservar la cadena de consulta**. Compruébalo con `curl -I https://www.pedi-track.com/planes?x=1` (debe dar `301` a `https://pedi-track.com/planes?x=1`).
+   - **Mayúsculas (opcional):** el sitio redirige solo `/Planes` (primera letra en mayúscula) a `/planes`; Pages distingue mayúsculas y `_redirects` no puede pasar a minúsculas. Para cualquier otra combinación (`/PLANES`) crea una Redirect Rule de la zona con la expresión `lower(http.request.uri.path) ne http.request.uri.path` y destino dinámico `concat("https://pedi-track.com", lower(http.request.uri.path))`, `301`. Sin ella esas direcciones responden 404.
+   - **Barra final:** no hay nada que configurar: cada página se publica como `<ruta>.html` y Pages manda `/planes/` y `/planes.html` a `/planes` (`308`).
+   - Las rutas que eran de la app (`/familia/*`, `/hijo`, `/children/*`, `/planes/regreso`…) las manda el `_redirects` del sitio a `app.pedi-track.com` con `301` (el `#` con la ficha de las invitaciones se conserva). `/planes` es del sitio; la de la app es `app.pedi-track.com/planes`.
+8. **Analítica:** solo las **estadísticas de tráfico de la zona en Cloudflare** (Analytics, del lado del servidor, con las peticiones que ya pasan por el DNS *proxied*). **No actives «Web Analytics» ni nada que inserte un script**: el sitio no carga terceros y su CSP (`site/dist/_headers`) no lo permitiría. Declara «estadísticas de visitas agregadas, sin cookies» en el aviso de privacidad.
+9. **Search Console:** da de alta `pedi-track.com` (propiedad de dominio, con un registro TXT en Cloudflare) y manda `https://pedi-track.com/sitemap.xml`. Revisa «Inspección de URLs» del inicio y de un artículo, y pega `/planes` y `/preguntas-frecuentes` en la prueba de resultados enriquecidos de Google.
+
+**Revisión del sitio:** `cd site && npm run build && npx vite preview --port 4173`; las pruebas (`npx vitest run --coverage`, `npx playwright test`) y la guía de validación están en `specs/080-sitio-publico/quickstart.md`. Las imágenes para compartir se rehacen con `npm run build && npm run og` cuando cambia un título y se guardan en `site/public/og/`.

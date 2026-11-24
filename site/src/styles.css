@@ -1,0 +1,89 @@
+@import 'tailwindcss';
+@import './theme.css';
+
+/* Base del sitio. Lo demás son clases de Tailwind en los componentes. */
+@layer base {
+  html {
+    line-height: normal;
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+  }
+  body {
+    @apply bg-surface font-sans text-ink antialiased;
+    margin: 0;
+  }
+  a {
+    @apply text-action;
+  }
+  /* Foco visible de 3 px en todo lo que se toca (FR-020). */
+  a:focus-visible,
+  button:focus-visible,
+  summary:focus-visible {
+    outline: 3px solid var(--color-action);
+    outline-offset: 2px;
+  }
+  /* Acordeones nativos (decisión 14): el «+» y el «–» son del resumen. */
+  details > summary {
+    list-style: none;
+  }
+  details > summary::-webkit-details-marker {
+    display: none;
+  }
+  details > summary::after {
+    content: '+';
+    /* Como el mock: el círculo de 32 px más su borde (35 px), porque el mock no aplica border-box a los pseudo-elementos. */
+    box-sizing: content-box;
+    flex: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 9999px;
+    border: 1.5px solid var(--color-hint-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--color-action);
+  }
+  details[open] > summary::after {
+    content: '–';
+  }
+}
+
+/*
+ * Menú del teléfono (R2). Sin JavaScript, «#menu» abre el panel con :target; con menu.ts el panel se maneja con data-open.
+ * Solo existe debajo de la web (< 1200 px): ahí el menú completo va en la barra.
+ */
+.site-menu {
+  display: none;
+}
+.site-menu:target,
+.site-menu[data-open='true'] {
+  display: flex;
+}
+.site-menu[data-js='true']:target:not([data-open='true']) {
+  display: none;
+}
+@media (min-width: 75rem) {
+  .site-menu,
+  .site-menu:target,
+  .site-menu[data-open='true'] {
+    display: none;
+  }
+}
+
+/* El botón del menú muestra las tres rayas y, abierto, la «x». */
+#menu-toggle .icon-close {
+  display: none;
+}
+#menu-toggle[aria-expanded='true'] .icon-open {
+  display: none;
+}
+#menu-toggle[aria-expanded='true'] .icon-close {
+  display: block;
+}
