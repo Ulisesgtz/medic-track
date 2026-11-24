@@ -2,11 +2,30 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { FREE_PLAN, FULL_PLAN } from '../content/plans.ts'
-import { FREE_ITEMS, FULL_ITEMS, PLAN_PERIOD, PLAN_PRICE } from '../../frontend/src/features/plans/planCopy.ts'
 
 // El sitio copia los tokens y los precios de la app en vez de compartir código (spec 080, R9). Estas pruebas fallan si se separan.
 
 const read = (relative: string) => readFileSync(resolve(process.cwd(), relative), 'utf8')
+
+// planCopy.ts se lee como texto (no se importa): así `tsc` del sitio no revisa `frontend/`, que en CI no tiene sus dependencias.
+const planCopy = read('../frontend/src/features/plans/planCopy.ts')
+
+function constString(name: string): string {
+  const match = planCopy.match(new RegExp(`export const ${name} = '([^']*)'`))
+  if (!match) throw new Error(`No se encontró ${name} en planCopy.ts`)
+  return match[1]
+}
+
+function constList(name: string): string[] {
+  const match = planCopy.match(new RegExp(`export const ${name} = \\[([\\s\\S]*?)\\n\\]`))
+  if (!match) throw new Error(`No se encontró ${name} en planCopy.ts`)
+  return [...match[1].matchAll(/'([^']*)'/g)].map((item) => item[1])
+}
+
+const PLAN_PRICE = constString('PLAN_PRICE')
+const PLAN_PERIOD = constString('PLAN_PERIOD')
+const FREE_ITEMS = constList('FREE_ITEMS')
+const FULL_ITEMS = constList('FULL_ITEMS')
 
 function colorTokens(css: string): Map<string, string> {
   const tokens = new Map<string, string>()
@@ -68,5 +87,13 @@ describe('precios y planes', () => {
     const service = read('../backend/internal/account/service.go')
     expect(service).toMatch(/freePlanChildLimit = 1\b/)
     expect(service).toMatch(/paidPlanChildLimit = 10\b/)
+  })
+})
+
+describe('lectura de planCopy.ts', () => {
+  it('encuentra las constantes de la app', () => {
+    expect(PLAN_PRICE).toMatch(/^MX\$\d+$/)
+    expect(FREE_ITEMS.length).toBeGreaterThan(3)
+    expect(FULL_ITEMS.length).toBeGreaterThan(3)
   })
 })
