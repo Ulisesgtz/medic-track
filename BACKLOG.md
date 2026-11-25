@@ -305,9 +305,11 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
   (Hetzner/DigitalOcean, ~5–12 USD pero con mantenimiento manual), y AWS (App Runner/ECS + RDS — tendría sentido
   solo si se termina usando Cognito para el login, para quedar todo en una cuenta).
 - **Recordatorios push (spec 011)**: el proceso del backend tiene que estar encendido siempre (el envío corre dentro del API cada 30 s), así que el hosting no puede ser de los que duermen sin tráfico; configurar ahí `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` y `REMINDER_ACTION_SECRET` (las de producción, distintas de las locales). El frontend debe servirse por HTTPS (los avisos no funcionan sin él) y el service worker desde la raíz del dominio.
-- **Frontend (el PWA)**: **Cloudflare Pages** — gratis, sirve el PWA con su service worker, dominio
-  `pedi-track.com` ya comprado (ver memoria `peditrack-dominio.md`) solo hay que apuntar el DNS. Alternativas
-  equivalentes: Vercel, Netlify.
+- **Frontend (el PWA)**: **Cloudflare Pages** — gratis, sirve el PWA con su service worker. **Actualizado 2026-11-24
+  (spec 080): en producción la app vive en `app.pedi-track.com` y `pedi-track.com` es el sitio público** (proyecto
+  `peditrack-site`, carpeta `site/`); los pasos de configuración (Pages, Railway, Clerk, Mercado Pago, Better Stack, DNS)
+  están en `DEPLOY.md`, «Sitio público y producción». La app no cambia de código: su dirección sale de variables.
+  Alternativas equivalentes: Vercel, Netlify.
 - **Cloudflare Containers para el backend** — evaluado y descartado por ahora: corre cualquier imagen Docker
   (serviría para el binario de Go), pero Cloudflare no tiene Postgres propio (Hyperdrive solo acelera la conexión
   a un Postgres externo, no lo hospeda) y el producto sigue siendo relativamente nuevo. Revisar de nuevo si más
@@ -562,3 +564,9 @@ está en el PR de `feature/033c-rutinas-personales`. Queda por decidir y probar:
 - **Compartir la ficha por QR** — una liga o un código de la ficha para mostrarla a un médico o a la escuela sin darles acceso a la cuenta. Pide decidir qué viaja, cuánto dura y que no pase por terceros (Principio II).
 - **Arrastrar para reordenar en la web** — hoy las alergias y los padecimientos se reordenan con «Subir»/«Bajar»; en la web se puede sumar arrastrar y soltar (manteniendo los botones por accesibilidad).
 - **Pendientes del dueño**: aplicar la migración `0039` en DEV **antes** del merge y actualizar el aviso de privacidad (la ficha guarda datos de salud escritos por la familia).
+
+## Spec 080 — sitio público (ideas para después, anotado 2026-11-24)
+
+- **Capturas reales en el sitio público.** Hoy las pantallas del sitio (`site/src/ui/screens/`) están **dibujadas** con el sistema visual y datos de ejemplo, como en el mock. Cuando haya capturas reales de la app, cambiarlas (con su texto alternativo y sin datos de ninguna familia) y medir de nuevo el peso de la página.
+- **Paquete compartido de tokens entre `site/` y `frontend/`.** El sitio **copia** el `@theme` de la app y una prueba (`site/src/sync.test.ts`) falla si difieren. Si los tokens empiezan a cambiar seguido, pasarlos a un paquete compartido (workspace) en vez de copiarlos; obliga a reestructurar `frontend/` y su CI.
+- **Pendientes del dueño para publicar**: correos de contacto y de privacidad en `site/content/site.json`, completar los corchetes de `legal/*.md` y la revisión del abogado (`legal/estado.json`), artículos del blog en `ready: true`, y los pasos de `DEPLOY.md` («Sitio público y producción»). Mientras tanto `SITE_ENV=production npm run build` falla a propósito (`site/scripts/production-check.ts`).

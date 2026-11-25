@@ -292,3 +292,61 @@ jobs:
     steps:
       - name: All E2E jobs passed
         run: test "${{ needs.frontend-e2e.result }}" = "success"
+
+  site:
+    name: Site — unit tests + >90% coverage + E2E
+    # Pinned, never ubuntu-latest (see above). The public site (specs/080) is static: no backend, no database, no Clerk.
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        working-directory: site
+        run: npm ci
+
+      - name: Type-check
+        working-directory: site
+        run: npx tsc --noEmit
+
+      - name: Lint
+        working-directory: site
+        run: npx eslint . && npx oxlint
+
+      - name: Unit tests with coverage
+        working-directory: site
+        # vitest.config.ts sets thresholds: 90% lines/functions/branches/statements; a lower one fails the run.
+        run: npx vitest run --coverage
+
+      - name: Build
+        working-directory: site
+        run: npm run build
+
+      - name: Install Playwright browsers
+        working-directory: site
+        timeout-minutes: 15
+        run: |
+          echo 'DPkg::Lock::Timeout "300";' | sudo tee /etc/apt/apt.conf.d/99-wait-for-lock > /dev/null
+          npx playwright install-deps chromium webkit
+          for try in 1 2; do
+            timeout 300 npx playwright install chromium webkit && exit 0
+            echo "Downloading the browsers took too long or failed (try $try)"
+          done
+          exit 1
+
+      - name: E2E (Chromium and WebKit, against vite preview of dist)
+        working-directory: site
+        run: npx playwright test
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-playwright-report
+          path: site/playwright-report
+          retention-days: 7
