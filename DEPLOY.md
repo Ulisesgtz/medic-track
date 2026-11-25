@@ -354,6 +354,16 @@ El sitio público (`pedi-track.com`: inicio, funciones, planes, privacidad, preg
 - que un abogado revise los tres documentos y poner `"reviewedByLawyer": true` (y la `date`, AAAA-MM-DD) en `legal/estado.json`;
 - artículos del blog con `ready: true` (sin ninguno no hay blog ni enlace «Blog»: es correcto).
 
+**Sitio de DEV (`sitio-dev.pedi-track.com`)**, para revisar el sitio antes de lanzar (`dev.pedi-track.com` ya es la app de DEV). Un proyecto de Pages **aparte** del de producción, una sola vez:
+
+1. *Workers & Pages → Create → Pages → Connect to Git*, repositorio `medic-track`, proyecto **`peditrack-site-dev`**.
+2. Rama de producción **`develop`** (se publica sola con cada merge; mientras la spec 080 no esté en `develop`, se puede poner `feature/080-sitio-publico` y cambiarla después en *Settings → Builds & deployments*). Raíz `site`, comando `npm ci && npm run build`, salida `dist`.
+3. Variables de entorno: `SITE_ORIGIN=https://sitio-dev.pedi-track.com` y `SITE_APP_ORIGIN=https://dev.pedi-track.com`. **`SITE_ENV` sin definir**: así todas las páginas llevan `noindex` y la nota de borrador (Google no lo indexa) y la compilación no se detiene por los pendientes legales. Nunca `SITE_ENV=production` en este proyecto.
+4. *Custom domains → Set up a custom domain* → `sitio-dev.pedi-track.com` (como el DNS ya está en Cloudflare, crea el CNAME **proxied** solo).
+5. Comprueba: `https://sitio-dev.pedi-track.com/` abre el inicio con la nota de borrador, «Crear cuenta gratis» lleva a `https://dev.pedi-track.com/signup`, `curl -I https://sitio-dev.pedi-track.com/familia` da `301` a `https://dev.pedi-track.com/familia` y el código fuente de cualquier página trae `<meta name="robots" content="noindex` (lo que evita que Google la indexe; `robots.txt` sí permite rastrear, para que Google vea esa etiqueta).
+
+Los botones y las rutas de la app llevan a la app de DEV; nada de este proyecto toca la app ni el API. Al lanzar, el sitio de producción es otro proyecto (`peditrack-site`, paso 1 de abajo) y este se queda para revisar los cambios antes de pasarlos a `master`.
+
 **Pasos del dueño**, en este orden:
 
 1. **Proyecto de Pages del sitio.** Cloudflare Pages, proyecto nuevo `peditrack-site`, conectado al repositorio: raíz `site`, comando `npm ci && npm run build`, salida `dist` (es decir, `site/dist`), rama de producción `master`. Variables de entorno: `SITE_ENV=production` (en la vista previa de `develop` déjala **sin definir**: así todas las páginas llevan `noindex` y la nota de borrador) y, solo si la app no está en `https://app.pedi-track.com`, `SITE_APP_ORIGIN` (en la vista previa conviene `https://dev.pedi-track.com` para que los botones lleven a DEV). Opcionalmente `SITE_ORIGIN` (por omisión `https://pedi-track.com`). **Con `SITE_ENV=production` el build se detiene hasta que no quede ningún pendiente de la lista de arriba.** Revisa la vista previa de `develop` antes de seguir.
