@@ -10,27 +10,36 @@ y se elimina (o se marca) aquí.
 
 ## Pendientes de decisión (preguntas abiertas al usuario)
 
-Preguntas que se hicieron durante la homologación a los mocks (`specs/007-homologar-pantallas-a-mocks/`) y que el usuario
-dejó pendientes (2026-09-21). No se construye nada de esto hasta que se responda.
+Decisiones que solo el dueño puede tomar. No se construye nada de esto hasta que se responda. Reunidas aquí el 2026-11-27
+desde el resto del BACKLOG (antes estaban repartidas en sus secciones). El primer punto que hubo aquí, editar consultas, se
+hizo en la spec 051.
 
-- ~~**Editar consultas y medicamentos**~~ — **hecho** en la spec 051 (ver abajo). Hoy son inmutables (spec 004, FR-014); solo se marcan las tomas, y desde 2026-09-20
-  "Primera toma" (antes "Desde") es obligatoria al crear. Si se quiere poder corregir una consulta ya guardada hay que decidir: qué se edita
-  (solo nombre y dosis, o también frecuencia, duración y hora de inicio); qué pasa con las tomas ya marcadas si cambia el
-  horario (regenerarlas y perder las marcas, o que el cambio solo aplique a las tomas futuras); si también se edita doctor,
-  fecha y síntomas; si se permite borrar una consulta o un medicamento; y el diseño (los mocks no tienen esa pantalla).
-  Requiere endpoint nuevo y su spec. Recomendación que se dio: editar solo nombre, frecuencia, duración y hora de cada
-  medicamento, regenerando sus tomas con un aviso de que se pierden las marcas.
-  **Hecho en `specs/051-editar-consultas/` (decidido 2026-10-26)**: se edita todo (doctor, fecha, síntomas, notas y cada
-  medicamento: nombre, frecuencia, duración, primera toma) pero **un cambio de horario solo rehace las tomas futuras sin
-  marcar** (lo marcado y lo pasado no cambia nunca, como editar un suplemento); se puede **quitar un medicamento sin
-  ninguna toma marcada** (la consulta completa no se borra); edita el nivel `Full` (dueña y Tutor) **en cualquier plan**
-  (corregir lo propio no se cobra, Principio IV); la consulta dice **«Editada el … por Ana»** (la última edición, sin
-  historial de versiones).
-  Pendiente de la revisión (2026-10-26): el horario nuevo se calcula con la zona horaria del dispositivo que edita, y las
-  tomas conservadas con la de quien creó la consulta; si alguien edita desde otra zona, una toma nueva puede quedar a una
-  hora de una conservada. En México no hay horario de verano, así que es raro; se arregla guardando el desfase con la consulta.
-  **Resuelto en `bugfix/054-zona-horaria-consulta` (2026-10-30)**: la consulta guarda su desfase (`utc_offset_minutes`,
-  migración `0031`, con relleno desde la primera toma) y al editar se usa ese, no el del teléfono que edita.
+### Pruebas y CI
+
+- **Excepción de `cmd/api` en el gate de cobertura de CI** — actualmente `cmd/api` (wiring de Go) no
+  cuenta para el >90% exigido por el Principio VI. Pregunta abierta sin resolver con el usuario: si
+  se acepta la excepción permanentemente o se agrega alguna prueba de wiring.
+
+### Diseño
+
+- **Calendario: inicio y fin visibles** (anotado 2026-09-30, a pedido del usuario: la fecha de inicio y la de fin marcadas con el color de cada medicamento) — la spec 022 (rebranding con el diseño de Claude Design) los quitó de la vista porque el «Turno 1» del diseño no los trae; siguen en el nombre accesible del día. Falta un segundo turno del diseño que los dibuje (p. ej. pastilla del día con el color del medicamento y la etiqueta «Inicio»/«Fin»).
+
+### Aprobar desviaciones de los mocks
+
+- **Aprobar las desviaciones del mock de suplementos**: el móvil de «Tomas de hoy» solo cuenta las tomas de suplemento (no las lista), el
+  texto de «Finalizar», fechas con selector nativo y hora local fija por rutina (un viaje obliga a editar la rutina).
+- **Aprobar las desviaciones del mock de próxima cita** (`specs/033-recordatorios-suplementos-citas/parte2/plan.md`): las etiquetas del campo son
+  «Fecha de la cita» y «Hora de la cita» (el mock dice «Fecha» y «Hora»: chocaban con la fecha de la consulta), la pantalla de ajustes N3 del
+  mock no se construyó (la elección de detalle o texto genérico ya está en la tarjeta de recordatorios del inicio), fecha y hora con selector
+  nativo, y la cita se guarda en una segunda llamada después de la consulta (si falla, la consulta queda y se avisa).
+- **Aprobar las desviaciones del mock de rutinas personales** (`specs/033-recordatorios-suplementos-citas/referencia/rutinas-personales-decisiones.md`):
+  **no se renombró el inicio a «Inicio»** ni se agregó «Inicio»/«Hijos» a la barra lateral web ni el panel «Tomas de hoy · Mateo» que el mock dibuja como
+  contexto (B2: cambia la navegación existente; el enlace de regreso sigue siendo «← Tus hijos»), el chip sin autor «a las HH:MM», el estado vacío con
+  botón sólido, y las decisiones D1–D8 del diseño resueltas como se anotan ahí (plan caducado: las rutinas siguen generando tomas y avisos y solo se
+  puede finalizar; aviso de primera vez por cuenta; tope de 10 propio de la persona).
+- **Aprobar las desviaciones del mock de suplementos y actividades** (`specs/035-actividades-y-suplementos/referencia/actividades-decisiones.md`): **«← Tus hijos» → «← Inicio»: aprobado el 2026-10-12 y hecho** (el enlace de regreso al inicio dice «← Inicio» en todas las pantallas; el título del inicio sigue siendo «Tus hijos» y la barra lateral sin «Inicio»/«Hijos», si se quiere renombrar es otra decisión); las fechas del formulario de actividad son el selector nativo (el mock las dibuja como texto «8 oct 2026»); «Próxima» es la primera toma sin marcar que todavía no llega («Sin más avisos hoy» si no queda ninguna) y «Realizado» marca la más temprana sin marcar del día aunque ya haya pasado; «Quitar la última marca» aparece siempre que haya marcas hoy (el diseño solo después de marcar en esa visita) y lo sigue gobernando la regla de las tomas (la autora o quien puede todo); el aviso «Antes de empezar» ahora nombra las actividades (subió la versión del aviso). Las respuestas a las preguntas abiertas D1–D9 del diseño están en la spec 035.
+- **Aprobar las desviaciones del mock de Familia** (spec 032): la lista está en `specs/032-compartir-con-familia/familia-mock-desviaciones.md`.
+- **Aprobar las desviaciones del mock de unir hijos** (spec 074): la lista está en `specs/074-unir-hijo-duplicado/referencia/desviaciones.md`.
 
 ## Próximo a trabajar (decidido 2026-09-28)
 
@@ -60,7 +69,6 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
   medicamentos se reponen y en otros no). Opciones a decidir: (a) la fecha de fin no se mueve y el calendario marca los
   días con tomas sin registrar; (b) un botón "Recorrer tratamiento" que el padre usa si su médico se lo indicó, que
   agrega las tomas al final y queda registrado quién lo decidió. Recomendación: (b), nunca automático.
-- **Calendario: inicio y fin visibles** (anotado 2026-09-30, a pedido del usuario: la fecha de inicio y la de fin marcadas con el color de cada medicamento) — la spec 022 (rebranding con el diseño de Claude Design) los quitó de la vista porque el «Turno 1» del diseño no los trae; siguen en el nombre accesible del día. Falta un segundo turno del diseño que los dibuje (p. ej. pastilla del día con el color del medicamento y la etiqueta «Inicio»/«Fin»).
 - **Quitar «Tomas de hoy» del detalle de la consulta** — hecho en `specs/023-calendario-selector-de-dia/` (opción b: el calendario elige el día y cada tarjeta de medicamento muestra sus tomas).
 - **Convertir una consulta «solo registro» en una con tomas** (anotado 2026-10-01) — la spec 024 la deja fija al crearla (consultas inmutables, spec 004); si hace falta, sería una acción explícita del padre que pida la hora de inicio y genere las tomas desde ahí.
 - **Subir literales a `@theme`** — hecho en `feature/028-colores-a-theme` (refactor sin cambio visual; ver `design-tokens.md`, «Colores de apoyo»). Queda aparte, si se quiere: unificar los **radios** de campo (16/12/14 px según el mock), que sí es una decisión visual.
@@ -129,9 +137,6 @@ cambio: si se agrega "Otro" con texto libre (hoy: para eso están las notas).
 - **Política de retención/purga de `error_logs`** — hecho en `specs/021-consulta-y-retencion-error-logs/` (depuración diaria, 90 días por omisión, mínimo 7). Texto original: hoy la tabla crece indefinidamente
   (`specs/002-registro-log-errores/spec.md`, Aclaraciones sesión 2026-09-16). Revisar cuando haya
   visibilidad real de volumen.
-- **Excepción de `cmd/api` en el gate de cobertura de CI** — actualmente `cmd/api` (wiring de Go) no
-  cuenta para el >90% exigido por el Principio VI. Pregunta abierta sin resolver con el usuario: si
-  se acepta la excepción permanentemente o se agrega alguna prueba de wiring.
 - **Almacenamiento de fotos de recetas en object storage** — `specs/004-detalle-consulta-hijo/`
   guarda la foto de la receta como `bytea` directamente en Postgres (ver research.md), por
   simplicidad y porque no hay infraestructura de archivos decidida todavía. Revisar migrar a un
@@ -517,20 +522,8 @@ Principio I (la app guarda lo que el padre escribe; nunca evalúa ni sugiere).
 ## Spec 033 — recordatorios de suplementos y de próxima cita (pendiente)
 
 Las **partes 1** (rutinas de suplementos de los hijos) y **2** (próxima cita) ya están en `develop`; la **parte 3** (rutinas personales)
-está en el PR de `feature/033c-rutinas-personales`. Queda por decidir y probar:
+está en el PR de `feature/033c-rutinas-personales`. Queda por probar (las desviaciones de sus mocks por aprobar están en «Pendientes de decisión», arriba):
 
-- **Aprobar las desviaciones del mock de suplementos**: el móvil de «Tomas de hoy» solo cuenta las tomas de suplemento (no las lista), el
-  texto de «Finalizar», fechas con selector nativo y hora local fija por rutina (un viaje obliga a editar la rutina).
-- **Aprobar las desviaciones del mock de próxima cita** (`specs/033-recordatorios-suplementos-citas/parte2/plan.md`): las etiquetas del campo son
-  «Fecha de la cita» y «Hora de la cita» (el mock dice «Fecha» y «Hora»: chocaban con la fecha de la consulta), la pantalla de ajustes N3 del
-  mock no se construyó (la elección de detalle o texto genérico ya está en la tarjeta de recordatorios del inicio), fecha y hora con selector
-  nativo, y la cita se guarda en una segunda llamada después de la consulta (si falla, la consulta queda y se avisa).
-- **Aprobar las desviaciones del mock de rutinas personales** (`specs/033-recordatorios-suplementos-citas/referencia/rutinas-personales-decisiones.md`):
-  **no se renombró el inicio a «Inicio»** ni se agregó «Inicio»/«Hijos» a la barra lateral web ni el panel «Tomas de hoy · Mateo» que el mock dibuja como
-  contexto (B2: cambia la navegación existente; el enlace de regreso sigue siendo «← Tus hijos»), el chip sin autor «a las HH:MM», el estado vacío con
-  botón sólido, y las decisiones D1–D8 del diseño resueltas como se anotan ahí (plan caducado: las rutinas siguen generando tomas y avisos y solo se
-  puede finalizar; aviso de primera vez por cuenta; tope de 10 propio de la persona).
-- **Aprobar las desviaciones del mock de suplementos y actividades** (`specs/035-actividades-y-suplementos/referencia/actividades-decisiones.md`): **«← Tus hijos» → «← Inicio»: aprobado el 2026-10-12 y hecho** (el enlace de regreso al inicio dice «← Inicio» en todas las pantallas; el título del inicio sigue siendo «Tus hijos» y la barra lateral sin «Inicio»/«Hijos», si se quiere renombrar es otra decisión); las fechas del formulario de actividad son el selector nativo (el mock las dibuja como texto «8 oct 2026»); «Próxima» es la primera toma sin marcar que todavía no llega («Sin más avisos hoy» si no queda ninguna) y «Realizado» marca la más temprana sin marcar del día aunque ya haya pasado; «Quitar la última marca» aparece siempre que haya marcas hoy (el diseño solo después de marcar en esa visita) y lo sigue gobernando la regla de las tomas (la autora o quien puede todo); el aviso «Antes de empezar» ahora nombra las actividades (subió la versión del aviso). Las respuestas a las preguntas abiertas D1–D9 del diseño están en la spec 035.
 - **Modo «A una hora fija» de la actividad y selector de hora de cuadrícula** — **hecho el 2026-10-12** con el mock entregado por Claude Design (`specs/036-actividad-hora-fija-y-selector-de-hora/referencia/mock-hora-fija-desviaciones.md`; PR `feature/042-hora-fija-selector-mock`). Pendientes que dejó, **cerrados el 2026-10-13 (spec 043)**: (a) la «última marcada» de otro día (`lastDone` del servidor), (b) «Inicio» en la barra lateral web (adoptado; el título del inicio sigue siendo «Tus hijos») y (c) las otras desviaciones del documento (aceptadas).
 - **E2E de avisos por persona de la próxima cita** con dos sesiones (como `familia-recordatorios.spec.ts`; el reclamo está cubierto por pruebas del backend).
 - **E2E de avisos por persona de suplementos** con dos sesiones (`suplementos-recordatorios.spec.ts`, como `familia-recordatorios.spec.ts`).
