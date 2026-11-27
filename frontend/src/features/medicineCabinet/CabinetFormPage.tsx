@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { FreemiumLimitModal } from '../account-signup/FreemiumLimitModal'
 import { useCurrentAccount } from '../auth/useCurrentAccount'
@@ -15,7 +16,7 @@ import { CabinetApiError } from './api'
 import { cabinetAccess } from './cabinetAccess'
 import { EMPTY_VALUES, applyProposal, isDirty, toInput, validate, valuesOf, yearOptions, type CabinetErrors, type CabinetValues, type ProposedField } from './cabinetForm'
 import { CABINET, MONTHS, fromConsultation, unitLabel } from './cabinetText'
-import { useCabinetItem, useCabinetPhoto, useSaveCabinetItem } from './hooks'
+import { useCabinet, useCabinetItem, useCabinetPhoto, useSaveCabinetItem } from './hooks'
 import { parseMedicineText } from './parseMedicineText'
 import { CABINET_UNITS, type FromConsultation } from './types'
 import { selectedFill } from '../../shared/ui/selection'
@@ -51,6 +52,8 @@ export function CabinetFormPage() {
   const savedPhoto = useCabinetPhoto(access.ownerId, itemId, editing && !!itemQuery.data?.hasPhoto)
   const save = useSaveCabinetItem(ownerId, itemId)
   const ocr = useOcrSuggestion()
+  const queryClient = useQueryClient()
+  const cabinet = useCabinet(access.ownerId)
 
   const startValues = fromRx ? { ...EMPTY_VALUES, name: fromRx.name } : EMPTY_VALUES
   const [initial, setInitial] = useState<CabinetValues>(startValues)
@@ -81,8 +84,12 @@ export function CabinetFormPage() {
 
   // The reading of a new photo finished: propose what it found into the fields still empty at that moment.
   const valuesRef = useRef(values)
+  // Names the family already wrote: the cabinet's and the medications of the consultations already in the cache (no new request).
+  const knownRef = useRef<string[]>([])
   useEffect(() => {
     valuesRef.current = values
+    const fromConsultations = queryClient.getQueriesData<{ medications?: { name: string }[] }>({ queryKey: ['consultation'] }).flatMap(([, d]) => d?.medications?.map((m) => m.name) ?? [])
+    knownRef.current = [...(cabinet.data?.items.map((i) => i.name) ?? []), ...fromConsultations]
   })
   const reading = ocr.isRunning
   const wasReading = useRef(false)
@@ -93,11 +100,11 @@ export function CabinetFormPage() {
     }
     if (!wasReading.current) return
     wasReading.current = false
-    const { values: next, proposed: filled } = applyProposal(valuesRef.current, parseMedicineText(ocr.suggestion))
+    const { values: next, proposed: filled } = applyProposal(valuesRef.current, parseMedicineText(ocr.suggestion, { words: ocr.words, known: knownRef.current }))
     setValues(next)
     setProposed(filled)
     setPhoto(filled.length > 0 ? 'read' : 'noText')
-  }, [reading, ocr.suggestion])
+  }, [reading, ocr.suggestion, ocr.words])
 
   useEffect(() => () => void (preview && URL.revokeObjectURL(preview)), [preview])
 
@@ -122,7 +129,7 @@ export function CabinetFormPage() {
     setPhotoRemoved(false)
     setPreview(URL.createObjectURL(picked))
     setPhoto('reading')
-    void ocr.runOcr(picked)
+    void ocr.runOcr(picked, { words: true })
   }
 
   const submit = async () => {
