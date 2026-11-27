@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { parseMedicineText, type OcrWord } from './parseMedicineText'
+import type { OcrWord } from '../consultations/useOcrSuggestion'
+import { parseMedicineText } from './parseMedicineText'
 
 describe('parseMedicineText (specs/062 R4)', () => {
   it('reads a children’s paracetamol box', () => {
