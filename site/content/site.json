@@ -1,6 +1,6 @@
 {
-  "contactEmail": "",
-  "privacyEmail": "",
+  "contactEmail": "contacto@pedi-track.com",
+  "privacyEmail": "privacidad@pedi-track.com",
   "social": { "facebook": "", "instagram": "" },
   "appOrigin": "https://app.pedi-track.com"
 }

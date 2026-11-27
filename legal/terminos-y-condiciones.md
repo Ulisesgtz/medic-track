@@ -102,4 +102,4 @@ Estos Términos se rigen por las leyes de los **Estados Unidos Mexicanos**. Para
 someten a los tribunales de **[ciudad]**, sin perjuicio de los derechos que te otorga la **Procuraduría Federal del
 Consumidor (PROFECO)**.
 
-Contacto: **[contacto@pedi-track.com]**.
+Contacto: **contacto@pedi-track.com**.

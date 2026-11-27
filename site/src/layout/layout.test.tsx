@@ -70,7 +70,8 @@ describe('Footer', () => {
   })
 
   it('sin correo ni redes no dibuja «Contacto» ni «Blog y guías»', () => {
-    render(withSite(<Footer />))
+    const settings = { ...loadSettings({}), contactEmail: '', social: {} }
+    render(withSite(<Footer />, { settings }))
     expect(screen.queryByText('Contacto')).toBeNull()
     expect(screen.queryByRole('link', { name: 'Escríbenos' })).toBeNull()
     expect(screen.queryByRole('link', { name: 'Facebook' })).toBeNull()
@@ -87,7 +88,7 @@ describe('Footer', () => {
   })
 
   it('una sola red configurada: solo esa', () => {
-    const settings = { ...loadSettings({}), social: { instagram: 'https://instagram.com/peditrack' } }
+    const settings = { ...loadSettings({}), contactEmail: '', social: { instagram: 'https://instagram.com/peditrack' } }
     render(withSite(<Footer />, { settings }))
     expect(screen.getByRole('link', { name: 'Instagram' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Facebook' })).toBeNull()

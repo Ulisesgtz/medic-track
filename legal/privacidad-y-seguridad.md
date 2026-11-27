@@ -63,6 +63,6 @@ Algunos de estos servidores están fuera de México. El detalle legal está en e
 
 Puedes **acceder, corregir, cancelar u oponerte** al uso de tus datos (derechos ARCO), y retirar tu consentimiento.
 Gran parte lo haces tú mismo desde la app (editar, descargar, borrar). Para todo lo demás escríbenos a
-**[privacidad@pedi-track.com]**.
+**privacidad@pedi-track.com**.
 
-¿Dudas? Escríbenos a **[privacidad@pedi-track.com]**.
+¿Dudas? Escríbenos a **privacidad@pedi-track.com**.
