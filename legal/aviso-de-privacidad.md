@@ -11,7 +11,7 @@
 
 **[Nombre completo o razón social]** («PediTrack», «nosotros»), con domicilio en **[domicilio completo]**, es responsable
 del tratamiento de los datos personales que nos proporcionas al usar la aplicación PediTrack (el sitio público pedi-track.com y la
-app instalable en app.pedi-track.com). Contacto para temas de privacidad: **[privacidad@pedi-track.com]**.
+app instalable en app.pedi-track.com). Contacto para temas de privacidad: **privacidad@pedi-track.com**.
 
 ## 2. Datos personales que tratamos
 
@@ -89,7 +89,7 @@ salvo cuando lo exija una autoridad competente conforme a la ley.
 Puedes **Acceder, Rectificar, Cancelar u Oponerte** al tratamiento de tus datos, y **revocar tu consentimiento**:
 - **Desde la app**: corregir datos (consultas, hijos, ficha, medidas), descargar todos tus datos («Mi cuenta» →
   «Descargar todos mis datos») y eliminar tu cuenta («Mi cuenta» → «Eliminar mi cuenta»).
-- **Por correo** a **[privacidad@pedi-track.com]**, indicando tu nombre, el correo de tu cuenta, el derecho que ejerces y
+- **Por correo** a **privacidad@pedi-track.com**, indicando tu nombre, el correo de tu cuenta, el derecho que ejerces y
   lo que solicitas. Te responderemos en un máximo de **[20 días hábiles]** [confirmar plazo vigente con el abogado].
 
 ## 7. Conservación y eliminación
