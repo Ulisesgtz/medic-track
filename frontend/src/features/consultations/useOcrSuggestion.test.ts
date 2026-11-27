@@ -5,6 +5,7 @@ import { useOcrSuggestion } from './useOcrSuggestion'
 vi.mock('tesseract.js', () => ({
   default: {
     recognize: vi.fn(),
+    createWorker: vi.fn(),
   },
 }))
 
@@ -81,5 +82,62 @@ describe('useOcrSuggestion', () => {
     await waitFor(() => expect(result.current.suggestion).toBe('Receta'))
     expect(result.current.progress).toBe(1)
     expect(result.current.isRunning).toBe(false)
+  })
+
+  it('with words: reads blocks through its own worker and exposes size, confidence and line of each word (bugfix/081)', async () => {
+    const tesseract = await import('tesseract.js')
+    const terminate = vi.fn().mockResolvedValue(undefined)
+    const recognize = vi.fn().mockResolvedValue({
+      data: {
+        text: 'TEMPRA\nParacetamol',
+        blocks: [
+          {
+            paragraphs: [
+              {
+                lines: [
+                  { words: [{ text: 'TEMPRA', confidence: 91, bbox: { y0: 10, y1: 70 } }] },
+                  { words: [{ text: 'Paracetamol', confidence: 88, bbox: { y0: 80, y1: 100 } }] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    })
+    vi.mocked(tesseract.default.createWorker).mockImplementation((async (_l: unknown, _o: unknown, options: { logger: (m: { status: string; progress: number }) => void }) => {
+      options.logger({ status: 'recognizing text', progress: 0.5 })
+      return { recognize, terminate }
+    }) as never)
+
+    const { result } = renderHook(() => useOcrSuggestion())
+    await act(async () => {
+      await result.current.runOcr(new File(['x'], 'caja.jpg'), { words: true })
+    })
+
+    expect(recognize).toHaveBeenCalledWith(expect.any(File), {}, { blocks: true })
+    expect(terminate).toHaveBeenCalled()
+    expect(result.current.suggestion).toBe('TEMPRA\nParacetamol')
+    expect(result.current.words).toEqual([
+      { text: 'TEMPRA', confidence: 91, height: 60, line: 0 },
+      { text: 'Paracetamol', confidence: 88, height: 20, line: 1 },
+    ])
+    expect(tesseract.default.recognize).not.toHaveBeenCalled()
+  })
+
+  it('with words and a reading without blocks: no words, the text stays; the plain way never has words', async () => {
+    const tesseract = await import('tesseract.js')
+    vi.mocked(tesseract.default.createWorker).mockResolvedValue({ recognize: vi.fn().mockResolvedValue({ data: { text: 'Zinc', blocks: null } }), terminate: vi.fn() } as never)
+    const { result } = renderHook(() => useOcrSuggestion())
+    await act(async () => {
+      await result.current.runOcr(new File(['x'], 'caja.jpg'), { words: true })
+    })
+    expect(result.current.suggestion).toBe('Zinc')
+    expect(result.current.words).toEqual([])
+
+    vi.mocked(tesseract.default.recognize).mockResolvedValue({ data: { text: 'Receta' } } as never)
+    await act(async () => {
+      await result.current.runOcr(new File(['x'], 'receta.jpg'))
+    })
+    expect(result.current.words).toBeNull()
   })
 })

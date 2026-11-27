@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { CabinetFormPage } from './CabinetFormPage'
 import { account, bodyOf, callsOf, item, renderAt, stubApi, stubWeb } from './cabinet.test-utils'
 
-const ocr = vi.hoisted(() => ({ suggestion: null as string | null, isRunning: false, progress: 0, runOcr: vi.fn() }))
+const ocr = vi.hoisted(() => ({ suggestion: null as string | null, words: null as { text: string; confidence: number; height: number; line: number }[] | null, isRunning: false, progress: 0, runOcr: vi.fn() }))
 vi.mock('../consultations/useOcrSuggestion', () => ({ useOcrSuggestion: () => ocr }))
 vi.mock('../consultations/shrinkPhoto', () => ({
   shrinkPhoto: vi.fn(async (f: File) => f),
@@ -35,6 +35,7 @@ async function fillRequired(user: ReturnType<typeof userEvent.setup>) {
 describe('CabinetFormPage', () => {
   beforeEach(() => {
     ocr.suggestion = null
+    ocr.words = null
     ocr.isRunning = false
     ocr.runOcr.mockReset()
   })
@@ -116,7 +117,7 @@ describe('CabinetFormPage', () => {
     URL.revokeObjectURL = vi.fn()
     ocr.isRunning = true
     await user.upload(screen.getByTestId('cabinet-gallery'), file)
-    expect(ocr.runOcr).toHaveBeenCalledWith(file)
+    expect(ocr.runOcr).toHaveBeenCalledWith(file, { words: true })
     expect(screen.getByText('Leyendo la foto…')).toBeInTheDocument()
     ocr.isRunning = false
     ocr.suggestion = 'AMOXICILINA\n250 mg/5 ml\nCAD 02/2027'
@@ -125,6 +126,7 @@ describe('CabinetFormPage', () => {
     // A fresh form: the reading finishes after the photo is chosen.
     ocr.isRunning = true
     ocr.suggestion = null
+    ocr.words = null
     await user.upload(await screen.findByTestId('cabinet-gallery'), file)
     ocr.isRunning = false
     ocr.suggestion = 'AMOXICILINA\n250 mg/5 ml\nCAD 02/2027'
@@ -143,6 +145,40 @@ describe('CabinetFormPage', () => {
     await waitFor(() => expect(bodyOf(mock, 'POST /accounts/a1/medicine-cabinet')?.photoBase64).toBe('BASE64'))
   })
 
+  it('the biggest letters give the name, and a name the cabinet already has wins over them (bugfix/081)', async () => {
+    api({ 'GET /accounts/a1/medicine-cabinet': { body: { items: [item({ name: 'Tempra' })], canEdit: true, canAdd: true, limit: 200 } } })
+    renderAt(NEW, <CabinetFormPage />, NEW)
+    const user = userEvent.setup()
+    URL.createObjectURL = vi.fn(() => 'blob:caja')
+    const word = (text: string, height: number, line: number) => ({ text, height, line, confidence: 90 })
+    ocr.isRunning = true
+    await user.upload(await screen.findByTestId('cabinet-gallery'), new File(['x'], 'caja.jpg', { type: 'image/jpeg' }))
+    await waitFor(() => expect(screen.getByText('Leyendo la foto…')).toBeInTheDocument())
+    // The cabinet's list has arrived by the time the reading finishes.
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    ocr.isRunning = false
+    ocr.suggestion = 'LABORATORIOS PISA\nTenpra\n500 mg'
+    ocr.words = [word('LABORATORIOS', 20, 0), word('PISA', 20, 0), word('Tenpra', 60, 1), word('500', 20, 2), word('mg', 20, 2)]
+    await user.type(screen.getByLabelText('Cantidad'), '1')
+    expect(await screen.findByText('Leído de tu foto · revísalo')).toBeInTheDocument()
+    expect(screen.getByLabelText('Nombre')).toHaveValue('Tempra')
+  })
+
+  it('a reading with no clear name leaves the name empty and still proposes the strength', async () => {
+    api()
+    renderAt(NEW, <CabinetFormPage />, NEW)
+    const user = userEvent.setup()
+    URL.createObjectURL = vi.fn(() => 'blob:caja')
+    ocr.isRunning = true
+    await user.upload(await screen.findByTestId('cabinet-gallery'), new File(['x'], 'caja.jpg', { type: 'image/jpeg' }))
+    ocr.isRunning = false
+    ocr.suggestion = 'Laboratorios Pisa\nAmoxicilina forte\n250 mg/5 ml'
+    await user.type(screen.getByLabelText('Cantidad'), '1')
+    expect(await screen.findByText('Leído de tu foto · revísalo')).toBeInTheDocument()
+    expect(screen.getByLabelText('Nombre')).toHaveValue('')
+    expect(screen.getByLabelText(/Concentración/)).toHaveValue('250 mg/5 ml')
+  })
+
   it('a photo with no text says so and keeps the photo', async () => {
     api()
     renderAt(NEW, <CabinetFormPage />, NEW)
@@ -152,6 +188,7 @@ describe('CabinetFormPage', () => {
     await user.upload(await screen.findByTestId('cabinet-camera'), new File(['x'], 'c.jpg', { type: 'image/jpeg' }))
     ocr.isRunning = false
     ocr.suggestion = null
+    ocr.words = null
     await user.type(screen.getByLabelText('Nombre'), 'A')
     expect(await screen.findByText('No encontramos texto')).toBeInTheDocument()
   })
